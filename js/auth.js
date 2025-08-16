@@ -86,6 +86,7 @@ function initAuthForms() {
 
       console.log("Login exitoso, cambiando hash a #games");
       await ensurePlayer(); // Asegura que el jugador exista
+      await initializeCurrentPlayer(); // Carga datos del jugador en el estado global
       window.location.hash = "games";
     });
     liForm._init = true;
@@ -126,6 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } = await supabase.auth.getSession();
   console.log("getSession →", { session, sessionErr });
   if (session) {
+    await initializeCurrentPlayer(); // Carga datos del jugador en el estado global
     // Si estamos en welcome o sin hash, navegamos a games; si ya estamos en game, no tocamos
     const current = window.location.hash.slice(1) || "welcome";
     if (current === "welcome" || current === "" || current === "login") {

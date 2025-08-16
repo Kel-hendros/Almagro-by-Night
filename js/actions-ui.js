@@ -27,18 +27,6 @@ window.ActionsUI = (function () {
     return { user, playerId: player?.id || null };
   }
 
-  async function getRemainingAP(nightId, playerId) {
-    let used = 0;
-    if (!nightId || !playerId) return 0;
-    const { data: logs } = await supabase
-      .from("actions_log")
-      .select("cost_units")
-      .eq("night_id", nightId)
-      .eq("player_id", playerId);
-    if (logs) logs.forEach((l) => (used += l.cost_units || 0));
-    return Math.max(2 - used, 0);
-  }
-
   // CSS helper: .influence-input for styling numeric input of influence
 
   // Trae acciones disponibles para una zona/locación (con exclusividad opcional)
@@ -114,8 +102,7 @@ window.ActionsUI = (function () {
       window.LastSelection.set({ type, id });
     }
 
-    const { user, playerId } = await getCurrentUserAndPlayer();
-    const remaining = await getRemainingAP(window.currentNightId, playerId);
+    const { id: playerId, remainingAP: remaining } = window.currentPlayer;
 
     // Ensure dialog
     const dlg =
@@ -312,6 +299,13 @@ window.ActionsUI = (function () {
     btn.addEventListener("click", () =>
       openActionsPanel(type, id, opts.name || opts.zoneName || "")
     );
+
+    // Deshabilitar el botón si el jugador no tiene PA
+    if (window.currentPlayer && window.currentPlayer.remainingAP <= 0) {
+      btn.disabled = true;
+      btn.title = "No te quedan Puntos de Acción.";
+    }
+
     wrapper.appendChild(title);
     wrapper.appendChild(btn);
     containerEl.appendChild(wrapper);
@@ -319,8 +313,7 @@ window.ActionsUI = (function () {
 
   // Modal para ejecutar la acción (elige PA y confirma)
   async function openActionModal(action, target) {
-    const { playerId } = await getCurrentUserAndPlayer();
-    const remaining = await getRemainingAP(window.currentNightId, playerId);
+    const { id: playerId, remainingAP: remaining } = window.currentPlayer;
 
     const dlg =
       document.getElementById("panel-apply-influence") ||

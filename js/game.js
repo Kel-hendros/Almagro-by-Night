@@ -134,6 +134,10 @@ async function renderPlayersStatus(gameId, nightId = null) {
     .map((p) => {
       const used = usedMap[p.player_id] || 0;
       const remaining = Math.max(2 - used, 0);
+      // Si este es el jugador actual, actualizamos su estado global de AP
+      if (p.player_id === window.currentPlayer?.id) {
+        setCurrentPlayerAP(remaining);
+      }
       const display = remaining > 0 ? remaining : "✓";
       return `
       <div class="player-item">
