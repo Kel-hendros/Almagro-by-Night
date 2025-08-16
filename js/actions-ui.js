@@ -102,6 +102,10 @@ window.ActionsUI = (function () {
       window.LastSelection.set({ type, id });
     }
 
+    if (!window.currentPlayer || !window.currentPlayer.id) {
+      alert("Error: No se ha podido identificar al jugador actual. Refresca la página.");
+      return;
+    }
     const { id: playerId, remainingAP: remaining } = window.currentPlayer;
 
     // Ensure dialog

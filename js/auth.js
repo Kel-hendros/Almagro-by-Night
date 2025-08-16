@@ -116,44 +116,5 @@ async function ensurePlayer() {
   }
 }
 
-// Al cargar la app por primera vez
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("DOMContentLoaded fired");
-
-  // 1) Chequear si ya hay sesión activa
-  const {
-    data: { session },
-    error: sessionErr,
-  } = await supabase.auth.getSession();
-  console.log("getSession →", { session, sessionErr });
-  if (session) {
-    await initializeCurrentPlayer(); // Carga datos del jugador en el estado global
-    // Si estamos en welcome o sin hash, navegamos a games; si ya estamos en game, no tocamos
-    const current = window.location.hash.slice(1) || "welcome";
-    if (current === "welcome" || current === "" || current === "login") {
-      window.location.hash = "games";
-      return;
-    }
-  }
-
-  // 2) Si estamos en login/register, inicializamos pestañas y forms
-  if (
-    window.location.hash === "#login" ||
-    window.location.hash === "#register"
-  ) {
-    initAuthTabs();
-    initAuthForms();
-  }
-});
-
-// Cada vez que cambie el hash (carga de un nuevo fragmento) reiniciamos tabs y forms
-window.addEventListener("hashchange", () => {
-  console.log("hash changed to", window.location.hash);
-  if (
-    window.location.hash === "#login" ||
-    window.location.hash === "#register"
-  ) {
-    initAuthTabs();
-    initAuthForms();
-  }
-});
+// El router se encarga de la inicialización,
+// por lo que no se necesitan listeners de DOMContentLoaded o hashchange aquí.

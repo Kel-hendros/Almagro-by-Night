@@ -118,8 +118,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  sessionReady = true;
   currentSession = session;
+
+  // Asegurarse de que los datos del jugador están cargados ANTES de cualquier renderizado
+  if (currentSession && typeof initializeCurrentPlayer === "function") {
+    await initializeCurrentPlayer();
+  }
+  sessionReady = true;
+
 
   await updateSidebar();
   __lastUserId = currentSession?.user?.id || null;
