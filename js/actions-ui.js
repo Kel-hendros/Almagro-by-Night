@@ -220,7 +220,28 @@ window.ActionsUI = (function () {
       action.skill_name || ""
     )} · Dif ${esc(action.base_difficulty ?? "?")}</p>
         <p>${esc(action.description || "")}</p>
-        <div class="img-placeholder" aria-hidden="true"></div>
+        ${
+          action.image
+            ? (() => {
+                const url = action.image;
+                if (url.toLowerCase().endsWith(".mp4")) {
+                  return `
+              <div class="img-wrap">
+                <video autoplay loop muted playsinline>
+                  <source src="${esc(url)}" type="video/mp4">
+                </video>
+              </div>
+            `;
+                } else {
+                  return `
+              <div class="img-wrap">
+                <img alt="Imagen de la acción" src="${esc(url)}">
+              </div>
+            `;
+                }
+              })()
+            : ""
+        }
         <div class="form-row">
           <label>Influencia obtenida
             <input type="number" class="influence-input" min="0" step="1" placeholder="0">
@@ -397,6 +418,7 @@ window.ActionsUI = (function () {
           skill_name: action.skill_name,
           base_difficulty: action.base_difficulty,
           ap_cost: apCost,
+          action_image: action.image || null,
           influence_gain: Number.isFinite(infl) ? infl : null,
         }),
       };

@@ -116,7 +116,7 @@ button,
 
 .content {
     /* map background for the main area */
-    background: url('images/map-bg.png') no-repeat center center;
+    background: url('https://queitmvjucbjoeodsgqk.supabase.co/storage/v1/object/public/maps/almagro.png') no-repeat center center;
     background-size: cover;
     /* red tint overlay blended with the map */
     background-color: rgba(140, 86, 28, 0.4);

@@ -719,15 +719,32 @@
 
 .panel-actuar .img-placeholder {
     width: 100%;
-    aspect-ratio: 16/9;
-    max-height: 28vh;
-    /* recorta alto máximo para evitar scroll */
-    flex: 0 0 auto;
-    /* no crece, no fuerza overflow */
-    border-radius: 8px;
-    background: rgba(255, 255, 255, .06);
-    border: 1px dashed rgba(255, 255, 255, .15);
-    margin: 6px 0 10px;
+    height: 200px;
+    background: rgba(255, 255, 255, .05);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-cream);
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.panel-actuar .img-wrap {
+    margin-top: 15px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    border-radius: 15px;
+    max-height: 40%;
+}
+
+.img-wrap video {
+    width: auto;
+    height: auto;
+    border-radius: 15px;
+    box-shadow: 0 0px 15px rgba(0, 0, 0, 0.772);
+
 }
 
 .panel-actuar .form-row {
