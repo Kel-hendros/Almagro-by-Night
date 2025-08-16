@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Almagro by Night</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/games.css">
+    <link rel="stylesheet" href="css/game.css">
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="images/icono.png" alt="Almagro by Night">
+                <h1>Almagro by Night</h1>
+            </div>
+            <nav class="nav">
+                <ul>
+                    <li id="menu-welcome"><a href="#welcome"><i data-lucide="log-in"></i>Bienvenido</a></li>
+                    <li id="menu-user" class="hidden"><a href="#user"><i data-lucide="user-circle"></i><span
+                                id="user-name"></span></a></li>
+                    <li id="menu-games" class="hidden"><a href="#games"><i
+                                data-lucide="folder-open"></i><span>Partidas</span></a>
+                    </li>
+                    <li id="menu-logout" class="hidden"><a href="#" id="logout-link"><i
+                                data-lucide="log-out"></i><span>Cerrar
+                                sesión</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="content">
+            <div id="content"></div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.255.0/dist/umd/lucide.min.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script src="js/actions-ui.js"></script>
+    <script src="js/detail.zone.js" defer></script>
+    <script src="js/game.js" defer></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+
+    <script src="js/router.js"></script>
+</body>
+
+</html>

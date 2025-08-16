@@ -1,0 +1,38 @@
+<div class="panel welcome-panel">
+    <div class="auth-tabs">
+        <button id="tab-login" class="tab active">Ingresar</button>
+        <button id="tab-register" class="tab">Registrarse</button>
+    </div>
+
+    <!-- Formulario de login -->
+    <form id="login-form" class="auth-form">
+        <div class="form-group">
+            <label>Email:</label>
+            <input id="li-email" type="email" placeholder="Email" required>
+        </div>
+        <div class="form-group">
+            <label>Contraseña:</label>
+            <input id="li-password" type="password" placeholder="Contraseña" required>
+        </div>
+        <button type="submit">Ingresar</button>
+        <p id="li-msg" class="msg"></p>
+    </form>
+
+    <!-- Formulario de registro -->
+    <form id="signup-form" class="auth-form hidden">
+        <div class="form-group">
+            <label>Nombre:</label>
+            <input id="su-name" type="text" placeholder="Tu nombre" required>
+        </div>
+        <div class="form-group">
+            <label>Email:</label>
+            <input id="su-email" type="email" placeholder="Email" required>
+        </div>
+        <div class="form-group">
+            <label>Contraseña:</label>
+            <input id="su-password" type="password" placeholder="Contraseña" required>
+        </div>
+        <button type="submit">Registrarse</button>
+        <p id="su-msg" class="msg"></p>
+    </form>
+</div>

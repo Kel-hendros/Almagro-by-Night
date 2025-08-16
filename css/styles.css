@@ -1,0 +1,347 @@
+/* === Gothic Dark Theme === */
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Special+Elite&display=swap');
+
+/* Layout principal */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --color-cream: #e3d8c3;
+    --color-cream-muted: #68645c;
+    --color-red: #8c1c1c;
+    --color-red-accent: #ad3838;
+    --color-red-muted: #321515;
+    --color-dark: #121212;
+    --color-dark-alt: #1f1b24;
+    --color-dark-transparent: rgba(31, 27, 36, 0.8);
+}
+
+html,
+body {
+    height: 100%;
+    background-color: var(--color-dark);
+    color: var(--color-cream);
+    font-family: 'Special Elite', cursive;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.app {
+    display: flex;
+    height: 100%;
+}
+
+h1,
+h2,
+button,
+.welcome-panel {
+    font-family: 'Special Elite', cursive;
+}
+
+
+
+/* Sidebar */
+.sidebar {
+    width: 220px;
+    background-color: var(--color-red-muted);
+    border-right: 1px solid var(--color-red);
+    color: var(--color-cream);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #2f2f41;
+    box-shadow: 5px 0px 30px 5px rgba(24, 5, 5, 0.501);
+    position: relative;
+}
+
+
+
+.logo {
+    display: flex;
+    flex-direction: row;
+    padding: 20px;
+    text-align: center;
+}
+
+.logo img {
+    width: 50px;
+    height: auto;
+}
+
+.nav {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.nav ul {
+    list-style: none;
+    padding: 10px 0;
+}
+
+.nav ul li {
+    margin-bottom: 20px;
+}
+
+.nav li a {
+    margin: 0;
+    padding-left: 15px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+    gap: 10px;
+}
+
+
+.nav li:hover,
+.nav li.active {
+    background-color: var(--color-cream);
+    color: var(--color-dark);
+}
+
+/* Override link hover to defer styling to list item */
+.nav a:hover {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+
+.content {
+    /* map background for the main area */
+    background: url('/images/map-bg.png') no-repeat center center;
+    background-size: cover;
+    /* red tint overlay blended with the map */
+    background-color: rgba(140, 86, 28, 0.4);
+    background-blend-mode: multiply;
+    flex: 1;
+    padding: 2px;
+    overflow-y: auto;
+
+}
+
+
+
+
+
+
+.panel {
+    background-color: var(--color-dark-transparent);
+    border: none;
+    border-radius: 8px;
+    color: var(--color-cream);
+    max-width: 800px;
+    min-height: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    text-align: center;
+    backdrop-filter: blur(4px);
+    position: relative;
+    box-shadow: 0px 15px 15px 5px rgba(0, 0, 0, 0.5);
+}
+
+
+/* Login Registration */
+
+/* Auth tabs styling */
+.auth-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 20px;
+    position: absolute;
+    top: -35px;
+    right: 10px;
+}
+
+.auth-tabs .tab {
+    font-size: 1.3rem;
+    width: 200px;
+    height: 35px;
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    cursor: pointer;
+    background-color: var(--color-dark-alt);
+    color: var(--color-cream-muted);
+    border: none;
+    border-radius: 4px 4px 0px 0px;
+    backdrop-filter: blur(4px);
+    transform-origin: bottom center;
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+
+}
+
+.auth-tabs .tab:not(.active):hover {
+    background-color: rgba(140, 28, 28, 0.8);
+    backdrop-filter: blur(4px);
+    transform: scaleY(1.1);
+
+
+}
+
+.auth-tabs .tab.active {
+    background-color: rgba(31, 27, 36, 0.8);
+    backdrop-filter: blur(4px);
+    color: var(--color-cream);
+    transform: scaleY(1.15);
+}
+
+/* Align labels above fields and push submit to bottom */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.auth-form .form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.auth-form .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    color: var(--color-cream);
+}
+
+.auth-form .form-group input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--color-cream-muted);
+    border-radius: 4px;
+    background: var(--color-dark);
+    color: var(--color-cream);
+}
+
+.auth-form button[type="submit"] {
+    font-size: 1.1rem;
+    margin-top: auto;
+    align-self: flex-start;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-red);
+    color: var(--color-cream);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.auth-form button[type="submit"]:hover {
+    background: var(--color-red-accent);
+}
+
+
+/* GAMES */
+
+.gameButtons-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+button.gameButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-red);
+    color: var(--color-cream);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+}
+
+button.gameButton:hover {
+    background: var(--color-red-accent);
+}
+
+
+.gameButton .lucide {
+    width: 1.5rem;
+    height: auto;
+}
+
+
+
+
+
+/* Siempre ultimo */
+.hidden {
+    display: none !important;
+}
+
+
+@media (max-width: 1400px) {
+    .sidebar {
+        width: 70px;
+        /* much narrower */
+        align-items: center;
+    }
+
+    .nav {
+        width: 100%;
+
+    }
+
+    .nav li {
+        margin-bottom: 0;
+        /* justify-content: center; */
+        align-items: center;
+        padding-left: 0;
+
+    }
+
+    .nav li a {
+        padding-left: 0px;
+        /* more padding for touch targets */
+        justify-content: center;
+        /* center icons in narrow mode */
+    }
+
+
+    .nav span {
+        display: none;
+        /* hide text in narrow mode */
+    }
+
+    .nav a .lucide,
+    .nav span .lucide {
+        display: block;
+        /* avoid baseline misalignment */
+        width: 26px;
+        height: 26px;
+        flex: 0 0 auto;
+    }
+
+    .logo img {
+        width: 60px;
+    }
+
+    .logo h1 {
+        display: none;
+        /* hide text in narrow mode */
+    }
+
+    .logo {
+        justify-content: center;
+        align-items: center;
+        /* vertically center logo image */
+        padding: 10px;
+    }
+}

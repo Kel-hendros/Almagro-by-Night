@@ -1,0 +1,835 @@
+:root {
+    /* tu paleta para el mapa */
+    --zone-neutral: #929292;
+    --zone-neutral-opacity: 0.53;
+    --zone-outline: #8c1c1c;
+    --location-fill: #ad3838;
+    --location-stroke: #ffffff;
+
+    /* paleta general */
+    --color-dark: #1a1a1a;
+    --color-dark-transparent: rgba(26, 26, 26, 0.8);
+    --color-cream: #f5f1e8;
+    --color-red-accent: #e63946;
+}
+
+/* Layout principal con grid */
+#game-container {
+    display: grid;
+    height: calc(100vh - 15px);
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas:
+        "header header"
+        "tabletop details"
+        "footer details";
+
+    padding: 1rem;
+    box-sizing: border-box;
+    user-select: none;
+    cursor: default;
+}
+
+/* Header */
+#game-header {
+    grid-area: header;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1rem;
+    background-color: var(--color-dark);
+    backdrop-filter: blur(6px);
+    border-radius: 25px 25px 0 0;
+    height: 80px;
+}
+
+#game-header h1 {
+    font-size: 1.8rem;
+    color: var(--color-cream);
+    margin: 0;
+}
+
+#game-header p#turn-info {
+    font-family: 'Lato', sans-serif;
+    font-size: 1rem;
+    color: var(--color-red-accent);
+    margin: 0;
+}
+
+/* Header progress container */
+.game-progress-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 1rem;
+    background: transparent;
+    height: 30px;
+    width: auto;
+}
+
+
+/* Contenedor del mapa */
+.tabletop-container {
+    grid-area: tabletop;
+    display: flex;
+    background-color: var(--color-dark-transparent);
+    padding: 1rem;
+    min-height: 0;
+    min-width: 300px;
+}
+
+#map {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+}
+
+/* Detalles a la derecha */
+.details {
+    grid-area: details;
+    background-color: var(--color-dark-transparent);
+    padding: 1rem;
+    border-radius: 0 0 25px 0;
+    color: var(--color-cream);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-width: 300px;
+}
+
+.details span {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+/* Detalles panel */
+.details .detail-loading,
+.details .detail-error {
+    font-size: 1rem;
+    text-align: center;
+    width: 100%;
+    margin: 1rem 0;
+}
+
+.detail-header {
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    margin-bottom: 0.5rem;
+    width: 100%;
+}
+
+.details .detail-title {
+    font-size: 1.5rem;
+
+}
+
+.details .detail-icon {
+    margin-left: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.details .detail-desc {
+    font-family: 'Lato', sans-serif;
+    font-size: .9rem;
+    font-style: italic;
+    margin: 0.5rem 0 1rem;
+    line-height: 1.4;
+}
+
+
+/* Contenedor con ratio fijo 3:4 y recorte */
+.detail-image-container {
+    width: 100%;
+    height: 30%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+    border: 5px solid var(--color-cream-muted);
+    overflow: hidden;
+}
+
+
+/* Imagen que ocupa todo y se recorta si no encaja */
+.details .detail-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* object-fit: cover; */
+}
+
+.details .detail-status,
+.details .detail-points {
+    font-size: 1rem;
+    margin: 0.5rem 0;
+}
+
+.details .detail-list {
+    list-style: disc inside;
+    margin: 0.5rem 0 1rem;
+    padding: 0;
+}
+
+.details .detail-item {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+}
+
+.detail-progress-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-block: 1rem;
+    height: 40px;
+}
+
+.detail-progress-bar .breakdown-bar {
+    box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.2),
+        -3px -3px 5px rgba(255, 255, 255, 0.2);
+
+
+}
+
+/* Footer with players list */
+#game-footer {
+    grid-area: footer;
+    background-color: var(--color-dark-transparent);
+    padding: 0.75rem 1rem;
+    border-radius: 0 0 0 25px;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+}
+
+.players-list {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+}
+
+.player-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.player-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    user-select: none;
+    color: var(--color-cream);
+}
+
+.player-name {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--color-cream);
+}
+
+/* Mover atribuciones de MapLibre abajo del footer */
+.maplibregl-control-container {
+
+    position: fixed;
+    bottom: 8px !important;
+    right: 8px;
+}
+
+.maplibregl-control-container summary {
+    display: none;
+}
+
+#btn-config-zone {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-red-accent);
+    color: var(--color-cream);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+#btn-config-zone:hover {
+    opacity: 0.9;
+}
+
+
+/* BARRA DE PROGRESO GENERAL */
+
+/* Contenedor del widget */
+.full-progress-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Contenedor de la barra */
+.breakdown-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    position: relative;
+    height: 100%;
+}
+
+.breakdown-bar {
+    flex: 1 1 auto;
+    /* grow and shrink to fill space */
+    display: flex;
+    height: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--zone-neutral-opacity);
+    min-width: 0;
+    height: 100%;
+}
+
+
+.breakdown-owner,
+.breakdown-rival {
+    font-size: .6rem !important;
+    color: var(--color-cream);
+    white-space: wrap;
+}
+
+
+.breakdown-owner,
+.breakdown-rival {
+    position: absolute;
+    font-size: 0.9rem;
+    color: var(--color-cream);
+    white-space: nowrap;
+}
+
+.breakdown-owner {
+    font-size: 0.9rem;
+    margin-right: 0.5rem;
+    white-space: nowrap;
+    color: var(--color-cream);
+    left: 5px;
+    /* siempre a la izquierda */
+    z-index: 1;
+}
+
+.breakdown-rival {
+    right: 5px;
+    /* siempre a la derecha */
+    z-index: 1;
+}
+
+.breakdown-segment {
+    height: 100%;
+    position: relative;
+    flex-shrink: 1;
+    flex-basis: 0;
+}
+
+/* Puntos  */
+.breakdown-points {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-inline: 1rem;
+    font-size: 0.8rem;
+    color: var(--color-cream-muted);
+    margin-top: 0.1rem;
+    font-family: 'Lato', sans-serif;
+
+
+}
+
+
+
+
+/* Apply Influence Panel */
+#panel-apply-influence {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
+    padding: 1.5rem;
+    background-color: rgba(31, 27, 36, 0.95);
+    color: var(--color-cream);
+    max-width: 700px;
+    width: 90%;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
+    height: auto;
+
+}
+
+#panel-apply-influence::backdrop {
+    background: rgba(18, 18, 18, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+#panel-apply-influence h2 {
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-family: 'Special Elite', cursive;
+    text-align: center;
+}
+
+#panel-apply-influence p {
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.apply-influence-container {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.influence-radios {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin: 2rem;
+}
+
+.influence-radios input[type="radio"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--color-red-accent);
+    outline: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.influence-radios input[type="radio"]:checked {
+    background-color: var(--color-red);
+}
+
+.influence-radios label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    color: var(--color-cream);
+    cursor: pointer;
+    margin: 0.5rem 0;
+}
+
+.influence-number {
+    border: none;
+    outline: none;
+    border-radius: 5px;
+    padding: 1em;
+    background-color: #ccc;
+    box-shadow: inset 2px 5px 10px rgba(0, 0, 0, 0.3);
+    transition: 300ms ease-in-out;
+    margin-bottom: 3rem;
+    width: 50%;
+}
+
+.influence-number:focus {
+    background-color: white;
+    transform: scale(1.05);
+    box-shadow: 13px 13px 100px #969696,
+        -13px -13px 100px #ffffff;
+}
+
+
+
+
+.panel-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.panel-buttons button {
+    flex: 1 1 auto;
+    /* allow buttons to grow and shrink */
+    min-width: 120px;
+    /* minimum width for buttons */
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    border: none;
+}
+
+/* style for the first button in .panel-buttons */
+.panel-buttons button:first-child {
+    background: var(--color-cream-muted);
+    color: var(--color-cream);
+    border: none;
+
+}
+
+.panel-buttons button:nth-child(2) {
+    background: var(--color-red);
+    color: var(--color-cream);
+
+
+}
+
+.panel button:hover {
+    background: var(--color-red-accent);
+}
+
+/* styles for the disabled button */
+.panel-buttons button:disabled {
+    background: var(--color-neutral);
+    border: 1px solid var(--color-red);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+
+
+/* Actions */
+
+.actions-toolbar {
+    margin-top: 12px;
+    border-top: 1px solid #ddd;
+    padding-top: 8px;
+}
+
+.actions-section {
+    margin-top: 8px;
+}
+
+.actions-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.action-chip {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #aaa;
+    background: #f7f7f7;
+    cursor: pointer;
+}
+
+.action-chip:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.action-notes {
+    width: 100%;
+    min-height: 70px;
+    margin-top: 8px;
+}
+
+/* =============================
+   PANEL ACTUAR (ACCIONES) MODAL
+   ============================= */
+
+/* Dialog modal base */
+#panel-actuar.panel-actuar {
+    position: fixed;
+    /* dialog behaves consistently across browsers */
+    inset: 4vh 4vw;
+    /* casi pantalla completa, con margen */
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: none;
+    border-radius: 16px;
+    background: var(--color-dark-transparent);
+    color: var(--color-cream);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .6);
+}
+
+#panel-actuar::backdrop {
+    background: rgba(18, 18, 18, .8);
+    backdrop-filter: blur(4px);
+}
+
+/* Header */
+.panel-actuar .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.panel-actuar .panel-header h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-family: 'Special Elite', cursive;
+    letter-spacing: .5px;
+}
+
+.panel-actuar .panel-close {
+    appearance: none;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-cream);
+}
+
+.panel-actuar .panel-close:hover {
+    opacity: .85;
+}
+
+/* Body split */
+.panel-actuar .panel-body {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    /* izquierda list, derecha detalle */
+    gap: 16px;
+    padding: 16px;
+    height: calc(100% - 56px);
+    /* resta header */
+    box-sizing: border-box;
+}
+
+/* Left column: listado de acciones */
+.panel-actuar .actions-left {
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.panel-actuar .cost-group {
+    margin-bottom: 16px;
+}
+
+.panel-actuar .cost-group h3 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-cream);
+}
+
+.panel-actuar .actions-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.panel-actuar .action-card {
+    text-align: left;
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .04);
+    color: var(--color-cream);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.panel-actuar .action-card:hover {
+    background: rgba(255, 255, 255, .07);
+}
+
+.panel-actuar .action-card:focus {
+    outline: 2px solid var(--color-red-accent);
+    outline-offset: -2px;
+    background: rgba(255, 255, 255, .1);
+}
+
+.panel-actuar .action-card .ac-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-actuar .action-card .ac-head strong {
+    font-size: 0.95rem;
+}
+
+.panel-actuar .action-card .ac-sub {
+    font-size: 0.85rem;
+    opacity: .8;
+}
+
+/* Right column: detalle de la acción */
+.panel-actuar .actions-right {
+    overflow: hidden;
+    /* que no scrollee este panel */
+    display: flex;
+    /* layout vertical para el detalle */
+    flex-direction: column;
+    min-height: 0;
+    /* permite que los hijos calculen alturas sin overflow fantasma */
+}
+
+.panel-actuar .detail-wrap {
+    border: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .03);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    /* estructura en columna */
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    /* evita scroll interno del wrap */
+    gap: 6px;
+    /* respirito entre bloques */
+}
+
+.panel-actuar .detail-wrap h2 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+}
+
+.panel-actuar .muted {
+    opacity: .8;
+    font-size: .9rem;
+    margin: 0 0 8px;
+}
+
+.panel-actuar .img-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    max-height: 28vh;
+    /* recorta alto máximo para evitar scroll */
+    flex: 0 0 auto;
+    /* no crece, no fuerza overflow */
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px dashed rgba(255, 255, 255, .15);
+    margin: 6px 0 10px;
+}
+
+.panel-actuar .form-row {
+    margin: 8px 0;
+}
+
+.panel-actuar .form-row label {
+    display: block;
+    font-size: .95rem;
+}
+
+.panel-actuar .form-row input[type="number"] {
+    width: 160px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .08);
+    color: var(--color-cream);
+}
+
+.panel-actuar .form-row input[type="number"]:focus {
+    outline: 2px solid var(--color-red-accent);
+}
+
+.panel-actuar .form-row.note {
+    font-size: .85rem;
+    opacity: .8;
+}
+
+.panel-actuar .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.panel-actuar .detail-wrap .actions {
+    margin-top: auto;
+    /* empuja el botón al final del panel */
+}
+
+.panel-actuar .btn-apply {
+    appearance: none;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: .95rem;
+    cursor: pointer;
+    background: var(--color-red-accent);
+    color: var(--color-cream);
+}
+
+.panel-actuar .btn-apply:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* Botón de entrada en el detalle (compacto, dentro del panel de la derecha) */
+.details .actions-toolbar {
+    border-top: 1px solid rgba(255, 255, 255, .08);
+    padding-top: 8px;
+}
+
+.details .actions-toolbar h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+}
+
+.details .actions-toolbar .btn-primary {
+    appearance: none;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: var(--color-red-accent);
+    color: var(--color-cream);
+    cursor: pointer;
+}
+
+.details .actions-toolbar .btn-primary:hover {
+    opacity: .9;
+}
+
+.actions-target-name {
+    color: var(--color-red-accent);
+    /* text-transform: uppercase; */
+    letter-spacing: 0.5px;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+    #panel-actuar.panel-actuar {
+        inset: 2vh 2vw;
+    }
+
+    .panel-actuar .panel-body {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-actuar .actions-left {
+        max-height: 40vh;
+    }
+
+    .panel-actuar .detail-wrap {
+        overflow: auto;
+    }
+}

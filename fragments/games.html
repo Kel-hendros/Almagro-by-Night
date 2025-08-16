@@ -1,0 +1,58 @@
+<dialog id="createGameDialog" class="modalDialog createGameDialog">
+    <form method="dialog">
+        <h2>Crear nueva partida</h2>
+        <div class="form-group">
+            <label>Nombre de la partida:</label>
+            <input id="game-name" type="text" required />
+        </div>
+        <div class="form-group">
+            <label>Fecha del primer Turno:</label>
+            <input id="game-date" type="date" required />
+        </div>
+        <div class="form-group">
+            <label>Territorio:</label>
+            <select id="territory-select"></select>
+        </div>
+        <div class="form-group">
+            <label>Facción:</label>
+            <select id="faction-select"></select>
+        </div>
+        <menu>
+            <button value="cancel" onclick="document.getElementById('createGameDialog').close()">Cancelar</button>
+            <button id="confirm-create" value="default" onclick="createGame()">Crear</button>
+        </menu>
+    </form>
+</dialog>
+
+
+<div class="panel">
+    <h1>Partidas</h1>
+    <div class="gameButtons-container">
+        <button id="btn-create-game" class="gameButton"
+            onclick="loadTerritories(); document.getElementById('createGameDialog').showModal();">
+            <i data-lucide="plus-circle"></i>
+            Crear nueva partida
+        </button>
+        <button id="btn-join-game" class="gameButton">
+            <i data-lucide="user-plus"> </i>
+            Unirse a una partida</button>
+    </div>
+    <div class="games-lis-container">
+        <p id="no-games">No hay partidas existentes.</p>
+        <table class="games-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Creador</th>
+                    <th>Creada</th>
+                    <th>Turno</th>
+                    <th>Fecha Turno</th>
+                </tr>
+            </thead>
+            <tbody id="games-list">
+                <!-- JS inyecta <tr> aquí -->
+            </tbody>
+        </table>
+    </div>
+
+</div>
