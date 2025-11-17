@@ -64,9 +64,11 @@ button,
     flex-direction: row;
     padding: 20px;
     text-align: center;
+
 }
 
 .logo img {
+    display: none;
     width: 50px;
     height: auto;
 }
@@ -122,7 +124,7 @@ button,
     background-color: rgba(140, 86, 28, 0.4);
     background-blend-mode: multiply;
     flex: 1;
-    padding: 2px;
+    padding: none;
     overflow-y: auto;
 
 }
@@ -277,6 +279,11 @@ button.gameButton:hover {
     height: auto;
 }
 
+.muted {
+    color: var(--color-cream-muted);
+    font-size: 0.95rem;
+}
+
 
 
 
@@ -330,7 +337,7 @@ button.gameButton:hover {
     }
 
     .logo img {
-        width: 60px;
+        width: 100%;
     }
 
     .logo h1 {

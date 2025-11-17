@@ -90,14 +90,6 @@ async function loadRoute(force = false) {
   }
   if (targetHash === "games") {
     if (typeof window.loadGames === "function") window.loadGames();
-    const btnCreate = document.getElementById("btn-create-game");
-    if (btnCreate) {
-      btnCreate.onclick = () => {
-        if (typeof window.loadOptions === "function") window.loadOptions();
-        const dlg = document.getElementById("createGameDialog");
-        if (dlg?.showModal) dlg.showModal();
-      };
-    }
   }
   if (targetHash === "game") {
     console.log("Router: game route detected, initializing game view");

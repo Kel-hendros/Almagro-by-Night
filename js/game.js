@@ -786,7 +786,7 @@ async function initGame() {
     container: "map",
     style:
       "https://api.maptiler.com/maps/basic/style.json?key=3BYctVRw6IwXUy2XDK2b",
-    center: [-58.421, -34.612], // Longitude, Latitude for Almagro
+    center: [-58.42, -34.612], // Longitude, Latitude for Almagro
     zoom: 13.3,
   });
   // Expose map globally for later styling after configuration

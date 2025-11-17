@@ -41,14 +41,17 @@ function initAuthForms() {
     suForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = document.getElementById("su-name").value.trim();
+      const characterName = document
+        .getElementById("su-character")
+        .value.trim();
       const email = document.getElementById("su-email").value;
       const password = document.getElementById("su-password").value;
-      console.log("Signup submit →", { name, email });
+      console.log("Signup submit →", { name, email, characterName });
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name } },
+        options: { data: { full_name: name, character_name: characterName } },
       });
       console.log("signUp response →", { data, error });
       if (error) {
@@ -57,7 +60,7 @@ function initAuthForms() {
       }
 
       // Ensure a player record exists (handles both signup and login paths)
-      await ensurePlayer();
+      await ensurePlayer({ displayName: name, characterName });
       alert("¡Registrado!");
       window.location.hash = "games";
     });
@@ -92,26 +95,57 @@ function initAuthForms() {
   }
 }
 
-async function ensurePlayer() {
+async function ensurePlayer(options = {}) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) throw new Error("No hay sesión");
   const userId = session.user.id;
+  const metadata = session.user.user_metadata || {};
+  const desiredName =
+    options.displayName || metadata.full_name || session.user.email;
+  const desiredCharacter =
+    options.characterName || metadata.character_name || null;
+  const nowIso = new Date().toISOString();
   // Intento de select
-  const { data: existing } = await supabase
+  const {
+    data: existing,
+    error: selectError,
+  } = await supabase
     .from("players")
     .select("id")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
+  if (selectError) {
+    console.error("ensurePlayer select error:", selectError);
+    throw selectError;
+  }
   if (!existing) {
-    await supabase.from("players").insert([
-      {
-        name: session.user.user_metadata.full_name || session.user.email,
-        email: session.user.email,
-        user_id: userId,
-      },
-    ]);
+    const payload = {
+      name: desiredName,
+      email: session.user.email,
+      user_id: userId,
+      last_login_at: nowIso,
+    };
+    if (desiredCharacter) {
+      payload.character_name = desiredCharacter;
+    }
+    const { error: insertError } = await supabase
+      .from("players")
+      .insert([payload]);
+    if (insertError) {
+      console.error("ensurePlayer insert error:", insertError);
+      throw insertError;
+    }
+  } else {
+    const { error: updateError } = await supabase
+      .from("players")
+      .update({ last_login_at: nowIso })
+      .eq("id", existing.id);
+    if (updateError) {
+      console.error("ensurePlayer update error:", updateError);
+      throw updateError;
+    }
   }
 }
 

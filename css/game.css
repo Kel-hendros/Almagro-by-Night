@@ -557,6 +557,10 @@
     color: var(--color-cream-muted);
 }
 
+.lieutenant-faction {
+    font-size: 0.85rem;
+}
+
 .lieutenant-tooltip-body .stats {
     display: flex;
     flex-direction: row;

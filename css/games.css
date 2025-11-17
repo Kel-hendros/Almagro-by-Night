@@ -1,150 +1,201 @@
-/* === Create Game Dialog === */
-.modalDialog {
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 1px solid var(--color-red);
-    border-radius: 8px;
-    padding: 1.5rem;
-    background-color: rgba(31, 27, 36, 0.95);
-    color: var(--color-cream);
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
+/* Vista simplificada de Partidas */
+.single-game-panel {
+    max-width: 900px;
+    margin: 0 auto;
 }
 
-.modalDialog::backdrop {
-    background: rgba(18, 18, 18, 0.8);
-    backdrop-filter: blur(4px);
-}
-
-.modalDialog h2 {
-    margin-top: 0;
-    margin-bottom: 2rem;
-    font-size: 1.5rem;
-    font-family: 'Special Elite', cursive;
-    text-align: center;
-}
-
-.modalDialog .form-group {
+.single-game-copy {
+    color: var(--color-cream-muted);
     margin-bottom: 1rem;
+}
+
+.single-game-card {
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    padding: 1.5rem;
+    background: rgba(18, 17, 20, 0.8);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.single-game-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.single-game-meta {
+    margin: 0.35rem 0 0;
+    color: var(--color-cream-muted);
+}
+
+.single-game-territory {
+    min-width: 180px;
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-cream-muted);
+}
+
+.single-game-territory strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--color-cream);
+}
+
+.single-game-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.single-game-body p {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.single-game-id code {
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0.15rem 0.4rem;
+    border-radius: 6px;
+}
+
+.single-game-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.gameButton.primary {
+    background: var(--color-red);
+}
+
+.gameButton.secondary {
+    background: transparent;
+    border: 1px solid var(--color-cream-muted);
+}
+
+.single-game-status {
+    margin: 0;
+    color: var(--color-cream-muted);
+    font-size: 0.95rem;
+}
+
+.players-management {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    background: rgba(14, 12, 16, 0.9);
+}
+
+.players-management-header {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
 }
 
-.modalDialog .form-group label {
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem;
+.players-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
 }
 
-.modalDialog input[type="text"],
-.modalDialog input[type="date"] {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--color-cream-muted);
-    border-radius: 4px;
-    background: var(--color-dark);
-    color: var(--color-cream);
+.players-grid {
+    display: grid;
+    gap: 1rem;
 }
 
-.modalDialog menu {
+.player-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.35);
     display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
-.modalDialog menu button {
-    padding: 0.5rem 1rem;
+.player-card h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.player-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.player-badge {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     background: var(--color-red);
     color: var(--color-cream);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Special Elite', cursive;
-    transition: background-color 0.2s;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
 }
 
-.modalDialog menu button[value="cancel"] {
-    background: var(--color-red-muted);
-}
-
-.modalDialog menu button:hover {
-    background: var(--color-red-accent);
-}
-
-/* === Games List === */
-.games-lis-container {
-    margin-top: 1.5rem;
-    max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-#no-games {
-    text-align: center;
-    margin: 2rem 0;
+.player-meta {
+    font-size: 0.9rem;
     color: var(--color-cream-muted);
-    font-style: italic;
 }
 
-
-
-/* === Games Table (borderless) === */
-.games-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1.5rem;
+.player-meta span {
+    display: block;
 }
 
-.games-table thead {
-    font-family: 'Special Elite', cursive;
-    font-size: 1.1rem;
+.player-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
-.games-table th,
-.games-table td {
-    padding: 0.75rem 1rem;
-    border: none;
-    /* sin líneas de tabla */
+.player-actions button {
+    flex: 1;
+    min-width: 120px;
+    border-radius: 6px;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--color-cream-muted);
+    background: transparent;
     color: var(--color-cream);
-
-
-}
-
-.games-table td {
-    transition: background-color 0.2s;
-    font-size: .8rem;
-
-}
-
-
-
-.games-table tbody tr:hover {
-    background: var(--color-red-muted);
-    border-radius: 10px;
-}
-
-.invite-game-btn {
-    background: var(--color-red-muted);
-    color: var(--color-cream);
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
     cursor: pointer;
-    font-family: 'Special Elite', cursive;
-    transition: background-color 0.2s;
 }
 
-.delete-game-btn {
+.player-actions button.primary {
     background: var(--color-red);
-    color: var(--color-cream);
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Special Elite', cursive;
-    transition: background-color 0.2s;
+    border-color: var(--color-red);
+}
+
+.player-actions button.danger {
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+@media (max-width: 600px) {
+    .player-actions button {
+        flex: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .single-game-territory {
+        text-align: left;
+    }
+
+    .single-game-body {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

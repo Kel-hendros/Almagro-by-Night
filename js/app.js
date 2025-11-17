@@ -1,430 +1,452 @@
 // js/app.js
 
-/**
- * Fetch and display the list of games in the #games-list element.
- */
-async function loadGames() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const currentUserId = session?.user?.id;
-  console.log("Usuario logueado:", currentUserId);
+const SINGLE_GAME_SELECT = `
+  id,
+  name,
+  created_at,
+  start_date,
+  creator_id,
+  territory_id,
+  territory:territories(name, maptiler_dataset_url),
+  players:players!games_creator_id_fkey(name)
+`;
 
-  const { data: playerData, error: playerError } = await supabase
+async function querySingleGame() {
+  const { data, error } = await supabase
+    .from("games")
+    .select(SINGLE_GAME_SELECT)
+    .order("created_at", { ascending: true })
+    .limit(1);
+  if (error) {
+    console.error("Error loading single game:", error);
+    return null;
+  }
+  const record = data?.[0] || null;
+  if (!record) return null;
+  try {
+    const { data: nightsData } = await supabase
+      .from("nights")
+      .select("night_date")
+      .eq("game_id", record.id);
+    record.nights = nightsData || [];
+  } catch (err) {
+    record.nights = [];
+  }
+  return record;
+}
+
+window.SingleGameStore = {
+  _record: null,
+  async fetch() {
+    if (this._record) return this._record;
+    const record = await querySingleGame();
+    if (record) this._record = record;
+    return record;
+  },
+  invalidate() {
+    this._record = null;
+  },
+  async getId() {
+    const game = await this.fetch();
+    return game?.id || null;
+  },
+};
+
+async function fetchCurrentPlayerId(userId) {
+  if (!userId) return null;
+  const { data, error } = await supabase
     .from("players")
     .select("id")
-    .eq("user_id", currentUserId)
-    .single();
-  console.log("Player ID correspondiente:", playerData?.id);
-  if (playerError || !playerData) {
-    console.error("Error fetching player info:", playerError);
-    return;
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error && error.code !== "PGRST116") {
+    console.error("Error fetching player record:", error);
+    return null;
   }
-  const currentPlayerId = playerData.id;
+  return data?.id || null;
+}
 
-  const listEl = document.getElementById("games-list");
-  const noGames = document.getElementById("no-games");
-  if (!listEl || !noGames) return; // not on the games view
-
-  // Obtener todos los IDs de partidas donde participa este jugador
-  const { data: participations, error: partsErr } = await supabase
+async function fetchParticipation(gameId, playerId) {
+  if (!gameId || !playerId) return null;
+  const { data, error } = await supabase
     .from("game_participants")
-    .select("game_id")
-    .eq("player_id", currentPlayerId);
-
-  console.log("Participaciones encontradas:", participations);
-
-  if (partsErr) {
-    console.error("Error fetching game participations:", partsErr);
-    return;
-  }
-
-  const joinedGameIds = participations.map((p) => p.game_id);
-
-  const { data: games, error } = await supabase
-    .from("games")
-    .select(
-      `
-      id,
-      name,
-      created_at,
-      creator_id,
-      players!games_creator_id_fkey(name),
-      nights(turn_number, night_date),
-      game_participants(player_id)
-    `
-    )
-    .in("id", joinedGameIds)
-    .order("start_date", { ascending: false });
-
-  console.log("Juegos encontrados:", games);
-
+    .select("player_id, is_admin")
+    .eq("game_id", gameId)
+    .eq("player_id", playerId)
+    .maybeSingle();
   if (error) {
-    console.error("Error loading games:", error);
+    console.error("Error checking participation:", error);
+    return null;
+  }
+  return data;
+}
+
+function formatGameMeta(game) {
+  const nights = [...(game.nights || [])].sort(
+    (a, b) => new Date(b.night_date) - new Date(a.night_date)
+  );
+  const latest = nights[0];
+  if (latest) {
+    return `Última noche: ${new Date(
+      latest.night_date
+    ).toLocaleDateString()}`;
+  }
+  return `Disponible desde ${new Date(game.start_date).toLocaleDateString()}`;
+}
+
+function updateStatus(message) {
+  const statusEl = document.getElementById("single-game-status");
+  if (statusEl) statusEl.textContent = message;
+}
+
+function configureCopyButton(gameId, visible) {
+  const copyBtn = document.getElementById("copy-game-id-btn");
+  if (!copyBtn) return;
+  copyBtn.classList.toggle("hidden", !visible);
+  if (!visible) {
+    copyBtn.onclick = null;
+    return;
+  }
+  if (copyBtn._init) return;
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(gameId);
+      alert("ID copiado al portapapeles.");
+    } catch (err) {
+      alert(`No se pudo copiar el ID.\n${err?.message || err}`);
+    }
+  });
+  copyBtn._init = true;
+}
+
+function configureEnterButton(enabled, onClick, label) {
+  const enterBtn = document.getElementById("enter-game-btn");
+  if (!enterBtn) return;
+  enterBtn.disabled = !enabled;
+  enterBtn.textContent = label;
+  enterBtn.onclick = onClick;
+}
+
+function formatDateLabel(value, includeTime = false) {
+  if (!value) return "—";
+  try {
+    const date = new Date(value);
+    return includeTime ? date.toLocaleString() : date.toLocaleDateString();
+  } catch (err) {
+    return "—";
+  }
+}
+
+function createPlayerCard(player, { badge = null, actions = [] } = {}) {
+  const card = document.createElement("div");
+  card.className = "player-card";
+
+  const header = document.createElement("div");
+  header.className = "player-card-header";
+  const title = document.createElement("h4");
+  title.textContent = player.name || "Sin nombre";
+  header.appendChild(title);
+  if (badge) {
+    const badgeEl = document.createElement("span");
+    badgeEl.className = "player-badge";
+    badgeEl.textContent = badge;
+    header.appendChild(badgeEl);
+  }
+  card.appendChild(header);
+
+  const meta = document.createElement("div");
+  meta.className = "player-meta";
+  const emailSpan = document.createElement("span");
+  emailSpan.textContent = player.email || "Sin email";
+  const characterSpan = document.createElement("span");
+  const characterName = player.character_name || "—";
+  characterSpan.textContent = `Personaje: ${characterName}`;
+  const createdSpan = document.createElement("span");
+  createdSpan.textContent = `Registración: ${formatDateLabel(
+    player.joined_at
+  )}`;
+  const lastLoginSpan = document.createElement("span");
+  lastLoginSpan.textContent = `Último login: ${formatDateLabel(
+    player.last_login_at,
+    true
+  )}`;
+  meta.appendChild(emailSpan);
+  meta.appendChild(characterSpan);
+  meta.appendChild(createdSpan);
+  meta.appendChild(lastLoginSpan);
+  card.appendChild(meta);
+
+  if (actions.length) {
+    const actionsEl = document.createElement("div");
+    actionsEl.className = "player-actions";
+    actions.forEach(({ label, className = "", handler }) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = label;
+      if (className) btn.classList.add(className);
+      btn.addEventListener("click", handler);
+      actionsEl.appendChild(btn);
+    });
+    card.appendChild(actionsEl);
+  }
+
+  return card;
+}
+
+async function fetchAllPlayers() {
+  const { data, error } = await supabase
+    .from("players")
+    .select(
+      "id, name, email, character_name, joined_at, last_login_at, is_admin"
+    )
+    .order("joined_at", { ascending: true });
+  if (error) {
+    console.error("Error loading players:", error);
+    return [];
+  }
+  return data || [];
+}
+
+async function fetchGameParticipants(gameId) {
+  const { data, error } = await supabase
+    .from("game_participants")
+    .select("player_id, is_admin")
+    .eq("game_id", gameId);
+  if (error) {
+    console.error("Error loading game participants:", error);
+    return [];
+  }
+  return data || [];
+}
+
+function setPlayersListMessage(container, message) {
+  if (!container) return;
+  container.innerHTML = `<p class="muted">${message}</p>`;
+}
+
+async function renderPlayersManagement(gameId, userIsDirector, creatorPlayerId) {
+  const manager = document.getElementById("players-management");
+  if (!manager) return;
+  if (!userIsDirector) {
+    manager.classList.add("hidden");
     return;
   }
 
-  listEl.innerHTML = "";
-  if (!games.length) {
-    noGames.style.display = "";
-    return;
-  }
-  noGames.style.display = "none";
+  const participantsContainer = document.getElementById("participants-list");
+  const pendingContainer = document.getElementById("pending-list");
+  manager.classList.remove("hidden");
+  setPlayersListMessage(participantsContainer, "Cargando participantes...");
+  setPlayersListMessage(pendingContainer, "Cargando jugadores...");
 
-  games.forEach((g) => {
-    console.log("Procesando juego:", g.id, g.name);
-    const nights = g.nights || [];
-    const latest = nights.sort((a, b) => b.turn_number - a.turn_number)[0];
-    const turnNum = latest ? latest.turn_number : "—";
-    const turnDate = latest
-      ? new Date(latest.night_date).toLocaleDateString()
-      : "—";
-
-    const isCreator = g.creator_id === currentPlayerId;
-    const isParticipant = g.game_participants?.some(
-      (p) => p.player_id === currentPlayerId
+  try {
+    const [players, participants] = await Promise.all([
+      fetchAllPlayers(),
+      fetchGameParticipants(gameId),
+    ]);
+    const participantMap = new Map(
+      participants.map((p) => [p.player_id, p || {}])
     );
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${g.name}</td>
-      <td>${g.players?.name || "—"}</td>
-      <td>${new Date(g.created_at).toLocaleDateString()}</td>
-      <td>${turnNum}</td>
-      <td>${turnDate}</td>
-      ${
-        isCreator
-          ? `<td>
-               <button class="invite-game-btn" data-id="${g.id}" title="Invitar">🔗</button>
-               <button class="delete-game-btn" data-id="${g.id}" title="Eliminar">🗑️</button>
-             </td>`
-          : isParticipant
-          ? `<td></td>`
-          : null
+    participantsContainer.innerHTML = "";
+    pendingContainer.innerHTML = "";
+    const participantCards = [];
+    const pendingCards = [];
+
+    players.forEach((player) => {
+      const stored = participantMap.get(player.id);
+      const isCreator = player.id === creatorPlayerId;
+      const isParticipant = Boolean(stored) || isCreator;
+      if (isParticipant) {
+        const badge = isCreator
+          ? "Director"
+          : stored?.is_admin
+          ? "Admin"
+          : null;
+        const actions = [];
+        if (!isCreator) {
+          actions.push({
+            label: "Remover",
+            className: "danger",
+            handler: () => removePlayerFromGame(gameId, player.id),
+          });
+        }
+        participantCards.push(
+          createPlayerCard(player, {
+            badge,
+            actions,
+          })
+        );
+      } else {
+        const actions = [
+          {
+            label: "Agregar a la partida",
+            className: "primary",
+            handler: () => addPlayerToGame(gameId, player.id),
+          },
+          {
+            label: "Borrar usuario",
+            className: "danger",
+            handler: () => deletePlayerRecord(player.id),
+          },
+        ];
+        pendingCards.push(createPlayerCard(player, { actions }));
       }
-    `;
-    tr.addEventListener("click", () => {
-      localStorage.setItem("currentGameId", g.id);
-      window.location.hash = "game";
     });
-    // Delete button handler
-    if (isCreator) {
-      const btn = tr.querySelector(".delete-game-btn");
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation(); // prevent row click navigation
-        deleteGame(btn.dataset.id);
-      });
+
+    if (participantCards.length) {
+      participantCards.forEach((card) => participantsContainer.appendChild(card));
+    } else {
+      setPlayersListMessage(
+        participantsContainer,
+        "Aún no hay jugadores en la partida."
+      );
     }
-    // Invite button handler
-    if (isCreator) {
-      const inviteBtn = tr.querySelector(".invite-game-btn");
-      inviteBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const gameId = inviteBtn.dataset.id;
-        navigator.clipboard.writeText(gameId).then(() => {
-          alert("ID de la partida copiado al portapapeles:\n" + gameId);
-        });
-      });
+
+    if (pendingCards.length) {
+      pendingCards.forEach((card) => pendingContainer.appendChild(card));
+    } else {
+      setPlayersListMessage(
+        pendingContainer,
+        "No hay jugadores pendientes de invitar."
+      );
     }
-    listEl.appendChild(tr);
-  });
-}
-
-/**
- * Fetch and populate the territory dropdown when creating a new game.
- */
-async function loadTerritories() {
-  const selectEl = document.getElementById("territory-select");
-  if (!selectEl) return; // modal not in DOM
-
-  const { data: territories, error } = await supabase
-    .from("territories")
-    .select("id, name")
-    .order("name", { ascending: true });
-  if (error) {
-    console.error("Error loading territories:", error);
-    return;
-  }
-
-  selectEl.innerHTML = "";
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Selecciona un territorio";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  selectEl.appendChild(placeholder);
-
-  territories.forEach((t) => {
-    const opt = document.createElement("option");
-    opt.value = t.id;
-    opt.textContent = t.name;
-    selectEl.appendChild(opt);
-  });
-}
-
-/**
- * Fetch and populate the faction dropdown when creating a new game.
- */
-async function loadFactions() {
-  const selectEl = document.getElementById("faction-select");
-  if (!selectEl) return; // modal not in DOM
-
-  const { data: factions, error } = await supabase
-    .from("factions")
-    .select("id, name")
-    .order("name", { ascending: true });
-  if (error) {
-    console.error("Error loading factions:", error);
-    return;
-  }
-
-  selectEl.innerHTML = "";
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Selecciona una facción";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  selectEl.appendChild(placeholder);
-
-  factions.forEach((f) => {
-    const opt = document.createElement("option");
-    opt.value = f.id;
-    opt.textContent = f.name;
-    selectEl.appendChild(opt);
-  });
-}
-
-/**
- * Load all dropdown options for creating a game.
- */
-async function loadOptions() {
-  await Promise.all([loadTerritories(), loadFactions()]);
-}
-
-/**
- * Read form inputs and insert a new game into Supabase.
- * Then reload the game list.
- */
-async function createGame() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) {
-    alert("Debes estar logueado para crear la partida.");
-    return;
-  }
-
-  const userId = session.user.id;
-  const { data: player, error: playerErr } = await supabase
-    .from("players")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
-  if (playerErr || !player) {
-    alert("No se encontró tu registro de jugador.");
-    return;
-  }
-
-  // Read form fields
-  const name = document.getElementById("game-name")?.value.trim();
-  const date = document.getElementById("game-date")?.value;
-  const factionId = document.getElementById("faction-select")?.value;
-  const territoryId = document.getElementById("territory-select")?.value;
-  if (!name || !date || !territoryId || !factionId) {
-    alert("Completa todos los campos antes de crear la partida.");
-    return;
-  }
-
-  const { data: newGame, error: gameErr } = await supabase
-    .from("games")
-    .insert([
-      {
-        name,
-        start_date: date,
-        creator_id: player.id,
-        territory_id: territoryId,
-      },
-    ])
-    .select();
-  if (gameErr) {
-    alert("Error al crear partida: " + gameErr.message);
-    return;
-  }
-  // Add the creator as a participant in this game
-  const { error: partErr } = await supabase.from("game_participants").insert({
-    game_id: newGame[0].id,
-    player_id: player.id,
-    faction_id: factionId,
-    is_admin: true,
-  });
-  if (partErr) {
-    console.error("Error adding creator to participants:", partErr);
-  }
-  // 3) Register all available factions for this game (behind the scenes)
-  try {
-    const { data: allFactions, error: allErr } = await supabase
-      .from("factions")
-      .select("id");
-    if (allErr) throw allErr;
-    const gameFactions = allFactions.map((f) => ({
-      game_id: newGame[0].id,
-      faction_id: f.id,
-    }));
-    const { error: gfErr } = await supabase
-      .from("game_factions")
-      .insert(gameFactions);
-    if (gfErr) console.error("Error registering game_factions:", gfErr);
   } catch (err) {
-    console.error("Error loading factions for game_factions:", err);
-  }
-
-  loadGames();
-  alert("Partida creada: " + newGame[0].name);
-}
-
-/**
- * Delete a game and all its related data via the delete_game RPC.
- */
-async function deleteGame(gameId) {
-  if (!confirm("¿Eliminar esta partida y todos sus datos?")) return;
-  const { error } = await supabase.rpc("delete_game", { p_game_id: gameId });
-  if (error) {
-    console.error("Error deleting game:", error);
-    alert("No se pudo eliminar la partida: " + error.message);
-  } else {
-    loadGames();
+    console.error("Error rendering players management:", err);
+    setPlayersListMessage(
+      participantsContainer,
+      "No se pudieron cargar los participantes."
+    );
+    setPlayersListMessage(
+      pendingContainer,
+      "No se pudieron cargar los jugadores."
+    );
   }
 }
 
-// Nueva función para manejar la lógica de "Unirse a una partida"
-async function setupJoinGame() {
-  console.log("Setting up join game...");
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) {
-    alert("Debes estar logueado para unirte a una partida.");
-    return;
-  }
+const DEFAULT_FACTION_ID = "5f76c894-1d09-4669-992d-62d0233f6a77";
 
-  const gameId = prompt("Pega el ID de la partida:");
-  if (!gameId) return;
-
-  const userId = session.user.id;
-  const { data: player, error: playerErr } = await supabase
-    .from("players")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
-  if (playerErr || !player) {
-    alert("No se encontró tu registro de jugador.");
-    return;
-  }
-
-  const { data: game, error: gameErr } = await supabase
-    .from("games")
-    .select("id")
-    .eq("id", gameId)
-    .single();
-  if (gameErr || !game) {
-    alert("No se encontró la partida.");
-    return;
-  }
-
-  const { data: factions, error: fErr } = await supabase
-    .from("game_factions")
-    .select("faction_id, factions(name)")
-    .eq("game_id", gameId);
-  if (fErr || !factions.length) {
-    alert("No se encontraron facciones para esta partida.");
-    return;
-  }
-
-  const { data: joinableFactions, error: joinErr } = await supabase
-    .from("factions")
-    .select("id, name")
-    .in(
-      "id",
-      factions.map((f) => f.faction_id)
-    )
-    .eq("allow_non_admin_control", true);
-  if (joinErr || !joinableFactions.length) {
-    alert("No hay facciones disponibles para unirse.");
-    return;
-  }
-
-  const names = joinableFactions.map((f) => f.name).join(", ");
-  const factionName = prompt(
-    `Facciones disponibles: ${names}\nEscribe el nombre exacta de la facción a la que te quieres unir:`
-  );
-
-  const selected = joinableFactions.find(
-    (f) => f.name.toLowerCase() === factionName?.toLowerCase()
-  );
-  if (!selected) {
-    alert("Facción inválida.");
-    return;
-  }
-
-  // Validar si ya está unido antes de insertar
-  const { data: existing, error: existErr } = await supabase
-    .from("game_participants")
-    .select("id")
-    .eq("game_id", gameId)
-    .eq("player_id", player.id)
-    .single();
-
-  if (existing) {
-    alert("Ya estás unido a esta partida.");
-    return;
-  }
-
-  const { error: insertErr } = await supabase.from("game_participants").insert({
+async function addPlayerToGame(gameId, playerId) {
+  const factionId = DEFAULT_FACTION_ID;
+  const { error } = await supabase.from("game_participants").insert({
     game_id: gameId,
-    player_id: player.id,
-    faction_id: selected.id,
+    player_id: playerId,
+    faction_id: factionId,
     is_admin: false,
   });
-  if (insertErr) {
-    alert("Error al unirse a la partida: " + insertErr.message);
+  if (error) {
+    alert("No se pudo agregar al jugador: " + error.message);
+    return;
+  }
+  await loadGames();
+}
+
+async function removePlayerFromGame(gameId, playerId) {
+  if (
+    !confirm(
+      "¿Seguro que deseas remover a este jugador de la partida? Podrás volverlo a agregar luego."
+    )
+  )
+    return;
+  const { error } = await supabase
+    .from("game_participants")
+    .delete()
+    .eq("game_id", gameId)
+    .eq("player_id", playerId);
+  if (error) {
+    alert("No se pudo remover al jugador: " + error.message);
+    return;
+  }
+  await loadGames();
+}
+
+async function deletePlayerRecord(playerId) {
+  if (
+    !confirm(
+      "Esto eliminará al jugador y sus datos básicos. ¿Deseas continuar?"
+    )
+  )
+    return;
+  const { error } = await supabase.from("players").delete().eq("id", playerId);
+  if (error) {
+    alert("No se pudo borrar el usuario: " + error.message);
+    return;
+  }
+  await loadGames();
+}
+
+async function loadGames() {
+  const card = document.getElementById("single-game-card");
+  if (!card) return;
+  updateStatus("Cargando información...");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const userId = session?.user?.id || null;
+  const playerId = await fetchCurrentPlayerId(userId);
+
+  const game = await window.SingleGameStore.fetch();
+  if (!game) {
+    updateStatus(
+      "No encontramos la partida principal. Asegurate de que exista al menos una fila en `games`."
+    );
+    configureEnterButton(
+      false,
+      () => {},
+      session ? "Sin acceso" : "Iniciá sesión"
+    );
     return;
   }
 
-  alert("¡Te has unido a la partida!");
-  loadGames();
-}
+  document.getElementById("single-game-name").textContent = game.name;
+  document.getElementById("single-game-meta").textContent =
+    formatGameMeta(game);
+  document.getElementById("single-game-territory").textContent =
+    game.territory?.name || "—";
+  document.getElementById("single-game-director").textContent = `Director: ${
+    game.players?.name || "—"
+  }`;
+  document.getElementById("single-game-id-value").textContent = game.id;
 
-// Expose functions for router and inline handlers
+  localStorage.setItem("currentGameId", game.id);
 
-window.loadGames = loadGames;
-window.loadTerritories = loadTerritories;
-window.createGame = createGame;
-window.loadFactions = loadFactions;
-window.loadOptions = loadOptions;
-window.deleteGame = deleteGame;
+  const participation = await fetchParticipation(game.id, playerId);
+  const isCreator = game.creator_id === playerId;
+  const userIsDirector = isCreator || Boolean(participation?.is_admin);
+  const participates = Boolean(participation) || isCreator;
+  const canEnter = userIsDirector || participates;
+  configureCopyButton(game.id, userIsDirector);
 
-// Setup button listeners when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("App DOMContentLoaded");
-
-  // Setup create game button immediately if present
-  const createBtn = document.getElementById("btn-create-game");
-  if (createBtn) {
-    createBtn.addEventListener("click", () => {
-      loadTerritories();
-      document.getElementById("createGameDialog").showModal();
-    });
+  if (!session) {
+    configureEnterButton(
+      true,
+      () => {
+        window.location.hash = "login";
+      },
+      "Iniciá sesión"
+    );
+    updateStatus("Ingresá con tu cuenta para acceder a la crónica.");
+    return;
   }
 
-  // Use a MutationObserver to detect when the join button appears
-  const observer = new MutationObserver(() => {
-    const joinBtn = document.getElementById("btn-join-game");
-    if (joinBtn) {
-      console.log("Setting up join button listener");
-      joinBtn.addEventListener("click", setupJoinGame);
-      observer.disconnect(); // Ya lo encontró, deja de observar
-    }
-  });
+  await renderPlayersManagement(game.id, userIsDirector, game.creator_id);
 
-  observer.observe(document.body, { childList: true, subtree: true });
-});
+  if (canEnter) {
+    configureEnterButton(
+      true,
+      () => {
+        localStorage.setItem("currentGameId", game.id);
+        window.location.hash = "game";
+      },
+      "Entrar a la partida"
+    );
+    updateStatus("Listo para jugar.");
+  } else {
+    configureEnterButton(false, () => {}, "Sin acceso");
+    updateStatus(
+      "Tu usuario todavía no forma parte de esta crónica. Pedile acceso al Director."
+    );
+  }
+}
+
+window.loadGames = loadGames;

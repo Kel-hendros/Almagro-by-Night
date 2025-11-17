@@ -1,58 +1,54 @@
-<dialog id="createGameDialog" class="modalDialog createGameDialog">
-    <form method="dialog">
-        <h2>Crear nueva partida</h2>
-        <div class="form-group">
-            <label>Nombre de la partida:</label>
-            <input id="game-name" type="text" required />
-        </div>
-        <div class="form-group">
-            <label>Fecha del primer Turno:</label>
-            <input id="game-date" type="date" required />
-        </div>
-        <div class="form-group">
-            <label>Territorio:</label>
-            <select id="territory-select"></select>
-        </div>
-        <div class="form-group">
-            <label>Facción:</label>
-            <select id="faction-select"></select>
-        </div>
-        <menu>
-            <button value="cancel" onclick="document.getElementById('createGameDialog').close()">Cancelar</button>
-            <button id="confirm-create" value="default" onclick="createGame()">Crear</button>
-        </menu>
-    </form>
-</dialog>
+<div class="panel single-game-panel">
+    <h1>Crónica en curso</h1>
+    <p class="single-game-copy">
+        La Banda de Loquillo y la Cuadrilla de la Forza disputan el control del barrio de Almagro.
+    </p>
 
+    <div id="single-game-card" class="single-game-card">
+        <div class="single-game-header">
+            <div>
+                <h2 id="single-game-name">—</h2>
+                <p id="single-game-meta" class="single-game-meta">Cargando partida...</p>
+            </div>
+            <div class="single-game-territory">
+                <span>Territorio</span>
+                <strong id="single-game-territory">—</strong>
+            </div>
+        </div>
 
-<div class="panel">
-    <h1>Partidas</h1>
-    <div class="gameButtons-container">
-        <button id="btn-create-game" class="gameButton"
-            onclick="loadTerritories(); document.getElementById('createGameDialog').showModal();">
-            <i data-lucide="plus-circle"></i>
-            Crear nueva partida
-        </button>
-        <button id="btn-join-game" class="gameButton">
-            <i data-lucide="user-plus"> </i>
-            Unirse a una partida</button>
+        <div class="single-game-body">
+            <p id="single-game-director">Director: —</p>
+            <p class="single-game-id">
+                ID: <code id="single-game-id-value">—</code>
+            </p>
+        </div>
+
+        <div class="single-game-actions">
+            <button id="enter-game-btn" class="gameButton primary">Entrar a la partida</button>
+            <button id="copy-game-id-btn" class="gameButton secondary hidden">Copiar ID</button>
+        </div>
+
+        <p id="single-game-status" class="single-game-status muted"></p>
     </div>
-    <div class="games-lis-container">
-        <p id="no-games">No hay partidas existentes.</p>
-        <table class="games-table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Creador</th>
-                    <th>Creada</th>
-                    <th>Turno</th>
-                    <th>Fecha Turno</th>
-                </tr>
-            </thead>
-            <tbody id="games-list">
-                <!-- JS inyecta <tr> aquí -->
-            </tbody>
-        </table>
-    </div>
+</div>
 
+<div id="players-management" class="players-management hidden">
+    <div class="players-management-header">
+        <h2>Jugadores registrados</h2>
+        <p class="muted">Gestioná quién participa de la crónica.</p>
+    </div>
+    <div class="players-columns">
+        <section>
+            <header>
+                <h3>Participantes</h3>
+            </header>
+            <div id="participants-list" class="players-grid"></div>
+        </section>
+        <section>
+            <header>
+                <h3>Registrados pendientes</h3>
+            </header>
+            <div id="pending-list" class="players-grid"></div>
+        </section>
+    </div>
 </div>

@@ -14,6 +14,17 @@ window.ActionsUI = (function () {
     );
   }
   // === Utils ===
+  function formatNightDate(dateStr) {
+    if (!dateStr) return "—";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }
+
   async function getCurrentUserAndPlayer() {
     const {
       data: { user },
@@ -30,20 +41,13 @@ window.ActionsUI = (function () {
   // CSS helper: .influence-input for styling numeric input of influence
 
   // Trae acciones disponibles para una zona/locación (con exclusividad opcional)
-  async function fetchAvailableActions(zoneId, locationId) {
-    const ors = [
-      "and(exclusive_zone_id.is.null,exclusive_location_id.is.null)",
-      zoneId ? `exclusive_zone_id.eq.${zoneId}` : null,
-      locationId ? `exclusive_location_id.eq.${locationId}` : null,
-    ]
-      .filter(Boolean)
-      .join(",");
-    const { data, error } = await supabase
-      .from("actions")
-      .select("*")
-      .or(ors)
-      .order("attribute_type", { ascending: true })
-      .order("name", { ascending: true });
+  async function fetchAvailableActions(playerId, nightDate, zoneId) {
+    if (!playerId || !nightDate || !zoneId) return [];
+    const { data, error } = await supabase.rpc("available_actions_full", {
+      p_player_id: playerId,
+      p_night_date: nightDate,
+      p_zone_id: zoneId,
+    });
     if (error) {
       console.error("fetchAvailableActions error:", error);
       return [];
@@ -138,7 +142,9 @@ window.ActionsUI = (function () {
     const header = document.createElement("div");
     header.className = "panel-header";
     const h2 = document.createElement("h2");
-    h2.innerHTML = `Acciones en <span class="actions-target-name">${name}</span>`;
+    h2.innerHTML = `Realiza una acción en <span class="actions-target-name">${name}</span> el ${formatNightDate(
+      window.currentNightDate
+    )}`;
     const close = document.createElement("button");
     close.className = "panel-close";
     close.textContent = "×";
@@ -161,7 +167,11 @@ window.ActionsUI = (function () {
     dlg.appendChild(body);
 
     // Load actions
-    const actions = await fetchAvailableActions(zoneId, locationId);
+    const actions = await fetchAvailableActions(
+      playerId,
+      window.currentNightDate,
+      zoneId || locationId
+    );
     if (!actions.length) {
       right.innerHTML = `<p class="muted">No hay acciones disponibles.</p>`;
     }
@@ -184,6 +194,9 @@ window.ActionsUI = (function () {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "action-card";
+        if (action.is_available === false) {
+          card.classList.add("action-card-unavailable");
+        }
         const apCost = Number(action.ap_cost) || 1;
         const durationLabel = apCost >= 2 ? "Toma 1 noche" : "Toma media noche";
         const durationDisplay = apCost >= 2 ? "1" : "1/2";
@@ -253,6 +266,15 @@ window.ActionsUI = (function () {
           }
         </p>
         ${
+          action.is_available === false
+            ? `<p class="action-warning">${
+                action.reason === "COOLDOWN"
+                  ? "Esta acción está bloqueada por cooldown."
+                  : "Esta acción no se puede realizar esta noche."
+              }</p>`
+            : ""
+        }
+        ${
           action.image
             ? (() => {
                 const url = action.image;
@@ -275,15 +297,6 @@ window.ActionsUI = (function () {
             : ""
         }
         ${
-          needsAmount
-            ? `<div class="form-row">
-                <label>Cantidad
-                  <input type="number" class="influence-input" min="1" step="1" placeholder="1">
-                </label>
-              </div>`
-            : ""
-        }
-        ${
           missingZone || missingLocation || targetError
             ? `<p class="warning">${
                 targetError ||
@@ -297,8 +310,19 @@ window.ActionsUI = (function () {
               }</p>`
             : ""
         }
-        <div class="actions">
-          <button type="button" class="btn-apply" disabled>Aplicar</button>
+        <div class="action-controls">
+          ${
+            needsAmount
+              ? `<div class="form-row inline">
+                  <label>Influencia ganada:
+                    <input type="number" class="influence-input" min="1" step="1" placeholder="1">
+                  </label>
+                </div>`
+              : ""
+          }
+          <div class="actions">
+            <button type="button" class="btn-apply" disabled>Aplicar</button>
+          </div>
         </div>
       </div>
     `;
@@ -315,7 +339,8 @@ window.ActionsUI = (function () {
         !missingZone &&
         !missingLocation &&
         (hasZoneTarget || hasLocationTarget);
-      btn.disabled = !(inflOk && playerId && dateOk && targetOk);
+      const availableOk = action.is_available !== false;
+      btn.disabled = !(inflOk && playerId && dateOk && targetOk && availableOk);
       btn.title = "";
     }
     if (input) input.addEventListener("input", validate);
