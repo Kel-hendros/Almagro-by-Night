@@ -4,26 +4,29 @@
     <header id="game-header">
         <h1 id="game-name">Cargando partida…</h1>
         <div id="game-progress" class="game-progress-bar"></div>
-        <p id="turn-info">Turno: — | Fecha: —</p>
-
     </header>
-    <div class="tabletop-container">
-        <main id="map">
-        </main>
+    <div class="game-body">
+        <section class="game-left">
+            <div class="map-wrapper">
+                <main id="map"></main>
+            </div>
+            <div class="details">
+                <span>Selecciona una zona o una locación en el mapa</span>
+            </div>
+        </section>
+        <aside class="game-right">
+            <div class="calendar-panel">
+                <div id="night-calendar" class="calendar-widget"></div>
+            </div>
+            <div class="actions-log-panel">
+                <div class="actions-log-header">
+                    <h3>Historial de Acciones </h3>
+                    <p id="actions-log-status" class="muted">Seleccioná una fecha.</p>
+                </div>
+                <div id="actions-log-list" class="actions-log-list">
+                    <!-- Logs -->
+                </div>
+            </div>
+        </aside>
     </div>
-    <div class="details">
-        <span>Selecciona una zona o una locación en el mapa</span>
-
-    </div>
-    <footer id="game-footer">
-        <div class="players-list">
-            <!-- Aquí se mostrarán los círculos de jugadores y sus puntos -->
-        </div>
-    </footer>
 </div>
-
-<dialog id="panel-apply-influence" class="panel">
-
-
-
-</dialog>

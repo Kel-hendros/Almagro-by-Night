@@ -31,120 +31,56 @@ function drawProgressBar({
   const pct2 = Math.round((pts2 / total) * 100);
   const pctN = Math.round((neutralPts / total) * 100);
 
-  let html = '<div class="full-progress-bar">';
-
-  // --- fila principal: labels opcionales + barra ---
-  html += '<div class="breakdown-container">';
-
+  let html = '<div class="progress-widget">';
   if (drawNames) {
-    html += `<span class="breakdown-owner">${name1} (${pct1}%)</span>`;
+    html += `
+      <div class="progress-header">
+        <div class="progress-label">
+          <strong>${name1}</strong>
+          <span>${pct1}%</span>
+        </div>
+        <div class="progress-label neutral">
+          <strong>Neutral</strong>
+        </div>
+        <div class="progress-label right">
+          <strong>${name2}</strong>
+          <span>${pct2}%</span>
+        </div>
+      </div>
+    `;
   }
-
-  html += '<div class="breakdown-bar">';
-  html += `<div class="breakdown-segment" style="flex:${pts1}; background:${color1};"></div>`;
-  html += `<div class="breakdown-segment" style="flex:${neutralPts}; background:${cssVar(
+  html += `
+    <div class="progress-track">
+      <div class="progress-segment" style="flex:${pts1}; background:${color1};"></div>
+      <div class="progress-segment" style="flex:${neutralPts}; background:${cssVar(
     "--zone-neutral"
-  )};"></div>`;
-  html += `<div class="breakdown-segment" style="flex:${pts2}; background:${color2};"></div>`;
-  html += "</div>"; // .breakdown-bar
+  )};"></div>
+      <div class="progress-segment" style="flex:${pts2}; background:${color2};"></div>
+    </div>
+  `;
 
-  if (drawNames) {
-    html += `<span class="breakdown-rival">${name2} (${pct2}%)</span>`;
-  }
-
-  html += "</div>"; // .breakdown-container
-
-  // --- fila secundaria: puntos (solo si se pide) ---
   if (showPointsRow) {
-    html += '<div class="breakdown-points">';
-    html += `<label class="pts-left">${pts1}</label>`;
-    html += `<label class="pts-neutral">${neutralPts}</label>`;
-    html += `<label class="pts-right">${pts2}</label>`;
-    html += "</div>";
+    html += `
+      <div class="progress-values">
+        <div class="progress-value">
+          <span class="value-number">${pts1}</span>
+          <small>${name1}</small>
+        </div>
+        <div class="progress-value">
+          <span class="value-number">${neutralPts}</span>
+          <small>Neutral</small>
+        </div>
+        <div class="progress-value">
+          <span class="value-number">${pts2}</span>
+          <small>${name2}</small>
+        </div>
+      </div>
+    `;
   }
-
-  html += "</div>"; // .full-progress-bar
-
+  html += "</div>";
   return html;
 }
 
-/**
- * Fetches all participants of a game with their player names and faction colors.
- * Returns Array<{ player_id, name, faction_id, faction_color }>
- */
-async function loadGameParticipants(gameId) {
-  const { data, error } = await supabase
-    .from("game_participants")
-    .select(
-      `
-      player_id,
-      players!game_participants_player_id_fkey (
-        name
-      ),
-      faction_id,
-      factions!game_participants_faction_id_fkey (
-        faction_color
-      )
-    `
-    )
-    .eq("game_id", gameId);
-  console.log("loadGameParticipants result:", { data, error });
-  if (error) {
-    console.error("Error loading game participants:", error);
-    return [];
-  }
-  return data.map((row) => ({
-    player_id: row.player_id,
-    name: row.players.name,
-    faction_id: row.faction_id,
-    faction_color: row.factions.faction_color || "var(--color-cream)",
-  }));
-}
-
-/**
- * Renders the footer with each player's remaining action points.
- * Each player has 2 points per night; when <=0, shows a check mark.
- */
-async function renderPlayersStatus(gameId, nightId = null) {
-  console.log("renderPlayersStatus called with", { gameId, nightId });
-  // 1) Load participants
-  const participants = await loadGameParticipants(gameId);
-  console.log("Loaded participants:", participants);
-  // 2) Calculate used points per player
-  const usedMap = {};
-  if (nightId) {
-    const { data: logs, error: logErr } = await supabase
-      .from("actions_log")
-      .select("player_id, cost_units")
-      .eq("night_id", nightId);
-    if (logErr) {
-      console.error("Error loading action logs:", logErr);
-    } else {
-      logs.forEach(({ player_id, cost_units }) => {
-        usedMap[player_id] = (usedMap[player_id] || 0) + cost_units;
-      });
-    }
-  }
-  console.log("Computed usedMap:", usedMap);
-  // 3) Build HTML
-  const container = document.querySelector(".players-list");
-  if (!container) return;
-  console.log("Rendering players-list with remainings for each participant");
-  container.innerHTML = participants
-    .map((p) => {
-      const used = usedMap[p.player_id] || 0;
-      const remaining = Math.max(2 - used, 0);
-      const display = remaining > 0 ? remaining : "✓";
-      return `
-      <div class="player-item">
-        <div class="player-circle" style="background-color: ${p.faction_color}">
-          ${display}
-        </div>
-        <div class="player-name">${p.name}</div>
-      </div>`;
-    })
-    .join("");
-}
 // Helper to read CSS custom properties
 
 function cssVar(name) {
@@ -153,42 +89,316 @@ function cssVar(name) {
     .trim();
 }
 
-// === Estado y Realtime helpers ===
-window.GameState = window.GameState || {
-  actionsLogChannel: null,
-};
+function escapeAttr(val) {
+  return String(val ?? "").replace(/"/g, "&quot;");
+}
 
-function safeUnsubscribe(ch) {
+function normalizeDateInput(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().split("T")[0];
+}
+
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function safeParseJSON(value) {
+  if (!value) return null;
   try {
-    ch?.unsubscribe?.();
+    return JSON.parse(value);
   } catch (e) {
-    /* noop */
+    return null;
   }
 }
 
-function subscribeActionsLog(gameId, nightId) {
-  safeUnsubscribe(window.GameState.actionsLogChannel);
-  if (!nightId) return;
-  window.GameState.actionsLogChannel = supabase
-    .channel(`actions-log-updates-${nightId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "actions_log",
-        filter: `night_id=eq.${nightId}`,
-      },
-      async () => {
-        await renderPlayersStatus(gameId, nightId);
+async function loadActionLogForDate(dateValue, gameId) {
+  const statusEl = document.getElementById("actions-log-status");
+  const listEl = document.getElementById("actions-log-list");
+  if (!statusEl || !listEl) return;
+
+  const normalized = normalizeDateInput(dateValue);
+  if (window.NightCalendarState) {
+    if (normalized) {
+      window.NightCalendarState.selectedDate = normalized;
+      const selectedDateObj = toDate(normalized);
+      if (selectedDateObj) {
+        const selectedMonth = new Date(
+          selectedDateObj.getFullYear(),
+          selectedDateObj.getMonth(),
+          1
+        );
+        if (
+          !window.NightCalendarState.monthDate ||
+          window.NightCalendarState.monthDate.getTime() !==
+            selectedMonth.getTime()
+        ) {
+          window.NightCalendarState.monthDate = selectedMonth;
+        }
       }
-    )
-    .subscribe();
+    } else {
+      window.NightCalendarState.selectedDate = null;
+    }
+    renderNightCalendar();
+  }
+  if (!normalized) {
+    statusEl.textContent = "Seleccioná una fecha.";
+    listEl.innerHTML = "";
+    window.currentNightDate = null;
+    return;
+  }
+
+  statusEl.textContent = "Cargando acciones...";
+  listEl.innerHTML = "";
+  window.currentNightDate = normalized;
+
+  const { data: logs, error: logErr } = await supabase
+    .from("night_actions_view")
+    .select("*")
+    .eq("night_date", normalized)
+    .order("real_timestamp", { ascending: true });
+
+  if (logErr) {
+    console.error("Error loading action logs:", logErr);
+    statusEl.textContent = "No se pudieron cargar las acciones.";
+    return;
+  }
+
+  if (!logs || !logs.length) {
+    statusEl.textContent = "No hay acciones registradas.";
+    listEl.innerHTML = "";
+    updateActivityState(normalized, false);
+    return;
+  }
+
+  updateActivityState(normalized, true);
+  listEl.innerHTML = logs
+    .map((entry) => {
+      const factionColor = entry.faction_color || cssVar("--zone-neutral");
+      const time = entry.real_timestamp
+        ? new Date(entry.real_timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "--:--";
+      const playerLabel =
+        entry.character_name || entry.player_name || "Jugador desconocido";
+      return `
+        <div class="log-card" style="border-color:${factionColor}1A; background-color:${factionColor}0D;">
+          <div class="log-card-header">
+          <h3>${entry.action_name || "Acción"} en ${
+        entry.zone_name || "Zona desconocida"
+      }</h3>
+          </div>
+          <div class="log-player-container">
+          <p class="log-player">${playerLabel}</p>
+          <span class="log-time">${time}</span>
+          </div>
+          <p class="log-result">${entry.result_text || "Sin resultado"}</p>
+          
+        </div>
+      `;
+    })
+    .join("");
+  statusEl.textContent = `${logs.length} acciones registradas`;
 }
 
-function bootstrapRealtime(gameId, nightId) {
-  // Solo actualizamos el footer en vivo; sin detección de cambio de noche ni refresh automático
-  subscribeActionsLog(gameId, nightId);
+function updateActivityState(dateIso, hasActivity) {
+  const state = window.NightCalendarState;
+  if (!state || !dateIso) return;
+  if (!state.activityDates) state.activityDates = new Set();
+  if (hasActivity) {
+    state.activityDates.add(dateIso);
+    const dateObj = toDate(dateIso);
+    const marker = state.currentMarker ? toDate(state.currentMarker) : null;
+    if (
+      !marker ||
+      (dateObj && marker && dateObj.getTime() > marker.getTime())
+    ) {
+      state.currentMarker = dateIso;
+    }
+  } else {
+    state.activityDates.delete(dateIso);
+    if (state.currentMarker === dateIso) {
+      const latestDate = Array.from(state.activityDates)
+        .map((d) => toDate(d))
+        .filter(Boolean)
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+      state.currentMarker = latestDate
+        ? normalizeDateInput(latestDate)
+        : state.selectedDate;
+    }
+  }
+  renderNightCalendar();
+}
+
+async function setupTimelinePanel(game, initialDate) {
+  const calendarEl = document.getElementById("night-calendar");
+  if (!calendarEl) return;
+  const startDate = toDate(game.start_date) || new Date();
+  const baseSelectedDate = toDate(initialDate || game.start_date) || startDate;
+  const activityInfo = await loadActivityDates();
+  const initialSelectedDate =
+    activityInfo.latestActivityDate || baseSelectedDate;
+  const monthDate = new Date(
+    initialSelectedDate.getFullYear(),
+    initialSelectedDate.getMonth(),
+    1
+  );
+
+  window.NightCalendarState = {
+    container: calendarEl,
+    minDate: startDate,
+    minMonth: new Date(startDate.getFullYear(), startDate.getMonth(), 1),
+    maxMonth: null,
+    monthDate,
+    selectedDate: normalizeDateInput(initialSelectedDate),
+    gameId: game.id,
+    activityDates: activityInfo.dates,
+    currentMarker: normalizeDateInput(
+      activityInfo.latestActivityDate || initialSelectedDate
+    ),
+  };
+
+  renderNightCalendar();
+  await loadActionLogForDate(initialSelectedDate, game.id);
+}
+
+async function loadActivityDates() {
+  const { data, error } = await supabase
+    .from("actions_log")
+    .select("night_date");
+  if (error) {
+    console.error("Error loading activity dates:", error);
+    return { dates: new Set(), latestActivityDate: null };
+  }
+  const dates = new Set();
+  let latest = null;
+  (data || []).forEach((entry) => {
+    const date = normalizeDateInput(entry.night_date);
+    if (!date) return;
+    dates.add(date);
+    const dateObj = toDate(date);
+    if (dateObj && (!latest || dateObj.getTime() > latest.getTime())) {
+      latest = dateObj;
+    }
+  });
+  return { dates, latestActivityDate: latest };
+}
+
+function changeCalendarMonth(offset) {
+  const state = window.NightCalendarState;
+  if (!state) return;
+  const newMonth = new Date(
+    state.monthDate.getFullYear(),
+    state.monthDate.getMonth() + offset,
+    1
+  );
+  if (newMonth < state.minMonth) return;
+  if (state.maxMonth && newMonth > state.maxMonth) return;
+  state.monthDate = newMonth;
+  renderNightCalendar();
+}
+
+function renderNightCalendar() {
+  const state = window.NightCalendarState;
+  if (!state || !state.container) return;
+  const monthDate = state.monthDate || state.minMonth || new Date();
+  const selected = state.selectedDate || "";
+  const activityDates = state.activityDates || new Set();
+  const currentMarker = state.currentMarker;
+  const container = state.container;
+  container.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "calendar-header";
+  const monthLabel = document.createElement("h4");
+  monthLabel.textContent = monthDate.toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+  const nav = document.createElement("div");
+  nav.className = "calendar-nav";
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.textContent = "‹";
+  prevBtn.disabled = state.monthDate.getTime() <= state.minMonth.getTime();
+  prevBtn.addEventListener("click", () => changeCalendarMonth(-1));
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.textContent = "›";
+  nextBtn.disabled =
+    state.maxMonth && state.monthDate.getTime() >= state.maxMonth.getTime();
+  nextBtn.addEventListener("click", () => changeCalendarMonth(1));
+  nav.appendChild(prevBtn);
+  nav.appendChild(nextBtn);
+  header.appendChild(monthLabel);
+  header.appendChild(nav);
+  container.appendChild(header);
+
+  const weekdaysRow = document.createElement("div");
+  weekdaysRow.className = "calendar-grid calendar-weekdays";
+  const weekdays = ["L", "M", "M", "J", "V", "S", "D"];
+  weekdays.forEach((day) => {
+    const el = document.createElement("div");
+    el.className = "calendar-weekday";
+    el.textContent = day;
+    weekdaysRow.appendChild(el);
+  });
+  container.appendChild(weekdaysRow);
+
+  const daysGrid = document.createElement("div");
+  daysGrid.className = "calendar-grid calendar-days";
+
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = (firstDay.getDay() + 6) % 7; // lunes=0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startWeekday + daysInMonth) / 7) * 7;
+  const minTime = state.minDate ? state.minDate.getTime() : -Infinity;
+  const maxTime = Infinity;
+
+  for (let i = 0; i < totalCells; i++) {
+    const dayDiv = new Date(year, month, i - startWeekday + 1);
+    const wrapper = document.createElement("div");
+    wrapper.className = "calendar-day";
+    if (i < startWeekday || i - startWeekday + 1 > daysInMonth) {
+      daysGrid.appendChild(wrapper);
+      continue;
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const dayNumber = i - startWeekday + 1;
+    btn.textContent = dayNumber;
+    const isDisabled = dayDiv.getTime() < minTime || dayDiv.getTime() > maxTime;
+    const iso = normalizeDateInput(dayDiv);
+    if (iso === selected) {
+      btn.classList.add("selected");
+    }
+    if (currentMarker && iso === currentMarker) {
+      btn.classList.add("today");
+    }
+    if (activityDates.has(iso) && iso !== currentMarker) {
+      btn.classList.add("has-activity");
+    }
+    if (isDisabled) {
+      btn.disabled = true;
+    } else {
+      btn.addEventListener("click", () => {
+        window.NightCalendarState.selectedDate = iso;
+        loadActionLogForDate(iso, state.gameId);
+      });
+    }
+    wrapper.appendChild(btn);
+    daysGrid.appendChild(wrapper);
+  }
+
+  container.appendChild(daysGrid);
 }
 
 // === Memoria de selección y refresco con restauración ===
@@ -245,13 +455,6 @@ async function initializeGameData(gameId, territoryId, datasetUrl) {
     console.error("Error fetching initial GeoJSON:", err);
   }
 
-  // 2. Zone statuses
-  try {
-    const zoneStatuses = await loadZoneStatuses(gameId, territoryId);
-  } catch (err) {
-    console.error("Error loading initial zone statuses:", err);
-  }
-
   // 3. Locations in DB for those zones
   if (rawGeoJson) {
     const zoneIds = rawGeoJson.features
@@ -266,18 +469,6 @@ async function initializeGameData(gameId, territoryId, datasetUrl) {
       console.log("Initial DB locations for zones:", dbLocations);
     } catch (err) {
       console.error("Error loading initial DB locations:", err);
-    }
-
-    // 4. Location states
-    try {
-      const { data: locStates, error: locStatesErr } = await supabase
-        .from("location_states")
-        .select("location_id, status, owner_faction_id")
-        .eq("game_id", gameId);
-      if (locStatesErr) throw locStatesErr;
-      console.log("Initial location states:", locStates);
-    } catch (err) {
-      console.error("Error loading initial location states:", err);
     }
   }
 }
@@ -307,177 +498,187 @@ async function loadGameFactions(gameId) {
   }));
 }
 
+window.zoneStatusCache = window.zoneStatusCache || null;
+async function fetchZoneStatusRows(gameId, { force = false } = {}) {
+  if (!gameId) return [];
+  if (
+    !force &&
+    window.zoneStatusCache &&
+    window.zoneStatusCache.gameId === gameId
+  ) {
+    return window.zoneStatusCache.data || [];
+  }
+  const { data, error } = await supabase
+    .from("zone_status_view")
+    .select("*")
+    .eq("game_id", gameId);
+  if (error) {
+    console.error("Error fetching zone_status_view:", error);
+    throw error;
+  }
+  window.zoneStatusCache = { gameId, data: data || [] };
+  return window.zoneStatusCache.data;
+}
+
+function getFactionMeta(keyword, fallbackName, fallbackColor) {
+  const fallback = {
+    name: fallbackName,
+    color: fallbackColor || cssVar("--zone-neutral"),
+  };
+  if (!keyword || !window.gameFactions?.length) return fallback;
+  const match = window.gameFactions.find((f) =>
+    (f.name || "").toLowerCase().includes(keyword.toLowerCase())
+  );
+  if (!match) return fallback;
+  return {
+    name: match.name || fallback.name,
+    color: match.color || fallback.color,
+  };
+}
+
 /**
  * Calculate and render overall game progress bar.
  */
 async function loadGameProgress(gameId, territoryId) {
-  // 1) Fetch all zones for this territory
-  const { data: zones, error: zonesErr } = await supabase
-    .from("zones")
-    .select("id, influence_goal")
-    .eq("territory_id", territoryId);
-  if (zonesErr) {
-    console.error("Error loading zones for progress:", zonesErr);
-    return;
-  }
-  const totalGoal = zones.reduce((sum, z) => sum + z.influence_goal, 0);
-  const zoneIds = zones.map((z) => z.id);
-
-  // 2) Totales por facción desde la VIEW (filtrando por juego y territorio)
-  let factionTotals = {};
-  try {
-    const { data: rows, error: viewErr } = await supabase
-      .from("zone_influence_summary")
-      .select("faction_id,total_influence")
-      .eq("game_id", gameId)
-      .eq("territory_id", territoryId);
-    if (viewErr) throw viewErr;
-    (rows || []).forEach((r) => {
-      factionTotals[r.faction_id] =
-        (factionTotals[r.faction_id] || 0) + (r.total_influence || 0);
-    });
-  } catch (e) {
-    console.warn(
-      "zone_influence_summary no disponible; fallback a cálculo local:",
-      e
-    );
-    // Fallback local si la view no existe o no tiene columnas: sumar desde zone_influence
-    factionTotals = {};
-    const { data: infs } = await supabase
-      .from("zone_influence")
-      .select("zone_id,faction_id,influence")
-      .eq("game_id", gameId)
-      .in("zone_id", zoneIds);
-    (infs || []).forEach(({ faction_id, influence }) => {
-      factionTotals[faction_id] =
-        (factionTotals[faction_id] || 0) + (influence || 0);
-    });
-  }
-
-  // 3) Neutral = suma de goals de las zonas del territorio − suma de influencia total en esas zonas
-  const totalInfluence = Object.values(factionTotals).reduce(
-    (s, v) => s + v,
-    0
-  );
-  const neutralPoints = Math.max(totalGoal - totalInfluence, 0);
-
-  // 4) Identify the two factions (assumes exactly two)
-  const [f1, f2] = window.gameFactions;
-
-  const pts1 = factionTotals[f1.id] || 0;
-  const pts2 = factionTotals[f2.id] || 0;
-  const ptsN = neutralPoints;
-
-  // 5) Render graphical progress bar inside #game-progress
   const container = document.getElementById("game-progress");
   if (!container) return;
-  const html = drawProgressBar({
-    name1: f1.name,
-    color1: f1.color,
-    pts1,
-    name2: f2.name,
-    color2: f2.color,
-    pts2,
-    neutralPts: ptsN,
-    drawNames: true,
-    showPointsRow: true,
-  });
-  container.innerHTML = html;
+  container.innerHTML = `<p class="muted">Calculando control...</p>`;
+  if (!gameId || !territoryId) {
+    container.innerHTML = `<p class="muted">Sin datos de territorio.</p>`;
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("territory_status_view")
+      .select("*")
+      .eq("game_id", gameId)
+      .eq("territory_id", territoryId)
+      .single();
+    if (error) throw error;
+    if (!data) {
+      container.innerHTML = `<p class="muted">Sin datos de control para este territorio.</p>`;
+      return;
+    }
+
+    const cuadrillaMeta = getFactionMeta(
+      "cuadrilla",
+      "La Cuadrilla",
+      "#008000"
+    );
+    const loquilloMeta = getFactionMeta(
+      "loquillo",
+      "La Banda de Loquillo",
+      "#800000"
+    );
+    const totalGoal =
+      Number(data.total_influence_goal) ||
+      Math.max(
+        Number(data.total_cuadrilla_points || 0) +
+          Number(data.total_loquillo_points || 0) +
+          Number(data.neutral_points || 0),
+        1
+      );
+    const segments = [
+      {
+        label: cuadrillaMeta.name,
+        color: cuadrillaMeta.color,
+        value: Number(data.total_cuadrilla_points) || 0,
+      },
+      {
+        label: "Neutral",
+        color: cssVar("--zone-neutral"),
+        value: Number(data.neutral_points) || 0,
+      },
+      {
+        label: loquilloMeta.name,
+        color: loquilloMeta.color,
+        value: Number(data.total_loquillo_points) || 0,
+      },
+    ];
+
+    const trackHtml = segments
+      .map(
+        (seg) =>
+          `<div class="progress-segment" style="flex:${Math.max(
+            seg.value,
+            0
+          )}; background:${seg.color};"></div>`
+      )
+      .join("");
+
+    const zoneSummary = `
+      ${Number(data.cuadrilla_zones) || 0}/${
+      Number(data.total_zones) || 0
+    } zonas Cuadrilla ·
+      ${Number(data.loquillo_zones) || 0}/${
+      Number(data.total_zones) || 0
+    } zonas Loquillo
+    `;
+
+    const tooltipText = [
+      `Total: ${totalGoal}`,
+      `Neutral: ${Number(data.neutral_points) || 0}`,
+      `Influencia de la Cuadrilla: ${Number(data.total_cuadrilla_points) || 0}`,
+      `Influencia de la Banda de Loquillo: ${
+        Number(data.total_loquillo_points) || 0
+      }`,
+    ].join("\n");
+
+    container.innerHTML = `
+      <div class="progress-widget territory-widget" data-tooltip="${escapeAttr(
+        tooltipText
+      )}">
+        <div class="territory-status-row">
+          <span class="territory-zone-summary">${zoneSummary}</span>
+        </div>
+        <div class="progress-track">${trackHtml}</div>
+      </div>
+    `;
+  } catch (err) {
+    console.error("Error loading territory_status_view:", err);
+    container.innerHTML = `<p class="muted">No se pudo cargar el estado del territorio.</p>`;
+  }
 }
 
 /**
  * Apply zone styling based on influence data for a given game.
  */
 async function styleZones(map, gameId) {
-  // Load current influence for this game
-  const { data: infs, error: infErr } = await supabase
-    .from("zone_influence")
-    .select("zone_id, faction_id, influence")
-    .eq("game_id", gameId);
-  if (infErr) {
-    console.error("Error loading influences:", infErr);
+  if (!map || !gameId) return;
+  let statuses = [];
+  try {
+    statuses = await fetchZoneStatusRows(gameId);
+  } catch (err) {
+    console.error("Error loading zone_status_view for styling:", err);
     return;
   }
-  // If no influence records, paint all zones neutral and exit
-  if (!infs || infs.length === 0) {
-    const neutral = cssVar("--zone-neutral");
-    map.setPaintProperty("zones-fill", "fill-color", neutral);
-    map.setPaintProperty("zones-fill", "fill-outline-color", neutral);
+  const neutralColor = cssVar("--zone-neutral");
+  const disputedColor = cssVar("--zone-dispute") || neutralColor;
+  if (!statuses || !statuses.length) {
+    map.setPaintProperty("zones-fill", "fill-color", neutralColor);
+    map.setPaintProperty("zones-fill", "fill-outline-color", neutralColor);
     return;
   }
 
-  // Compute statuses with owner from DB
-  const statuses = await loadZoneStatuses(gameId, window.currentTerritoryId);
-
-  // Load faction colors from database
-  const factionIds = [...new Set(infs.map((i) => i.faction_id))];
-  const { data: factions, error: facErr } = await supabase
-    .from("factions")
-    .select("id, faction_color")
-    .in("id", factionIds);
-  if (facErr) {
-    console.error("Error loading factions:", facErr);
-    return;
-  }
-  const factionColorMap = {};
-  factions.forEach((f) => {
-    factionColorMap[f.id] = f.faction_color;
-  });
-
-  // Group influences by zone
-  const byZone = {};
-  infs.forEach(({ zone_id, faction_id, influence }) => {
-    byZone[zone_id] = byZone[zone_id] || [];
-    byZone[zone_id].push({ faction_id, influence });
-  });
-
-  // Build match expressions
   const fillExpr = ["match", ["get", "feature_id"]];
-  const outlineExpr = ["match", ["get", "feature_id"]];
-
-  Object.entries(byZone).forEach(([zoneId, infos]) => {
-    const { owner: ownerId } = statuses[zoneId] || {};
-    const hasOne = infos.length === 1;
-    const hasTwo = infos.length === 2;
-
-    if (infos.length === 0) {
-      // fully neutral
-      fillExpr.push(zoneId, cssVar("--zone-neutral"));
-      outlineExpr.push(zoneId, cssVar("--zone-neutral"));
-    } else if (hasOne && !ownerId) {
-      // single faction present, not claimed
-      fillExpr.push(zoneId, cssVar("--zone-neutral"));
-      outlineExpr.push(
-        zoneId,
-        factionColorMap[infos[0].faction_id] || cssVar("--zone-neutral")
-      );
-    } else if (ownerId && infos.every((i) => i.faction_id === ownerId)) {
-      // claimed by one faction without enemy
-      const ownerColor = factionColorMap[ownerId] || cssVar("--zone-neutral");
-      fillExpr.push(zoneId, ownerColor);
-      outlineExpr.push(zoneId, ownerColor);
-    } else if (!ownerId && hasTwo) {
-      // neutral but disputed by two factions
-      fillExpr.push(zoneId, cssVar("--zone-dispute"));
-      outlineExpr.push(zoneId, cssVar("--zone-dispute"));
-    } else if (ownerId && hasTwo) {
-      // claimed but under attack by another faction
-      const attacker = infos.find((i) => i.faction_id !== ownerId).faction_id;
-      const ownerColor = factionColorMap[ownerId] || cssVar("--zone-neutral");
-      const attackerColor =
-        factionColorMap[attacker] || cssVar("--zone-neutral");
-      fillExpr.push(zoneId, ownerColor);
-      outlineExpr.push(zoneId, attackerColor);
+  statuses.forEach((row) => {
+    let fillColor = neutralColor;
+    if (row.control_state === "CONTROLLED" && row.controlling_color) {
+      fillColor = row.controlling_color;
+    } else if (row.control_state === "DISPUTED") {
+      fillColor = disputedColor;
     }
+    fillExpr.push(row.zone_id, fillColor);
   });
+  fillExpr.push(neutralColor);
 
-  // Default colors
-  fillExpr.push(cssVar("--zone-neutral"));
-  outlineExpr.push(cssVar("--zone-neutral"));
-
-  // Apply to map layer
   map.setPaintProperty("zones-fill", "fill-color", fillExpr);
-  map.setPaintProperty("zones-fill", "fill-outline-color", outlineExpr);
+  map.setPaintProperty(
+    "zones-fill",
+    "fill-outline-color",
+    cssVar("--zone-outline")
+  );
 }
 
 /**
@@ -486,8 +687,6 @@ async function styleZones(map, gameId) {
  * @param {string} id - feature_id of the element currently shown in details
  */
 async function refreshUI(type, id) {
-  // 1a) Re-render players' remaining action points
-  await renderPlayersStatus(window.currentGameId, window.currentNightId);
   // 1) Update overall progress bar
   await loadGameProgress(window.currentGameId, window.currentTerritoryId);
   // 2) Refresh GeoJSON source if available
@@ -502,6 +701,9 @@ async function refreshUI(type, id) {
   if (window.currentMap) {
     await styleZones(window.currentMap, window.currentGameId);
   }
+  if (window.currentNightDate) {
+    await loadActionLogForDate(window.currentNightDate, window.currentGameId);
+  }
   // 4) Si hay un panel abierto, refrescarlo usando el renderer explícito
   if (type && id) {
     if (type === "zone" && window.DetailView?.renderZone) {
@@ -512,23 +714,30 @@ async function refreshUI(type, id) {
   }
 }
 
+async function getStoredOrConfiguredGameId() {
+  const stored = localStorage.getItem("currentGameId");
+  if (stored) return stored;
+  if (window.SingleGameStore?.getId) {
+    const resolved = await window.SingleGameStore.getId();
+    if (resolved) {
+      localStorage.setItem("currentGameId", resolved);
+      return resolved;
+    }
+  }
+  return null;
+}
+
 /**
  * Initialize the game view, step by step:
- * 1. Fetch the selected game ID from localStorage
+ * 1. Resolver la partida fija (localStorage o SingleGameStore)
  * 2. Fetch game details from Supabase
  * 3. Populate header UI elements
- * 4. Fetch and display current turn/night
- * 5. Load factions for this game
- * 6. Load and render overall game progress
- * 7. Load and log all initial game data (GeoJSON, statuses, locations, states)
- * 8. Initialize MapLibre GL map and add layers
- * 9. Set up interactivity and styling
+ * ...
  */
 async function initGame() {
   // 1) Get the current game ID
-  const gameId = localStorage.getItem("currentGameId");
+  const gameId = await getStoredOrConfiguredGameId();
   if (!gameId) {
-    // No game selected; go back to games list
     window.location.hash = "games";
     return;
   }
@@ -553,38 +762,9 @@ async function initGame() {
 
   // 3) Populate header UI
   const nameEl = document.getElementById("game-name");
-  const turnInfoEl = document.getElementById("turn-info");
   if (nameEl) nameEl.textContent = game.name;
 
-  // 4) Fetch and display the current turn/night
-  const { data: nights, error: nightsErr } = await supabase
-    .from("nights")
-    .select("id, turn_number, night_date")
-    .eq("game_id", gameId)
-    .order("turn_number", { ascending: false })
-    .limit(1);
-
-  if (!nightsErr && nights && nights.length > 0) {
-    const latest = nights[0];
-    if (turnInfoEl) {
-      turnInfoEl.textContent = `Turno ${latest.turn_number} | Fecha: ${new Date(
-        latest.night_date
-      ).toLocaleDateString()}`;
-    }
-    window.currentNightId = latest.id;
-    // Render footer player statuses
-    await renderPlayersStatus(gameId, window.currentNightId);
-    // Iniciar realtime limpio (actions_log + nights)
-    bootstrapRealtime(gameId, window.currentNightId);
-  } else {
-    if (turnInfoEl) {
-      turnInfoEl.textContent = `Fecha de inicio: ${new Date(
-        game.start_date
-      ).toLocaleDateString()}`;
-    }
-    // No nights yet, render full points for all players
-    await renderPlayersStatus(gameId);
-  }
+  let initialTimelineDate = game.start_date;
 
   // 5) Load factions for this game and keep in memory
   window.gameFactions = await loadGameFactions(gameId);
@@ -606,8 +786,8 @@ async function initGame() {
     container: "map",
     style:
       "https://api.maptiler.com/maps/basic/style.json?key=3BYctVRw6IwXUy2XDK2b",
-    center: [-58.42, -34.606], // Longitude, Latitude for Almagro
-    zoom: 14,
+    center: [-58.421, -34.612], // Longitude, Latitude for Almagro
+    zoom: 13.3,
   });
   // Expose map globally for later styling after configuration
   window.currentMap = map;
@@ -623,7 +803,12 @@ async function initGame() {
     const datasetUrl = game.territory?.maptiler_dataset_url;
     if (datasetUrl) {
       // 1) Fetch raw GeoJSON to avoid URL caching issues
-      const rawData = await fetch(datasetUrl).then((res) => res.json());
+      const bustUrl = datasetUrl.includes("?")
+        ? `${datasetUrl}&_ts=${Date.now()}`
+        : `${datasetUrl}?_ts=${Date.now()}`;
+      const rawData = await fetch(bustUrl, { cache: "no-store" }).then((res) =>
+        res.json()
+      );
       console.log("Initial features loaded:", rawData.features);
       // 2) Add source using in-memory data
       map.addSource("zones", {
@@ -643,7 +828,18 @@ async function initGame() {
         paint: {
           "fill-color": neutralColor,
           "fill-opacity": neutralOpacity,
-          "fill-outline-color": neutralOutline,
+        },
+      });
+
+      // Outline for all zones
+      map.addLayer({
+        id: "zones-outline",
+        type: "line",
+        source: "zones",
+        filter: ["==", ["get", "type"], "zone"],
+        paint: {
+          "line-color": neutralOutline,
+          "line-width": 2,
         },
       });
 
@@ -668,7 +864,7 @@ async function initGame() {
         source: "zones",
         filter: ["==", ["get", "feature_id"], ""], // initially no feature
         paint: {
-          "line-color": "#000000",
+          "line-color": "#FFFFFF",
           "line-width": 4,
         },
       });
@@ -730,11 +926,18 @@ async function initGame() {
       }
     });
   });
+
+  await setupTimelinePanel(game, initialTimelineDate);
 }
 
 // Expose initGame to be called by router.js
 window.initGame = initGame;
 window.loadGameFactions = loadGameFactions;
+window.refreshActionLogPanel = function () {
+  if (window.currentNightDate && window.currentGameId) {
+    loadActionLogForDate(window.currentNightDate, window.currentGameId);
+  }
+};
 
 /**
  * Updates the highlight layer filter to the selected feature.
@@ -772,94 +975,3 @@ function highlightFeature(type, id) {
  * Load zone statuses for a given game and territory
  * Returns an object: { zoneId: { owner, attackers, status, breakdown } }
  */
-async function loadZoneStatuses(gameId, territoryId) {
-  // Load influence goal per zone
-  const { data: zones, error: zonesErr } = await supabase
-    .from("zones")
-    .select("id, name, description, influence_goal, capture_threshold")
-    .eq("territory_id", territoryId);
-  if (zonesErr) {
-    console.error("Error loading zones:", zonesErr);
-    return {};
-  }
-  // build metadata map for name and description
-  const zoneMetaMap = {};
-  const influenceGoalMap = {};
-  const captureThresholdMap = {};
-  zones.forEach((z) => {
-    zoneMetaMap[z.id] = {
-      name: z.name,
-      description: z.description,
-    };
-    influenceGoalMap[z.id] = z.influence_goal;
-    captureThresholdMap[z.id] = z.capture_threshold;
-  });
-
-  // Load influence data for this game
-  const { data: infs, error: infErr } = await supabase
-    .from("zone_influence")
-    .select("zone_id, faction_id, influence")
-    .eq("game_id", gameId);
-  if (infErr) {
-    console.error("Error loading zone influence:", infErr);
-    return {};
-  }
-
-  // Group influences by zone
-  const byZone = {};
-  infs.forEach(({ zone_id, faction_id, influence }) => {
-    byZone[zone_id] = byZone[zone_id] || [];
-    byZone[zone_id].push({ faction_id, influence });
-  });
-
-  const result = {};
-  // For each zone, even with zero influence, compute status
-  zones.forEach((z) => {
-    const zoneId = z.id;
-    const infos = byZone[zoneId] || [];
-    const goal = influenceGoalMap[zoneId] || 0;
-
-    // Determine owner
-    const ownerRec = infos.find((i) => i.influence >= goal);
-    const owner = ownerRec ? ownerRec.faction_id : null;
-
-    // Determine attackers
-    const attackers = infos
-      .filter((i) => i.faction_id !== owner)
-      .map((i) => i.faction_id);
-
-    // Determine status
-    let status = "neutral";
-    if (owner && attackers.length === 0) status = "controlled";
-    else if (owner && attackers.length > 0) status = "under_attack";
-    else if (!owner && infos.length > 0) status = "contested";
-
-    // Compute breakdown
-    const totalInf = infos.reduce((sum, i) => sum + i.influence, 0);
-    const neutralPts = Math.max(goal - totalInf, 0);
-    const breakdown = { neutral: neutralPts };
-    infos.forEach((i) => {
-      breakdown[i.faction_id] = i.influence;
-    });
-
-    // Compute percentMap
-    const percentMap = {};
-    const baseTotal = Object.values(breakdown).reduce((s, v) => s + v, 0) || 1;
-    Object.entries(breakdown).forEach(([key, pts]) => {
-      percentMap[key] = Math.round((pts / baseTotal) * 100);
-    });
-
-    result[zoneId] = {
-      id: zoneId,
-      name: zoneMetaMap[zoneId].name,
-      description: zoneMetaMap[zoneId].description,
-      influence_goal: influenceGoalMap[zoneId], // added field
-      owner,
-      status,
-      breakdown,
-      percentMap,
-    };
-  });
-  console.log("All zone statuses:", result);
-  return result;
-}
