@@ -116,6 +116,164 @@ function safeParseJSON(value) {
   }
 }
 
+function buildZoneGeometryMap(dataset) {
+  if (!dataset?.features) return {};
+  const map = {};
+  dataset.features.forEach((feat) => {
+    if (feat.properties?.type !== "zone" || !feat.geometry) return;
+    map[feat.properties.feature_id] = feat.geometry;
+  });
+  return map;
+}
+
+function buildLocationZoneMap(dataset) {
+  if (!dataset?.features) return {};
+  const map = {};
+  dataset.features.forEach((feat) => {
+    if (feat.properties?.type !== "location") return;
+    const locId = feat.properties.feature_id;
+    const zoneId = feat.properties.zone_id || feat.properties.zoneId;
+    if (locId && zoneId) {
+      map[locId] = zoneId;
+    }
+  });
+  return map;
+}
+
+function polygonCentroid(coords) {
+  if (!coords?.length) return null;
+  const ring = coords[0];
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x0, y0] = ring[i];
+    const [x1, y1] = ring[i + 1];
+    const f = x0 * y1 - x1 * y0;
+    area += f;
+    cx += (x0 + x1) * f;
+    cy += (y0 + y1) * f;
+  }
+  area *= 0.5;
+  if (area === 0) {
+    const [x, y] = ring[0] || [0, 0];
+    return { lng: x, lat: y };
+  }
+  cx /= 6 * area;
+  cy /= 6 * area;
+  return { lng: cx, lat: cy };
+}
+
+function geometryCentroid(geometry) {
+  if (!geometry) return null;
+  if (geometry.type === "Polygon") {
+    return polygonCentroid(geometry.coordinates);
+  }
+  if (geometry.type === "MultiPolygon") {
+    let best = null;
+    let maxArea = -Infinity;
+    (geometry.coordinates || []).forEach((poly) => {
+      const ring = poly?.[0];
+      if (!ring) return;
+      let area = 0;
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [x0, y0] = ring[i];
+        const [x1, y1] = ring[i + 1];
+        area += x0 * y1 - x1 * y0;
+      }
+      const centroid = polygonCentroid(poly);
+      if (!centroid) return;
+      const absArea = Math.abs(area);
+      if (absArea > maxArea) {
+        maxArea = absArea;
+        best = centroid;
+      }
+    });
+    return best;
+  }
+  if (geometry.type === "Point") {
+    const [lng, lat] = geometry.coordinates;
+    return { lng, lat };
+  }
+  return null;
+}
+
+function ensureLieutenantMarkerLayer() {
+  const map = window.currentMap;
+  if (!map) return null;
+  if (!map.getSource("lieutenant-positions")) {
+    map.addSource("lieutenant-positions", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    map.addLayer({
+      id: "lieutenant-positions",
+      type: "circle",
+      source: "lieutenant-positions",
+      paint: {
+        "circle-radius": 6,
+        "circle-color": ["get", "color"],
+        "circle-stroke-color": "#000000",
+        "circle-stroke-width": 1,
+      },
+    });
+  }
+  return map.getSource("lieutenant-positions");
+}
+
+async function refreshLieutenantMarkers() {
+  const map = window.currentMap;
+  if (!map || !window.zoneGeometryMap) return;
+  const source = ensureLieutenantMarkerLayer();
+  if (!source) return;
+  try {
+    const { data, error } = await supabase
+      .from("lieutenants_positions")
+      .select("*");
+    if (error) throw error;
+    const grouped = data.reduce((acc, lt) => {
+      const zoneId = lt.current_zone_id;
+      if (!zoneId) return acc;
+      (acc[zoneId] || (acc[zoneId] = [])).push(lt);
+      return acc;
+    }, {});
+    const features = [];
+    Object.entries(grouped).forEach(([zoneId, list]) => {
+      const geometry = window.zoneGeometryMap[zoneId];
+      if (!geometry) return;
+      const centroid = geometryCentroid(geometry);
+      if (!centroid) return;
+      const radius = 0.0002;
+      list.forEach((lt, idx) => {
+        const angle =
+          list.length === 1 ? 0 : (idx / list.length) * Math.PI * 2;
+        const lng = centroid.lng + Math.cos(angle) * radius;
+        const lat = centroid.lat + Math.sin(angle) * radius;
+        features.push({
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: [lng, lat],
+          },
+          properties: {
+            name: lt.name || "Teniente",
+            faction: lt.faction_name || "",
+            stats: `💪 ${lt.phys_power || 0} · 🗣️ ${lt.soc_power || 0} · 🧠 ${
+              lt.ment_power || 0
+            }`,
+            zone: lt.current_zone_name || "Zona desconocida",
+            color: lt.faction_color || "#cccccc",
+          },
+        });
+      });
+    });
+    source.setData({ type: "FeatureCollection", features });
+  } catch (err) {
+    console.error("No se pudieron cargar los tenientes del mapa:", err);
+  }
+}
+window.refreshLieutenantMarkers = refreshLieutenantMarkers;
+
 async function loadActionLogForDate(dateValue, gameId) {
   const statusEl = document.getElementById("actions-log-status");
   const listEl = document.getElementById("actions-log-list");
@@ -818,6 +976,8 @@ async function initGame() {
       // Save the raw data and URL for future refresh
       window.currentDatasetData = rawData;
       window.currentDatasetUrl = datasetUrl;
+      window.zoneGeometryMap = buildZoneGeometryMap(rawData);
+      window.locationZoneMap = buildLocationZoneMap(rawData);
 
       // Draw zone polygons
       map.addLayer({
@@ -915,6 +1075,7 @@ async function initGame() {
         }
         highlightFeature("location", locId);
       });
+      await refreshLieutenantMarkers();
     } else {
       console.warn("No dataset URL for territory:", game);
     }
@@ -924,6 +1085,9 @@ async function initGame() {
       if (e.sourceId === "zones" && e.isSourceLoaded) {
         styleZones(map, gameId);
       }
+    });
+    map.once("idle", () => {
+      styleZones(map, gameId);
     });
   });
 

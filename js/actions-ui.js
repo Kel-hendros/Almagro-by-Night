@@ -110,7 +110,10 @@ window.ActionsUI = (function () {
   }
 
   async function openActionsPanel(type, id, name, opts = {}) {
-    const zoneId = type === "zone" ? id : null;
+    const zoneId =
+      type === "zone"
+        ? id
+        : window.locationZoneMap?.[id] || window.currentZoneId || null;
     const locationId = type === "location" ? id : null;
     // Recordar selección actual (por si abrís el modal desde el detalle)
     if (
@@ -352,6 +355,12 @@ window.ActionsUI = (function () {
         alert(targetError);
         return;
       }
+      const actionId = action.id || action.action_id;
+      if (!actionId) {
+        console.error("No se encontró action_id para la acción seleccionada:", action);
+        alert("No se pudo ejecutar la acción porque falta su identificador.");
+        return;
+      }
       const infl = parseInt(input?.value || "0", 10) || 0;
       const resolvedAmount = needsAmount ? infl : 0;
       const details = {
@@ -370,13 +379,13 @@ window.ActionsUI = (function () {
       };
       console.log("RPC CALL → perform_action payload:", {
         p_player_id: playerId,
-        p_action_id: action.id,
+        p_action_id: actionId,
         p_night_date: window.currentNightDate,
         p_details: details,
       });
       const { error: rpcError } = await supabase.rpc("perform_action", {
         p_player_id: playerId,
-        p_action_id: action.id,
+        p_action_id: actionId,
         p_night_date: window.currentNightDate,
         p_details: details,
       });
