@@ -185,7 +185,7 @@ function buildLieutenantCard(lt, options = {}) {
   if (accentColor) {
     card.style.borderColor = accentColor;
     card.style.backgroundColor = `${accentColor}1A`;
-    card.style.boxShadow = `0 0 8px ${accentColor}55`;
+    card.style.boxShadow = `0 0 10px ${accentColor}55`;
   }
   if (richLayout) {
     card.classList.add("lieutenant-card-rich");
@@ -240,45 +240,26 @@ function buildLieutenantCard(lt, options = {}) {
   const row = document.createElement("div");
   row.className = "lieutenant-minimal-row";
   row.innerHTML = `
-    <div class="lieutenant-minimal">
-      <span>${lt.name || "Teniente"}</span>
-      <span class="lieutenant-mini-stats">💪 ${lt.phys_power || 0} · 🗣️ ${
+    
+    <span>${lt.name || "Teniente"}</span>
+    <span class="lieutenant-mini-faction" style="color:${
+      lt.faction_color || "#FF0000"
+    }">${lt.faction_name || "Facción"}</span>
+    <span class="lieutenant-mini-stats">💪 ${lt.phys_power || 0} · 🗣️ ${
     lt.soc_power || 0
   } · 🧠 ${lt.ment_power || 0}</span>
-    </div>
+    
   `;
   card.appendChild(row);
-  const tooltip = document.createElement("div");
-  tooltip.className = "lieutenant-tooltip";
-  tooltip.innerHTML = `
-    ${
-      lt.image_url
-        ? `<div class="lieutenant-tooltip-img"><img src="${
-            lt.image_url
-          }" alt="${lt.name || "Teniente"}"></div>`
-        : ""
-    }
-    <div class="lieutenant-tooltip-body">
-      <h3>${lt.name || "Teniente"}</h3>
-      ${
-        lt.faction_name
-          ? `<p class="lieutenant-faction">Facción: <span style="color:${
-              lt.faction_color || getCssVarValue("--color-red-accent")
-            }">${lt.faction_name}</span></p>`
-          : ""
-      }
-      ${lt.description ? `<p>${lt.description}</p>` : ""}
-      <div class="stats"><span>💪 ${lt.phys_power || 0}</span><span>🗣️ ${
-    lt.soc_power || 0
-  }</span><span>🧠 ${lt.ment_power || 0}</span></div>
-      <p><strong>📍 Desplegado en: </strong><span class="tooltip-zone">${
-        showLocation
-          ? lt.current_zone_name || "Sin zona asignada"
-          : zoneLabel || "Zona actual"
-      }</span></p>
-    </div>
-  `;
-  card.appendChild(tooltip);
+  card.appendChild(row);
+
+  // Click handler for modal
+  card.addEventListener("click", (e) => {
+    // Prevent if clicking on a button inside the card
+    if (e.target.tagName === "BUTTON") return;
+    showLieutenantModal(lt, options);
+  });
+
   if (showDeploy) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -291,7 +272,8 @@ function buildLieutenantCard(lt, options = {}) {
           ? "Este teniente ya fue desplegado esta noche"
           : "No se puede desplegar";
     }
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation(); // Prevent card click
       if (btn.disabled) return;
       if (typeof onDeploy === "function") {
         onDeploy(lt);
@@ -301,6 +283,107 @@ function buildLieutenantCard(lt, options = {}) {
   }
 
   return card;
+}
+
+function showLieutenantModal(lt, options = {}) {
+  const { showLocation = false, zoneLabel = null } = options;
+
+  let dialog = document.getElementById("lieutenant-detail-modal");
+  if (!dialog) {
+    dialog = document.createElement("dialog");
+    dialog.id = "lieutenant-detail-modal";
+    dialog.className = "lieutenant-modal";
+    document.body.appendChild(dialog);
+
+    // Close on backdrop click
+    dialog.addEventListener("click", (e) => {
+      const rect = dialog.getBoundingClientRect();
+      const isInDialog =
+        rect.top <= e.clientY &&
+        e.clientY <= rect.top + rect.height &&
+        rect.left <= e.clientX &&
+        e.clientX <= rect.left + rect.width;
+      if (!isInDialog) {
+        dialog.close();
+      }
+    });
+  }
+
+  const accentColor = lt.faction_color || getCssVarValue("--color-red-accent");
+
+  dialog.innerHTML = `
+<div class="modal-content" style="border-color:${accentColor}">
+  <!-- Botón cerrar arriba a la derecha -->
+  <button
+    class="modal-close-btn"
+    onclick="document.getElementById('lieutenant-detail-modal').close()"
+  >
+    ×
+  </button>
+
+  <!-- Contenedor principal en dos columnas -->
+  <div class="modal-container">
+    
+    <!-- COLUMNA IZQUIERDA: texto -->
+    <div class="modal-column modal-column-left">
+      <div class="modal-header">
+        <div class="modal-title-block">
+          <h2>${lt.name || "Teniente"}</h2>
+          <p class="modal-faction" style="color:${accentColor}">
+            ${lt.faction_name || "Facción"}
+          </p>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        ${lt.description ? `<p class="modal-desc">${lt.description}</p>` : ""}
+
+        <div class="modal-stats">
+          <div class="stat-item">
+            <span>💪</span>
+            <strong>${lt.phys_power || 0}</strong>
+            <small>Físico</small>
+          </div>
+          <div class="stat-item">
+            <span>🗣️</span>
+            <strong>${lt.soc_power || 0}</strong>
+            <small>Social</small>
+          </div>
+          <div class="stat-item">
+            <span>🧠</span>
+            <strong>${lt.ment_power || 0}</strong>
+            <small>Mental</small>
+          </div>
+        </div>
+
+        <div class="modal-location">
+          <strong>📍 Ubicación actual:</strong>
+          <span>${
+            showLocation
+              ? lt.current_zone_name || "Sin zona asignada"
+              : zoneLabel || "Zona actual"
+          }</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: imagen -->
+    <div class="modal-column modal-column-right">
+      ${
+        lt.image_url
+          ? `<div class="modal-img">
+               <img src="${lt.image_url}" alt="${lt.name || "Teniente"}">
+             </div>`
+          : ""
+      }
+    </div>
+
+  </div>
+</div>
+
+  `;
+
+  dialog.showModal();
 }
 
 async function handleDeployLieutenant(lt, zoneId, zoneName, dlg) {
@@ -533,23 +616,84 @@ window.DetailView.renderZone = async function (id) {
   }
 
   const wrapper = document.createElement("div");
-  wrapper.innerHTML = `
-    <div class="detail-header">
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "detail-header";
+  header.innerHTML = `
       <h2 class="detail-title">${data.name}</h2>
       <div id="detail-actions-slot"></div>
-    </div>
-    <div class="detail-body">
-      <div class="detail-info">
-        <p class="detail-desc">${description}</p>
-        <div class="detail-state" id="detail-state-block"></div>
-      </div>
-      <div class="detail-image-container portrait">
-        <img class="detail-img" src="${imageUrl}" alt="${data.name}" />
-      </div>
-    </div>
   `;
-  const infoContainer = wrapper.querySelector(".detail-info");
-  const stateBlock = wrapper.querySelector("#detail-state-block");
+  wrapper.appendChild(header);
+
+  // Tabs Container
+  const tabsContainer = document.createElement("div");
+  tabsContainer.className = "tab-buttons";
+
+  const tabs = [
+    { id: "info", label: "Información", icon: "ℹ️" },
+    { id: "lieutenants", label: "Tenientes", icon: "♟️" },
+    { id: "benefits", label: "Beneficios", icon: "🏆" },
+  ];
+
+  let activeTabId = "info";
+
+  tabs.forEach((tab) => {
+    const btn = document.createElement("button");
+    btn.className = `tab-chip ${tab.id === activeTabId ? "active" : ""}`;
+    btn.innerHTML = `${tab.label}`;
+    btn.onclick = () => {
+      // Switch tabs
+      wrapper
+        .querySelectorAll(".tab-chip")
+        .forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      wrapper
+        .querySelectorAll(".tab-content")
+        .forEach((c) => c.classList.remove("active"));
+      const target = wrapper.querySelector(`#tab-${tab.id}`);
+      if (target) target.classList.add("active");
+    };
+    tabsContainer.appendChild(btn);
+  });
+  wrapper.appendChild(tabsContainer);
+
+  // --- Tab 1: Información ---
+  const tabInfo = document.createElement("div");
+  tabInfo.id = "tab-info";
+  tabInfo.className = "tab-content active";
+  tabInfo.innerHTML = `
+      <div class="detail-body">
+        <div class="detail-info">
+          <p class="detail-desc">${description}</p>
+          <div class="detail-state" id="detail-state-block"></div>
+        </div>
+        <div class="detail-image-container portrait">
+          <img class="detail-img" src="${imageUrl}" alt="${data.name}" />
+        </div>
+      </div>
+  `;
+  wrapper.appendChild(tabInfo);
+
+  // --- Tab 2: Tenientes ---
+  const tabLieutenants = document.createElement("div");
+  tabLieutenants.id = "tab-lieutenants";
+  tabLieutenants.className = "tab-content";
+  // Se llenará dinámicamente
+  wrapper.appendChild(tabLieutenants);
+
+  // --- Tab 3: Beneficios ---
+  const tabBenefits = document.createElement("div");
+  tabBenefits.id = "tab-benefits";
+  tabBenefits.className = "tab-content";
+  tabBenefits.innerHTML = `<p class="muted" style="padding: 20px; text-align: center;">No hay beneficios registrados para esta zona.</p>`;
+  wrapper.appendChild(tabBenefits);
+
+  // Lógica para poblar el Tab de Información (Estado y Locaciones)
+  const infoContainer = tabInfo.querySelector(".detail-info");
+  const stateBlock = tabInfo.querySelector("#detail-state-block");
+
   if (zoneStatus && stateBlock) {
     let statusText = "Neutral";
     if (zoneStatus.control_state === "CONTROLLED") {
@@ -632,7 +776,7 @@ window.DetailView.renderZone = async function (id) {
     `;
     const threshold = Number(zoneStatus.capture_threshold);
     const thresholdLabel = Number.isFinite(threshold)
-      ? `Controlada a los <span style="color:white">${threshold}</span> puntos de influencia`
+      ? `Objetivo: <span style="color:white">${threshold}</span> puntos de influencia`
       : "";
     stateBlock.innerHTML = `
       <div class="zone-control-card">
@@ -661,25 +805,25 @@ window.DetailView.renderZone = async function (id) {
     infoContainer.appendChild(locSection);
   }
 
-  if (infoContainer) {
-    const ltSection = document.createElement("div");
-    ltSection.className = "lieutenants-section zone";
-    ltSection.innerHTML = `<h3>Tenientes en la zona</h3>`;
-    const ltList = document.createElement("div");
-    ltList.className = "lieutenant-list";
-    if (lieutenantData.zone_lieutenants?.length) {
-      lieutenantData.zone_lieutenants.forEach((lt) => {
-        ltList.appendChild(
-          buildLieutenantCard(lt, { zoneLabel: data.name || lt.zone_name })
-        );
-      });
-    } else {
-      ltList.innerHTML = `<p class="muted">Aún no hay tenientes en esta zona.</p>`;
-    }
-    ltSection.appendChild(ltList);
-    infoContainer.appendChild(ltSection);
+  // Lógica para poblar el Tab de Tenientes
+  const ltSection = document.createElement("div");
+  ltSection.className = "lieutenants-section zone";
+  const ltList = document.createElement("div");
+  ltList.className = "lieutenant-list";
+  if (lieutenantData.zone_lieutenants?.length) {
+    lieutenantData.zone_lieutenants.forEach((lt) => {
+      ltList.appendChild(
+        buildLieutenantCard(lt, { zoneLabel: data.name || lt.zone_name })
+      );
+    });
+  } else {
+    ltList.innerHTML = `<p class="muted">No hay tenientes en esta zona.</p><p class="muted">Usa el botón de Desplegar Teniente para sumar un Teniente a esta zona.</p>`;
   }
-  el.innerHTML = wrapper.innerHTML;
+  ltSection.appendChild(ltList);
+  tabLieutenants.appendChild(ltSection);
+
+  el.innerHTML = "";
+  el.appendChild(wrapper);
 
   // Toolbar acciones
   if (
