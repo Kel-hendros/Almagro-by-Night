@@ -201,8 +201,12 @@ window.ActionsUI = (function () {
           card.classList.add("action-card-unavailable");
         }
         const apCost = Number(action.ap_cost) || 1;
-        const durationLabel = apCost >= 2 ? "Toma 1 noche" : "Toma media noche";
-        const durationDisplay = apCost >= 2 ? "1" : "1/2";
+        const normalizedCost = apCost >= 2 ? 2 : 1; // mostramos 1 (media noche) o 2 (noche completa)
+        const durationLabel =
+          normalizedCost === 2
+            ? "Costo: 2 puntos de acción (toma una noche completa)"
+            : "Costo: 1 punto de acción (toma media noche)";
+        const durationDisplay = normalizedCost.toString();
         card.innerHTML = `
           <div class="ac-head">
             <span class="action-info">
@@ -264,8 +268,8 @@ window.ActionsUI = (function () {
         <p class="action-duration-detail">
           ⌛ ${
             Number(action.ap_cost) >= 2
-              ? "Toma una noche completa realizar esta acción"
-              : "Toma media noche realizar esta acción"
+              ? "Costo: 2 puntos de acción (toma una noche completa)"
+              : "Costo: 1 punto de acción (toma media noche)"
           }
         </p>
         ${

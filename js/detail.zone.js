@@ -1,32 +1,3 @@
-/**
- * detail.zone.js
- * ----------------
- * Renderizador **EXCLUSIVO** para el detalle de **Zonas**.
- * Este módulo no despacha por tipo ni registra renderers genéricos: sólo sabe
- * dibujar zonas. Usalo como base para crear `detail.location.js` (locaciones),
- * `detail.player.js` (jugadores), etc., cada uno con su propia función explícita.
- *
- * API pública expuesta en `window.DetailView`:
- *   - `DetailView.renderZone(id: string|number): Promise<void>`
- *       Dibuja el panel de detalles de la zona `id`.
- *   - `DetailView.showConfigurations(type: 'zone', id, el): Promise<void>`
- *       (Opcional, sólo para admins) Renderiza controles de configuración para la zona.
- *
- * Dependencias en tiempo de ejecución:
- *   - `supabase` (instancia global ya configurada)
- *   - `window.currentGameId`, `window.currentTerritoryId`, `window.gameFactions`
- *   - `drawProgressBar(...)` (util global para la barra de influencia)
- *   - (Opcional) `window.ActionsUI.renderActionsToolbar(type, id, el)`
- *
- * Orden de carga recomendado (en index.html):
- *   <script src="js/detail.zone.js" defer></script>
- *   <script src="js/game.js" defer></script>
- *
- * Nota: este archivo **no** define ni usa `DetailView.register(...)` ni un
- * dispatcher. Si más adelante querés un sistema por registro, creá un
- * `detail.core.js` con `DetailView.register/get` y migrá las funciones explícitas.
- */
-
 // -----------------------------------------------------------------------------
 // Utilidad: asegurar contenedor del panel de detalles
 // -----------------------------------------------------------------------------
@@ -115,15 +86,18 @@ function formatShortDate(value) {
   });
 }
 
+function normalizeNightDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().split("T")[0];
+}
+
 async function fetchLieutenantsForZone(zoneId, nightDate) {
   const playerId = await getCurrentPlayerId();
-  let effectiveNight = nightDate || window.currentNightDate || null;
-  if (effectiveNight) {
-    const date = new Date(effectiveNight);
-    if (!Number.isNaN(date.getTime())) {
-      effectiveNight = date.toISOString().split("T")[0];
-    }
-  }
+  const effectiveNight = normalizeNightDate(
+    nightDate || window.currentNightDate
+  );
   if (!playerId || !zoneId || !effectiveNight)
     return { zone_lieutenants: [], other_my_lieutenants: [] };
   try {
@@ -392,7 +366,8 @@ async function handleDeployLieutenant(lt, zoneId, zoneName, dlg) {
     alert("Necesitás iniciar sesión para desplegar un teniente.");
     return;
   }
-  if (!window.currentNightDate) {
+  const effectiveNight = normalizeNightDate(window.currentNightDate);
+  if (!effectiveNight) {
     alert("Seleccioná una fecha antes de desplegar un teniente.");
     return;
   }
@@ -401,7 +376,7 @@ async function handleDeployLieutenant(lt, zoneId, zoneName, dlg) {
       p_player_id: playerId,
       p_lieutenant_id: lt.id,
       p_zone_id: zoneId,
-      p_night_date: window.currentNightDate,
+      p_night_date: effectiveNight,
     });
     if (error) throw error;
     const updated = await fetchLieutenantsForZone(
@@ -550,7 +525,7 @@ window.DetailView.renderZone = async function (id) {
   try {
     const { data: full, error } = await supabase
       .from("zones")
-      .select("id, name, description, image_url")
+      .select("id, name, description, image_url, benefits")
       .eq("id", id)
       .single();
     if (error) throw error;
@@ -616,6 +591,7 @@ window.DetailView.renderZone = async function (id) {
   }
 
   const wrapper = document.createElement("div");
+  wrapper.className = "detail-wrapper";
 
   // Header
   const header = document.createElement("div");
@@ -683,11 +659,49 @@ window.DetailView.renderZone = async function (id) {
   // Se llenará dinámicamente
   wrapper.appendChild(tabLieutenants);
 
+  const buildDeployLieutenantCard = () => {
+    const card = document.createElement("div");
+    card.className = "lieutenant-card lieutenant-card-add";
+    card.innerHTML = `
+      <div class="lieutenant-add-icon">+</div>
+      <div class="lieutenant-add-text">Desplegar Teniente</div>
+    `;
+    card.addEventListener("click", () =>
+      openLieutenantPanel(id, data.name || "")
+    );
+    return card;
+  };
+
   // --- Tab 3: Beneficios ---
   const tabBenefits = document.createElement("div");
   tabBenefits.id = "tab-benefits";
   tabBenefits.className = "tab-content";
-  tabBenefits.innerHTML = `<p class="muted" style="padding: 20px; text-align: center;">No hay beneficios registrados para esta zona.</p>`;
+  if (data.benefits) {
+    const isControlled = zoneStatus?.control_state === "CONTROLLED";
+    const controllingColor = isControlled
+      ? zoneStatus.controlling_color || "#fff"
+      : "transparent";
+    const checkStyle = isControlled
+      ? `background-color: ${controllingColor}; border-color: ${controllingColor};`
+      : "";
+    // Checkmark only if controlled
+    const checkContent = isControlled ? "✓" : "";
+
+    tabBenefits.innerHTML = `
+      <div class="benefit-card">
+        <div class="benefit-text">${data.benefits}</div>
+        <div class="benefit-status">
+          <div class="benefit-checkbox" style="${checkStyle}" title="${
+      isControlled ? "Beneficio activo" : "Beneficio inactivo"
+    }">
+            ${checkContent}
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    tabBenefits.innerHTML = `<p class="muted" style="padding: 20px; text-align: center;">No hay beneficios por capturar esta zona.</p>`;
+  }
   wrapper.appendChild(tabBenefits);
 
   // Lógica para poblar el Tab de Información (Estado y Locaciones)
@@ -808,6 +822,12 @@ window.DetailView.renderZone = async function (id) {
   // Lógica para poblar el Tab de Tenientes
   const ltSection = document.createElement("div");
   ltSection.className = "lieutenants-section zone";
+  if (!lieutenantData.zone_lieutenants?.length) {
+    const empty = document.createElement("div");
+    empty.className = "lieutenant-empty";
+    empty.innerHTML = `<p class="muted">No hay tenientes en esta zona.</p>`;
+    ltSection.appendChild(empty);
+  }
   const ltList = document.createElement("div");
   ltList.className = "lieutenant-list";
   if (lieutenantData.zone_lieutenants?.length) {
@@ -816,9 +836,8 @@ window.DetailView.renderZone = async function (id) {
         buildLieutenantCard(lt, { zoneLabel: data.name || lt.zone_name })
       );
     });
-  } else {
-    ltList.innerHTML = `<p class="muted">No hay tenientes en esta zona.</p><p class="muted">Usa el botón de Desplegar Teniente para sumar un Teniente a esta zona.</p>`;
   }
+  ltList.appendChild(buildDeployLieutenantCard());
   ltSection.appendChild(ltList);
   tabLieutenants.appendChild(ltSection);
 
@@ -835,14 +854,6 @@ window.DetailView.renderZone = async function (id) {
       await window.ActionsUI.renderActionsToolbar("zone", id, actionsSlot, {
         zoneName: data.name,
       });
-      const deployBtn = document.createElement("button");
-      deployBtn.type = "button";
-      deployBtn.className = "btn-secondary";
-      deployBtn.textContent = "Desplegar Teniente";
-      deployBtn.addEventListener("click", () =>
-        openLieutenantPanel(id, data.name)
-      );
-      actionsSlot.appendChild(deployBtn);
     } catch (e) {
       console.warn("ActionsUI.renderActionsToolbar failed:", e);
     }
