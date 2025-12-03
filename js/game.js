@@ -678,6 +678,144 @@ async function fetchZoneStatusRows(gameId, { force = false } = {}) {
   return window.zoneStatusCache.data;
 }
 
+async function loadActiveBenefitsByFaction(gameId) {
+  const rows = await fetchZoneStatusRows(gameId, { force: true });
+  const controlled = rows.filter((r) => r.control_state === "CONTROLLED");
+  const zoneIds = controlled.map((r) => r.zone_id).filter(Boolean);
+
+  let benefitsMap = new Map();
+  if (zoneIds.length) {
+    try {
+      const { data, error } = await supabase
+        .from("zones")
+        .select("id, benefits")
+        .in("id", zoneIds);
+      if (error) throw error;
+      benefitsMap = new Map((data || []).map((z) => [z.id, z.benefits]));
+    } catch (err) {
+      console.warn("No se pudieron obtener beneficios de zonas:", err);
+    }
+  }
+
+  const groups = { cuadrilla: [], loquillo: [], other: [] };
+  controlled.forEach((row) => {
+    const benefitText = benefitsMap.get(row.zone_id);
+    if (!benefitText) return;
+    const key = resolveFactionKey(row);
+    const target = groups[key] ? groups[key] : groups.other;
+    target.push({
+      zoneName: row.zone_name || "Zona",
+      benefit: benefitText,
+      color: row.controlling_color || cssVar("--color-cream"),
+    });
+  });
+  return groups;
+}
+
+function buildBenefitsColumn(factionMeta, items) {
+  const col = document.createElement("div");
+  col.className = "benefit-column";
+  const title = document.createElement("h3");
+  title.textContent = factionMeta.name;
+  title.style.color = factionMeta.color || cssVar("--color-cream");
+  col.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "benefit-list";
+  if (!items?.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Sin beneficios activos.";
+    list.appendChild(empty);
+  } else {
+    items.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "benefit-card";
+      const text = document.createElement("div");
+      text.className = "benefit-text";
+      const strong = document.createElement("strong");
+      strong.textContent = item.zoneName;
+      text.appendChild(strong);
+      const benefitCopy = document.createElement("div");
+      benefitCopy.innerHTML = item.benefit;
+      text.appendChild(benefitCopy);
+
+      const status = document.createElement("div");
+      status.className = "benefit-status";
+      status.innerHTML = `<div class="benefit-checkbox" style="background:${item.color}; border-color:${item.color};">✓</div>`;
+      card.appendChild(text);
+      card.appendChild(status);
+      list.appendChild(card);
+    });
+  }
+  col.appendChild(list);
+  return col;
+}
+
+function ensureBenefitsDialog() {
+  let dlg = document.getElementById("panel-benefits");
+  if (!dlg) {
+    dlg = document.createElement("dialog");
+    dlg.id = "panel-benefits";
+    dlg.className = "panel-actuar panel-benefits";
+    dlg.addEventListener("click", (e) => {
+      const rect = dlg.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+      if (!inside) dlg.close();
+    });
+    document.body.appendChild(dlg);
+  }
+  return dlg;
+}
+
+async function openBenefitsPanel() {
+  const gameId = window.currentGameId;
+  if (!gameId) {
+    alert("No hay partida cargada para mostrar beneficios.");
+    return;
+  }
+  const dlg = ensureBenefitsDialog();
+  dlg.innerHTML = `
+    <div class="panel-header">
+      <h1>Beneficios activos</h1>
+      <button class="panel-close" type="button" aria-label="Cerrar panel">×</button>
+    </div>
+    <div class="panel-body">
+      <p class="muted">Cargando beneficios...</p>
+    </div>
+  `;
+  dlg.querySelector(".panel-close").addEventListener("click", () => dlg.close());
+  dlg.showModal();
+
+  const body = dlg.querySelector(".panel-body");
+  try {
+    const groups = await loadActiveBenefitsByFaction(gameId);
+    const columns = document.createElement("div");
+    columns.className = "benefits-columns";
+    const cuadrillaMeta = getFactionMeta(
+      "cuadrilla",
+      "La Cuadrilla",
+      "#008000"
+    );
+    const loquilloMeta = getFactionMeta(
+      "loquillo",
+      "La Banda de Loquillo",
+      "#800000"
+    );
+    columns.appendChild(buildBenefitsColumn(cuadrillaMeta, groups.cuadrilla));
+    columns.appendChild(buildBenefitsColumn(loquilloMeta, groups.loquillo));
+    body.innerHTML = "";
+    body.appendChild(columns);
+  } catch (err) {
+    console.error("No se pudieron cargar los beneficios:", err);
+    body.innerHTML = `<p class="muted">No se pudieron cargar los beneficios activos.</p>`;
+  }
+}
+
 function getFactionMeta(keyword, fallbackName, fallbackColor) {
   const fallback = {
     name: fallbackName,
@@ -692,6 +830,26 @@ function getFactionMeta(keyword, fallbackName, fallbackColor) {
     name: match.name || fallback.name,
     color: match.color || fallback.color,
   };
+}
+
+function resolveFactionKey(row) {
+  const lower = (row?.controlling_faction || "").toLowerCase();
+  const factionId = row?.controlling_faction_id;
+
+  const cuadrillaId =
+    window.gameFactions?.find((f) =>
+      (f.name || "").toLowerCase().includes("cuadrilla")
+    )?.id || null;
+  const loquilloId =
+    window.gameFactions?.find((f) =>
+      (f.name || "").toLowerCase().includes("loquillo")
+    )?.id || null;
+
+  if (cuadrillaId && factionId === cuadrillaId) return "cuadrilla";
+  if (loquilloId && factionId === loquilloId) return "loquillo";
+  if (lower.includes("cuadrilla")) return "cuadrilla";
+  if (lower.includes("loquillo")) return "loquillo";
+  return "other";
 }
 
 /**
@@ -921,6 +1079,10 @@ async function initGame() {
   // 3) Populate header UI
   const nameEl = document.getElementById("game-name");
   if (nameEl) nameEl.textContent = game.name;
+  const benefitsBtn = document.getElementById("btn-benefits");
+  if (benefitsBtn) {
+    benefitsBtn.addEventListener("click", openBenefitsPanel);
+  }
 
   let initialTimelineDate = game.start_date;
 
