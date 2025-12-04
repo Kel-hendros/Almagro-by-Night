@@ -245,8 +245,7 @@ async function refreshLieutenantMarkers() {
       if (!centroid) return;
       const radius = 0.0002;
       list.forEach((lt, idx) => {
-        const angle =
-          list.length === 1 ? 0 : (idx / list.length) * Math.PI * 2;
+        const angle = list.length === 1 ? 0 : (idx / list.length) * Math.PI * 2;
         const lng = centroid.lng + Math.cos(angle) * radius;
         const lat = centroid.lat + Math.sin(angle) * radius;
         features.push({
@@ -346,7 +345,7 @@ async function loadActionLogForDate(dateValue, gameId) {
       const playerLabel =
         entry.character_name || entry.player_name || "Jugador desconocido";
       return `
-        <div class="log-card" style="border-color:${factionColor}1A; background-color:${factionColor}0D;">
+        <div class="log-card" style="border-color:${factionColor}66; background-color:${factionColor}33;">
           <div class="log-card-header">
           <h3>${entry.action_name || "Acción"} en ${
         entry.zone_name || "Zona desconocida"
@@ -788,7 +787,9 @@ async function openBenefitsPanel() {
       <p class="muted">Cargando beneficios...</p>
     </div>
   `;
-  dlg.querySelector(".panel-close").addEventListener("click", () => dlg.close());
+  dlg
+    .querySelector(".panel-close")
+    .addEventListener("click", () => dlg.close());
   dlg.showModal();
 
   const body = dlg.querySelector(".panel-body");
