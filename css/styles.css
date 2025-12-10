@@ -2,6 +2,14 @@
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Special+Elite&display=swap');
 
+@font-face {
+    font-family: 'Dingbats';
+    src: url('/fonts/dingbats.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
 /* Layout principal */
 * {
     box-sizing: border-box;
@@ -72,6 +80,29 @@ button,
     justify-content: center;
 
 
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.home-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.home-content h2 {
+    color: var(--color-red-muted);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    font-family: 'Special Elite', cursive;
+    /* Explicitly matching theme */
+}
+
+.home-content p {
+    color: var(--color-cream);
+    opacity: 0.8;
 }
 
 .icono {
@@ -160,6 +191,78 @@ button,
     backdrop-filter: blur(4px);
     position: relative;
     box-shadow: 0px 15px 15px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* 
+   Standard Main Container 
+   Intended to replace generic .panel for main views (#user, #games, #tools)
+   Ensures consistent margins, padding, and typography.
+*/
+.main-container {
+    background-color: var(--color-dark-transparent);
+    border: none;
+    border-radius: 8px;
+    color: var(--color-cream);
+    margin: 100px auto;
+    padding: 40px;
+    backdrop-filter: blur(4px);
+    position: relative;
+    box-shadow: 0px 15px 15px 5px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    /* Standard responsive width */
+    max-width: 1000px;
+    /* Unified width for all panels */
+    text-align: center;
+    /* Unified alignment */
+    min-height: 500px;
+}
+
+/* 
+   Modifiers removed to enforce uniformity as requested.
+   All panels (#user, #games, #tools) now share identical container properties.
+*/
+
+/* Standard typography within Main Containers */
+.main-container h1 {
+    font-family: 'Special Elite', cursive;
+    font-size: 2rem;
+    color: var(--color-red-accent);
+    margin-bottom: 30px;
+
+    /* Optional: border bottom like tools had? */
+    /* border-bottom: 1px solid var(--color-cream-muted);
+    padding-bottom: 15px; */
+}
+
+.main-container h1::before {
+    content: "3";
+    font-family: 'Dingbats';
+    font-size: 2rem;
+    color: var(--color-cream-muted);
+    display: inline-block;
+    margin-right: 0.4rem;
+
+}
+
+
+.main-container h1::after {
+    content: "4";
+    font-family: 'Dingbats';
+    font-size: 2rem;
+    color: var(--color-cream-muted);
+    display: inline-block;
+    margin-left: 0.4rem;
+
+}
+
+/* Allow h1 specific overrides (like tools gold color) via internal classes if needed, 
+   but stick to base for now */
+
+.main-container p {
+    color: var(--color-cream);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
 }
 
 

@@ -59,9 +59,10 @@ async function loadRoute(force = false) {
 
   // Redirect resolution (compute target hash without causing loops)
   let targetHash = rawHash;
-  if (session && (rawHash === "welcome" || rawHash === "login")) {
-    targetHash = "games";
-  } else if (!session && (rawHash === "games" || rawHash === "game")) {
+
+  // Previously redirected authenticated users from 'welcome' to 'games'.
+  // Now we want them to see the home screen on 'welcome'.
+  if (!session && (rawHash === "games" || rawHash === "game")) {
     targetHash = "welcome";
   }
 
@@ -96,10 +97,14 @@ async function loadRoute(force = false) {
   if (
     targetHash === "welcome" ||
     targetHash === "login" ||
-    targetHash === "register"
+    targetHash === "register" ||
+    targetHash === "user"
   ) {
     if (typeof initAuthTabs === "function") initAuthTabs();
-    if (typeof initAuthForms === "function") initAuthForms();
+    if (typeof initAuthForms === "function") {
+      console.log("Router: Calling initAuthForms for hash", targetHash);
+      initAuthForms();
+    }
   }
   if (targetHash === "games") {
     if (typeof window.loadGames === "function") window.loadGames();
@@ -120,9 +125,16 @@ async function loadRoute(force = false) {
 
 // 4) Initialize app on DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("Router: DOMContentLoaded");
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
+  console.log(
+    "Router: Initial session check ->",
+    session ? "LOGGED IN" : "NO SESSION"
+  );
+
   sessionReady = true;
   currentSession = session;
 
@@ -144,7 +156,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// 5) React to hash changes
+// 5) Handle hash changes
 window.addEventListener("hashchange", async () => {
   await updateSidebar();
   await loadRoute(false);

@@ -30,10 +30,67 @@ function initAuthTabs() {
 }
 
 // Inicializa los handlers de los formularios de auth
-function initAuthForms() {
-  console.log("initAuthForms called");
+async function initAuthForms() {
+  console.log("initAuthForms: Execution started");
   const suForm = document.getElementById("signup-form");
   const liForm = document.getElementById("login-form");
+
+  if (!suForm || !liForm) {
+    console.warn("initAuthForms: Forms not found. Cache issue?");
+    return;
+  }
+
+  // View Toggling based on Session
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  console.log(
+    "initAuthForms: Session check ->",
+    session ? "Valid Session Found" : "No Session"
+  );
+
+  const homeContainer = document.getElementById("home-container");
+  const authContainer = document.getElementById("auth-container");
+
+  console.log("initAuthForms: Containers found?", {
+    home: !!homeContainer,
+    auth: !!authContainer,
+    hiddenClass: homeContainer
+      ? homeContainer.classList.contains("hidden")
+      : "N/A",
+  });
+
+  if (session) {
+    if (homeContainer) {
+      homeContainer.classList.remove("hidden");
+      homeContainer.style.display = "block";
+    }
+    if (authContainer) {
+      authContainer.classList.add("hidden");
+      authContainer.style.display = "none";
+    }
+  } else {
+    if (homeContainer) {
+      homeContainer.classList.add("hidden");
+      homeContainer.style.display = "none";
+    }
+    if (authContainer) {
+      authContainer.classList.remove("hidden");
+      // Restore default display (usually block, but let CSS handle it if possible,
+      // or force block if we want to be sure)
+      authContainer.style.display = "block";
+    }
+  }
+
+  // Common UI helpers
+  const showMsg = (id, text, type = "error") => {
+    const msgElement = document.getElementById(id);
+    if (msgElement) {
+      msgElement.textContent = text;
+      msgElement.className = `message ${type}`; // Apply class for styling
+    }
+  };
 
   if (suForm && !suForm._init) {
     console.log("attach signup handler");
@@ -156,14 +213,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     error: sessionErr,
   } = await supabase.auth.getSession();
   console.log("getSession →", { session, sessionErr });
-  if (session) {
-    // Si estamos en welcome o sin hash, navegamos a games; si ya estamos en game, no tocamos
-    const current = window.location.hash.slice(1) || "welcome";
-    if (current === "welcome" || current === "" || current === "login") {
-      window.location.hash = "games";
-      return;
-    }
-  }
+  // Removed legacy redirect to #games. We now support a Home screen on #welcome.
 
   // 2) Si estamos en login/register, inicializamos pestañas y forms
   // DEPRECATED: Router handles this now to avoid race conditions.
