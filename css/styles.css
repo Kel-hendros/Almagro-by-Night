@@ -4,7 +4,8 @@
 
 @font-face {
     font-family: 'Dingbats';
-    src: url('/fonts/dingbats.ttf') format('truetype');
+    /* Use relative path from css folder to fonts folder */
+    src: url('../fonts/dingbats.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
