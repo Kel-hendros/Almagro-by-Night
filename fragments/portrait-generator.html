@@ -1,0 +1,160 @@
+<div class="vtm-generator-container">
+    <link rel="stylesheet" href="css/portrait-generator.css">
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="hidden">
+        <div class="auth-box">
+            <h1 style="color: #8a0b0b; font-size: 2rem; margin-bottom: 0.5rem; letter-spacing: 2px;">VAMPIRE</h1>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.5rem;">PORTRAIT GENERATOR</p>
+            <p style="color: #ccc; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Esta herramienta utiliza <strong>Gemini 3 Pro</strong>. Requiere una API Key válida.
+            </p>
+            <div id="auth-error" class="error-box"></div>
+
+            <div style="margin-bottom: 1rem;">
+                <input type="password" id="input-api-key" placeholder="Pegá tu Google AI API Key"
+                    style="width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: white; border-radius: 4px;">
+                <p style="font-size: 0.7rem; color: #666; margin-top: 5px; text-align: left;">
+                    La key se guardará en tu navegador (localStorage).
+                </p>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-direction: column;">
+                <button id="btn-connect" class="btn-generate">Conectar</button>
+                <button id="btn-skip-auth" class="btn-secondary" style="margin-top:0;">Continuar sin llave</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI -->
+    <header class="vtm-header">
+        <h1 class="vtm-title">VTM <span>GENERATOR</span></h1>
+        <button id="btn-change-key" class="text-link" style="font-size: 0.75rem;">Cambiar API Key</button>
+    </header>
+
+    <!-- Wizard Layout -->
+    <div class="vtm-wizard-grid">
+
+        <!-- 1. Archetype -->
+        <div class="vtm-section">
+            <h3 class="vtm-section-title"><span class="step-number">1</span> Arquetipo</h3>
+            <div id="preset-list" class="options-grid"></div>
+        </div>
+
+        <!-- 2. Background -->
+        <div class="vtm-section">
+            <h3 class="vtm-section-title"><span class="step-number">2</span> Escenario</h3>
+            <div id="background-list" class="options-grid"></div>
+        </div>
+
+        <!-- 3. Details (Encuadre & Formato) -->
+        <div class="vtm-section">
+            <h3 class="vtm-section-title"><span class="step-number">3</span> Detalles</h3>
+
+            <div style="margin-bottom: 1rem;">
+                <span class="input-label">Arquetipo Personalizado (Opcional)</span>
+                <input type="text" id="input-custom-archetype" class="vtm-text-input"
+                    placeholder="Sobrescribe el estilo del Arquetipo...">
+                <p style="font-size:0.7rem; color:#666; margin-top:2px;">Si completas esto, se ignorará la selección del
+                    paso 1.</p>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <span class="input-label">Escenario Personalizado (Opcional)</span>
+                <input type="text" id="input-custom-background" class="vtm-text-input"
+                    placeholder="Sobrescribe el estilo del Fondo...">
+                <p style="font-size:0.7rem; color:#666; margin-top:2px;">Si completas esto, se ignorará la selección del
+                    paso 2.</p>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <span class="input-label">Encuadre</span>
+                <div id="shot-list" class="shot-buttons"></div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <span class="input-label">Formato</span>
+                <select id="select-aspect" class="vtm-select" style="width: 100%;">
+                    <option value="1:1">Cuadrado (1:1)</option>
+                    <option value="3:4" selected>Retrato (3:4)</option>
+                    <option value="16:9">Cinemático (16:9)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generation Row -->
+    <div class="vtm-section generation-row">
+        <h3 class="vtm-section-title">Descripción y Generación</h3>
+
+        <div class="generation-grid">
+            <textarea id="input-description" class="vtm-input"
+                placeholder="Describe a tu vástago: apariencia física, ropa, accesorios... (Ej: Pelo largo y negro, cicatriz en el ojo, traje de cuero, fumando un cigarrillo)"></textarea>
+
+            <div class="generate-actions">
+                <button id="btn-generate" class="btn-generate">
+                    INVOCAR RETRATO
+                </button>
+                <div id="generation-error" class="error-box"></div>
+                <button id="btn-preview-prompt" class="btn-secondary">
+                    COPIAR PROMPT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Session Gallery -->
+    <div class="gallery-section">
+        <h3 class="vtm-section-title">Galería Actual (Sesión)</h3>
+        <div id="gallery-container" class="gallery-grid"></div>
+
+        <div id="empty-state" class="empty-state hidden">
+            <span style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;">🩸</span>
+            <p>La galería está vacía.</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem; opacity: 0.6;">Configura un vástago y genera una
+                imagen.</p>
+        </div>
+    </div>
+
+    <!-- Cloud Gallery -->
+    <div class="gallery-section">
+        <h3 class="vtm-section-title">Mis Retratos Guardados (Nube)</h3>
+        <div id="cloud-gallery-container" class="gallery-grid"></div>
+        <div id="cloud-empty-state" class="empty-state hidden">
+            <p>No hay imágenes guardadas en la nube aún.</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- Lightbox (Moved outside to respect fixed positioning vs backdrop-filter) -->
+<div id="lightbox" class="hidden">
+    <button id="btn-close-lightbox" class="close-lightbox">&times;</button>
+    <div class="lightbox-content">
+        <img id="lightbox-img" class="lightbox-img" src="">
+        <div class="lightbox-info">
+            <h3 id="lightbox-title" style="color: var(--color-blood); margin-bottom: 0.5rem; font-size: 1.2rem;">
+            </h3>
+            <p id="lightbox-prompt" style="font-style: italic; opacity: 0.8; font-size: 0.9rem;"></p>
+            <div class="lightbox-actions">
+                <a id="lightbox-download" href="#" download class="text-link">Descargar</a>
+                <span style="color: #333;">|</span>
+                <button id="btn-copy-prompt" class="text-link"
+                    style="background:none; border:none; padding-bottom: 2px;">Copiar Prompt</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Using dynamic import because the router executes this via eval(), which doesn't support static imports
+    // Using absolute path from root to avoid relative path issues
+    import('/js/tools/portrait-generator/generator.js')
+        .then(module => {
+            module.initPortraitGenerator();
+        })
+        .catch(err => {
+            console.error("Failed to load Portrait Generator:", err);
+            document.getElementById('preset-list').innerHTML = `<p style="color:red; padding:1rem">Error cargando el módulo: ${err.message}</p>`;
+        });
+</script>

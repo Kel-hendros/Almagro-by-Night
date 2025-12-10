@@ -108,10 +108,7 @@ async function ensurePlayer(options = {}) {
     options.characterName || metadata.character_name || null;
   const nowIso = new Date().toISOString();
   // Intento de select
-  const {
-    data: existing,
-    error: selectError,
-  } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from("players")
     .select("id")
     .eq("user_id", userId)
@@ -169,23 +166,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // 2) Si estamos en login/register, inicializamos pestañas y forms
-  if (
-    window.location.hash === "#login" ||
-    window.location.hash === "#register"
-  ) {
-    initAuthTabs();
-    initAuthForms();
-  }
+  // DEPRECATED: Router handles this now to avoid race conditions.
 });
 
 // Cada vez que cambie el hash (carga de un nuevo fragmento) reiniciamos tabs y forms
-window.addEventListener("hashchange", () => {
-  console.log("hash changed to", window.location.hash);
-  if (
-    window.location.hash === "#login" ||
-    window.location.hash === "#register"
-  ) {
-    initAuthTabs();
-    initAuthForms();
-  }
-});
+// DEPRECATED: Router handles this now.
+// window.addEventListener("hashchange", () => { ... });

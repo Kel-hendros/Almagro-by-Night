@@ -1,0 +1,50 @@
+<div class="vtm-generator-container" style="height: 100vh; display: flex; flex-direction: column; overflow: hidden;">
+    <!-- Simple Header -->
+    <header class="vtm-header">
+        <h1 class="vtm-title">CREADOR DE <span>CARTAS</span></h1>
+        <button onclick="window.history.back()" class="text-link" style="font-size: 0.75rem;">&larr; Volver</button>
+    </header>
+
+    <!-- Iframe Container -->
+    <div style="flex: 1; width: 100%; position: relative; background: #000;">
+        <iframe src="https://kel-hendros.github.io/CardCreator/"
+            style="position: absolute; top:0; left:0; width: 100%; height: 100%; border: none;"
+            title="Creador de Cartas WoD" allow="clipboard-write"></iframe>
+    </div>
+</div>
+
+<style>
+    /* Reuse styles from portrait generator if available, or define minimal needed */
+    .vtm-header {
+        background: rgba(15, 15, 15, 0.9);
+        border-bottom: 1px solid #333;
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .vtm-title {
+        color: #e0e0e0;
+        font-size: 1.5rem;
+        letter-spacing: 0.1em;
+        font-family: 'Georgia', serif;
+    }
+
+    .vtm-title span {
+        color: #8a0b0b;
+        font-weight: bold;
+    }
+
+    .text-link {
+        color: #888;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+
+    .text-link:hover {
+        color: white;
+    }
+</style>

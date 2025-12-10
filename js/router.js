@@ -26,6 +26,12 @@ async function updateSidebar() {
     liLogout?.classList.remove("hidden");
     const name = session.user.user_metadata?.full_name || session.user.email;
     if (spanName) spanName.textContent = name;
+
+    // Check Admin for Tools Menu - NOW OPEN FOR ALL AUTHENTICATED USERS
+    const liTools = document.getElementById("menu-tools");
+    if (liTools) {
+      liTools.classList.remove("hidden");
+    }
   } else {
     liWelcome?.classList.remove("hidden");
     liUser?.classList.add("hidden");
@@ -39,6 +45,9 @@ const routes = {
   welcome: "fragments/login.html",
   games: "fragments/games.html",
   game: "fragments/game.html",
+  tools: "fragments/tools.html",
+  "portrait-generator": "fragments/portrait-generator.html",
+  "card-creator": "fragments/card-creator.html",
 };
 
 // 3) Core routing function
@@ -84,7 +93,11 @@ async function loadRoute(force = false) {
   contentEl.querySelectorAll("script").forEach((s) => eval(s.textContent));
 
   // View-specific initialization
-  if (targetHash === "welcome") {
+  if (
+    targetHash === "welcome" ||
+    targetHash === "login" ||
+    targetHash === "register"
+  ) {
     if (typeof initAuthTabs === "function") initAuthTabs();
     if (typeof initAuthForms === "function") initAuthForms();
   }

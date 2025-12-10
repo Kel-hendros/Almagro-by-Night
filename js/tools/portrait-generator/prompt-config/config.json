@@ -1,0 +1,195 @@
+{
+    "systemInstruction": "\nYou are an expert visual artist specializing in \"World of Darkness\" and \"Vampire: The Masquerade\" aesthetics.\nYour task is to generate photorealistic, cinematic portraits of vampires.\nThe lighting should always be dark, dramatic, moody, and nocturnal. \nVERY IMPORTANT: Avoid daylight, dusk and dawn completely. Only Night.\nFocus on texture: realistic skin, fabric details, atmospheric fog, and lighting contrast.\nAll subjects are vampires, therefore: No sweat, no \"healthy\" rosé skin color, always apply a pale \"cadaverous\" tint. Even for black skins.\nIf the user description conflicts with the style presets, prioritize the user description for physical features, but keep the lighting/mood of the preset.\nShots are made with some depth of field, separating the subject from the background.\n",
+    "archetypes": [
+        {
+            "id": "generic-cainite",
+            "name": "Cainita Genérico",
+            "description": "Pálido, elegante, depredador.",
+            "icon": "🩸",
+            "stylePrompt": "A vampire, pale skin, intense gaze."
+        },
+        {
+            "id": "nosferatu",
+            "name": "Nosferatu",
+            "description": "Rasgos deformados, textura rugosa.",
+            "icon": "🧟",
+            "stylePrompt": "A Nosferatu vampire, sharp incisive teeth, disfigured facial features, slight prosthetics realism, rough skin texture, sparse hair, terrifying but realistic."
+        },
+        {
+            "id": "toreador",
+            "name": "Toreador",
+            "description": "Belleza sobrenatural, mirada intensa.",
+            "icon": "🌹",
+            "stylePrompt": "A breathtakingly beautiful Toreador vampire, flawless porcelain skin, intense seductive gaze, high fashion aesthetic."
+        },
+        {
+            "id": "gangrel",
+            "name": "Gangrel",
+            "description": "Rasgos ferales, ojos brillantes.",
+            "icon": "🐺",
+            "stylePrompt": "A feral person, subtle animalistic features, intense predatory eyes, slightly unkempt appearance, raw and gritty texture."
+        },
+        {
+            "id": "ventrue",
+            "name": "Ventrue",
+            "description": "Autoritario, aristocrático, regio.",
+            "icon": "👑",
+            "stylePrompt": "A commanding person, aura of authority, stern expression, perfectly groomed, cold and expensive look."
+        },
+        {
+            "id": "malkavian",
+            "name": "Malkavian",
+            "description": "Expresión inquietante, mirada perdida.",
+            "icon": "🔮",
+            "stylePrompt": "A chaotic person, unhinged or disconnected expression, eyes that see beyond reality, psychological horror vibe."
+        },
+        {
+            "id": "brujah",
+            "name": "Brujah",
+            "description": "Rebelde, apasionado, intenso.",
+            "icon": "👊",
+            "stylePrompt": "A rebellious person, intense and passionate expression, grit texture, dynamic energy."
+        },
+        {
+            "id": "tremere",
+            "name": "Tremere",
+            "description": "Intelectual, severo, misterioso.",
+            "icon": "📚",
+            "stylePrompt": "A mysterious warlock person, stern academic look, sharp focus, intense concentration, crimson and shadow palette."
+        },
+        {
+            "id": "assamita",
+            "name": "Assamita",
+            "description": "Silencioso, juez, mirada penetrante.",
+            "icon": "🗡️",
+            "stylePrompt": "An assassin aesthetic, dark hooded or tactical clothing, intense judging eyes, middle eastern features mixed with modern darkness."
+        },
+        {
+            "id": "followers-of-seth",
+            "name": "Seguidores de Seth",
+            "description": "Seductor, corrupto, hipnótico.",
+            "icon": "🐍",
+            "stylePrompt": "A Ministry (Setite) vampire, seductive and corrupt appearance, hypnotic eyes, wearing luxurious but eccentric clothing, aura of temptation."
+        },
+        {
+            "id": "giovanni",
+            "name": "Giovanni",
+            "description": "Mórbido, piel pálida azulada, rico.",
+            "icon": "💀",
+            "stylePrompt": "A Giovanni vampire, deathly pale skin, morbid wealth aesthetic, suits with skulls or death motifs, cold dead eyes. Italian heritage, aristocratic bearing."
+        },
+        {
+            "id": "ravnos",
+            "name": "Ravnos",
+            "description": "Bribón, sonriente, colorido pero oscuro.",
+            "icon": "🃏",
+            "stylePrompt": "A Ravnos vampire, trickster vibes, perhaps a slightly mischievous smile, eclectic clothing style mixed with street wear, gypsy atmosphere."
+        },
+        {
+            "id": "lasombra",
+            "name": "Lasombra",
+            "description": "Sombras vivas, arrogante, oscuro.",
+            "icon": "🌑",
+            "stylePrompt": "A Lasombra vampire, surrounded by unnatural shadows, arrogant expression, dressed in dark formal wear or clerical clothing, manipulation of darkness."
+        },
+        {
+            "id": "tzimisce",
+            "name": "Tzimisce",
+            "description": "Inhumano, belleza alienígena, dragón.",
+            "icon": "🐉",
+            "stylePrompt": "A Tzimisce vampire, flesh-crafted beauty, alien-like perfection or slight monstrous modifications, aristocratic bearing, lordlike aura."
+        }
+    ],
+    "backgrounds": [
+        {
+            "id": "void",
+            "name": "El Vacío",
+            "description": "Negro sólido, oscuridad total.",
+            "icon": "⚫",
+            "stylePrompt": "Solid black background, pitch black void, minimal lighting, isolated subject. NO architecture, NO walls, NO buildings, NO scenery."
+        },
+        {
+            "id": "blur",
+            "name": "Bokeh Oscuro",
+            "description": "Fondo desenfocado y abstracto.",
+            "icon": "🌫️",
+            "stylePrompt": "Abstract dark blurry background, heavy bokeh effect, undefinable shapes, soft focus background."
+        },
+        {
+            "id": "city-street",
+            "name": "Calle Nocturna",
+            "description": "Ciudad gótica, lluvia, neón.",
+            "icon": "🏙️",
+            "stylePrompt": "Dark city street at night, wet pavement, rain, reflection of neon signs, urban gothic atmosphere."
+        },
+        {
+            "id": "interior-haven",
+            "name": "Refugio Privado",
+            "description": "Lujoso, antiguo, terciopelo.",
+            "icon": "🍷",
+            "stylePrompt": "Lavish vampire haven interior, velvet curtains, antique furniture, dim candle light, luxury room."
+        },
+        {
+            "id": "club",
+            "name": "Nightclub",
+            "description": "Luces estroboscópicas, humo.",
+            "icon": "🎉",
+            "stylePrompt": "Dark industrial nightclub, lasers, fog machine smoke, silhouette of dancing crowd in distance."
+        },
+        {
+            "id": "sewer",
+            "name": "Alcantarillas",
+            "description": "Túneles, ladrillo viejo, humedad.",
+            "icon": "🐀",
+            "stylePrompt": "Underground sewer tunnel, old brickwork, dripping water, moss, steam pipes, dirty dark atmosphere."
+        },
+        {
+            "id": "forest",
+            "name": "Bosque Profundo",
+            "description": "Árboles secos, niebla, luna.",
+            "icon": "🌲",
+            "stylePrompt": "Dense forest at night, twisted branches, thick ground fog, cold moonlight filtering through trees, dark atmosphere."
+        },
+        {
+            "id": "library",
+            "name": "Biblioteca Oculta",
+            "description": "Estanterías, polvo, misterio.",
+            "icon": "📖",
+            "stylePrompt": "Occult library, rows of old books, shadows cast by shelves, scholarly atmosphere, dark atmosphere, victorian age aesthetics."
+        },
+        {
+            "id": "elysium",
+            "name": "El Eliseo",
+            "description": "Bar elegante, victoriano, gente fondo.",
+            "icon": "🏛️",
+            "stylePrompt": "Elysium setting, elegant victorian bar or lounge, out of focus patrons in the background, high society vampire gathering."
+        },
+        {
+            "id": "wall",
+            "name": "Pared Vieja",
+            "description": "Ladrillos oscuros, grunge.",
+            "icon": "🧱",
+            "stylePrompt": "Old dark brick wall texture background, grunge aesthetic, out of focus urban texture, graffiti, urban decay."
+        }
+    ],
+    "shotTypes": [
+        {
+            "id": "close-up",
+            "name": "Primer Plano",
+            "description": "Rostro.",
+            "stylePrompt": "Extreme close-up portrait, framing strictly the face, occupying the full image. Focus intently on facial details, eyes, and skin texture."
+        },
+        {
+            "id": "bust",
+            "name": "Medio Pecho",
+            "description": "Hasta mitad del pecho.",
+            "stylePrompt": "Medium close-up (bust shot), framing the subject from the head down to the middle of the chest. Clearly showing the shoulders and upper garment details."
+        },
+        {
+            "id": "full-body",
+            "name": "Cuerpo Completo",
+            "description": "Figura entera de pies a cabeza.",
+            "stylePrompt": "Full body wide shot. The entire character is visible from head to toe, including footwear. Showing full stance and outfit."
+        }
+    ]
+}
