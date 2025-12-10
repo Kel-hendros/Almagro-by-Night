@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "https://esm.run/@google/genai";
 
 // --- Configuration ---
-const CONFIG_URL = "/js/tools/portrait-generator/prompt-config/config.json";
+const CONFIG_URL = "js/tools/portrait-generator/prompt-config/config.json";
 let PRESETS = [];
 let BACKGROUNDS = [];
 let SHOT_TYPES = [];
