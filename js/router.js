@@ -48,6 +48,7 @@ const routes = {
   tools: "fragments/tools.html",
   "portrait-generator": "fragments/portrait-generator.html",
   "card-creator": "fragments/card-creator.html",
+  "character-sheets": "fragments/character-sheets.html",
 };
 
 // 3) Core routing function

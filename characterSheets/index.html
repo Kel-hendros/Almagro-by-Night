@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>
+        Vampiro v20 - Hoja de Personaje
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="style light.css">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <script src="https://kit.fontawesome.com/8a611956c8.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+    <script src="../js/supabase.js"></script>
+</head>
+
+<body>
+    <div style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
+        <a href="../index.html#character-sheets"
+            style="color: white; text-decoration: none; background: #333; padding: 5px 10px; border-radius: 5px;">&larr;
+            Volver</a>
+    </div>
+    <div class="super-container">
+        <div class="column-left">
+            <!-- INFORMACION -->
+            <div class="container info">
+                <div class="column">
+                    <div class="form-group info">
+                        <label for="naturaleza">Naturaleza:</label>
+                        <input type="text" id="naturaleza" autocomplete="off">
+                    </div>
+                    <div class="form-group info">
+                        <label for="conducta">Conducta:</label>
+                        <input type="text" id="conducta" autocomplete="off">
+                    </div>
+                    <div class="form-group info">
+                        <label for="concepto">Concepto:</label>
+                        <input type="text" id="concepto" autocomplete="off">
+                    </div>
+                    <div class="form-group info">
+                        <label for="debilidad">Debilidad del Clan:</label>
+                        <input type="text" id="debilidad" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <!-- TAB CONTENEDOR -->
+            <div class="tab-container">
+                <div class="seccion-container">
+                    <div class="seccion-linea"></div>
+                    <h1 class="seccion">Ventajas</h1>
+                    <div class="seccion-linea"></div>
+                </div>
+                <div class="tab-buttons-container">
+                    <button class="tab-button active" data-tab="tab1">Disciplinas</button>
+                    <button class="tab-button" data-tab="tab2">Trasfondos</button>
+                    <button class="tab-button" data-tab="tab3">Virtudes</button>
+                    <button class="tab-button" data-tab="tab4">Meritos y Defectos</button>
+                </div>
+                <!-- DISCIPLINAS -->
+                <div id="tab1" class="tab-content active">
+                    <div class="discipline-container">
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina1" autocomplete="off">
+                            <div class="rating" id="disciplina1-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina1-value" name="disciplina1" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina2" autocomplete="off">
+                            <div class="rating" id="disciplina2-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina2-value" name="disciplina2" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina3" autocomplete="off">
+                            <div class="rating" id="disciplina3-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina3-value" name="disciplina3" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina4" autocomplete="off">
+                            <div class="rating" id="disciplina4-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina4-value" name="disciplina4" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina5" autocomplete="off">
+                            <div class="rating" id="disciplina5-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina5-value" name="disciplina5" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina6" autocomplete="off">
+                            <div class="rating" id="disciplina6-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina6-value" name="disciplina6" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina7" autocomplete="off">
+                            <div class="rating" id="disciplina7-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina7-value" name="disciplina7" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina8" autocomplete="off">
+                            <div class="rating" id="disciplina8-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina8-value" name="disciplina8" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina9" autocomplete="off">
+                            <div class="rating" id="disciplina9-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina9-value" name="disciplina9" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina10" autocomplete="off">
+                            <div class="rating" id="disciplina10-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina10-value" name="disciplina10" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina11" autocomplete="off">
+                            <div class="rating" id="disciplina11-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina11-value" name="disciplina11" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
+                            <input type="text" id="disciplina12" autocomplete="off">
+                            <div class="rating" id="disciplina12-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="disciplina12-value" name="disciplina12" value="0">
+                        </div>
+                    </div>
+                </div>
+                <!-- TRASFONDOS -->
+                <div id="tab2" class="tab-content">
+                    <div class="discipline-container">
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo1" autocomplete="off">
+                            <div class="rating" id="trasfondo1-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo1-value" name="trasfondo1" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo2" autocomplete="off">
+                            <div class="rating" id="trasfondo2-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo2-value" name="trasfondo2" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo3" autocomplete="off">
+                            <div class="rating" id="trasfondo3-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo3-value" name="trasfondo3" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo4" autocomplete="off">
+                            <div class="rating" id="trasfondo4-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo4-value" name="trasfondo4" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo5" autocomplete="off">
+                            <div class="rating" id="trasfondo5-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo5-value" name="trasfondo5" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo6" autocomplete="off">
+                            <div class="rating" id="trasfondo6-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo6-value" name="trasfondo6" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo7" autocomplete="off">
+                            <div class="rating" id="trasfondo7-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo7-value" name="trasfondo7" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo8" autocomplete="off">
+                            <div class="rating" id="trasfondo8-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo8-value" name="trasfondo8" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo9" autocomplete="off">
+                            <div class="rating" id="trasfondo9-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo9-value" name="trasfondo9" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo10" autocomplete="off">
+                            <div class="rating" id="trasfondo10-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo10-value" name="trasfondo10" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo11" autocomplete="off">
+                            <div class="rating" id="trasfondo11-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo11-value" name="trasfondo11" value="0">
+                        </div>
+                        <div class="form-group discipline">
+                            <input type="text" id="trasfondo12" autocomplete="off">
+                            <div class="rating" id="trasfondo12-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="trasfondo12-value" name="trasfondo12" value="0">
+                        </div>
+                    </div>
+                </div>
+                <!-- Virtudes -->
+                <div id="tab3" class="tab-content">
+                    <div class="discipline-container">
+                        <!-- dropdown field with two options-->
+                        <div class="virtue-container">
+
+                            <div class="form-group discipline">
+                                <ion-icon class="virtue-icon" name="dice-sharp"></ion-icon>
+                                <select id="virtue1" name="virtue1">
+                                    <option value="conciencia" selected>Conciencia</option>
+                                    <option value="conviccion">Conviccion</option>
+                                </select>
+                                <div class="rating" id="virtue1-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="virtue1-value" name="virtue1" value="0">
+                            </div>
+
+                            <div class="form-group discipline">
+                                <ion-icon class="virtue-icon" name="dice-sharp"></ion-icon>
+                                <select id="virtue2" name="virtue2">
+                                    <option value="autocontrol" selected>Autocontrol</option>
+                                    <option value="instinto">Instinto</option>
+                                </select>
+                                <div class="rating" id="virtue2-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="virtue2-value" name="virtue2" value="0">
+                            </div>
+
+                            <div class="form-group discipline">
+                                <ion-icon class="virtue-icon" name="dice-sharp"></ion-icon>
+                                <input for="virtue3" value="Coraje" readonly>
+                                <div class="rating" id="virtue3-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="virtue3-value" name="virtue3" value="0">
+                            </div>
+                        </div>
+
+                        <div class="humanidad-container">
+                            <div class="seccion-container">
+                                <div class="seccion-linea"></div>
+                                <h2 class="seccion">Humanidad/Senda</h2>
+                                <div class="seccion-linea"></div>
+                            </div>
+
+                            <!-- Contenido Humanidad/Senda -->
+                            <div class="form-group humanidad">
+                                <input type="text" id="humanidad" autocomplete="off" placeholder="Humanidad/Senda">
+                                <div class="humanidad-form-group">
+                                    <ion-icon class="senda-icon" name="dice-sharp"></ion-icon>
+                                    <div class="rating" id="humanidad-rating">
+                                        <span class="dot" data-value="0"></span>
+                                        <span class="dot" data-value="1"></span>
+                                        <span class="dot" data-value="2"></span>
+                                        <span class="dot" data-value="3"></span>
+                                        <span class="dot" data-value="4"></span>
+                                        <span class="dot" data-value="5"></span>
+                                        <span class="dot" data-value="6"></span>
+                                        <span class="dot" data-value="7"></span>
+                                        <span class="dot" data-value="8"></span>
+                                        <span class="dot" data-value="9"></span>
+                                    </div>
+                                    <input type="hidden" id="humanidad-value" name="humanidad" value="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Meritos y Defectos -->
+                <div id="tab4" class="tab-content">
+                    <div class="discipline-container">
+                        <div class="seccion-container">
+                            <div class="seccion-linea"></div>
+                            <h2 class="seccion">Meritos</h2>
+                            <div class="seccion-linea"></div>
+                        </div>
+                        <div class="form-group merito">
+                            <input type="text" id="merito1" autocomplete="off">
+                            <div class="rating" id="merito1-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="merito1-value" name="merito1" value="0">
+                        </div>
+                        <div class="form-group merito">
+                            <input type="text" id="merito2" autocomplete="off">
+                            <div class="rating" id="merito2-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="merito2-value" name="merito2" value="0">
+                        </div>
+                        <div class="form-group merito">
+                            <input type="text" id="merito3" autocomplete="off">
+                            <div class="rating" id="merito3-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="merito3-value" name="merito3" value="0">
+                        </div>
+                        <div class="form-group merito">
+                            <input type="text" id="merito4" autocomplete="off">
+                            <div class="rating" id="merito4-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="merito4-value" name="merito4" value="0">
+                        </div>
+                        <div class="form-group merito">
+                            <input type="text" id="merito5" autocomplete="off">
+                            <div class="rating" id="merito5-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="merito5-value" name="merito5" value="0">
+                        </div>
+                        <div class="seccion-container">
+                            <div class="seccion-linea"></div>
+                            <h2 class="seccion">Defectos</h2>
+                            <div class="seccion-linea"></div>
+                        </div>
+                        <!-- need to repeat all form groups as in Merito but with defecto, 5 of them -->
+                        <div class="form-group defecto">
+                            <input type="text" id="defecto1" autocomplete="off">
+                            <div class="rating" id="defecto1-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="defecto1-value" name="defecto1" value="0">
+                        </div>
+                        <div class="form-group defecto">
+                            <input type="text" id="defecto2" autocomplete="off">
+                            <div class="rating" id="defecto2-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="defecto2-value" name="defecto2" value="0">
+                        </div>
+                        <div class="form-group defecto">
+                            <input type="text" id="defecto3" autocomplete="off">
+                            <div class="rating" id="defecto3-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="defecto3-value" name="defecto3" value="0">
+                        </div>
+                        <div class="form-group defecto">
+                            <input type="text" id="defecto4" autocomplete="off">
+                            <div class="rating" id="defecto4-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="defecto4-value" name="defecto4" value="0">
+                        </div>
+                        <div class="form-group defecto">
+                            <input type="text" id="defecto5" autocomplete="off">
+                            <div class="rating" id="defecto5-rating">
+                                <span class="dot" data-value="0"></span>
+                                <span class="dot" data-value="1"></span>
+                                <span class="dot" data-value="2"></span>
+                                <span class="dot" data-value="3"></span>
+                                <span class="dot" data-value="4"></span>
+                            </div>
+                            <input type="hidden" id="defecto5-value" name="defecto5" value="0">
+                        </div>
+                    </div>
+                    <div class="defectos-container"></div>
+                </div>
+            </div>
+            <!-- VOLUNTAD CONTENEDOR -->
+            <div class="voluntad-container">
+                <div class="seccion-container">
+                    <div class="seccion-linea"></div>
+                    <h1 class="seccion">Fuerza de Voluntad</h1>
+                    <div class="seccion-linea"></div>
+                </div>
+                <div class="form-group voluntad">
+                    <ion-icon class="will-icon perm" name="dice-sharp"
+                        onclick="rollVoluntad('voluntadPerm-value')"></ion-icon>
+                    <div class="rating" id="voluntad-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                        <span class="dot" data-value="5"></span>
+                        <span class="dot" data-value="6"></span>
+                        <span class="dot" data-value="7"></span>
+                        <span class="dot" data-value="8"></span>
+                        <span class="dot" data-value="9"></span>
+                    </div>
+                    <input type="hidden" id="voluntadPerm-value" name="Vol.Perm." value="0">
+                </div>
+                <div class="form-group voluntadTemp">
+                    <ion-icon class="will-icon temp" name="dice-sharp" onclick="rollVoluntad('voluntadTemp-value')" "></ion-icon>
+                        <div class=" rating" id="voluntadTemp-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                        <span class="dot" data-value="5"></span>
+                        <span class="dot" data-value="6"></span>
+                        <span class="dot" data-value="7"></span>
+                        <span class="dot" data-value="8"></span>
+                        <span class="dot" data-value="9"></span>
+                </div>
+                <input type="hidden" id="voluntadTemp-value" name="Vol.Temp." value="0">
+            </div>
+        </div>
+        <!-- EXPERIENCIA -->
+        <div class="experiencia-container">
+            <div class="seccion-container">
+                <div class="seccion-linea"></div>
+                <h2 class="seccion">Experiencia</h2>
+                <div class="seccion-linea"></div>
+            </div>
+            <div class="experiencia-pool">
+                <div class="xp-row">
+                    <div class="rating" id="xp-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                        <span class="dot" data-value="5"></span>
+                        <span class="dot" data-value="6"></span>
+                        <span class="dot" data-value="7"></span>
+                        <span class="dot" data-value="8"></span>
+                        <span class="dot" data-value="9"></span>
+                        <span class="dot" data-value="10"></span>
+                        <span class="dot" data-value="11"></span>
+                        <span class="dot" data-value="12"></span>
+                        <span class="dot" data-value="13"></span>
+                        <span class="dot" data-value="14"></span>
+                        <span class="dot" data-value="15"></span>
+                        <span class="dot" data-value="16"></span>
+                        <span class="dot" data-value="17"></span>
+                        <span class="dot" data-value="18"></span>
+                        <span class="dot" data-value="19"></span>
+                        <span class="dot" data-value="20"></span>
+                        <span class="dot" data-value="21"></span>
+                        <span class="dot" data-value="22"></span>
+                        <span class="dot" data-value="23"></span>
+                        <span class="dot" data-value="24"></span>
+                        <span class="dot" data-value="25"></span>
+                        <span class="dot" data-value="26"></span>
+                        <span class="dot" data-value="27"></span>
+                        <span class="dot" data-value="28"></span>
+                        <span class="dot" data-value="29"></span>
+                        <span class="dot" data-value="30"></span>
+                        <span class="dot" data-value="31"></span>
+                        <span class="dot" data-value="32"></span>
+                        <span class="dot" data-value="33"></span>
+                        <span class="dot" data-value="34"></span>
+                        <span class="dot" data-value="35"></span>
+                        <span class="dot" data-value="36"></span>
+                        <span class="dot" data-value="37"></span>
+                        <span class="dot" data-value="38"></span>
+                        <span class="dot" data-value="39"></span>
+                        <span class="dot" data-value="40"></span>
+                        <span class="dot" data-value="41"></span>
+                        <span class="dot" data-value="42"></span>
+                        <span class="dot" data-value="43"></span>
+                        <span class="dot" data-value="44"></span>
+                    </div>
+                    <input type="hidden" id="experiencia-value" name="experiencia" value="0">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="column-middle">
+        <!-- TITULO -->
+        <div class="header">
+            <div class="container info">
+                <div class="form-group info">
+                    <label for="nombre">Nombre:</label>
+                    <input type="text" id="nombre" autocomplete="off">
+                </div>
+                <div class="form-group info">
+                    <label for="clan">Clan:</label>
+                    <input type="text" id="clan" autocomplete="off">
+                </div>
+                <div class="form-group info">
+                    <label for="generacion">Generacion:</label>
+                    <select id="generacion" autocomplete="off">
+                        <option value="14">14</option>
+                        <option value="13" selected>13</option>
+                        <option value="12">12</option>
+                        <option value="11">11</option>
+                        <option value="10">10</option>
+                        <option value="9">9</option>
+                        <option value="8">8</option>
+                        <option value="7">7</option>
+                        <option value="6">6</option>
+                        <option value="5">5</option>
+                        <option value="4">4</option>
+                        <option value="3">3</option>
+                    </select>
+                </div>
+                <div class="form-group info">
+                    <label for="sire">Sire:</label>
+                    <input type="text" id="sire" autocomplete="off">
+                </div>
+            </div>
+            <div class="title-container">
+                <div class="title-logo">/</div>
+            </div>
+            <div class="button-and-image">
+                <div class="header-clandetail-container">
+                    <div class="header-clan-logo">
+                        <p id="header-logo-display">G</p>
+                        <input type="hidden" id="header-logo-value" name="logo" value="G">
+                    </div>
+                </div>
+            </div>
+            <div class="buttons-container">
+                <!-- <button title="Guardar personaje" class="gg-export" onclick="downloadCharacterData()"></button> -->
+                <ion-icon name="save-sharp" onclick="downloadCharacterData()"></ion-icon>
+                <!-- <label title="Cargar personaje" for="file-input" class="gg-import"></label> -->
+                <ion-icon for="file-input-icon" name="download-sharp" onclick="clickOnFileInput()"></ion-icon>
+                <input type="file" id="file-input" hidden accept=".json">
+                <!-- <button title="cambiarModo" class="gg-dark-mode""></button> -->
+                <ion-icon name="logo-discord" id="discord-btn"></ion-icon>
+                <ion-icon name="contrast-sharp" id="modeToggle"></ion-icon>
+            </div>
+        </div>
+
+        <!-- Modal discord token -->
+        <div id="discord-modal" class="modal">
+            <div class="modal-content">
+                <h1>Discord webhook</h1>
+                <p>Introduce la URL del webhook de Discord para que se envíen los mensajes de las tiradas de dados.
+                    <br>
+                    Dejar en blanco para desactivar.
+                    <br><br>
+                    <a href="https://support.discord.com/hc/es/articles/228383668-Usando-Webhooks" target="_blank">¿Cómo
+                        crear
+                        un webhook?</a>
+                </p>
+                <div class="discord-container">
+                    <div class="discordlist">
+                        <label for="discord-webhook">Webhook URL:</label>
+                        <input type="text" id="discord-modal-webhook-input" autocomplete="off">
+                    </div>
+                    <ion-icon class="toggle" id="discord-toggle" name="toggle-sharp"></ion-icon>
+                    <input type="hidden" id="discord-toggle-input" name="discord-toggle-input" value="true">
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button-save" id="discord-modal-save-button">Guardar</button>
+                    <button class="modal-button-close" id="discord-modal-close-button">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal CLAN HTML -->
+        <div id="clan-modal" class="modal">
+            <div class="modal-content">
+                <h1>Elegir Clan</h1>
+                <div class="clan-container">
+                    <div class="clanlist-container">
+                        <h2>Camarilla</h2>
+                        <ul>
+                            <li data-clan="1">Brujah</li>
+                            <li data-clan="2">Gangrel</li>
+                            <li data-clan="3">Malkavian</li>
+                            <li data-clan="4">Nosferatu</li>
+                            <li data-clan="5">Toreador</li>
+                            <li data-clan="6">Tremere</li>
+                            <li data-clan="7">Ventrue</li>
+                        </ul>
+                        <h2>Sabbat</h2>
+                        <ul>
+                            <li data-clan="R">Lasombra</li>
+                            <li data-clan="E">Tzimisce</li>
+                        </ul>
+                        <h2>Indepedientes</h2>
+                        <ul>
+                            <li data-clan="9">Assamita</li>
+                            <li data-clan="e">Giovanni</li>
+                            <li data-clan="0">Ravnos</li>
+                            <li data-clan="=">Seguidores de Set</li>
+                        </ul>
+                        <h2>Lineas de sangre</h2>
+                        <ul>
+                            <li data-clan="É">Ahriman</li>
+                            <li data-clan="`">Anda</li>
+                            <li data-clan="ã">Baali</li>
+                            <li data-clan="T">
+                                Brujah Verdadero</li>
+                            <li data-clan="`">Capadocio</li>
+                            <li data-clan="`">Gargola</li>
+                            <li data-clan="`">Heraldo de las Calaveras</li>
+                            <li data-clan="`">Hermanos de sangre</li>
+                            <li data-clan="q">Hijas de la Cacofonia</li>
+                            <li data-clan="`">Hijos de Osiris</li>
+                            <li data-clan="`">Kiasyd</li>
+                            <li data-clan="`">Lamia</li>
+                            <li data-clan="`">Lhiannan</li>
+                            <li data-clan="`">Nagaraja</li>
+                            <li data-clan="`">Noiad</li>
+                            <li data-clan="-">Salubri</li>
+                            <li data-clan="t">Samedi</li>
+                        </ul>
+                    </div>
+                    <div class="clandetail-container">
+                        <div class="clan-logo">
+                            <p id="logo-display">G</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button-save" id="accept-btn">Aceptar</button>
+                    <button class="modal-button-close" id="close-btn">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!--  ATRIBUTOS  -->
+        <div class="seccion-container">
+            <div class="seccion-linea-izq">3</div>
+            <div class="linea-recta"></div>
+            <h1 class="seccion">Atributos</h1>
+            <div class="linea-recta"></div>
+            <div class="seccion-linea-der">4</div>
+        </div>
+        <div class="container attributes">
+            <!-- PRIMERA COLUMNA ATRIBUTOS: FISICOS  -->
+            <div class="column">
+                <h2>Fisicos</h2>
+                <div class="form-group attribute fisicos">
+                    <label for="fuerza">Fuerza:</label>
+                    <!-- TO DO -->
+                    <select class="tempAttr fuerza" id="tempFuerza">
+                        <option value="0" selected>+0</option>
+                        <option value="1">+1</option>
+                        <option value="2">+2</option>
+                        <option value="3">+3</option>
+                        <option value="4">+4</option>
+                        <option value="5">+5</option>
+                        <option value="6">+6</option>
+                        <option value="7">+7</option>
+                        <option value="8">+8</option>
+                    </select>
+                    <!-- end of TO DO -->
+                    <div class="rating" id="fuerza-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="fuerza-value" name="fuerza" value="0">
+                </div>
+                <div class="form-group attribute fisicos">
+                    <label for="destreza">Destreza:</label>
+                    <!-- TO DO -->
+                    <select class="tempAttr destreza" id="tempDestreza">
+                        <option value="0" selected>+0</option>
+                        <option value="1">+1</option>
+                        <option value="2">+2</option>
+                        <option value="3">+3</option>
+                        <option value="4">+4</option>
+                        <option value="5">+5</option>
+                        <option value="6">+6</option>
+                        <option value="7">+7</option>
+                        <option value="8">+8</option>
+                    </select>
+                    <!-- end of TO DO -->
+                    <div class="rating" id="destreza-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="destreza-value" name="destreza" value="0">
+                </div>
+                <div class="form-group attribute fisicos">
+                    <label for="resistencia">Resistencia:</label>
+                    <!-- TO DO -->
+                    <select class="tempAttr resistencia" id="tempResistencia">
+                        <option value="0" selected>+0</option>
+                        <option value="1">+1</option>
+                        <option value="2">+2</option>
+                        <option value="3">+3</option>
+                        <option value="4">+4</option>
+                        <option value="5">+5</option>
+                        <option value="6">+6</option>
+                        <option value="7">+7</option>
+                        <option value="8">+8</option>
+                    </select>
+                    <!-- end of TO DO -->
+                    <div class="rating" id="resistencia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="resistencia-value" name="resistencia" value="0">
+                </div>
+            </div>
+            <!-- SEGUNDA COLUMNA ATRIBUTOS: SOCIALES  -->
+            <div class="column">
+                <h2>Sociales</h2>
+                <div class="form-group attribute">
+                    <label for="carisma">Carisma:</label>
+                    <div class="rating" id="carisma-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="carisma-value" name="carisma" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="manipulacion">Manipulacion:</label>
+                    <div class="rating" id="manipulacion-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="manipulacion-value" name="manipulacion" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="apariencia">Apariencia:</label>
+                    <div class="rating" id="apariencia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="apariencia-value" name="apariencia" value="0">
+                </div>
+            </div>
+            <!-- TERCERA COLUMNA ATRIBUTOS: MENTALES  -->
+            <div class="column">
+                <h2>Mentales</h2>
+                <div class="form-group attribute">
+                    <label for="percepcion">Percepcion:</label>
+                    <div class="rating" id="percepcion-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="percepcion-value" name="percepcion" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="inteligencia">Inteligencia:</label>
+                    <div class="rating" id="inteligencia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="inteligencia-value" name="inteligencia" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="astucia">Astucia:</label>
+                    <div class="rating" id="astucia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="astucia-value" name="astucia" value="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- HABILIDADES -->
+        <div class="seccion-container">
+            <div class="seccion-linea-izq">3</div>
+            <div class="linea-recta"></div>
+            <h1 class="seccion">Habilidades</h1>
+            <div class="linea-recta"></div>
+            <div class="seccion-linea-der">4</div>
+        </div>
+        <div class="container abilities">
+            <!-- PRIMERA COLUMNA HABILIDADES: TALENTOS  -->
+            <div class="column">
+                <h2>Talentos</h2>
+                <div class="form-group attribute">
+                    <label for="alerta">Alerta:</label>
+                    <div class="rating" id="alerta-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="alerta-value" name="alerta" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="atletismo">Atletismo:</label>
+                    <div class="rating" id="atletismo-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="atletismo-value" name="atletismo" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="callejeo">Callejeo:</label>
+                    <div class="rating" id="callejeo-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="callejeo-value" name="callejeo" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="consciencia">Consciencia:</label>
+                    <div class="rating" id="consciencia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="consciencia-value" name="consciencia" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="empatia">Empatia:</label>
+                    <div class="rating" id="empatia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="empatia-value" name="empatia" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="expresion">Expresion:</label>
+                    <div class="rating" id="expresion-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="expresion-value" name="expresion" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="intimidacion">Intimidacion:</label>
+                    <div class="rating" id="intimidacion-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="intimidacion-value" name="intimidacion" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="liderazgo">Liderazgo:</label>
+                    <div class="rating" id="liderazgo-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="liderazgo-value" name="liderazgo" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="pelea">Pelea:</label>
+                    <div class="rating" id="pelea-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="pelea-value" name="pelea" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="subterfugio">Subterfugio:</label>
+                    <div class="rating" id="subterfugio-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="subterfugio-value" name="subterfugio" value="0">
+                </div>
+            </div>
+            <!-- SEGUNDA COLUMNA HABILIDADES: TECNICAS  -->
+            <div class="column">
+                <h2>Tecnicas</h2>
+                <div class="form-group attribute">
+                    <label for="armasDeFuego">Armas de Fuego:</label>
+                    <div class="rating" id="armasDeFuego-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="armasDeFuego-value" name="armasDeFuego" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="artesania">Artesania:</label>
+                    <div class="rating" id="artesania-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="artesania-value" name="artesania" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="conducir">Conducir:</label>
+                    <div class="rating" id="conducir-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="conducir-value" name="conducir" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="etiqueta">Etiqueta:</label>
+                    <div class="rating" id="etiqueta-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="etiqueta-value" name="etiqueta" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="interpretacion">Interpretacion:</label>
+                    <div class="rating" id="interpretacion-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="interpretacion-value" name="interpretacion" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="latrocinio">Latrocinio:</label>
+                    <div class="rating" id="latrocinio-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="latrocinio-value" name="latrocinio" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="peleaConArmas">Pelea con Armas:</label>
+                    <div class="rating" id="peleaConArmas-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="peleaConArmas-value" name="peleaConArmas" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="sigilo">Sigilo:</label>
+                    <div class="rating" id="sigilo-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="sigilo-value" name="sigilo" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="supervivencia">Supervivencia:</label>
+                    <div class="rating" id="supervivencia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="supervivencia-value" name="supervivencia" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="tratoConAnimales">Trato con Animales:</label>
+                    <div class="rating" id="tratoConAnimales-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="tratoConAnimales-value" name="tratoConAnimales" value="0">
+                </div>
+            </div>
+            <!-- TERCERA COLUMNA HABILIDADES: CONOCIMIENTOS  -->
+            <div class="column">
+                <h2>Conocimientos</h2>
+                <div class="form-group attribute">
+                    <label for="academicismo">Academicismo:</label>
+                    <div class="rating" id="academicismo-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="academicismo-value" name="academicismo" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="ciencias">Ciencias:</label>
+                    <div class="rating" id="ciencias-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="ciencias-value" name="ciencias" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="finanzas">Finanzas:</label>
+                    <div class="rating" id="finanzas-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="finanzas-value" name="finanzas" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="informatica">Informatica:</label>
+                    <div class="rating" id="informatica-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="informatica-value" name="informatica" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="investigacion">Investigacion:</label>
+                    <div class="rating" id="investigacion-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="investigacion-value" name="investigacion" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="leyes">Leyes:</label>
+                    <div class="rating" id="leyes-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="leyes-value" name="leyes" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="medicina">Medicina:</label>
+                    <div class="rating" id="medicina-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="medicina-value" name="medicina" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="ocultismo">Ocultismo:</label>
+                    <div class="rating" id="ocultismo-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="ocultismo-value" name="ocultismo" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="politica">Politica:</label>
+                    <div class="rating" id="politica-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="politica-value" name="politica" value="0">
+                </div>
+                <div class="form-group attribute">
+                    <label for="tecnologia">Tecnologia:</label>
+                    <div class="rating" id="tecnologia-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                    </div>
+                    <input type="hidden" id="tecnologia-value" name="tecnologia" value="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- SEPARADOR  -->
+        <div class="seccion-container">
+            <div class="seccion-linea-izq">3</div>
+            <div class="linea-recta"></div>
+            <div class="seccion-linea-der">4</div>
+        </div>
+
+        <!-- DADOS! -->
+        <div class="dice-container">
+            <div class="dice-automatizations">
+
+                <!-- Checkbox Penalizador Salud -->
+                <div class="automatization-row">
+                    <input type="checkbox" id="penalizadorSalud" name="penalizadorSalud" checked>
+                    <label for="penalizadorSalud">Penalizador de Salud:</label>
+                    <label for="penalizadorSalud" id="penalizadorSaludLabel">0</label>
+                </div>
+                <!-- Checkbox Fuerza de Voluntad -->
+                <div class="automatization-row">
+                    <input type="checkbox" id="willpower" name="usaVoluntad">
+                    <label for="willpower">Usar Fuerza de Voluntad</label>
+                </div>
+                <!-- Checkbox Especialidad -->
+                <div class="automatization-row">
+                    <input type="checkbox" id="specialty" name="usaEspecialidad">
+                    <label for="specialty">Usar Especialidad</label>
+                </div>
+            </div>
+            <div class="dice-column">
+                <div class="dice-row">
+                    <div class="groupDie">
+                        <label class="diceLabel" for="dicePool1" id="dicePool1Label"></label>
+                        <input class="dicePool" id="dicePool1" type="number" value="0">
+                    </div>
+                    <div class="groupDie-span">
+                        <span></span>
+                        <span>
+                            +
+                        </span>
+                    </div>
+                    <div class="groupDie">
+                        <label class="diceLabel" for="dicePool2" id="dicePool2Label"></label>
+                        <input class="dicePool" id="dicePool2" type="number" value="0">
+                    </div>
+                    <div class="groupDie-span">
+                        <span></span>
+                        <span>
+                            +
+                        </span>
+                    </div>
+                    <div class="groupDie">
+                        <label class="diceLabel" for="dieMod" id="modLabel">Modif.</label>
+                        <input class="diceMod" id="diceMod" type="number" value="0">
+                    </div>
+                    <div class="groupDie">
+                        <label class="dificultadLabel" for="difficulty">Dif.</label>
+                        <!-- <input class="diceDifficulty" id="difficulty" type="number" value=6> -->
+                        <select id="difficulty" autocomplete="off">
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6" selected>6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                    <button class="diceButton" id="diceButton">Lanzar</button>
+                    <i class="gg-trash"></i>
+                </div>
+                <div class="diceResults" id="diceResults">
+                    <label class="diceRolls" id="diceRolls"></label>
+                    <label class="diceResult" id="diceResult"></label>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="column-right">
+        <!-- SALUD -->
+        <div class="health-container">
+            <div class="seccion-container">
+                <div class="seccion-linea"></div>
+                <h1 class="seccion">Salud</h1>
+                <div class="seccion-linea"></div>
+            </div>
+            <div class="health-table">
+                <div class="table-row salud">
+                    <label for="magullado">Magullado:</label>
+                    <label for="magullado"></label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="magullado-value" name="magullado" value="0">
+                </div>
+                <div class="table-row salud">
+                    <label for="lastimado">Lastimado:</label>
+                    <label for="lastimado">-1</label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="lastimado-value" name="lastimado" value="0">
+                </div>
+                <div class="table-row salud">
+                    <label for="lesionado">Lesionado:</label>
+                    <label for="lesionado">-1</label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="lesionado-value" name="lesionado" value="0">
+                </div>
+                <div class="table-row salud">
+                    <label for="herido">Herido:</label>
+                    <label for="herido">-2</label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="herido-value" name="herido" value="0">
+                </div>
+                <div class="table-row salud">
+                    <label for="malherido">Malherido:</label>
+                    <label for="malherido">-2</label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="malherido-value" name="Malherido" value="0">
+                </div>
+                <div class="table-row salud">
+                    <label for="tullido">Tullido:</label>
+                    <label for="tullido">-5</label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="tullido-value" name="tullido" value="0">
+                </div>
+                <div class="table-row salud">
+                    <label for="incapacitado">Incapacitado:</label>
+                    <label for="incapacitado"></label>
+                    <span class="square" data-value="0"></span>
+                    <input class="inputHealth" type="hidden" id="incapacitado-value" name="incapacitado" value="0">
+                </div>
+            </div>
+            <div class="health-buttons-container">
+                <div class="botonera contundente">
+                    <button type="button" class="button-add" id="contundenteAdd">+</button>
+                    <label class="health-button-label contundente">Contundente</label>
+                    <button type="button" class="button-remove" id="contundenteRemove">-</button>
+                </div>
+                <div class="botonera letal">
+                    <button type="button" class="button-add" id="letalAdd">+</button>
+                    <label class="health-button-label letal">Letal</label>
+                    <button type="button" class="button-remove" id="letalRemove">-</button>
+                </div>
+                <div class="botonera agravado">
+                    <button type="button" class="button-add" id="agravadoAdd">+</button>
+                    <label class="health-button-label agravado">Agravado</label>
+                    <button type="button" class="button-remove" id="agravadoRemove">-</button>
+                </div>
+            </div>
+        </div>
+        <!-- SANGRE -->
+        <div class="blood-container">
+            <div class="seccion-container">
+                <div class="seccion-linea"></div>
+                <h1 class="seccion">Sangre</h1>
+                <div class="seccion-linea"></div>
+            </div>
+            <div class="blood-pool">
+                <div class="blood-action-consume">
+                    <i id="consumeBlood" class="fa-solid fa-droplet-slash" style="color: black;"></i>
+                </div>
+                <div class="blood-row">
+                    <div class="rating" id="blood-rating">
+                        <span class="dot" data-value="0"></span>
+                        <span class="dot" data-value="1"></span>
+                        <span class="dot" data-value="2"></span>
+                        <span class="dot" data-value="3"></span>
+                        <span class="dot" data-value="4"></span>
+                        <span class="dot" data-value="5"></span>
+                        <span class="dot" data-value="6"></span>
+                        <span class="dot" data-value="7"></span>
+                        <span class="dot" data-value="8"></span>
+                        <span class="dot" data-value="9"></span>
+                        <span class="dot" data-value="10"></span>
+                        <span class="dot" data-value="11"></span>
+                        <span class="dot" data-value="12"></span>
+                        <span class="dot" data-value="13"></span>
+                        <span class="dot" data-value="14"></span>
+                        <span class="dot" data-value="15"></span>
+                        <span class="dot" data-value="16"></span>
+                        <span class="dot" data-value="17"></span>
+                        <span class="dot" data-value="18"></span>
+                        <span class="dot" data-value="19"></span>
+                        <span class="dot" data-value="20"></span>
+                        <span class="dot" data-value="21"></span>
+                        <span class="dot" data-value="22"></span>
+                        <span class="dot" data-value="23"></span>
+                        <span class="dot" data-value="24"></span>
+                        <span class="dot" data-value="25"></span>
+                        <span class="dot" data-value="26"></span>
+                        <span class="dot" data-value="27"></span>
+                        <span class="dot" data-value="28"></span>
+                        <span class="dot" data-value="29"></span>
+                    </div>
+
+                    <input type="hidden" id="blood-value" name="blood" value="0">
+                    <div class="info-sangre">
+                        <label for="blood">Sangre por turno:</label>
+                        <label id="bloodPerTurn" for="blood">1</label>
+                    </div>
+                </div>
+                <div class="blood-action-add">
+                    <i id="addNormalBlood" class="fa-solid fa-droplet" style="color: black;"></i>
+                    <i id="addSpecialBlood1" class="fa-solid fa-droplet" style="color: red;"></i>
+                    <i id="addSpecialBlood2" class="fa-solid fa-droplet" style="color: blue;"></i>
+                </div>
+            </div>
+        </div>
+        <!-- TIRADAS! -->
+        <div class="seccion-container">
+            <div class="seccion-linea"></div>
+            <h1 class="seccion">Tiradas</h1>
+            <div class="seccion-linea"></div>
+        </div>
+        <div class="tiradas-container">
+            <div class="tiradas-botonera">
+                <button class="iniciativa-button" type="button" id="iniciativa-button"
+                    onclick="tirarIniciativa()">Iniciativa</button>
+                <label for="iniciativa" id="valorIniciativa">
+                    1d10 + Destreza + Astucia - Penalizadores por daño</label>
+            </div>
+            <div class="historial">
+                <!-- Se genera automatico con JS -->
+            </div>
+        </div>
+    </div>
+    </div>
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+</body>
+<script src="script.js"></script>
+
+</html>

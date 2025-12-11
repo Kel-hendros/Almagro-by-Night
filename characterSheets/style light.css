@@ -1,0 +1,1708 @@
+@font-face {
+	font-family: 'delavan';
+	src: url("fonts/delavan-webfont.woff2") format("woff2"), url("fonts/delavan-webfont.woff") format("woff");
+}
+
+@font-face {
+	font-family: 'vampire-sigils';
+	src: url("fonts/vampiresigils.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: 'vampire-dingbats';
+	src: url("fonts/VampireDingbats.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: 'vampire-wod3';
+	src: url("fonts/WOD3.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: 'Cormorant Garamond';
+	src: url("fonts/CormorantGaramond-Regular.woff") format("woff");
+}
+
+@font-face {
+	font-family: 'Cormorant Bold';
+	src: url("fonts/CormorantGaramond-Bold.woff") format("woff");
+}
+
+/* ELIMINAR LAS FLECHITAS EN LOS CAMPOS NUMERICOS (SOLO CHROME Y OTROS POCOS) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+
+:root {
+	--backgroundColor: #fffaf1;
+
+	--accentColor: #b41200;
+
+	--secondaryColor: #7b4b4b;
+
+	--primaryColor: #000000;
+
+	--shadowColor: #00000069;
+
+	--successColor: #2cdb66;
+
+	--failureColor: #83b7bb;
+
+	--botchColor: #f84848;
+
+	--mutedColor: #adaba6;
+
+	--customPointer: url('images/pointer.png'), pointer;
+
+	--colorDeAdornos: var(--mutedColor);
+
+	--historySuccessColor: rgba(0, 128, 0, 0.308);
+
+	--historyFailureColor: #83b7bb94;
+
+	--historyBotchColor: #f8484879;
+
+
+}
+
+/* LLevar al Dark Mode a partir de aca */
+/* ----------------------------------- */
+
+
+html,
+body {
+	cursor: url("images/cursor1.png"), auto;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+
+	display: flex;
+	justify-content: center;
+	align-items: stretch;
+	overflow-y: auto;
+	overflow-x: auto;
+
+}
+
+
+* {
+	font-family: 'Cormorant Bold', serif;
+	color: var(--primaryColor);
+
+	/* Make Everything UNSELECTABLE!! */
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+
+}
+
+
+/* ----------CONTAINERS AND COLUMNS--------------- */
+
+
+
+
+.super-container {
+
+	flex-grow: 1;
+
+	display: grid;
+	grid-template-columns: 1fr 3fr 1fr;
+
+	gap: 10px;
+	overflow-x: auto;
+	min-height: fit-content;
+
+	flex-wrap: nowrap;
+	padding-inline: 25px;
+	
+
+	background-color: var(--backgroundColor);
+	
+
+}
+
+.column-left {
+	
+
+	padding-top: 10px;
+	padding-bottom: 50px;
+	
+	display: flex;
+	flex-direction: column;
+}
+
+.column-middle {
+
+	
+	padding-top: 10px;
+	padding-bottom: 50px;
+	
+	box-shadow: 0 2px 20px 0 var(--shadowColor);
+	padding-inline: 20px;	
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	
+}
+
+.column-right {
+	
+	padding-top: 10px;
+	padding-bottom: 50px;
+
+	min-width: 250px;
+
+	display: flex;
+	flex-direction: column;
+}
+
+
+
+
+h1,
+h2 {
+	font-family: 'delavan', serif;
+
+}
+
+
+/*  ESTILOS DE MODALES GENERAL  */
+
+.modal {
+	display: none;
+	position: fixed;
+	z-index: 13;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	overflow-y: auto;
+
+	/* Afecta la pantalla de fondo detras del modal */
+	background-color: rgba(0, 0, 0, 0.8);
+
+}
+
+.modal-content {
+
+	background-color: var(--backgroundColor);
+	margin: 5vh auto;
+	padding: 20px;
+	border: 1px solid var(--accentColor);
+	width: clamp(800px, 50%, 800px);
+	/* show scroll bar horizontally if the modal is bigger than the width of the screen */
+	overflow-x: auto;
+	overflow-y: auto;
+
+	border-radius: 30px;
+	border: 5px solid var(--primaryColor);
+	box-shadow: 0 10px 20px 0 var(--shadowColor);
+
+}
+
+.modal-content h1 {
+	text-align: center;
+	font-family: 'delavan', serif;
+	font-size: 2em;
+	margin: 0;
+}
+
+.modal-buttons {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+	align-items: center;
+	flex-wrap: nowrap;
+	margin: 30px;
+	gap: 20px;
+
+}
+
+
+.modal-buttons button {
+	border-radius: 20px;
+	padding-inline: 2em;
+	padding-block: 0.3em;
+
+	font-size: 1.2em;
+	cursor: var(--customPointer);
+	font-weight: bold;
+	box-shadow: 0 5px 5px 0 var(--shadowColor);
+}
+
+.modal-button-save {
+	background-color: var(--primaryColor);
+	color: var(--backgroundColor);
+}
+
+.modal-button-close {
+	background-color: var(--backgroundColor);
+	color: var(--primaryColor);
+}
+
+.modal-buttons button:hover {
+	background-color: var(--accentColor);
+	box-shadow: 0 2px 5px 0 var(--shadowColor);
+}
+
+
+
+
+
+
+
+
+/* ----------------------------------------------- */
+
+.container.info {
+	position: relative;
+	margin-bottom: 0;
+}
+
+/* LINEAS UNIENDO LOS PUNTITOS EN TODOS LADOS */
+.form-group::after {
+	content: "";
+	display: block;
+	position: absolute;
+	bottom: 8px;
+	height: 1px;
+	background-color: var(--secondaryColor);
+	width: 100%;
+}
+
+/* PRIMERA SUPER COLUMN */
+
+.column-left ion-icon {
+
+	color: var(--secondaryColor);
+	/* animate color transformation */
+	transition: color 1.5s ease-in-out;
+
+}
+
+.column-left ion-icon:hover {
+	color: var(--accentColor);
+	transition: color 0.15s ease-in-out;
+}
+
+
+/* TABS */
+
+.tab-buttons-container {
+	margin-top: 10px;
+	display: flex;
+	justify-content: space-between;
+	gap: 0
+}
+
+.tab-button {
+	color: var(--mutedColor);
+	font-family: 'delavan', serif;
+	font-size: 11px;
+	flex-grow: 1;
+	background-color: var(--backgroundColor);
+	border: 2px solid var(--primaryColor);
+	padding: 10px;
+	cursor: var(--customPointer);
+	display: inline-block;
+	border-top-right-radius: 20px;
+	border-top-left-radius: 20px;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tab-button.active {
+	background: var(--backgroundColor);
+	color: var(--primaryColor);
+	border: 2px solid var(--primaryColor);
+	border-bottom: none;
+	font-size: 15px;
+}
+
+.tab-content {
+	display: none;
+}
+
+.tab-content.active {
+	display: block;
+	border: 2px solid var(--primaryColor);
+	border-top: none;
+	min-height: fit-content;
+	height: 410px;
+
+
+}
+
+/* TAB: DISCIPLINAS */
+.discipline-container {
+	display: flex;
+	flex-direction: column;
+	padding: 30px 10px 10px;
+}
+
+.form-group.discipline,
+.form-group.merito {
+	position: relative;
+	display: flex;
+	margin-bottom: 0;
+	position: relative;
+	justify-content: space-between;
+	width: 100%;
+	align-items: baseline;
+}
+
+.discipline-container input {
+	display: block;
+	font-size: 20px;
+	border: 0;
+	font-weight: bold;
+	flex-grow: 1;
+	padding-right: 5px;
+	margin-bottom: 5px;
+}
+
+.discipline-icon {
+
+	font-size: 1em;
+	display: none;
+}
+
+.discipline-icon.visible {
+	display: inline-block;
+}
+
+
+/* Virtudes - HUMANIDAD / SENDA */
+
+.virtue-container {
+	display: flex;
+	flex-direction: column;
+}
+
+.virtue-icon {
+	font-size: 1em;
+}
+
+.virtue-container .form-group.discipline {
+
+	display: flex;
+	justify-content: space-between;
+
+}
+
+.virtue-container .rating {
+
+	flex-grow: 1;
+}
+
+#tab3 input,
+#tab3 select {
+
+	font-size: 20px;
+	font-weight: bold;
+
+
+}
+
+.humanidad-container {
+	display: grid;
+	padding-top: 0;
+	margin-top: 35px;
+
+}
+
+.form-group.humanidad {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+	margin-top: 15px;
+	margin-inline: auto;
+	margin-bottom: 10px;
+}
+
+.form-group.humanidad input {
+	position: relative;
+	width: 100%;
+	text-align: center;
+	border-bottom: 1px solid var(--primaryColor);
+
+}
+
+.senda-icon {
+	font-size: 1.5em;
+}
+
+.humanidad-form-group {
+
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+
+}
+
+
+.form-group.discipline select {
+	font-size: 16px;
+	border: none;
+}
+
+.form-group.humanidad .rating,
+.form-group.voluntad .rating,
+.form-group.voluntadTemp .rating {
+	display: flex;
+	gap: 8px;
+	flex-wrap: nowrap;
+	justify-content: space-between;
+
+}
+
+.form-group.humanidad::after {
+	display: none;
+}
+
+
+/* FUERZA DE VOLUNTAD */
+.voluntad-container {
+	display: grid;
+	padding-top: 0;
+	margin-top: 35px;
+
+}
+
+.form-group.voluntad {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	width: 90%;
+	margin-top: 25px;
+	gap: 15px;
+	margin-inline: auto;
+	margin-bottom: 0;
+}
+
+.form-group.voluntadTemp {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	width: 90%;
+	margin-top: 10px;
+	gap: 15px;
+	margin-inline: auto;
+	margin-bottom: 0;
+
+}
+
+.form-group.voluntad::after,
+.form-group.voluntadTemp::after {
+	display: none;
+}
+
+/* Fuerza de Voluntad temporal */
+.form-group.voluntadTemp .dot {
+	width: 12;
+	height: 12px;
+	border-radius: 0;
+	border: 2px solid var(--secondaryColor);
+	margin: 0 1px;
+	cursor: var(--customPointer);
+}
+
+.will-icon {
+	font-size: 1.5em;
+
+}
+
+
+
+/* ----------EXPERIENCIA------------ */
+.experiencia-container {
+	margin-top: 25px;
+}
+
+.experiencia-pool {
+	margin-top: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: inset 0 2px 5px 0px var(--shadowColor);
+	padding-block: 15px;
+}
+
+
+.xp-row .rating {
+	display: grid;
+	grid-template-columns: repeat(15, auto);
+	grid-template-rows: repeat(3, auto);
+	gap: 5px;
+	justify-items: center;
+	align-items: center;
+}
+
+.xp-row .rating span {
+	grid-column: span 1;
+}
+
+.xp-row .rating span:nth-child(5n-5) {
+	margin-right: 20px;
+}
+
+.xp-row .dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 0;
+	border: 2px solid var(--primaryColor);
+	margin: 0 1px;
+	cursor: var(--customPointer);
+}
+
+
+
+
+
+
+
+/* //////////////////////////////////
+//////// Columna del Medio //////////
+///////////////////////////////////*/
+.column-middle ion-icon {
+
+	color: var(--primaryColor);
+	/* animate color transformation */
+	transition: color 1.5s ease-in-out;
+
+}
+
+.column-middle ion-icon:hover {
+	color: var(--accentColor);
+	transition: color 0.15s ease-in-out;
+}
+
+
+
+
+
+
+/* MODAL SELECCION DE CLAN */
+.clan-container {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: none;
+}
+
+.clanlist-container {
+	flex-grow: 2;
+	flex-basis: 70%;
+}
+
+ul {
+	display: flex;
+	flex-wrap: wrap;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+ul li {
+	color: var(--primaryColor);
+	padding-inline: 0.7em;
+	padding-block: 0.2em;
+	margin: 0.2em;
+	cursor: var(--customPointer);
+	border: 1px solid var(--primaryColor);
+	background-color: var(--mutedColor);
+	border-radius: 5px;
+
+}
+
+ul li:hover {
+	color: var(--accentColor);
+	background-color: var(--primaryColor);
+	box-shadow: 0 2px 5px 0 var(--shadowColor);
+}
+
+ul li.active {
+	color: var(--primaryColor);
+	background-color: var(--accentColor);
+}
+
+.clan-logo {
+	width: 300px;
+	display: flex;
+}
+
+.clan-logo p {
+	font-family: 'vampire-sigils', serif;
+	font-size: 15em;
+	margin: auto;
+	text-shadow: 0 10px 10px var(--shadowColor);
+
+}
+
+/* DISCORD MODAL SYTLES */
+
+#discord-modal {
+
+	min-width: 800px;
+}
+
+#discord-modal-webhook-input {
+	width: 100%;
+	border: 1px solid var(--secondaryColor);
+	border-radius: 20px;
+	padding-inline: 10px;
+	height: 30px;
+}
+
+.discord-container {
+
+	display: flex;
+	justify-content: flex-start;
+	align-items: flex-end;
+	border-radius: 20px;
+	box-shadow: inset 0px 8px 15px 0px var(--shadowColor);
+	margin-inline: 30px;
+	padding: 40px;
+
+
+}
+
+.discordlist {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 3;
+}
+
+.column-middle .toggle {
+
+	flex-grow: 1;
+	font-size: 2em;
+	margin-right: 0px;
+	color: var(--successColor);
+	transition: color 0.15s ease-in-out;
+
+}
+
+.column-middle .toggle.disabled {
+
+	color: var(--botchColor);
+	transform: rotate(180deg);
+}
+
+.column-middle .toggle:hover {
+
+	color: var(--accentColor);
+	transition: color 0.15s ease-in-out;
+}
+
+/* Estilos del HEADER 
+ TITULO Y BOTONES */
+
+.header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+
+	gap: 10px;
+}
+
+/* Primera columna del Header: INFO */
+.header .container.info {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	align-items: flex-start;
+	justify-content: center;
+
+	/* compensa para que el logo quede centrado */
+	flex: 1.1;
+}
+
+/* Segunda columna del Header: LOGO VAMPIRO */
+.title-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+}
+
+.title-logo {
+	font-size: 7em;
+	font-family: 'vampire-wod3', serif;
+	margin: 0;
+	line-height: 0;
+	text-shadow: 0 5px 10px var(--shadowColor);
+
+}
+
+/* Tercera columna del Header: IMAGEN Y BOTONES */
+
+/* IMAGEN DEL LOGO */
+.button-and-image {
+
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+
+}
+
+.header-clan-logo p {
+
+	font-family: 'vampire-sigils', serif;
+	font-size: 8em;
+	margin: auto;
+	text-shadow: 0 10px 10px var(--shadowColor);
+}
+
+/* BOTONES DE OPCIONES */
+.buttons-container {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* ION ICONS */
+ion-icon {
+
+	font-size: 1.7em;
+	cursor: var(--customPointer);
+
+}
+
+
+
+
+
+
+
+/* Titulos de secciones */
+
+
+.seccion-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-wrap: nowrap;
+	gap: 0px;
+}
+
+.seccion {
+	text-align: center;
+	margin-bottom: 0;
+	position: relative;
+	margin-top: 0;
+	white-space: nowrap;
+	flex: 1;
+	margin-inline: 15px;
+}
+
+.seccion-linea-izq {
+	color: var(--colorDeAdornos);
+	font-family: 'vampire-dingbats', serif;
+	font-size: 70px;
+	line-height: 0px;
+	display: block;
+	flex: 0;
+	padding-bottom: 3px;
+
+}
+
+.linea-recta {
+
+	display: block;
+	padding-top: 0px;
+
+	background-color: var(--colorDeAdornos);
+	height: 5px;
+	flex: 1;
+}
+
+.seccion-linea-der {
+	color: var(--colorDeAdornos);
+	font-family: 'vampire-dingbats', serif;
+	font-size: 70px;
+	line-height: 0px;
+	display: block;
+	flex: 0;
+	padding-bottom: 3px;
+	margin-left: -2px;
+}
+
+.seccion-linea {
+
+	display: block;
+	top: 50%;
+	width: 100%;
+	height: 5px;
+	background-color: var(--colorDeAdornos);
+	height: 4px;
+	margin: 3px;
+
+}
+
+
+
+
+
+.container {
+	display: flex;
+	gap: clamp(0px, calc(3vw + 0px), 40px);
+	/* set gap to a minimum of 3px and a maximum of 40px, based on viewport size */
+	justify-content: space-between;
+	margin-top: 0;
+	margin-bottom: 15px;
+}
+
+
+.container h2 {
+	margin-top: 0;
+}
+
+.container.info label {
+	font-size: 17px;
+	font-family: 'Cormorant Garamond', serif;
+}
+
+.container input {
+	width: 100%;
+	padding: 5px;
+	border: 0;
+	background-color: transparent;
+	font-size: 19px;
+	font-weight: bold;
+	text-align: end;
+}
+
+.column {
+	flex-basis: 33.33%;
+	margin-right: 0;
+	margin-left: 0;
+	flex-grow: 1;
+	text-align: center;
+	padding: 0;
+}
+
+.column label {
+	font-size: 16px;
+}
+
+/* //QUE ES ESTO */
+.container.info label::after {
+	content: "";
+	display: block;
+	position: absolute;
+	bottom: 8px;
+	height: 1px;
+	background-color: lightgray;
+	width: 100%;
+}
+
+.form-group {
+	display: flex;
+	margin-bottom: 0;
+	text-align: left;
+	position: relative;
+	justify-content: space-between;
+	width: 100%;
+	white-space: nowrap;
+}
+
+.form-group.info {
+	align-items: baseline;
+}
+
+.form-group.attribute {
+	justify-content: space-between;
+	gap: 2px;
+	align-items: baseline;
+
+}
+
+.attributes .form-group.attribute label,
+.abilities .form-group.attribute label {
+	cursor: var(--customPointer);
+}
+
+
+label,
+select {
+	display: block;
+	font-weight: bold;
+	margin-bottom: 5px;
+}
+
+.info select {
+	font-size: 22px;
+	border: none;
+}
+
+.form-group.attribute label {
+	flex-grow: 1;
+
+
+}
+
+/* TO DO */
+.tempAttr {
+
+
+	background-color: transparent;
+	font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+
+
+	width: 30px;
+	border-radius: 5px;
+	color: var(--accentColor);
+	font-size: 18px;
+	font-weight: bold;
+	text-align: center;
+	border: 0px;
+}
+
+
+
+/* END OF TO DO */
+
+
+.rating {
+	display: flex;
+	justify-content: flex-end;
+
+
+}
+
+.dot {
+	width: 10px;
+	height: 15px;
+	border-radius: 50%;
+	border: 1px solid var(--primaryColor);
+	border-left: 3px solid var(--primaryColor);
+	border-right: 3px solid var(--primaryColor);
+	margin: 0 0.5px;
+	cursor: var(--customPointer);
+}
+
+.dot.filled {
+	background-color: var(--primaryColor);
+}
+
+/* Dados!! */
+
+.dice-container {
+
+	display: flex;
+	flex-direction: row;
+	margin-top: 20px;
+	justify-content: space-evenly;
+
+}
+
+.dice-automatizations {
+	margin-right: 30px;
+	display: flex;
+	flex-direction: column;
+
+
+}
+
+.automatization-row {
+	display: flex;
+	justify-content: flex-start;
+	align-items: center;
+	margin: 5px;
+
+
+}
+
+.automatization-row label {
+	font-family: 'delavan', 'serif';
+	font-size: .8rem;
+	margin-inline: 5px;
+}
+
+input[type="checkbox"] {
+	/* Set the size of the checkbox */
+	width: 1rem;
+	height: 1rem;
+}
+
+.dice-row {
+
+	display: flex;
+	justify-content: center;
+	gap: 40px;
+	width: 100%;
+}
+
+.groupDie {
+
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	width: 50px;
+
+}
+
+.groupDie-span {
+
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	font-size: 40px;
+	width: 5px;
+}
+
+.groupDie input,
+.groupDie select {
+
+	font-size: 20px;
+	width: 50px;
+	height: 40px;
+	border-radius: 5px;
+	text-align: center;
+	font-family: 'delavan', serif;
+	cursor: var(--customPointer);
+	background-color: transparent;
+	border: 2px solid var(--primaryColor);
+	box-shadow: inset 0px 4px 9px 0px var(--shadowColor);
+	appearance: none;
+	/* Other */
+	margin-bottom: 0;
+	padding: 1px 2px;
+}
+
+.groupDie select {
+
+	background-color: var(--primaryColor);
+	color: var(--backgroundColor);
+	height: 46px;
+	width: 58px;
+
+}
+
+.groupDie label {
+
+	width: 130px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-align: center;
+	color: var(--primaryColor);
+	font-size: 20px;
+
+}
+
+.diceButton {
+
+	margin-top: auto;
+	width: 100px;
+	height: 60px;
+	padding-inline: 0.5em;
+	border-radius: 10px;
+	font-size: 1.2rem;
+	cursor: var(--customPointer);
+
+	background-color: var(--mutedColor);
+	color: var(--primaryColor);
+	border: 3px solid var(--primaryColor);
+	box-shadow: 0 5px 10px 0px var(--shadowColor);
+}
+
+.diceButton:hover {
+	background-color: var(--accentColor);
+	color: var(--backgroundColor);
+	border: 3px solid var(--primaryColor);
+	box-shadow: inset 0 2px 8px 0px var(--shadowColor);
+}
+
+
+.gg-trash {
+
+	align-self: center;
+	box-sizing: border-box;
+	position: relative;
+	display: block;
+	transform: scale(var(--ggs, 1));
+	width: 10px;
+	height: 12px;
+	border: 2px solid transparent;
+	box-shadow:
+		0 0 0 2px,
+		inset -2px 0 0,
+		inset 2px 0 0;
+	border-bottom-left-radius: 1px;
+	border-bottom-right-radius: 1px;
+	margin-top: 4px;
+	cursor: var(--customPointer);
+}
+
+.gg-trash:hover {
+	transform: scale(var(--ggs, 1.3));
+	background-color: red;
+}
+
+.gg-trash::after,
+.gg-trash::before {
+	content: "";
+	display: block;
+	box-sizing: border-box;
+	position: absolute;
+}
+
+.gg-trash::after {
+	background: currentColor;
+	border-radius: 3px;
+	width: 16px;
+	height: 2px;
+	top: -4px;
+	left: -5px;
+}
+
+.gg-trash::before {
+	width: 10px;
+	height: 4px;
+	border: 2px solid;
+	border-bottom: transparent;
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	top: -7px;
+	left: -2px;
+}
+
+
+.diceResults {
+
+	margin-top: 15px;
+	width: 80%;
+	margin-inline: auto;
+	list-style: none;
+	display: flex;
+	flex-direction: column-reverse;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+
+}
+
+.diceResults * {
+	font-family: 'delavan', serif;
+
+}
+
+.diceResult>p {
+	font-size: 30px;
+	margin-top: 0;
+	margin-bottom: 5px;
+}
+
+.diceRolls {
+	list-style: none;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	font-size: 20px;
+	margin-bottom: 10px;
+
+}
+
+.diceRolls span {
+
+	color: var(--primaryColor);
+	border-radius: 50%;
+	width: 30px;
+	height: 30px;
+	text-align: center;
+	line-height: 30px;
+	box-shadow: 0 1px 3px 0 var(--shadowColor);
+}
+
+.diceRolls .success {
+	background-color: var(--successColor);
+	border: 2px solid var(--primaryColor);
+
+}
+
+.diceRolls .botch {
+	background-color: var(--botchColor);
+	color: var(--primaryColor);
+	font-size: 30px;
+	text-align: center;
+	border: 2px solid var(--botchColor);
+	font-family: 'vampire-sigils', serif;
+
+}
+
+.diceRolls .fail {
+	background-color: var(--failureColor);
+	border: 2px solid var(--primaryColor);
+
+}
+
+/* Atributos y Habilidades seleccionados */
+
+.atributo-seleccionado,
+#dicePool1Label {
+	color: var(--accentColor);
+}
+
+.habilidad-seleccionada,
+#dicePool2Label {
+	color: var(--accentColor);
+
+}
+
+
+
+
+/* Tercer Super Columna */
+
+
+/* SALUD */
+
+.health-container {
+	--contundente: #9a9a9a;
+	--letal: #d39c5e;
+	--agravado: #bb1515;
+
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	padding-top: 20px;
+	padding-bottom: 20px;
+	border-radius: 10px;
+	box-shadow: inset 0px 4px 9px 0px var(--shadowColor);
+
+}
+
+.health-container .seccion-container .seccion {
+
+	z-index: 2;
+	background-color: var(--backgroundColor);
+	box-shadow: 0px 0px 5px 5px var(--backgroundColor);
+}
+
+.health-container .seccion-container .seccion-linea {
+	z-index: 3;
+}
+
+.health-container.lesionado {
+	background-image: url('images/health1.png');
+}
+
+.health-container.malherido {
+	background-image: url('images/health2.png');
+}
+
+.health-container.tullido {
+	background-image: url('images/health3.png');
+}
+
+.health-table {
+	width: 210px;
+	margin-inline: auto;
+	display: grid;
+	grid-template-rows: repeat(7, 25px);
+
+	background-color: var(--backgroundColor);
+	box-shadow: 0px 0px 25px 25px var(--backgroundColor);
+
+
+	z-index: 0;
+
+}
+
+.health-buttons-container {
+
+	background-color: var(--backgroundColor);
+	box-shadow: 0px 0px 25px 25px var(--backgroundColor);
+}
+
+
+.table-row.salud {
+	display: grid;
+	grid-template-columns: 1fr 30px 20px;
+}
+
+
+.square {
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	border: 1px solid var(--primaryColor);
+	margin-right: 5px;
+	cursor: var(--customPointer);
+}
+
+.square.contundente {
+	background-color: var(--contundente);
+}
+
+
+.square.letal {
+	background-color: var(--letal);
+}
+
+.square.agravado {
+	background-color: var(--agravado);
+}
+
+.health-buttons-container {
+	display: flex;
+	justify-content: space-between;
+	width: 150px;
+	margin-top: 20px;
+	margin-inline: auto;
+	flex-direction: column;
+	z-index: 3;
+}
+
+.botonera {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-direction: row-reverse;
+	margin-bottom: 5px;
+	box-shadow: 0 3px 1px 0 var(--shadowColor);
+}
+
+.botonera:hover {
+	box-shadow: inset 0 5px 5px 0 var(--shadowColor);
+	/* change the background-color to a linear gradient from Green -> Transparent -> red */
+	background: linear-gradient(to right, Green 15%,  transparent 16%, transparent 85%, red 86%);
+}
+
+.botonera.contundente {
+	background-color: var(--contundente);
+	border-radius: 20px;
+	padding: 1px;
+	font-size: 18px;
+
+}
+
+.botonera.letal {
+	background-color: var(--letal);
+	border-radius: 20px;
+	padding: 1px;
+	font-size: 18px;
+}
+
+.botonera.agravado {
+	background-color: var(--agravado);
+	border-radius: 20px;
+	padding: 1px;
+	font-size: 18px;
+}
+
+.botonera .button-remove {
+
+	position: relative;
+	font-weight: normal;
+	font-size: 0;
+	height: 26px;
+	width: 50px;
+	border: none;
+	border-top-right-radius: 0;
+	border-top-left-radius: 20px;
+	border-bottom-left-radius: 20px;
+	border-bottom-right-radius: 0;
+	background-color: transparent;
+
+}
+
+.botonera .button-add {
+	position: relative;
+	font-weight: normal;
+	font-size: 0;
+	height: 26px;
+	width: 50px;
+	border: none;
+	border-top-right-radius: 20px;
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 20px;
+	background-color: transparent;
+
+}
+
+.botonera .button-add::after {
+	color: var(--backgroundColor);
+	position: absolute;
+	content: "+";
+	font-size: 20px;
+	right: 10px;
+	top: -2px;
+}
+
+.botonera .button-remove::after {
+	color: var(--backgroundColor);
+	position: absolute;
+	content: "-";
+	font-size: 20px;
+	left: 11px;
+	top: 1px;
+}
+
+
+.botonera .button-remove {
+	position: relative;
+	font-weight: normal;
+	font-size: 0;
+	height: 26px;
+	width: 50px;
+	border: none;
+	border-top-right-radius: 0;
+	border-top-left-radius: 20px;
+	border-bottom-left-radius: 20px;
+	border-bottom-right-radius: 0;
+	background-color: transparent;
+
+}
+
+/* SANGRE! */
+.blood-container {
+	margin-top: 30px;
+	display: flex;
+	flex-direction: column;
+	
+}
+
+
+.blood-pool {
+	margin-top: 10px;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-evenly;
+}
+
+.blood-pool i {
+	cursor: var(--customPointer);
+}
+
+.blood-action-add {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.blood-row .rating {
+	display: grid;
+	grid-template-columns: repeat(10, auto);
+	grid-template-rows: repeat(3, auto);
+	gap: 5px;
+	justify-items: center;
+	align-items: center;
+}
+
+.blood-row .dot {
+	width: 12;
+	height: 12px;
+	border-radius: 0;
+	border: 2px solid var(--primaryColor);
+	margin: 0 1px;
+	cursor: var(--customPointer);
+}
+
+.blood-type-1 {
+	width: 12;
+	height: 12px;
+	border-radius: 0;
+	border: 2px solid var(--primaryColor);
+	background-color: #000000;
+	margin: 0 1px;
+	cursor: var(--customPointer);
+}
+
+.blood-type-2 {
+	width: 12;
+	height: 12px;
+	border-radius: 0;
+	border: 2px solid var(--primaryColor);
+	background-color: red;
+	margin: 0 1px;
+	cursor: var(--customPointer);
+}
+
+.blood-type-3 {
+	width: 12;
+	height: 12px;
+	border-radius: 0;
+	border: 2px solid var(--primaryColor);
+	background-color: blue;
+	margin: 0 1px;
+	cursor: var(--customPointer);
+}
+
+
+.info-sangre {
+	margin-top: 10px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	margin-bottom: 20px;
+}
+
+.rating .dot.disabled {
+	background-color: var(--mutedColor);
+	border-color: var(--mutedColor);
+}
+
+select,
+input {
+	background-color: transparent;
+}
+
+
+/* SECCION TIRADAS */
+
+.tiradas-container {
+
+	margin-top: 10px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+
+}
+
+/* INICIATIVA */
+
+.tiradas-botonera {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	text-align: center;
+	gap: 10px;
+	margin-top: 0px;
+	width: 90%;
+
+}
+
+.iniciativa-button {
+
+	color: var(--backgroundColor);
+	background-color: var(--primaryColor);
+	border: none;
+	box-shadow: 0px 2px 5px 0px var(--shadowColor);
+	padding: 5px;
+	border-radius: 5px;
+
+	cursor: var(--customPointer);
+
+}
+
+.iniciativa-button:hover {
+	background-color: var(--secondaryColor);
+	box-shadow: 0px 2px 1px 0px var(--shadowColor);
+}
+
+/* HISTORIAL DE TIRADAS */
+
+.historial {
+
+	width: 100%;
+	margin-top: 20px;
+	display: flex;
+	flex-direction: column-reverse;
+	align-items: center;
+	gap: 5px;
+
+}
+
+.row-container {
+
+	border-radius: 5px;
+	box-shadow: inset 0px 1px 15px 2px var(--shadowColor);
+	width: 100%;
+
+}
+
+
+.history-row {
+
+	display: flex;
+	flex-direction: row;
+	justify-content: space-around;
+	text-align: center;
+
+	padding-inline: .2em;
+	padding-block: .3em;
+}
+
+.historial .line {
+
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+
+
+}
+
+.historial .timestamp {
+
+	color: var(--secondaryColor);
+	font-size: 15px;
+	text-align: center;
+	display: flex;
+	align-items: center;
+}
+
+
+.historial .roll {
+
+	margin-bottom: 0;
+}
+
+.historial .rollResult {
+
+	font-size: 20px;
+	margin-bottom: 0;
+	color: var(--secondaryColor);
+}
+
+.historial .fail {
+	background-color: var(--historyFailureColor);
+
+}
+
+.historial .success {
+	background-color: var(--historySuccessColor);
+
+}
+
+.historial .botch {
+	background-color: var(--historyBotchColor);
+
+
+}

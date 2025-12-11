@@ -1,0 +1,230 @@
+<div class="main-container tools">
+    <h1>Hojas de Personaje</h1>
+
+    <div id="sheets-grid" class="tools-grid"
+        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+        <!-- Loading state -->
+        <p class="muted">Cargando personajes...</p>
+    </div>
+</div>
+
+<script>
+    (async function initCharacterSheets() {
+        const grid = document.getElementById('sheets-grid');
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            grid.innerHTML = '<p class="error">Debes iniciar sesión.</p>';
+            return;
+        }
+
+        const clanMapping = {
+            "Brujah": "1",
+            "Gangrel": "2",
+            "Malkavian": "3",
+            "Nosferatu": "4",
+            "Toreador": "5",
+            "Tremere": "6",
+            "Ventrue": "7",
+            "Lasombra": "R",
+            "Tzimisce": "E",
+            "Assamita": "9",
+            "Giovanni": "e",
+            "Ravnos": "0",
+            "Seguidores de Set": "=",
+            "Ahriman": "É",
+            "Baali": "ã",
+            "Hijas de la Cacofonia": "q",
+            "Salubri": "-",
+            "Samedi": "t"
+        };
+
+        function getClanSigil(clanName) {
+            // Default to a generic symbol if not found, or maybe just "1" (Brujah) or similar
+            return clanMapping[clanName] || "L"; // "L" seems to be a generic Ankh or similar in some fonts, but let's stick to valid defaults or placeholders
+        }
+
+        try {
+            let isAdmin = false;
+            let playerMap = {};
+
+            // 1. Check Admin Status
+            const { data: playerData } = await supabase
+                .from('players')
+                .select('is_admin')
+                .eq('user_id', user.id)
+                .single();
+
+            if (playerData && playerData.is_admin) {
+                isAdmin = true;
+            }
+
+            // 2. Fetch Sheets
+            let query = supabase
+                .from('character_sheets')
+                .select('id, name, updated_at, data, user_id')
+                .order('updated_at', { ascending: false });
+
+            // If not admin, filter by own user
+            if (!isAdmin) {
+                query = query.eq('user_id', user.id);
+            } else {
+                // If ID is admin, fetch map of players
+                const { data: allPlayers } = await supabase
+                    .from('players')
+                    .select('user_id, name');
+                if (allPlayers) {
+                    allPlayers.forEach(p => {
+                        playerMap[p.user_id] = p.name;
+                    });
+                }
+            }
+
+            const { data: sheets, error } = await query;
+
+            if (error) throw error;
+
+            grid.innerHTML = '';
+
+            // 1. "Create New" Card (Always visible, creates for self)
+            const createCard = document.createElement('div');
+            createCard.className = 'tool-card';
+            createCard.onclick = window.createNewSheet;
+            createCard.style.cssText = `
+                background: rgba(0,0,0,0.6);
+                border: 2px dashed rgba(255, 255, 255, 0.3);
+                border-radius: 12px;
+                overflow: hidden;
+                cursor: pointer;
+                transition: transform 0.2s;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-height: 250px;
+            `;
+            createCard.innerHTML = `
+                <div style="font-size: 3rem; color: var(--color-gold); margin-bottom: 15px;">+</div>
+                <h3 style="color: #e0e0e0; font-family: 'Special Elite', cursive;">Crear Nuevo</h3>
+            `;
+            grid.appendChild(createCard);
+
+            // 2. Existing Sheets
+            sheets.forEach(sheet => {
+                const card = document.createElement('div');
+                card.className = 'tool-card';
+                // Inline styles for consistency with tools.html
+                card.style.cssText = `
+                    background: rgba(0,0,0,0.6);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    overflow: hidden;
+                    cursor: pointer;
+                    transition: transform 0.2s, box-shadow 0.2s;
+                    position: relative;
+                `;
+
+                // Extract useful info (maybe Clan/Gen if available in JSON)
+                const clan = sheet.data?.clan || 'Desconocido';
+                const sigil = getClanSigil(clan);
+                const gen = sheet.data?.generacion || '?';
+                const lastEdit = new Date(sheet.updated_at).toLocaleDateString();
+
+                // Admin Info
+                let playerInfoHTML = '';
+                if (isAdmin) {
+                    const playerName = playerMap[sheet.user_id] || 'Desconocido';
+                    playerInfoHTML = `<div style="font-size: 0.85rem; color: var(--color-gold); margin-bottom: 5px; font-weight: bold;">Jugador: ${playerName}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div onclick="window.openSheet('${sheet.id}')" style="height: 140px; background: linear-gradient(to bottom right, #2a0a0a, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center;">
+                        <span style="font-family: 'vampire-sigils'; font-size: 5rem; color: #fff; text-shadow: 0 0 10px rgba(255,0,0,0.5);">${sigil}</span>
+                    </div>
+                    <div style="padding: 24px;">
+                        <h3 style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
+                            ${sheet.name}
+                        </h3>
+                        ${playerInfoHTML}
+                        <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5">
+                            Clan: ${clan} <br>
+                            Gen: ${gen}ª
+                        </p>
+                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.7rem; color: #666;">Editado: ${lastEdit}</span>
+                            <span onclick="event.stopPropagation(); window.deleteSheet('${sheet.id}')"
+                                style="color: #ff4444; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; cursor: pointer; padding: 5px;">
+                                <i data-lucide="trash-2"></i>
+                            </span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Re-init lucide icons for the new content
+            if (window.lucide) lucide.createIcons();
+
+        } catch (err) {
+            console.error(err);
+            grid.innerHTML = '<p class="error">Error al cargar personajes.</p>';
+        }
+    })();
+
+    window.createNewSheet = async function () {
+        const name = prompt("Nombre del Personaje:", "Nuevo Vampiro");
+        if (!name) return;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+            .from('character_sheets')
+            .insert([{
+                user_id: user.id,
+                name: name,
+                data: { nombre: name }
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            alert("Error al crear: " + error.message);
+        } else {
+            window.openSheet(data.id);
+        }
+    }
+
+    window.openSheet = function (id) {
+        window.location.href = `characterSheets/index.html?id=${id}`;
+    }
+
+    window.deleteSheet = async function (id) {
+        if (!confirm("¿Estás seguro de borrar este personaje permanentemente?")) return;
+
+        const { error } = await supabase
+            .from('character_sheets')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            alert("Error al borrar: " + error.message);
+        } else {
+            // Reload the view (simple way: re-click the menu or just reload the logic.
+            // Re-navigating to hash refreshes it.)
+            loadRoute(true);
+        }
+    }
+</script>
+
+<style>
+    @font-face {
+        font-family: 'vampire-sigils';
+        src: url("characterSheets/fonts/vampiresigils.woff2") format("woff2");
+    }
+
+    .tool-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--color-gold) !important;
+    }
+</style>

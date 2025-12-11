@@ -361,7 +361,10 @@ window.ActionsUI = (function () {
       }
       const actionId = action.id || action.action_id;
       if (!actionId) {
-        console.error("No se encontró action_id para la acción seleccionada:", action);
+        console.error(
+          "No se encontró action_id para la acción seleccionada:",
+          action
+        );
         alert("No se pudo ejecutar la acción porque falta su identificador.");
         return;
       }
