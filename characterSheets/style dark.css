@@ -62,7 +62,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
 	--historySuccessColor: rgba(0, 128, 0, 0.308);
 
-	--historyFailureColor: #83b7bb44;
+	--historyFailureColor: #60606094;
 
 	--historyBotchColor: #f8484846;
 
@@ -125,39 +125,39 @@ body {
 
 	flex-wrap: nowrap;
 	padding-inline: 25px;
-	
+
 
 	background-color: var(--backgroundColor);
-	
+
 
 }
 
 .column-left {
-	
+
 
 	padding-top: 10px;
 	padding-bottom: 50px;
-	
+
 	display: flex;
 	flex-direction: column;
 }
 
 .column-middle {
 
-	
+
 	padding-top: 10px;
 	padding-bottom: 50px;
-	
+
 	box-shadow: 0 2px 20px 0 var(--shadowColor);
-	padding-inline: 20px;	
+	padding-inline: 20px;
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
-	
+
 }
 
 .column-right {
-	
+
 	padding-top: 10px;
 	padding-bottom: 50px;
 
@@ -1401,7 +1401,7 @@ input[type="checkbox"] {
 .botonera:hover {
 	box-shadow: inset 0 5px 5px 0 var(--shadowColor);
 	/* change the background-color to a linear gradient from Green -> Transparent -> red */
-	background: linear-gradient(to right, Green 15%,  transparent 16%, transparent 85%, red 86%);
+	background: linear-gradient(to right, Green 15%, transparent 16%, transparent 85%, red 86%);
 }
 
 .botonera.contundente {
@@ -1496,7 +1496,7 @@ input[type="checkbox"] {
 	margin-top: 30px;
 	display: flex;
 	flex-direction: column;
-	
+
 }
 
 

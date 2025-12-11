@@ -2,7 +2,7 @@
     <h1>Hojas de Personaje</h1>
 
     <div id="sheets-grid" class="tools-grid"
-        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
         <!-- Loading state -->
         <p class="muted">Cargando personajes...</p>
     </div>
@@ -62,7 +62,7 @@
             // 2. Fetch Sheets
             let query = supabase
                 .from('character_sheets')
-                .select('id, name, updated_at, data, user_id')
+                .select('id, name, updated_at, data, user_id, avatar_url')
                 .order('updated_at', { ascending: false });
 
             // If not admin, filter by own user
@@ -123,12 +123,14 @@
                     transition: transform 0.2s, box-shadow 0.2s;
                     position: relative;
                 `;
+                card.onclick = () => window.openSheet(sheet.id);
 
                 // Extract useful info (maybe Clan/Gen if available in JSON)
                 const clan = sheet.data?.clan || 'Desconocido';
                 const sigil = getClanSigil(clan);
                 const gen = sheet.data?.generacion || '?';
                 const lastEdit = new Date(sheet.updated_at).toLocaleDateString();
+                const avatarUrl = sheet.avatar_url; // New Column
 
                 // Admin Info
                 let playerInfoHTML = '';
@@ -137,9 +139,24 @@
                     playerInfoHTML = `<div style="font-size: 0.85rem; color: var(--color-gold); margin-bottom: 5px; font-weight: bold;">Jugador: ${playerName}</div>`;
                 }
 
+                // Decide what to show: Avatar or Sigil
+                let visualContent;
+                if (avatarUrl) {
+                    visualContent = `<img src="${avatarUrl}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-gold); box-shadow: 0 0 10px rgba(0,0,0,0.5);">`;
+                } else {
+                    visualContent = `<span style="font-family: 'vampire-sigils'; font-size: 5rem; color: #fff; text-shadow: 0 0 10px rgba(255,0,0,0.5);">${sigil}</span>`;
+                }
+
                 card.innerHTML = `
-                    <div onclick="window.openSheet('${sheet.id}')" style="height: 140px; background: linear-gradient(to bottom right, #2a0a0a, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center;">
-                        <span style="font-family: 'vampire-sigils'; font-size: 5rem; color: #fff; text-shadow: 0 0 10px rgba(255,0,0,0.5);">${sigil}</span>
+                    <div style="height: 140px; background: linear-gradient(to bottom right, #2a0a0a, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center; position: relative;">
+                        ${visualContent}
+                        
+                        <!-- Upload Button (Camera) -->
+                        <div onclick="window.openAvatarUpload(event, '${sheet.id}')" 
+                             style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 50%; cursor: pointer; color: #ccc;"
+                             title="Cambiar Foto">
+                            <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
+                        </div>
                     </div>
                     <div style="padding: 24px;">
                         <h3 style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
@@ -217,6 +234,148 @@
     }
 </script>
 
+<script>
+    // --- Avatar Upload & Cropping Logic ---
+    let currentSheetIdForUpload = null;
+    let cropperImage = new Image();
+    let cropperState = { x: 0, y: 0, scale: 1, isDragging: false, lastX: 0, lastY: 0 };
+    const canvas = document.getElementById('crop-canvas');
+    const ctx = canvas.getContext('2d');
+    const avatarModal = document.getElementById('avatar-modal');
+    const zoomSlider = document.getElementById('zoom-slider');
+
+    // Trigger File Input
+    window.openAvatarUpload = function (event, sheetId) {
+        event.stopPropagation();
+        currentSheetIdForUpload = sheetId;
+        document.getElementById('avatar-input').click();
+    }
+
+    // Handle File Selection
+    document.getElementById('avatar-input').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            cropperImage.src = event.target.result;
+            cropperImage.onload = () => {
+                // Reset state
+                cropperState = { x: 0, y: 0, scale: 1, isDragging: false, lastX: 0, lastY: 0 };
+                zoomSlider.value = 1;
+                avatarModal.style.display = 'flex';
+                drawCropper();
+            }
+        }
+        reader.readAsDataURL(file);
+        // Clear value to allow re-selecting same file
+        e.target.value = '';
+    });
+
+    function drawCropper() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        ctx.save();
+        ctx.translate(centerX + cropperState.x, centerY + cropperState.y);
+        ctx.scale(cropperState.scale, cropperState.scale);
+        // Draw centered
+        ctx.drawImage(cropperImage, -cropperImage.width / 2, -cropperImage.height / 2);
+        ctx.restore();
+    }
+
+    // Interaction Events for Canvas
+    canvas.addEventListener('mousedown', e => {
+        cropperState.isDragging = true;
+        cropperState.lastX = e.clientX;
+        cropperState.lastY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => {
+        cropperState.isDragging = false;
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!cropperState.isDragging) return;
+        const dx = e.clientX - cropperState.lastX;
+        const dy = e.clientY - cropperState.lastY;
+        cropperState.x += dx;
+        cropperState.y += dy;
+        cropperState.lastX = e.clientX;
+        cropperState.lastY = e.clientY;
+        drawCropper();
+    });
+
+    zoomSlider.addEventListener('input', e => {
+        cropperState.scale = parseFloat(e.target.value);
+        drawCropper();
+    });
+
+    window.closeAvatarModal = function () {
+        avatarModal.style.display = 'none';
+        currentSheetIdForUpload = null;
+    }
+
+    window.saveAvatar = async function () {
+        if (!currentSheetIdForUpload) return;
+
+        // Convert canvas to blob
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert("Error al procesar imagen.");
+                return;
+            }
+
+            // Upload to Supabase
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const filePath = `${user.id}/${currentSheetIdForUpload}_${Date.now()}.png`;
+
+            // Simple UI loading feedback
+            const saveBtn = document.querySelector('.btn-save');
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "Subiendo...";
+            saveBtn.disabled = true;
+
+            try {
+                // 1. Upload
+                const { error: uploadError } = await supabase.storage
+                    .from('character-avatars')
+                    .upload(filePath, blob);
+
+                if (uploadError) throw uploadError;
+
+                // 2. Get Public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('character-avatars')
+                    .getPublicUrl(filePath);
+
+                // 3. Update DB
+                const { error: dbError } = await supabase
+                    .from('character_sheets')
+                    .update({ avatar_url: publicUrl })
+                    .eq('id', currentSheetIdForUpload);
+
+                if (dbError) throw dbError;
+
+                // Success
+                closeAvatarModal();
+                loadRoute(true); // Refresh grid
+            } catch (err) {
+                console.error(err);
+                alert("Error al subir imagen: " + err.message);
+            } finally {
+                saveBtn.innerText = originalText;
+                saveBtn.disabled = false;
+            }
+
+        }, 'image/png');
+    }
+</script>
+
 <style>
     @font-face {
         font-family: 'vampire-sigils';
@@ -227,4 +386,84 @@
         transform: translateY(-2px);
         border-color: var(--color-gold) !important;
     }
+
+    /* Avatar Modal */
+    #avatar-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .avatar-content {
+        background-color: #1a1a1a;
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid var(--color-gold);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        max-width: 90%;
+    }
+
+    canvas#crop-canvas {
+        border: 1px solid #333;
+        cursor: move;
+        background: #000;
+    }
+
+    .avatar-controls {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .avatar-btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        border: none;
+    }
+
+    .btn-cancel {
+        background: #444;
+        color: #fff;
+    }
+
+    .btn-save {
+        background: var(--color-red);
+        color: #fff;
+    }
 </style>
+
+<!-- Hidden Input for File Selection -->
+<input type="file" id="avatar-input" accept="image/*" style="display: none;">
+
+<!-- Modal for Cropping -->
+<div id="avatar-modal">
+    <div class="avatar-content">
+        <h3 style="color: var(--color-gold); margin: 0;">Ajustar Foto</h3>
+        <p style="color: #aaa; font-size: 0.8rem; margin: 0;">Arrastra para mover. Usa el slider para zoom.</p>
+
+        <div
+            style="position: relative; width: 300px; height: 300px; overflow: hidden; border-radius: 50%; border: 2px solid var(--color-gold);">
+            <canvas id="crop-canvas" width="300" height="300"></canvas>
+        </div>
+
+        <input type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1" style="width: 100%;">
+
+        <div class="avatar-controls">
+            <button class="avatar-btn btn-cancel" onclick="closeAvatarModal()">Cancelar</button>
+            <button class="avatar-btn btn-save" onclick="saveAvatar()">Guardar</button>
+        </div>
+    </div>
+</div>

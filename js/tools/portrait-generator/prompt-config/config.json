@@ -9,6 +9,13 @@
             "stylePrompt": "A vampire, pale skin, intense gaze."
         },
         {
+            "id": "generic-mortal",
+            "name": "Mortal Genérico",
+            "description": "Humano, realista, mundo de tinieblas.",
+            "icon": "🧔🏻‍♂️",
+            "stylePrompt": "A normal person, human skin, intense gaze, realist aesthetic, sweat and rosé skin color if prompted is allowed."
+        },
+        {
             "id": "nosferatu",
             "name": "Nosferatu",
             "description": "Rasgos deformados, textura rugosa.",

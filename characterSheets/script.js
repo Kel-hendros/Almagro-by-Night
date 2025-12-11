@@ -191,10 +191,58 @@ window.addEventListener("click", (event) => {
 
 //Function to update the p #header-logo-display innerHTML with the value stored in
 //#header-logo-value input value
+let currentAvatarUrl = null;
+
+//Function to update the p #header-logo-display innerHTML with the value stored in
+//#header-logo-value input value
 function updateHeaderLogo() {
-  const headerLogoValue = document.querySelector("#header-logo-value").value;
-  const headerLogoDisplay = document.querySelector("#header-logo-display");
-  headerLogoDisplay.innerHTML = headerLogoValue;
+  const container = document.querySelector(".header-clan-logo");
+  const input = document.querySelector("#header-logo-value");
+  let displayP = document.querySelector("#header-logo-display");
+
+  // Safety check: if P is missing (due to previous bug), try to restore it or find it
+  if (!displayP) {
+    // If we are recovering from the bad state where P has wrong ID or was deleted
+    // The previous bad code created <p id="header-logo-value"> AND deleted the input.
+    // We rely on the page reload to fix the HTML structure, as this script runs on load.
+    // But if the user hasn't reloaded, this might be tricky.
+    // Assuming user reloads or we navigate, the HTML is fresh.
+
+    // However, let's be robust.
+    displayP = container.querySelector("p");
+  }
+
+  const headerLogoValue = input ? input.value : "G";
+
+  // Check for existing avatar IMG
+  let avatarImg = container.querySelector(".avatar-img");
+
+  // If we have an avatar URL
+  if (currentAvatarUrl) {
+    // Hide the text P
+    if (displayP) displayP.style.display = "none";
+
+    // Create IMG if not exists
+    if (!avatarImg) {
+      avatarImg = document.createElement("img");
+      avatarImg.className = "avatar-img";
+      avatarImg.alt = "Personaje";
+      avatarImg.style.cssText =
+        "width: 15vh; height: 15vh; border-radius: 50%; object-fit: cover; border: 3px solid var(--primaryColor); box-shadow: 0 0 10px var(--shadowColor);";
+      container.appendChild(avatarImg);
+    }
+
+    avatarImg.src = currentAvatarUrl;
+    avatarImg.style.display = "block";
+  } else {
+    // No avatar: Show clan sigil
+    if (avatarImg) avatarImg.style.display = "none";
+
+    if (displayP) {
+      displayP.style.display = "block";
+      displayP.innerHTML = headerLogoValue;
+    }
+  }
 }
 
 //////////////////////////////////////////////
@@ -394,6 +442,7 @@ window.onload = async function () {
       .single();
 
     if (data) {
+      currentAvatarUrl = data.avatar_url; // Store globally
       loadCharacterFromJSON(data.data);
       updateAll();
     } else {

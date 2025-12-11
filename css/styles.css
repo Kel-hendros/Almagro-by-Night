@@ -10,6 +10,13 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'Sigils';
+    /* Use relative path from css folder to fonts folder */
+    src: url('../characterSheets/fonts/vampiresigils.woff2') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
 
 /* Layout principal */
 * {
@@ -125,6 +132,9 @@ button,
 .nav ul {
     list-style: none;
     padding: 10px 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 .nav ul li {
@@ -149,14 +159,33 @@ button,
 
 .nav li:hover,
 .nav li.active {
-    background-color: var(--color-cream);
-    color: var(--color-dark);
+    /* background-color: var(--color-cream); */
+    color: var(--color-red-accent);
 }
 
 /* Override link hover to defer styling to list item */
 .nav a:hover {
     background-color: transparent !important;
     color: inherit !important;
+}
+
+.nav li.grabado {
+    /* avoid select text */
+    user-select: none;
+    align-self: center;
+    justify-self: center;
+    margin-top: auto;
+    font-family: 'Sigils';
+    font-size: 15rem;
+    color: var(--color-red-muted);
+    filter: drop-shadow(0px 2px 2px rgba(148, 84, 84, 0.494)) drop-shadow(0px -2px 2px rgba(21, 1, 1, 0.936));
+    cursor: default;
+}
+
+.nav li.grabado:hover,
+.nav li.grabado.active {
+    background-color: transparent;
+    color: var(--color-red);
 }
 
 
@@ -204,7 +233,7 @@ button,
     border: none;
     border-radius: 8px;
     color: var(--color-cream);
-    margin: 100px auto;
+    margin: 50px auto;
     padding: 40px;
     backdrop-filter: blur(4px);
     position: relative;
@@ -402,7 +431,13 @@ button.gameButton:hover {
 }
 
 
-
+.cuadrilla {
+    width: 60%;
+    height: auto;
+    margin: auto;
+    border-radius: 8px;
+    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.545);
+}
 
 
 /* Siempre ultimo */
@@ -417,6 +452,11 @@ button.gameButton:hover {
     }
 
     .icono-grande {
+        display: none;
+    }
+
+    .nav li.grabado {
+
         display: none;
     }
 

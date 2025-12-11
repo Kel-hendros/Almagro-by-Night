@@ -32,11 +32,17 @@ async function updateSidebar() {
     if (liTools) {
       liTools.classList.remove("hidden");
     }
+    const liChars = document.getElementById("menu-chars");
+    if (liChars) {
+      liChars.classList.remove("hidden");
+    }
   } else {
     liWelcome?.classList.remove("hidden");
     liUser?.classList.add("hidden");
     liGames?.classList.add("hidden");
     liLogout?.classList.add("hidden");
+    document.getElementById("menu-tools")?.classList.add("hidden");
+    document.getElementById("menu-chars")?.classList.add("hidden");
   }
 }
 
@@ -154,6 +160,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
     logoutLink._init = true;
+  }
+
+  // Easter Egg: Decorative Sigil Click
+  const easterEggLi = document.querySelector(".nav li.grabado");
+  if (easterEggLi) {
+    const symbols = ["`", "w", "~"];
+    easterEggLi.addEventListener("click", () => {
+      // Pick a random symbol or cycle? User said "cycle", but random might be fun too.
+      // User said "vaya ciclando... entre varios... 4, 5 etc". Let's do random from a set or cycle.
+      // Let's do cycle to be safe based on "ciclando".
+      const current = easterEggLi.textContent;
+      let idx = symbols.indexOf(current);
+      if (idx === -1) idx = 0;
+      const next = symbols[(idx + 1) % symbols.length];
+      easterEggLi.textContent = next;
+    });
   }
 });
 

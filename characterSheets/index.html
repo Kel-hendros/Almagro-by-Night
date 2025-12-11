@@ -15,7 +15,7 @@
 
 <body>
     <div style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
-        <a href="../index.html#character-sheets"
+        <a href="../index.html"
             style="color: white; text-decoration: none; background: #333; padding: 5px 10px; border-radius: 5px;">&larr;
             Volver</a>
     </div>
@@ -700,7 +700,8 @@
             </div>
             <div class="buttons-container">
                 <!-- <button title="Guardar personaje" class="gg-export" onclick="downloadCharacterData()"></button> -->
-                <ion-icon name="save-sharp" onclick="downloadCharacterData()"></ion-icon>
+                <ion-icon aria-label="Guardar personaje" title="Guardar personaje" name="save-sharp"
+                    onclick="downloadCharacterData()"></ion-icon>
                 <!-- <label title="Cargar personaje" for="file-input" class="gg-import"></label> -->
                 <ion-icon for="file-input-icon" name="download-sharp" onclick="clickOnFileInput()"></ion-icon>
                 <input type="file" id="file-input" hidden accept=".json">

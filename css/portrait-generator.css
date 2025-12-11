@@ -94,7 +94,7 @@
 
 /* Sections */
 .vtm-section {
-    margin-bottom: 2rem;
+    /* margin-bottom: 2rem; */
 }
 
 .vtm-section-title {
@@ -126,7 +126,7 @@
 /* Generation Row */
 .generation-row {
     max-width: 1600px;
-    margin: 2rem auto;
+    margin: 1rem auto;
     padding: 0 1rem;
 }
 
@@ -149,12 +149,15 @@
 
 /* Cards (Presets/Backgrounds) */
 .options-grid {
+
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
     max-height: 350px;
     overflow-y: auto;
     padding-right: 5px;
+
+
 }
 
 .option-card {
