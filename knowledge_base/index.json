@@ -1,0 +1,183 @@
+[
+    {
+        "file": "disciplinas/dominacion.md",
+        "title": "Dominación",
+        "tags": [
+            "disciplina",
+            "mental",
+            "ventrue",
+            "lasombra",
+            "tremere",
+            "giovanni"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/potencia.md",
+        "title": "Potencia",
+        "tags": [
+            "disciplina",
+            "fisica",
+            "brujah",
+            "nosferatu",
+            "lasombra",
+            "giovanni"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/presencia.md",
+        "title": "Presencia",
+        "tags": [
+            "disciplina",
+            "mental",
+            "brujah",
+            "ventrue"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/animalismo.md",
+        "title": "Animalismo",
+        "tags": [
+            "disciplina",
+            "mental",
+            "gangrel",
+            "nosferatu",
+            "tzimisce"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/auspex.md",
+        "title": "Auspex",
+        "tags": [
+            "disciplina",
+            "mental",
+            "malkavian",
+            "tremere",
+            "tzimisce",
+            "toreador"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/celeridad.md",
+        "title": "Celeridad",
+        "tags": [
+            "disciplina",
+            "fisica",
+            "assamita",
+            "brujah",
+            "toreador"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/dementacion.md",
+        "title": "Dementacion",
+        "tags": [
+            "disciplina",
+            "mental",
+            "malkavian"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/fortaleza.md",
+        "title": "Fortaleza",
+        "tags": [
+            "disciplina",
+            "fisica",
+            "ventrue",
+            "gangrel",
+            "ravnos"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/mytherceria.md",
+        "title": "Mytherceria",
+        "tags": [
+            "disciplina",
+            "mental",
+            "kiasyd"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/necromancia.md",
+        "title": "Necromancia",
+        "tags": [
+            "disciplina",
+            "magia",
+            "capadocio",
+            "giovanni"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/obtenebracion.md",
+        "title": "Obtenebración",
+        "tags": [
+            "disciplina",
+            "mental",
+            "lasombra",
+            "kiasyd"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/ofuscacion.md",
+        "title": "Ofuscación",
+        "tags": [
+            "disciplina",
+            "mental",
+            "assamita",
+            "seguidores de set",
+            "malkavian",
+            "nosferatu"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/protean.md",
+        "title": "Protean",
+        "tags": [
+            "disciplina",
+            "fisica",
+            "gangrel"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/taumaturgia.md",
+        "title": "Taumaturgia",
+        "tags": [
+            "disciplina",
+            "magia",
+            "tremere"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/temporis.md",
+        "title": "Temporis",
+        "tags": [
+            "disciplina",
+            "magia",
+            "brujah verdadero"
+        ],
+        "category": "Disciplinas"
+    },
+    {
+        "file": "disciplinas/vicisitud.md",
+        "title": "Vicisitud",
+        "tags": [
+            "disciplina",
+            "fisica",
+            "tzimisce"
+        ],
+        "category": "Disciplinas"
+    }
+]

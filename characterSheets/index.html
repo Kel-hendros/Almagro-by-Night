@@ -11,11 +11,62 @@
     <script src="https://kit.fontawesome.com/8a611956c8.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
     <script src="../js/supabase.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Special+Elite&family=UnifrakturCook:wght@700&family=Lato:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml/dist/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="../css/ghoul.css">
+    <script src="../js/ghoul.js" defer></script>
 </head>
 
 <body>
+    <!-- Ghoul Help System UI -->
+    <div id="ghoul-fab" title="Diga, maestro"></div>
+    <input type="hidden" id="selectedGhoul" value="igor">
+
+    <!-- Search Widget -->
+    <div id="ghoul-widget">
+        <div class="ghoul-header">
+            <h3>Diga, maestro</h3>
+            <i class="fa-solid fa-users-gear" id="ghoul-change-btn" title="Cambiar Ghoul"
+                style="color: white; cursor: pointer;"></i>
+        </div>
+        <div class="ghoul-body">
+            <input type="text" id="ghoul-search-input" class="ghoul-search-input"
+                placeholder="Buscar en la base de datos..." autocomplete="off">
+            <ul id="ghoul-results" class="ghoul-results"></ul>
+        </div>
+    </div>
+
+    <!-- Large Reading Modal -->
+    <div id="ghoul-modal-overlay">
+        <div id="ghoul-modal-content">
+            <div class="ghoul-modal-header">
+                <h2 id="ghoul-modal-title">Título</h2>
+                <button id="ghoul-modal-close" class="ghoul-modal-close">&times;</button>
+            </div>
+            <div id="ghoul-markdown-body" class="ghoul-markdown-body"></div>
+        </div>
+    </div>
+
+    <!-- Ghoul Selection Modal -->
+    <div id="ghoul-selection-modal-overlay">
+        <div id="ghoul-selection-modal-content">
+            <div class="ghoul-modal-header">
+                <h2 style="font-family: 'Special Elite'; color: #ff0000; margin: 0;">Elegir Ghoul</h2>
+                <button id="ghoul-selection-close" class="ghoul-modal-close">&times;</button>
+            </div>
+            <div id="ghoul-selection-list" class="ghoul-selection-grid">
+                <!-- Javascript will populate this -->
+            </div>
+        </div>
+    </div>
+
     <div style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
-        <a href="../index.html"
+        <a href="../index.html#character-sheets"
             style="color: white; text-decoration: none; background: #333; padding: 5px 10px; border-radius: 5px;">&larr;
             Volver</a>
     </div>

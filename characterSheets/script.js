@@ -409,6 +409,14 @@ function loadCharacterFromJSON(characterData) {
       input.value = value;
     }
   });
+  // Update Ghoul Visuals if function exists
+  if (window.updateGhoulVisuals && characterData.selectedGhoul) {
+    window.updateGhoulVisuals(characterData.selectedGhoul);
+  } else if (window.updateGhoulVisuals) {
+    // Default to Igor if not saved
+    window.updateGhoulVisuals("igor");
+  }
+
   updateAll();
 }
 
