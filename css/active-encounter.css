@@ -1,0 +1,613 @@
+/* Base Container */
+.active-encounter-container {
+    padding: 20px;
+    color: #e0e0e0;
+    background-color: #000;
+    /* Deepest black */
+    min-height: 100vh;
+}
+
+.ae-input {
+    width: 100%;
+    padding: 8px;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+}
+
+.mb-2 {
+    margin-bottom: 10px;
+}
+
+/* Header */
+.ae-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+/* ... existing content ... */
+
+.ae-hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    color: #fff;
+    font-weight: bold;
+    pointer-events: none;
+    text-shadow: 0 0 2px #000;
+}
+
+.ae-bubble-input {
+    background: transparent;
+    border: none;
+    color: white;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    padding: 0;
+    margin: 0;
+    /* Remove Spinners Firefox */
+    -moz-appearance: textfield;
+}
+
+.ae-bubble-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+/* Remove Spinners WebKit */
+.ae-bubble-input::-webkit-outer-spin-button,
+.ae-bubble-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ae-status-row {
+    margin-top: 5px;
+    border-top: 1px solid #333;
+    padding-top: 4px;
+    font-size: 0.8rem;
+    color: #888;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.ae-title {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--color-gold, #c5a059);
+    margin-right: 15px;
+}
+
+.ae-status-chip {
+    background: #27ae60;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.ae-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.ae-btn.secondary {
+    background: #444;
+    color: #fff;
+}
+
+.ae-btn.secondary:hover {
+    background: #555;
+}
+
+.ae-btn.primary {
+    background: var(--color-primary, #8c1c1c);
+    color: #fff;
+}
+
+/* Using fallback red */
+.ae-btn.primary:hover {
+    background: #a62121;
+}
+
+.ae-btn.success {
+    background: #27ae60;
+    color: #fff;
+}
+
+.ae-btn.danger {
+    background: #c0392b;
+    color: #fff;
+}
+
+.ae-btn.full-width {
+    width: 100%;
+}
+
+/* Layout */
+.ae-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 20px;
+    height: calc(100vh - 100px);
+    /* Fill remaining height */
+}
+
+/* Left Panel (Map Placeholder + Add NPC for now) */
+.ae-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-right: 1px solid #333;
+    /* Visual separation */
+    padding-right: 20px;
+}
+
+.ae-panel {
+    background: #111;
+    border: 1px solid #333;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.ae-panel h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #ccc;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
+.ae-form-group {
+    margin-bottom: 15px;
+}
+
+.ae-form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #aaa;
+    font-size: 0.85rem;
+}
+
+/* Turn Controls */
+.ae-turn-controls {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ae-round-info {
+    display: flex;
+    align-items: baseline;
+}
+
+.ae-round-label {
+    color: #aaa;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    margin-right: 10px;
+}
+
+.ae-round-val {
+    color: #fff;
+    font-size: 1.5em;
+}
+
+.ae-btn-play {
+    background: #2ecc71;
+    border: none;
+    color: #000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, box-shadow 0.2s;
+    padding-left: 4px;
+}
+
+.ae-btn-play:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+}
+
+/* Timeline */
+.ae-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    padding-left: 20px;
+}
+
+/* Visual line for timeline */
+.ae-timeline::before {
+    content: '';
+    position: absolute;
+    left: 28px;
+    /* Authenticated guess based on bubble width */
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #333;
+    z-index: 0;
+}
+
+.ae-timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    z-index: 1;
+    /* Above the line */
+}
+
+.ae-init-bubble {
+    width: 40px;
+    height: 40px;
+    background: #000;
+    border: 2px solid #555;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* ... existing ... */
+
+/* New Card Title Styles */
+.ae-card-name {
+    color: var(--color-red-accent);
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.ae-card-code {
+    color: var(--color-cream);
+    font-weight: normal;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+/* Updated Card Styles */
+.ae-card {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 10px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    /* Clickable */
+    position: relative;
+    overflow: hidden;
+    /* For the bar */
+    transition: border-color 0.2s;
+}
+
+.ae-card:hover {
+    border-color: #666;
+}
+
+.ae-card.active {
+    border-color: var(--color-red-muted);
+    background-color: var(--color-red-muted);
+    box-shadow: 0 0 10px rgba(173, 29, 29, 0.796);
+}
+
+/* Slim Health Bar on Card */
+.ae-card.dead {
+    opacity: 0.5;
+    filter: grayscale(100%);
+    border-color: #333 !important;
+    /* Prevent hover highlight */
+}
+
+.ae-card-hp-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: #333;
+}
+
+.ae-card-hp-fill,
+.ae-hp-fill {
+    height: 100%;
+    transition: width 0.3s, background-color 0.3s;
+}
+
+/* Modal Styles */
+.ae-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.ae-modal-content {
+    background: #111;
+    border: 1px solid #444;
+    border-radius: 8px;
+    width: 500px;
+    max-width: 90%;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+.ae-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.ae-modal-header h3 {
+    margin: 0;
+    color: var(--color-cream);
+}
+
+.ae-btn-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.ae-title-name {
+    color: var(--color-red-accent);
+}
+
+.ae-title-code {
+    color: var(--color-cream);
+    font-weight: normal;
+    opacity: 0.8;
+}
+
+/* Grouped Stats in Modal */
+.ae-group-fieldset {
+    border: 1px solid #555;
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    background: #111;
+}
+
+.ae-group-fieldset legend {
+    padding: 0 10px;
+    color: var(--color-red-accent);
+    font-family: 'Special Elite', cursive;
+    font-size: 1.1em;
+}
+
+.ae-stat-grid-3col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.ae-stat-col h4 {
+    color: #888;
+    margin: 0 0 10px 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+}
+
+.ae-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    padding: 2px 0;
+}
+
+.stat-label {
+    color: #bbb;
+}
+
+.stat-val {
+    color: #fff;
+    font-weight: bold;
+}
+
+.ae-divider {
+    border: 0;
+    border-top: 1px solid #333;
+    margin: 20px 0;
+}
+
+.ae-modal-health-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.ae-ctrl-btn.large {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+}
+
+.ae-ctrl-btn.large:hover {
+    background: #333;
+}
+
+.ae-hp-bar.large {
+    flex-grow: 1;
+    height: 30px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    border: 1px solid #333;
+}
+
+.ae-hp-text {
+    z-index: 2;
+    /* Ensure on top */
+}
+
+/* ... helpers ... */
+/* ... helpers ... */
+.ae-hp-fill.high,
+.ae-card-hp-fill.high {
+    background-color: var(--color-health-100);
+}
+
+.ae-hp-fill.med,
+.ae-card-hp-fill.med {
+    background-color: var(--color-health-50);
+}
+
+.ae-hp-fill.low,
+.ae-card-hp-fill.low {
+    background-color: var(--color-health-20);
+}
+
+.ae-hp-fill.dead,
+.ae-card-hp-fill.dead {
+    background-color: #555;
+}
+
+/* Card Health Bar (Slim) */
+.ae-card-hp-bar {
+    width: 100%;
+    height: 6px;
+    background: #222;
+    margin-top: 4px;
+    /* Space between name and bar */
+    border-radius: 2px;
+    overflow: hidden;
+    /* Position matches 'debajo del nombre' */
+}
+
+.ae-card-hp-fill {
+    height: 100%;
+    width: 100%;
+    /* Default, controlled by JS */
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Numeric Picker */
+.editable-stat {
+    cursor: pointer;
+    border-bottom: 1px dotted #555;
+    transition: color 0.2s, border-color 0.2s;
+    position: relative;
+    padding: 0 4px;
+}
+
+.editable-stat:hover {
+    color: var(--color-red-accent);
+    border-color: var(--color-red-accent);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.ae-stat-picker-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 20000;
+    display: none;
+}
+
+.ae-stat-picker {
+    position: absolute;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--color-red-accent);
+    border-radius: 8px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+    z-index: 20001;
+    display: none;
+    /* Toggled by JS */
+    min-width: 120px;
+}
+
+.ae-picker-btn {
+    background: #222;
+    border: 1px solid #444;
+    color: #eee;
+    font-weight: bold;
+    font-family: 'Special Elite', cursive;
+    padding: 10px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
+    min-width: 35px;
+}
+
+.ae-picker-btn:hover {
+    background: #333;
+    border-color: var(--color-red-accent);
+    color: var(--color-red-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.ae-picker-btn.active {
+    background: var(--color-red-accent);
+    color: var(--color-cream);
+    border-color: var(--color-red-accent);
+}

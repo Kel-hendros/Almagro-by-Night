@@ -1,0 +1,97 @@
+<div class="active-encounter-container">
+    <link rel="stylesheet" href="css/active-encounter.css">
+
+    <!-- Header / Top Bar -->
+    <header class="ae-header">
+        <div class="ae-header-left">
+            <h2 id="ae-encounter-name" class="ae-title">Cargando...</h2>
+            <span id="ae-encounter-status" class="ae-status-chip">Activo</span>
+        </div>
+        <div class="ae-header-right">
+            <button id="btn-ae-back" class="ae-btn secondary">Volver</button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="ae-layout">
+        <!-- Sidebar Controls (Left) -->
+        <aside class="ae-sidebar">
+            <div class="ae-panel">
+                <h4>Agregar PNJ</h4>
+                <div class="ae-form-group">
+                    <label>Plantilla</label>
+                    <select id="ae-template-select" class="ae-input">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div class="ae-form-group">
+                    <label>Cantidad</label>
+                    <input type="number" id="ae-npc-count" value="1" min="1" class="ae-input">
+                </div>
+                <button id="btn-ae-add-npc" class="ae-btn primary full-width">Agregar</button>
+            </div>
+
+            <div class="ae-panel">
+                <h4>Acciones</h4>
+                <button id="btn-ae-save" class="ae-btn success full-width mb-2">Guardar</button>
+                <button id="btn-ae-archive" class="ae-btn danger full-width">Archivar</button>
+            </div>
+        </aside>
+
+        <!-- Main Timeline (Center/Right) -->
+        <main class="ae-main">
+            <!-- Turn Controls -->
+            <div class="ae-turn-controls">
+                <div class="ae-round-info">
+                    <span class="ae-round-label">Ronda</span>
+                    <strong id="ae-round-counter" class="ae-round-val">1</strong>
+                </div>
+                <button id="btn-ae-next-turn" class="ae-btn-play" title="Pasar Turno">
+                    ▶
+                </button>
+            </div>
+
+            <!-- Instances Grid/Timeline -->
+            <div id="ae-timeline-container" class="ae-timeline">
+                <!-- JS Renders here -->
+                <p style="color: #666; text-align: center;">Cargando participantes...</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Instance Detail Modal -->
+    <div id="ae-modal" class="ae-modal-overlay" style="display: none;">
+        <div class="ae-modal-content">
+            <div class="ae-modal-header">
+                <h3 id="ae-modal-title">Detalle PNJ</h3>
+                <button id="btn-ae-modal-close" class="ae-btn-close">&times;</button>
+            </div>
+            <div class="ae-modal-body">
+                <div class="ae-detail-info">
+                    <p><strong>Código:</strong> <span id="ae-modal-code"></span></p>
+                    <div id="ae-modal-stats" class="ae-stats-grid">
+                        <!-- Stats injected here -->
+                    </div>
+                    <div id="ae-modal-notes" class="ae-notes-section"
+                        style="margin-top: 15px; color: #aaa; font-style: italic;"></div>
+                </div>
+
+                <hr class="ae-divider">
+
+                <div class="ae-health-section">
+                    <h4>Salud</h4>
+                    <div class="ae-modal-health-controls">
+                        <button class="ae-ctrl-btn large" id="btn-modal-dmg">-</button>
+                        <div class="ae-hp-bar large">
+                            <div id="ae-modal-hp-fill" class="ae-hp-fill"></div>
+                            <span id="ae-modal-hp-text" class="ae-hp-text"></span>
+                        </div>
+                        <button class="ae-ctrl-btn large" id="btn-modal-heal">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/active-encounter.js"></script>

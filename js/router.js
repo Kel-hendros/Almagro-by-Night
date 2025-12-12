@@ -55,6 +55,8 @@ const routes = {
   "portrait-generator": "fragments/portrait-generator.html",
   "card-creator": "fragments/card-creator.html",
   "character-sheets": "fragments/character-sheets.html",
+  "combat-tracker": "fragments/combat-tracker.html",
+  "active-encounter": "fragments/active-encounter.html",
 };
 
 // 3) Core routing function
@@ -62,14 +64,17 @@ async function loadRoute(force = false) {
   if (!sessionReady) return; // wait until session is initialized
 
   const rawHash = window.location.hash.slice(1) || "welcome";
+  // Split query params if present
+  const [baseHash, queryString] = rawHash.split("?");
+
   const session = currentSession;
 
   // Redirect resolution (compute target hash without causing loops)
-  let targetHash = rawHash;
+  let targetHash = rawHash; // Keep full hash for redirect comparison
 
   // Previously redirected authenticated users from 'welcome' to 'games'.
   // Now we want them to see the home screen on 'welcome'.
-  if (!session && (rawHash === "games" || rawHash === "game")) {
+  if (!session && (baseHash === "games" || baseHash === "game")) {
     targetHash = "welcome";
   }
 
@@ -81,7 +86,7 @@ async function loadRoute(force = false) {
     return;
   }
 
-  const path = routes[targetHash] || routes.welcome;
+  const path = routes[baseHash] || routes.welcome;
 
   // Guard: avoid redundant rerenders of the exact same route/path when not forced
   if (!force && __currentRoute === targetHash && __lastRenderedPath === path) {
@@ -91,9 +96,23 @@ async function loadRoute(force = false) {
   const contentEl = document.getElementById("content");
   try {
     const res = await fetch(path);
-    contentEl.innerHTML = await res.text();
+    const html = await res.text();
+    contentEl.innerHTML = html;
+
+    // Execute scripts found in the fragment
+    const scripts = contentEl.querySelectorAll("script");
+    scripts.forEach((oldScript) => {
+      const newScript = document.createElement("script");
+      Array.from(oldScript.attributes).forEach((attr) =>
+        newScript.setAttribute(attr.name, attr.value)
+      );
+      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    });
+
     if (window.lucide?.createIcons) lucide.createIcons();
   } catch (e) {
+    console.error("Router Error:", e);
     contentEl.innerHTML = "<p>Error al cargar la sección.</p>";
   }
 
@@ -122,6 +141,12 @@ async function loadRoute(force = false) {
       window.initGame();
     } else {
       console.warn("Router: initGame() is not defined on window");
+    }
+  }
+
+  if (targetHash === "combat-tracker") {
+    if (typeof window.initCombatTracker === "function") {
+      window.initCombatTracker();
     }
   }
 

@@ -1,0 +1,454 @@
+/* css/combat-tracker.css */
+
+/* .main-container inherited from styles.css */
+
+/* Tabs */
+.ct-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.ct-tab-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #888;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: 'Special Elite', cursive;
+    text-transform: uppercase;
+    transition: all 0.2s;
+}
+
+.ct-tab-btn:hover {
+    border-color: #666;
+    color: #ccc;
+}
+
+.ct-tab-btn.active {
+    background: var(--color-red, #8c1c1c);
+    color: var(--color-cream, #e3d8c3);
+    border-color: var(--color-red-accent, #ad3838);
+    font-weight: bold;
+}
+
+/* Views */
+.ct-view {
+    display: none;
+}
+
+.ct-view.active {
+    display: block;
+}
+
+/* Grid for Templates and Encounters */
+.ct-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.ct-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px;
+    transition: background 0.2s;
+}
+
+.ct-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #555;
+}
+
+.ct-card h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: #fff;
+}
+
+.ct-card p {
+    font-size: 0.9em;
+    color: #aaa;
+    margin: 4px 0;
+}
+
+.ct-btn {
+    background: #333;
+    color: #eee;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ct-btn:hover {
+    background: #444;
+}
+
+.ct-btn.primary {
+    background: var(--color-blood, #8a0303);
+    color: #fff;
+}
+
+.ct-btn.primary:hover {
+    background: #a00404;
+}
+
+/* Modal */
+.ct-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.ct-modal-overlay.hidden {
+    display: none;
+}
+
+.ct-modal {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    padding: 24px;
+    border-radius: 8px;
+    width: 800px;
+    max-width: 90%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.ct-modal h3 {
+    margin-top: 0;
+    font-family: 'Special Elite', cursive;
+    color: var(--color-red-accent, #ad3838);
+}
+
+.ct-modal .form-group {
+    margin-top: 10px;
+}
+
+.ct-modal label {
+    color: var(--color-cream-muted);
+}
+
+.ct-form-group {
+    margin-bottom: 16px;
+}
+
+.ct-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--color-cream);
+    font-size: 0.9em;
+}
+
+/* Unified Input Styling for Modal */
+.ct-form-group input,
+.ct-form-group textarea,
+.ct-form-group select,
+.ct-modal input[type="text"],
+.ct-modal input[type="number"],
+.ct-modal select {
+    width: 100%;
+    padding: 8px;
+    background: #000;
+    border: 1px solid #333;
+    color: var(--color-cream);
+    border-radius: 4px;
+    font-family: inherit;
+
+}
+
+.ct-form-group input:focus,
+.ct-modal input:focus {
+    border-color: var(--color-red-accent, #ad3838);
+    outline: none;
+}
+
+.ct-stat-input {
+    width: 50px !important;
+    padding: 6px 2px 2px 2px !important;
+    text-align: center;
+    background: #000;
+    color: var(--color-cream, #e3d8c3);
+    border: 1px solid #333;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* Remove spin buttons */
+.ct-stat-input::-webkit-outer-spin-button,
+.ct-stat-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ct-stat-input {
+    -moz-appearance: textfield;
+}
+
+.ct-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Active Encounter Specifics */
+.ct-encounter-dashboard {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 20px;
+}
+
+.ct-encounter-sidebar {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 16px;
+    border-radius: 8px;
+}
+
+/* Timeline Layout */
+.ct-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    padding-left: 10px;
+    border-left: 20px solid #333;
+    border-radius: 20px;
+    /* Vertical Line */
+    margin-left: 30px;
+}
+
+.ct-timeline-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+/* Initiative Bubble */
+.ct-init-bubble {
+    position: absolute;
+    left: -55px;
+    /* Pull left of the line */
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+
+}
+
+.ct-init-bubble .ct-stat-input {
+    width: 40px !important;
+    height: 40px;
+    border-radius: 50%;
+    /* Circle */
+    font-weight: bold;
+    font-size: 1.1em;
+    border: 2px solid #555;
+    background: #111;
+    z-index: 10;
+    padding: 0 !important;
+    line-height: 40px;
+}
+
+/* Compact Card */
+.ct-instance-card.compact {
+    flex: 1;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    /* Slightly more rounded like sketch */
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: 10px;
+    /* Space from line */
+    border-left: 4px solid #666;
+}
+
+.ct-card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ct-instance-code {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--color-cream-muted);
+    margin-right: 10px;
+}
+
+.ct-instance-name {
+    flex: 1;
+    font-family: 'Special Elite', cursive;
+    color: var(--color-red);
+    font-size: 1.1em;
+    text-transform: uppercase;
+}
+
+/* Health Controls (Horizontal) */
+/* Health Controls (Horizontal) */
+.ct-health-controls {
+    display: flex;
+    align-items: center;
+    background: #000;
+    border-radius: 12px;
+    border: 1px solid #333;
+    overflow: hidden;
+    /* Ensure pill shape masks content */
+    height: 20px;
+}
+
+.ct-control-btn.section {
+    flex: 1;
+    /* Grow to fill space */
+    height: 100%;
+    border: none;
+    background: #111;
+    color: #888;
+    font-weight: bold;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    min-width: 30px;
+    padding: 0 10px;
+}
+
+.ct-control-btn.section:hover {
+    background: #333;
+    color: #fff;
+}
+
+.ct-control-btn.section:active {
+    background: #555;
+}
+
+.ct-health-bar.small {
+    width: 100px;
+    height: 100%;
+    /* Full height of container */
+    background: #222;
+    position: relative;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+}
+
+/* Dynamic States */
+.ct-instance-card.dead {
+    opacity: 0.6;
+    filter: grayscale(100%);
+}
+
+.ct-health-fill {
+    height: 100%;
+    transition: width 0.3s, background-color 0.3s;
+}
+
+.ct-health-fill.hp-high {
+    background-color: #094e25;
+}
+
+.ct-health-fill.hp-med {
+    background-color: #755f06;
+}
+
+.ct-health-fill.hp-low {
+    background-color: var(--color-red, #8c1c1c);
+}
+
+.ct-health-fill.hp-dead {
+    background-color: #555;
+}
+
+.ct-health-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 0 0 3px #000;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.ct-status-label {
+    font-size: 0.8em;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    width: 100%;
+    text-align: center;
+    margin-top: 4px;
+    border-top: 1px solid #333;
+    padding-top: 2px;
+}
+
+/* Turn Controls */
+.ct-turn-controls {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ct-btn-play {
+    background: #2ecc71;
+    border: none;
+    color: #000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.2em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, box-shadow 0.2s;
+    padding-left: 4px;
+    /* Optical centering for play icon */
+}
+
+.ct-btn-play:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+}
+
+.ct-btn-play:active {
+    transform: scale(0.95);
+}
+
+/* Active Instance Highlight */
+.ct-instance-card.active {
+    border-color: #f1c40f !important;
+    box-shadow: 0 0 15px rgba(241, 196, 15, 0.3) !important;
+    background: #2a2a2a !important;
+    transition: all 0.3s ease;
+}
+
+.ct-instance-card.active .ct-instance-name {
+    color: #f1c40f !important;
+    /* Override muted red for active */
+    text-shadow: 0 0 5px rgba(241, 196, 15, 0.4);
+}

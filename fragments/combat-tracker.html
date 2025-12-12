@@ -1,0 +1,132 @@
+<div class="main-container tools">
+    <link rel="stylesheet" href="css/combat-tracker.css">
+
+    <h1>Control de Combate</h1>
+    <div id="ct-user-status" style="font-size: 0.9em; color: #888; margin-bottom: 20px;"></div>
+
+    <!-- Main Navigation Tabs -->
+    <div class="ct-tabs">
+        <button class="ct-tab-btn active" data-tab="templates">Gestión de Plantillas</button>
+        <button class="ct-tab-btn" data-tab="encounters">Encuentros</button>
+    </div>
+
+    <!-- VIEW 1: TEMPLATES -->
+    <div id="view-templates" class="ct-view active">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
+            <p>Define tipos de enemigos reutilizables. Tus plantillas se guardan en la base de datos.</p>
+            <button class="ct-btn primary" id="btn-create-template">+ Nueva Plantilla</button>
+        </div>
+
+        <div id="templates-list" class="ct-grid">
+            <!-- Template Items injected here -->
+            <p style="color: #666;">Cargando plantillas...</p>
+        </div>
+    </div>
+
+    <!-- VIEW 2: ENCOUNTERS -->
+    <div id="view-encounters" class="ct-view">
+        <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
+            <p>Gestiona tus escenas de combate. Entra a un encuentro para iniciar la acción.</p>
+            <button class="ct-btn primary" id="btn-create-encounter">+ Nuevo Encuentro</button>
+        </div>
+
+        <div id="encounters-list" class="ct-grid">
+            <!-- Encounter Items injected here -->
+            <p style="color: #666;">Cargando encuentros...</p>
+        </div>
+    </div>
+
+    <!-- VIEW 3: ACTIVE ENCOUNTER (Hidden by default, shown when entering an encounter) -->
+    <div id="view-active-encounter" class="ct-view" style="display: none;">
+
+        <div class="ct-encounter-dashboard">
+            <aside class="ct-encounter-sidebar">
+                <div style="margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 10px;">
+                    <strong id="active-encounter-name"
+                        style="display: block; font-size: 1.4em; color: var(--color-red-accent); margin-bottom: 5px;"></strong>
+                    <span id="active-encounter-status"
+                        style="font-size: 0.8em; padding: 2px 6px; background: #333; border-radius: 4px; color: #aaa;">Active</span>
+                </div>
+
+                <h4>Agregar PNJ</h4>
+                <div class="ct-form-group">
+                    <label>Plantilla:</label>
+                    <select id="select-add-npc-template" style="margin-bottom: 8px;">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div class="ct-form-group">
+                    <label>Cantidad:</label>
+                    <input type="number" id="input-add-npc-count" value="1" min="1" max="10">
+                </div>
+                <button class="ct-btn primary" id="btn-add-npc-instance" style="width: 100%;">Agregar</button>
+
+                <hr style="border-color: #444; margin: 20px 0;">
+
+                <h4>Opciones</h4>
+                <button class="ct-btn" id="btn-save-encounter" style="width: 100%; margin-bottom: 8px;">Guardar
+                    Cambios</button>
+                <button class="ct-btn" id="btn-archive-encounter" style="width: 100%;">Archivar Encuentro</button>
+
+            </aside>
+
+            <main class="ct-encounter-main">
+                <!-- Turn Controls -->
+                <div class="ct-turn-controls">
+                    <div class="ct-round-info">
+                        <span style="color:#aaa; font-size:0.9em; text-transform:uppercase;">Ronda</span>
+                        <strong id="ct-round-counter" style="color:#fff; font-size:1.5em; margin-left:10px;">1</strong>
+                    </div>
+                    <button id="btn-next-turn" class="ct-btn-play" title="Pasar Turno">
+                        ▶
+                    </button>
+                </div>
+
+                <div id="active-instances-grid" class="ct-instance-grid">
+                    <!-- Instances go here -->
+                    <p style="color: #666;">El encuentro está vacío. Agrega PNJs desde el panel lateral.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL: CREATE/EDIT TEMPLATE -->
+<div id="modal-template" class="ct-modal-overlay hidden">
+    <div class="ct-modal">
+        <h3 id="modal-template-title">Nueva Plantilla</h3>
+        <form id="form-template">
+            <input type="hidden" id="tpl-id">
+
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="tpl-name" placeholder="Ej: Matón Brujah">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 10px;">
+                <select id="tpl-type" disabled
+                    style="width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555;">
+                    <option value="npc">PNJ</option>
+                </select>
+            </div>
+
+            <!-- Dynamic Stats Container -->
+            <div id="tpl-stats-container"
+                style="max-height: 400px; overflow-y: auto; text-align: left; padding: 10px; border: 1px solid #444; background: #222; margin-bottom: 15px;">
+                <!-- JS will populate this -->
+            </div>
+
+            <div class="ct-form-group">
+                <label>Notas</label>
+                <textarea id="tpl-notes" rows="3" placeholder="Información adicional..."></textarea>
+            </div>
+
+            <div class="ct-actions">
+                <button type="button" class="ct-btn" id="btn-cancel-template">Cancelar</button>
+                <button type="submit" class="ct-btn primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
