@@ -285,8 +285,12 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* background-color: #000; */
+    background-color: #000;
     box-sizing: border-box;
+}
+
+#ghoul-selection-modal-content .ghoul-modal-header {
+    background-color: transparent
 }
 
 #ghoul-modal-title {

@@ -12,9 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let knowledgeBaseIndex = [];
 
   // 6. Dynamic Base Path for multiple pages
+  // 6. Dynamic Base Path for multiple pages
   function getBasePath() {
     // If we are in /characterSheets/, we need to go up one level
-    if (window.location.pathname.includes("/characterSheets/")) {
+    if (window.location.pathname.toLowerCase().includes("/charactersheets/")) {
       return "../";
     }
     return "";
@@ -113,13 +114,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const basePath = getBasePath();
       const response = await fetch(`${basePath}knowledge_base/${item.file}`);
-      if (!response.ok) throw new Error("File not found");
+      if (!response.ok)
+        throw new Error(
+          `File not found: ${response.status} ${response.statusText}`
+        );
       const text = await response.text();
-
-      // Parse Frontmatter and Content
-      // We assume the file starts with ---
-      // Using a simple split or regex because we imported js-yaml but we need to split first.
-      // Actually, we can just display the body.
 
       let markdownContent = text;
 
@@ -134,7 +133,16 @@ document.addEventListener("DOMContentLoaded", () => {
       modalBody.innerHTML = marked.parse(markdownContent);
     } catch (error) {
       console.error("Error loading article:", error);
-      modalBody.innerHTML = "<p>Error al cargar el contenido.</p>";
+      const basePath = getBasePath();
+      // Calculate attempts to explain to user
+      const attemptedUrl = `${basePath}knowledge_base/${item.file}`;
+      modalBody.innerHTML = `
+        <div style="padding: 1rem; color: #ff6b6b;">
+            <p><strong>Error al cargar el contenido.</strong></p>
+            <p style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 0.5rem;">Intento de URL: ${attemptedUrl}</p>
+            <p>Detalle: ${error.message}</p>
+        </div>
+      `;
     }
   }
 
