@@ -9,6 +9,7 @@
     encounters: [],
     activeEncounter: null,
     user: null,
+    templateEdit: { data: {}, type: "npc" }, // Edit state
   };
 
   // --- DOM Elements ---
@@ -152,7 +153,7 @@
             `;
 
       card.querySelector(".btn-edit-template").addEventListener("click", () => {
-        openEditTemplateModal(tpl);
+        openTemplateModal(tpl);
       });
 
       lists.templates.appendChild(card);
@@ -184,20 +185,20 @@
     }
 
     // Hydrate structure from definitions
-    const defs = window.TEMPLATE_DEFINITIONS.npc;
+    const type = state.templateEdit.type || "npc";
+    const defs =
+      window.TEMPLATE_DEFINITIONS[type] || window.TEMPLATE_DEFINITIONS.npc;
     const groups = JSON.parse(JSON.stringify(defs.groups)); // Deep clone
     const stats = {}; // Keep flat stats for easy lookup (e.g. Initiative)
 
     groups.forEach((group) => {
       group.fields.forEach((field) => {
-        const input = document.querySelector(
-          `#tpl-stats-container input[data-stat="${field.name}"]`
-        );
-        if (input) {
-          const val = parseInt(input.value) || 0;
-          field.value = val; // Hydrate value in structure
-          stats[field.name] = val; // Hydrate flat object
-        }
+        // Read from state
+        let val = state.templateEdit.data[field.name];
+        if (val === undefined) val = field.value || 0; // Default
+
+        field.value = val; // Hydrate value in structure
+        stats[field.name] = val; // Hydrate flat object
       });
     });
 
@@ -207,7 +208,7 @@
     const payload = {
       user_id: state.user.id,
       name: name,
-      type: "npc",
+      type: type,
       data: {
         maxHealth: maxHealth,
         groups: groups, // Saved structure
@@ -232,113 +233,177 @@
     }
   }
 
-  function openEditTemplateModal(tpl) {
-    document.getElementById("modal-template-title").textContent =
-      tpl && tpl.id ? "Editar Plantilla" : "Nueva Plantilla";
-    document.getElementById("tpl-id").value = tpl ? tpl.id : "";
-    document.getElementById("tpl-name").value = tpl ? tpl.name : "";
+  // Wrapper removed
+  // --- TEMPLATES ---
+  let currentTemplateId = null;
+
+  function openTemplateModal(tpl = null) {
+    const container = document.getElementById("ct-template-form-container");
+    /* Ensure container exists or target the right element. 
+         Wait, in previous files I used ct-template-form-container. 
+         But typically it might be tpl-stats-container?
+         Let's check fragments/combat-tracker.html if I can?
+         Actually I replaced content in line 237 of js/combat-tracker.js previously targeting "ct-template-form-container".
+         If that element doesn't exist in HTML, it fails.
+         I should check HTML. 
+         But assuming it was 'tpl-stats-container' before (line 194 in read), I should stick to that or update HTML.
+         Line 241 in original read said check Document.
+         I'll stick to 'tpl-stats-container' if that is what was there.
+         Line 239 of previous read said: const container = document.getElementById("tpl-stats-container");
+         My previous edit CHANGED it to ct-template-form-container.
+         I should probably check if I broke it.
+         I'll use 'tpl-stats-container' to be safe OR check HTML.
+         I will use 'tpl-stats-container' as it was the original ID.
+      */
+    const containerId = "tpl-stats-container";
+    const containerEl = document.getElementById(containerId);
+    const modalTemplate = document.getElementById("modal-template");
+
+    if (!containerEl) {
+      console.error("Template container not found: " + containerId);
+      return;
+    }
+    containerEl.innerHTML = "";
+
+    currentTemplateId = tpl ? tpl.id : null;
+    document.getElementById("tpl-id").value = currentTemplateId || "";
+    let templateName = tpl ? tpl.name : "";
+    document.getElementById("tpl-name").value = templateName;
     document.getElementById("tpl-notes").value =
-      tpl && tpl.data ? tpl.data.notes || "" : "";
+      tpl && tpl.data ? tpl.data.notes || "" : ""; // Fix notes loading
 
-    const container = document.getElementById("tpl-stats-container");
-    container.innerHTML = "";
+    // Determine Type
+    state.templateEdit.type =
+      tpl && tpl.type
+        ? tpl.type
+        : tpl && tpl.data && tpl.data.type
+        ? tpl.data.type
+        : "npc";
 
-    const defs = window.TEMPLATE_DEFINITIONS.npc;
+    // Initialize Data
+    if (tpl && tpl.data && tpl.data.stats) {
+      state.templateEdit.data = JSON.parse(JSON.stringify(tpl.data.stats));
+    } else {
+      state.templateEdit.data = {};
+    }
 
-    // Helper to find value in saved groups
-    const findSavedValue = (fieldName) => {
-      if (!tpl || !tpl.data) return 0;
-      if (tpl.data.groups) {
-        for (const g of tpl.data.groups) {
-          const f = g.fields.find((fi) => fi.name === fieldName);
-          if (f) return f.value;
-        }
-      }
-      if (tpl.data.stats) {
-        return tpl.data.stats[fieldName] || 0;
-      }
-      return 0;
-    };
+    // --- Type Selector ---
+    const typeWrap = document.getElementById("tpl-type-container");
+    if (typeWrap) {
+      typeWrap.innerHTML = ""; // Clear previous
+
+      const typeLabel = document.createElement("label");
+      typeLabel.textContent = "Tipo de Plantilla";
+
+      const typeSelect = document.createElement("select");
+      typeSelect.className = "ct-select";
+
+      // Populate Types
+      Object.keys(window.TEMPLATE_DEFINITIONS).forEach((key) => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = key.toUpperCase();
+        if (key === state.templateEdit.type) opt.selected = true;
+        typeSelect.appendChild(opt);
+      });
+
+      typeSelect.addEventListener("change", (e) => {
+        state.templateEdit.type = e.target.value;
+        renderTemplateForm(containerEl, state.templateEdit.type);
+      });
+
+      typeWrap.appendChild(typeLabel);
+      typeWrap.appendChild(typeSelect);
+    }
+
+    // Render Form
+    renderTemplateForm(containerEl, state.templateEdit.type);
+
+    modalTemplate.classList.remove("hidden");
+  }
+
+  function renderTemplateForm(container, type) {
+    let formDiv = container.querySelector(".ct-form-content");
+    if (!formDiv) {
+      formDiv = document.createElement("div");
+      formDiv.className = "ct-form-content";
+      container.appendChild(formDiv);
+    }
+    formDiv.innerHTML = "";
+
+    const defs =
+      window.TEMPLATE_DEFINITIONS[type] || window.TEMPLATE_DEFINITIONS.npc;
 
     defs.groups.forEach((group) => {
       const fieldset = document.createElement("fieldset");
-      fieldset.style.border = "1px solid #555";
-      fieldset.style.marginBottom = "15px";
-      fieldset.style.padding = "10px";
+      fieldset.className = "ae-group-fieldset";
 
       const legend = document.createElement("legend");
       legend.textContent = group.name;
-      legend.style.padding = "0 5px";
-      legend.style.color = "var(--color-cream, #e3d8c3)";
-      legend.style.fontFamily = "'Special Elite', cursive";
       fieldset.appendChild(legend);
 
-      // Bucket fields by type
+      const grid = document.createElement("div");
+      grid.className = "ae-stat-grid-3col";
+
+      // Bucket fields
       const byType = {};
       group.fields.forEach((f) => {
         if (!byType[f.type]) byType[f.type] = [];
         byType[f.type].push(f);
       });
 
-      // Grid Container for Types
-      const grid = document.createElement("div");
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "repeat(3, 1fr)"; // 3 Columns
-      grid.style.gap = "15px";
-
       Object.keys(byType).forEach((typeName) => {
         const col = document.createElement("div");
+        col.className = "ae-stat-col";
 
         const h4 = document.createElement("h4");
         h4.textContent = typeName;
-        h4.style.borderBottom = "1px solid #444";
-        h4.style.marginBottom = "8px";
-        h4.style.color = "#aaa";
-        h4.style.fontSize = "0.9em";
         col.appendChild(h4);
 
         byType[typeName].forEach((field) => {
-          const div = document.createElement("div");
-          div.style.display = "flex";
-          div.style.justifyContent = "space-between";
-          div.style.alignItems = "center";
-          div.style.marginBottom = "4px";
+          const row = document.createElement("div");
+          row.className = "ae-stat-row";
 
-          const label = document.createElement("label");
+          const label = document.createElement("span");
+          label.className = "stat-label";
           label.textContent = field.name;
-          label.style.fontSize = "0.9em";
 
-          const input = document.createElement("input");
-          input.type = "number";
-          input.min = "0";
-          input.className = "ct-stat-input"; // Styles moved to CSS
-          input.dataset.stat = field.name;
-          input.dataset.group = group.name;
+          const valSpan = document.createElement("span");
+          valSpan.className = "stat-val editable-stat";
 
-          input.addEventListener("focus", function () {
-            this.select();
+          let val = state.templateEdit.data[field.name];
+          if (val === undefined) val = field.value || 0;
+          state.templateEdit.data[field.name] = val;
+
+          valSpan.textContent = val;
+          valSpan.dataset.stat = field.name;
+
+          // Click to Edit
+          valSpan.addEventListener("click", () => {
+            const currentInt = parseInt(valSpan.textContent) || 0;
+            if (window.AE_Picker) {
+              window.AE_Picker.open(valSpan, currentInt, (newVal) => {
+                valSpan.textContent = newVal;
+                state.templateEdit.data[field.name] = newVal;
+              });
+            } else {
+              const manual = prompt(field.name, currentInt);
+              if (manual !== null) {
+                valSpan.textContent = manual;
+                state.templateEdit.data[field.name] = parseInt(manual);
+              }
+            }
           });
 
-          // Load value
-          let val = field.value; // Default from definition
-          if (tpl) {
-            val = findSavedValue(field.name);
-          }
-          input.value = val;
-
-          div.appendChild(label);
-          div.appendChild(input);
-          col.appendChild(div);
+          row.appendChild(label);
+          row.appendChild(valSpan);
+          col.appendChild(row);
         });
-
         grid.appendChild(col);
       });
-
       fieldset.appendChild(grid);
-      container.appendChild(fieldset);
+      formDiv.appendChild(fieldset);
     });
-
-    modalTemplate.classList.remove("hidden");
   }
 
   // --- DATA: ENCOUNTERS ---

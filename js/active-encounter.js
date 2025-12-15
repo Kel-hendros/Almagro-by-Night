@@ -354,103 +354,23 @@
   }
 
   // --- Picker Logic ---
-  let picker = null;
-  let pickerOverlay = null;
-  let currentCallback = null;
-
+  // Delegates to Shared Picker
   function initPicker() {
-    console.log("[AE] initPicker called");
-    const existing = document.getElementById("ae-picker");
-    const existingOverlay = document.querySelector(".ae-stat-picker-overlay");
-
-    if (existing) {
-      console.log("[AE] Removing existing stale picker");
-      existing.remove();
-    }
-    if (existingOverlay) {
-      existingOverlay.remove();
-    }
-
-    // Create Overlay
-    pickerOverlay = document.createElement("div");
-    pickerOverlay.className = "ae-stat-picker-overlay";
-    pickerOverlay.style.zIndex = "20000";
-    document.body.appendChild(pickerOverlay);
-
-    // Create Picker
-    picker = document.createElement("div");
-    picker.id = "ae-picker";
-    picker.className = "ae-stat-picker";
-    picker.style.zIndex = "20001";
-    document.body.appendChild(picker);
-
-    // Populate 0-10
-    for (let i = 0; i <= 10; i++) {
-      const btn = document.createElement("button");
-      btn.className = "ae-picker-btn";
-      btn.textContent = i;
-      btn.addEventListener("click", () => {
-        console.log("[AE] Picker value selected:", i);
-        if (currentCallback) currentCallback(i);
-        closePicker();
-      });
-      picker.appendChild(btn);
-    }
-
-    // Close events
-    pickerOverlay.addEventListener("click", () => {
-      console.log("[AE] Overlay clicked, closing picker");
-      closePicker();
-    });
+    if (window.AE_Picker) window.AE_Picker.init();
   }
 
-  function openPicker(targetEl, currentVal, onConfirm) {
-    console.log("[AE] openPicker called. Val:", currentVal);
-    if (!picker) initPicker();
-
-    currentCallback = onConfirm;
-
-    // Position
-    const rect = targetEl.getBoundingClientRect();
-    console.log("[AE] Target rect:", rect);
-
-    const pickerWidth = 140;
-    const pickerHeight = 220;
-
-    // Center horizontally relative to target
-    let left = rect.left + window.scrollX - pickerWidth / 2 + rect.width / 2;
-    // Position below target
-    let top = rect.top + window.scrollY + rect.height + 5;
-
-    // Boundary checks
-    if (left + pickerWidth > window.innerWidth)
-      left = window.innerWidth - pickerWidth - 10;
-    if (left < 10) left = 10;
-    if (top + pickerHeight > window.innerHeight)
-      top = rect.top + window.scrollY - pickerHeight - 5;
-
-    picker.style.left = `${left}px`;
-    picker.style.top = `${top}px`;
-
-    // Highlight current
-    Array.from(picker.children).forEach((btn) => {
-      btn.classList.toggle("active", parseInt(btn.textContent) === currentVal);
-    });
-
-    picker.style.display = "grid";
-    pickerOverlay.style.display = "block";
+  function openPicker(target, val, cb) {
+    if (window.AE_Picker) window.AE_Picker.open(target, val, cb);
   }
 
   function closePicker() {
-    if (picker) picker.style.display = "none";
-    if (pickerOverlay) pickerOverlay.style.display = "none";
-    currentCallback = null;
+    if (window.AE_Picker) window.AE_Picker.close();
   }
 
   // --- Modal Logic ---
 
   function openModal(inst) {
-    if (!picker) initPicker(); // Ensure picker exists
+    initPicker(); // Ensure picker exists
 
     state.selectedInstanceId = inst.id;
     // Combine Name and Code in Title using classes

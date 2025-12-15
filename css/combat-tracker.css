@@ -150,13 +150,37 @@
     font-size: 0.9em;
 }
 
+/* Horizontal Field Layout */
+.ct-inline-field {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    align-items: center;
+    gap: 15px;
+    /* margin-bottom: 16px !important; */
+}
+
+.ct-inline-field label {
+    margin-bottom: 0;
+    white-space: nowrap;
+    min-width: 120px;
+    /* Align labels */
+}
+
+.ct-inline-field input,
+.ct-inline-field select {
+    flex-grow: 1;
+    width: auto !important;
+    /* Override full width */
+}
+
 /* Unified Input Styling for Modal */
 .ct-form-group input,
 .ct-form-group textarea,
 .ct-form-group select,
 .ct-modal input[type="text"],
 .ct-modal input[type="number"],
-.ct-modal select {
+.ct-modal select,
+.ct-select {
     width: 100%;
     padding: 8px;
     background: #000;
@@ -451,4 +475,127 @@
     color: #f1c40f !important;
     /* Override muted red for active */
     text-shadow: 0 0 5px rgba(241, 196, 15, 0.4);
+}
+
+/* --- SHARED STYLES FOR TEMPLATE MODAL (Copied from active-encounter.css) --- */
+
+/* Grouped Stats */
+.ae-group-fieldset {
+    border: 1px solid #555;
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    background: #111;
+}
+
+.ae-group-fieldset legend {
+    padding: 0 10px;
+    color: var(--color-red-accent);
+    font-family: 'Special Elite', cursive;
+    font-size: 1.1em;
+}
+
+.ae-stat-grid-3col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.ae-stat-col h4 {
+    color: #888;
+    margin: 0 0 10px 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+}
+
+.ae-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    padding: 2px 0;
+}
+
+.stat-label {
+    color: #bbb;
+}
+
+.stat-val {
+    color: #fff;
+    font-weight: bold;
+}
+
+/* Numeric Picker */
+.editable-stat {
+    cursor: pointer;
+    border-bottom: 1px dotted #555;
+    transition: color 0.2s, border-color 0.2s;
+    position: relative;
+    padding: 0 4px;
+}
+
+.editable-stat:hover {
+    color: var(--color-red-accent);
+    border-color: var(--color-red-accent);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.ae-stat-picker-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 20000;
+    display: none;
+}
+
+.ae-stat-picker {
+    position: absolute;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--color-red-accent);
+    border-radius: 8px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+    z-index: 20001;
+    display: none;
+    min-width: 120px;
+}
+
+.ae-picker-btn {
+    background: #222;
+    border: 1px solid #444;
+    color: #eee;
+    font-weight: bold;
+    font-family: 'Special Elite', cursive;
+    padding: 10px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
+    min-width: 35px;
+}
+
+.ae-picker-btn:hover {
+    background: #333;
+    border-color: var(--color-red-accent);
+    color: var(--color-red-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.ae-picker-btn.active {
+    background: var(--color-red-accent);
+    color: var(--color-cream);
+    border-color: var(--color-red-accent);
 }
