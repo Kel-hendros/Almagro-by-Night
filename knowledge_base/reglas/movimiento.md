@@ -67,9 +67,9 @@ _Nota:_ Se puede gastar un punto de **Fuerza de Voluntad** para ignorar las pena
 - **Ventaja inicial:** El objetivo comienza con éxitos automáticos basados en la distancia inicial (1 éxito por metro de ventaja a pie).
 - **Resolución:** Se acumulan éxitos turno a turno. Si el perseguidor supera el total de éxitos del objetivo, lo alcanza. Si el objetivo acumula suficientes éxitos extra, escapa.
 
-## 5. Modificadores Sobrenaturales (Celeridad)
+## 5. Modificadores Sobrenaturales (Celeridad[/disciplinas/celeridad.md])
 
-La Disciplina **Celeridad** altera fundamentalmente estas reglas:
+La Disciplina **(Celeridad[/disciplinas/celeridad.md])** altera fundamentalmente estas reglas:
 
 1. **Pasivo:** Cada punto de Celeridad añade un dado a las tiradas de Destreza, lo cual aumenta automáticamente la velocidad base de trotar y correr.
 2. **Activo:** Al gastar sangre para obtener acciones adicionales, el personaje puede realizar estas acciones (incluyendo el desplazamiento máximo posible) **sin penalizadores** a sus reservas de dados.

@@ -6,7 +6,7 @@ category: Disciplinas
 
 # Celeridad
 
-No todos los vampiros son criaturas lentas y meticulosas. Cuando es necesario, algunos pueden moverse extremadamente rápido. La Celeridad permite a Assamitas, Brujah y Toreador moverse con una velocidad pasmosa, convirtiéndose prácticamente en un borrón. Los Assamitas usan su velocidad en conjunción con su sigilo para golpear rápida y brutalmente desde las sombras antes de que nadie pueda darse cuenta. A los Brujah, por otro lado, les gusta la ventaja adicional que este Poder les da para triunfar contra toda probabilidad. Los Toreador tienden a usar Celeridad para proporcionar un toque de gracia sobrenatural a actuaciones en vivo o como una ayuda para acabar una obra maestra a tiempo, pero cuando están enfadados pueden ser igual de rápidos vertiendo sangre que cualquier asesino o punkarra.
+No todos los vampiros son criaturas lentas y meticulosas. Cuando es necesario, algunos pueden (moverse[/reglas/movimiento.md]) extremadamente rápido. La Celeridad permite a Assamitas, Brujah y Toreador moverse con una velocidad pasmosa, convirtiéndose prácticamente en un borrón. Los Assamitas usan su velocidad en conjunción con su sigilo para golpear rápida y brutalmente desde las sombras antes de que nadie pueda darse cuenta. A los Brujah, por otro lado, les gusta la ventaja adicional que este Poder les da para triunfar contra toda probabilidad. Los Toreador tienden a usar Celeridad para proporcionar un toque de gracia sobrenatural a actuaciones en vivo o como una ayuda para acabar una obra maestra a tiempo, pero cuando están enfadados pueden ser igual de rápidos vertiendo sangre que cualquier asesino o punkarra.
 
 ### Sistema:
 

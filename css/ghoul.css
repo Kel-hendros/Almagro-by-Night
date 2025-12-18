@@ -2,6 +2,7 @@
 :root {
     --ghoul-idle: url('../images/igor-idle.png');
     --ghoul-hover: url('../images/igor-hover.png');
+    --customPointer: url('../characterSheets/images/pointer.png'), pointer;
 }
 
 #ghoul-fab {
@@ -327,6 +328,7 @@
 
 .ghoul-markdown-body p {
     font-family: 'Special Elite', cursive;
+    color: #000;
 }
 
 .ghoul-markdown-body h1 {
@@ -373,11 +375,37 @@
 }
 
 .ghoul-markdown-body li {
+    color: #000;
     margin-bottom: 0.5rem;
     font-family: 'Special Elite', cursive;
     background-color: transparent;
     border: none;
 
+    &:hover {
+        color: #000;
+        background-color: inherit;
+        box-shadow: none;
+        border: none;
+        cursor: inherit;
+    }
+}
+
+.ghoul-markdown-body em {
+    color: #520000;
+    font-family: inherit;
+}
+
+.ghoul-markdown-body a {
+    color: #ff0000;
+    text-decoration: none;
+    font-family: inherit;
+    border-bottom: 1px solid #8b0000;
+    cursor: var(--customPointer);
+}
+
+.ghoul-markdown-body a:hover {
+    color: #ff0000;
+    border-bottom: 1px solid #ff0000;
 }
 
 /* Table Styling */

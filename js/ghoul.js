@@ -130,7 +130,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // Pre-process custom links: (Text[Path]) -> [Text](Path)
+      markdownContent = markdownContent.replace(
+        /\(([^)]+)\[([^\]]+)\]\)/g,
+        "[$1]($2)"
+      );
+
       modalBody.innerHTML = marked.parse(markdownContent);
+
+      // Add click handlers for internal links
+      const links = modalBody.querySelectorAll("a");
+      links.forEach((link) => {
+        const href = link.getAttribute("href");
+        // Check if it's an internal link (starts with / or ends with .md)
+        if (href && (href.startsWith("/") || href.endsWith(".md"))) {
+          link.addEventListener("click", (e) => {
+            e.preventDefault();
+            // Normalize path: remove leading slash to make it relative to knowledge_base root
+            let targetFile = href;
+            if (targetFile.startsWith("/")) {
+              targetFile = targetFile.substring(1);
+            }
+            // Navigate to the article
+            openArticle({ file: targetFile, title: link.textContent });
+          });
+        }
+      });
     } catch (error) {
       console.error("Error loading article:", error);
       const basePath = getBasePath();
