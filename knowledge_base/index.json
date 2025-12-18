@@ -179,5 +179,19 @@
             "tzimisce"
         ],
         "category": "Disciplinas"
+    },
+    {
+        "file": "reglas/movimiento.md",
+        "title": "Movimiento",
+        "tags": [
+            "regla",
+            "movimiento",
+            "correr",
+            "saltar",
+            "trepar",
+            "nadar",
+            "persecución"
+        ],
+        "category": "Reglas"
     }
 ]

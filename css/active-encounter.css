@@ -252,13 +252,13 @@
 .ae-timeline::before {
     content: '';
     position: absolute;
-    left: 28px;
-    /* Authenticated guess based on bubble width */
+    left: 11%;
     top: 0;
     bottom: 0;
-    width: 2px;
-    background: #333;
+    width: 3px;
+    background: #3a3a3a;
     z-index: 0;
+    border-radius: 20px;
 }
 
 .ae-timeline-row {

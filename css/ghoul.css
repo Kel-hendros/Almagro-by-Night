@@ -1,5 +1,4 @@
 /* Ghoul Floating Button */
-/* Ghoul Floating Button */
 :root {
     --ghoul-idle: url('../images/igor-idle.png');
     --ghoul-hover: url('../images/igor-hover.png');
@@ -323,6 +322,11 @@
     color: #ddd;
     box-sizing: border-box;
 
+
+}
+
+.ghoul-markdown-body p {
+    font-family: 'Special Elite', cursive;
 }
 
 .ghoul-markdown-body h1 {
@@ -338,22 +342,42 @@
 
 .ghoul-markdown-body h2 {
     color: #520000;
-    border-bottom: 1px solid #8b0000;
+    border-bottom: 2px solid #8b0000;
     padding-bottom: 0.5rem;
     margin-top: 2rem;
     font-family: 'Special Elite', cursive;
 }
 
+.ghoul-markdown-body h3 {
+    color: #520000;
+    border-bottom: 0.5px dashed #8b0000;
+    padding-bottom: 0.2rem;
+    margin-top: 1rem;
+    font-family: 'Special Elite', cursive;
+}
+
 .ghoul-markdown-body strong {
     color: #520000;
+    font-family: inherit;
 }
 
 .ghoul-markdown-body ul {
     padding-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    list-style: disc;
+    list-style-position: outside;
+    font-family: 'Special Elite', cursive;
+
 }
 
 .ghoul-markdown-body li {
     margin-bottom: 0.5rem;
+    font-family: 'Special Elite', cursive;
+    background-color: transparent;
+    border: none;
+
 }
 
 /* Table Styling */
