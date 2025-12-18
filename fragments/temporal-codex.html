@@ -1,0 +1,108 @@
+<link rel="stylesheet" href="css/temporal-codex.css">
+
+<div class="main-container">
+    <div class="temporal-codex-container">
+
+        <!-- Header -->
+        <div class="codex-header">
+            <button id="codex-reset" class="reset-btn" title="Reiniciar">
+                <i data-lucide="trash-2"></i>
+            </button>
+            <div class="codex-title">
+                <h1>
+                    <span>TEMPORAL CODEX</span>
+                </h1>
+                <p>Calculadora de Edades</p>
+            </div>
+
+        </div>
+
+        <!-- Error Banner -->
+        <div id="codex-error" class="error-banner hidden">
+            <i data-lucide="alert-circle" class="icon-red"></i>
+            <p id="codex-error-text">Error message here</p>
+        </div>
+
+        <!-- Form -->
+        <div class="codex-form">
+
+            <!-- Anchor -->
+            <div class="form-group">
+                <label class="form-label">
+                    <i data-lucide="calendar" class="icon-muted"></i>
+                    Año Actual
+                </label>
+                <input type="number" id="input-fecha-actual" class="form-input" placeholder="2020">
+            </div>
+
+            <!-- Dates -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i data-lucide="baby" class="icon-muted"></i>
+                        Nacimiento
+                    </label>
+                    <input type="number" id="input-fecha-nacimiento" class="form-input" placeholder="...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <i data-lucide="droplet" class="icon-muted"></i>
+                        Abrazo
+                    </label>
+                    <input type="number" id="input-fecha-abrazo" class="form-input" placeholder="...">
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider">
+                <div class="divider-line"></div>
+                <div class="divider-text">Cómputo de Edad</div>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Ages -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i data-lucide="user" class="icon-muted"></i>
+                        Años como Mortal
+                    </label>
+                    <input type="number" id="input-edad-humana" class="form-input" placeholder="...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <i data-lucide="skull" class="icon-muted"></i>
+                        Años como Vástago
+                    </label>
+                    <input type="number" id="input-edad-vastago" class="form-input" placeholder="...">
+                </div>
+            </div>
+
+            <!-- Total -->
+            <div class="form-group">
+                <label class="form-label text-red">
+                    <i data-lucide="hourglass" class="icon-red"></i>
+                    <span style="color: var(--color-red-accent);">Existencia Total</span>
+                </label>
+                <input type="number" id="input-edad-total" class="form-input input-total" placeholder="...">
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-info">
+
+            <p class="info-text">
+
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="js/temporal-codex.js"></script>
+<script>
+    // Initialize standard icons if libraries are already loaded
+    if (window.lucide) window.lucide.createIcons();
+    // Initialize logic manually to ensure it runs when fragment is injected
+    if (window.initTemporalCodex) window.initTemporalCodex();
+</script>

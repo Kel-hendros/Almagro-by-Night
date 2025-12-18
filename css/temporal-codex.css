@@ -1,0 +1,238 @@
+/* Temporal Codex Styles */
+@font-face {
+    font-family: 'delavan';
+    src: url('../characterSheets/fonts/delavan-webfont.woff2') format('woff2'),
+        url('../characterSheets/fonts/delavan-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+.temporal-codex-container {
+    max-width: 600px;
+    margin: 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    /* overflow: hidden; Removed to allow reset button to overlap if needed */
+    color: var(--color-cream-muted);
+    background-image: url("https://www.transparenttextures.com/patterns/buried.png");
+    background-size: 150px;
+    background-repeat: repeat;
+    background-position: center;
+    background-attachment: fixed;
+    background-blend-mode: screen;
+    background-color: var(--color-dark-alt);
+    font-size: 1.5rem;
+}
+
+.codex-header {
+    padding: 2rem 2rem 1rem 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    position: relative;
+
+}
+
+
+
+.codex-title h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-family: 'delavan', sans-serif;
+}
+
+
+.codex-title p {
+    font-size: 0.9rem;
+    color: var(--color-cream-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+.reset-btn {
+    position: absolute;
+    top: -1rem;
+    right: -1rem;
+    padding: 0.75rem;
+    background-color: rgb(31, 27, 36);
+    color: var(--color-cream-muted);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.reset-btn:hover {
+    background-color: rgb(140, 28, 28);
+    color: var(--color-cream);
+    border-color: var(--color-red);
+}
+
+.error-banner {
+    margin: 0 2rem 1.5rem 2rem;
+    padding: 0.75rem;
+    background-color: rgba(69, 10, 10, 0.2);
+    /* red-950/20 */
+    border: 1px solid rgba(127, 29, 29, 0.4);
+    border-radius: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.error-banner p {
+    font-size: 0.7rem;
+    color: #fecaca;
+    /* red-200 */
+    font-weight: 500;
+    margin: 0;
+}
+
+.codex-form {
+    padding: 0 2rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.form-label {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-cream-muted);
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.form-input {
+    background-color: var(--color-dark);
+    /* bg-zinc-900 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-cream);
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    width: 100%;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.form-input:focus {
+    border-color: var(--color-red);
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0.3;
+    padding: 0.5rem 0;
+}
+
+.divider-line {
+    flex-grow: 1;
+    height: 1px;
+    background-color: var(--color-cream-muted);
+}
+
+.divider-text {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 900;
+}
+
+/* Special styling for Total Existence */
+.input-total {
+    border-color: rgba(127, 29, 29, 0.5);
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.1);
+}
+
+.footer-info {
+    margin-top: 1rem;
+    padding: 1.5rem 2rem;
+    background-color: rgba(24, 24, 27, 0.5);
+    border-top: 1px solid rgba(24, 24, 27, 1);
+    border-radius: 0 0 2.5rem 2.5rem;
+    /* Match container border radius */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.info-icon {
+    padding: 0.5rem;
+    background-color: var(--color-dark);
+    border-radius: 0.5rem;
+    color: var(--color-cream-muted);
+    display: flex;
+}
+
+.info-text {
+    font-size: 0.625rem;
+    color: var(--color-cream-muted);
+    line-height: 1.6;
+    font-style: italic;
+    margin: 0;
+}
+
+.info-text strong {
+    color: var(--color-cream);
+    font-weight: 700;
+}
+
+/* Utilities for icons */
+.icon-red {
+    color: var(--color-red);
+}
+
+.icon-muted {
+    color: var(--color-cream-muted);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Remove default spinners from number inputs */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}

@@ -57,6 +57,7 @@ const routes = {
   "character-sheets": "fragments/character-sheets.html",
   "combat-tracker": "fragments/combat-tracker.html",
   "active-encounter": "fragments/active-encounter.html",
+  "temporal-codex": "fragments/temporal-codex.html",
 };
 
 // 3) Core routing function
