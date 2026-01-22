@@ -70,17 +70,32 @@ function updateHTMLTitle() {
 // //////// Light / Dark Mode //////// //
 const modeToggle = document.querySelector("#modeToggle");
 const body = document.querySelector("body");
-const stylesheet = document.querySelector('link[href="style light.css"]');
 
-modeToggle.addEventListener("click", () => {
-  if (body.classList.contains("dark-mode")) {
-    body.classList.remove("dark-mode");
-    stylesheet.href = "style light.css";
+// Initialize theme from localStorage or system preference
+function initializeTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  if (savedTheme) {
+    body.setAttribute('data-theme', savedTheme);
+  } else if (systemPrefersDark) {
+    body.setAttribute('data-theme', 'dark');
   } else {
-    body.classList.add("dark-mode");
-    stylesheet.href = "style dark.css";
+    body.setAttribute('data-theme', 'light');
   }
+}
+
+// Toggle theme
+modeToggle.addEventListener("click", () => {
+  const currentTheme = body.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+  body.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
 });
+
+// Initialize theme on page load
+initializeTheme();
 
 // MODAL DISCORD WEBHOOK
 const discordModal = document.getElementById("discord-modal");
