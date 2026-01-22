@@ -51,6 +51,9 @@ function updateAll() {
 
   //update Virtues based on Humanity
   blockVirtues();
+
+  //update specialty containers visibility
+  updateAllSpecialtyVisibility();
 }
 
 //function to update the HTML title based on the character name
@@ -307,6 +310,11 @@ if (editMode === true) {
           }
           blockTemporalWillpower();
           blockVirtues();
+
+          // Update specialty visibility after changing dots
+          const attributeId = input.id.replace('-value', '');
+          updateSpecialtyVisibility(attributeId);
+
           saveCharacterData();
         });
       }
@@ -407,6 +415,14 @@ function loadCharacterFromJSON(characterData) {
     if (id && value) {
       // Set the input value from the characterData object
       input.value = value;
+
+      // Load specialties if they exist
+      if (id.endsWith('-value')) {
+        const specialtiesKey = id + '-specialties';
+        if (characterData[specialtiesKey]) {
+          input.setAttribute('data-specialties', characterData[specialtiesKey]);
+        }
+      }
     }
   });
   // Update Ghoul Visuals if function exists
@@ -484,6 +500,14 @@ function getCharacterData() {
     if (id && value && input.type !== "file") {
       // Add the input ID and value to the characterData object
       characterData[id] = value;
+
+      // Also save specialties if they exist
+      if (id.endsWith('-value')) {
+        const specialtiesData = input.getAttribute('data-specialties');
+        if (specialtiesData && specialtiesData !== '[]' && specialtiesData !== '') {
+          characterData[id + '-specialties'] = specialtiesData;
+        }
+      }
     }
   });
 
@@ -1668,4 +1692,284 @@ function tirarIniciativa() {
   document.querySelector(
     "#valorIniciativa"
   ).innerHTML = `1d10 (${random}) + Destreza (${destreza}) + Astucia (${astucia}) - Daño (${damagePenalty}) = ${valorIniciativa}`;
+}
+
+// ============================================
+// SPECIALTIES SYSTEM
+// ============================================
+
+// Initialize specialty containers for all attributes/abilities
+function initializeSpecialtyContainers() {
+  const allFormGroups = document.querySelectorAll('.form-group.attribute');
+
+  allFormGroups.forEach(formGroup => {
+    const hiddenInput = formGroup.querySelector('input[type="hidden"]');
+    if (!hiddenInput) return;
+
+    const attributeId = hiddenInput.id.replace('-value', '');
+
+    // Create specialty container
+    const specialtyContainer = document.createElement('div');
+    specialtyContainer.className = 'specialty-container';
+    specialtyContainer.setAttribute('data-for', attributeId);
+    specialtyContainer.style.display = 'none';
+
+    // Create add button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'specialty-add-btn';
+    addBtn.type = 'button';
+    addBtn.title = 'Agregar especialidad';
+    addBtn.textContent = '+';
+
+    // Create input row
+    const inputRow = document.createElement('div');
+    inputRow.className = 'specialty-input-row';
+    inputRow.style.display = 'none';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'specialty-input';
+    input.placeholder = 'Nueva especialidad...';
+    input.maxLength = 40;
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'specialty-confirm-btn';
+    confirmBtn.type = 'button';
+    confirmBtn.textContent = '✓';
+
+    inputRow.appendChild(input);
+    inputRow.appendChild(confirmBtn);
+
+    // Create specialty list
+    const specialtyList = document.createElement('div');
+    specialtyList.className = 'specialty-list';
+
+    // Assemble container
+    specialtyContainer.appendChild(addBtn);
+    specialtyContainer.appendChild(inputRow);
+    specialtyContainer.appendChild(specialtyList);
+
+    // Insert after hidden input
+    hiddenInput.parentNode.insertBefore(specialtyContainer, hiddenInput.nextSibling);
+
+    // Add event listeners
+    setupSpecialtyEventListeners(specialtyContainer, attributeId);
+  });
+}
+
+// Setup event listeners for specialty container
+function setupSpecialtyEventListeners(container, attributeId) {
+  const addBtn = container.querySelector('.specialty-add-btn');
+  const inputRow = container.querySelector('.specialty-input-row');
+  const input = container.querySelector('.specialty-input');
+  const confirmBtn = container.querySelector('.specialty-confirm-btn');
+
+  // Show input when clicking add button
+  addBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    inputRow.style.display = 'flex';
+    input.focus();
+  });
+
+  // Confirm new specialty
+  const confirmSpecialty = () => {
+    const specialtyName = input.value.trim();
+    if (specialtyName === '') return;
+
+    // Check max specialties
+    const currentValue = parseInt(document.getElementById(`${attributeId}-value`).value);
+    const maxSpecialties = Math.max(0, currentValue - 3);
+    const currentSpecialties = getSpecialties(attributeId);
+
+    if (currentSpecialties.length >= maxSpecialties) {
+      alert(`Máximo ${maxSpecialties} especialidad(es) para ${currentValue} puntos.`);
+      return;
+    }
+
+    // Add specialty
+    addSpecialty(attributeId, specialtyName);
+    input.value = '';
+
+    // Update UI
+    renderSpecialties(attributeId);
+    updateSpecialtyVisibility(attributeId);
+    saveCharacterData();
+  };
+
+  confirmBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    confirmSpecialty();
+  });
+
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      confirmSpecialty();
+    }
+  });
+}
+
+// Get specialties for an attribute from data structure
+function getSpecialties(attributeId) {
+  const hiddenInput = document.getElementById(`${attributeId}-value`);
+  const specialtiesData = hiddenInput.getAttribute('data-specialties');
+
+  if (!specialtiesData || specialtiesData === '') {
+    return [];
+  }
+
+  try {
+    return JSON.parse(specialtiesData);
+  } catch (e) {
+    return [];
+  }
+}
+
+// Set specialties for an attribute
+function setSpecialties(attributeId, specialties) {
+  const hiddenInput = document.getElementById(`${attributeId}-value`);
+  hiddenInput.setAttribute('data-specialties', JSON.stringify(specialties));
+}
+
+// Add a specialty
+function addSpecialty(attributeId, specialtyName) {
+  const specialties = getSpecialties(attributeId);
+  if (!specialties.includes(specialtyName)) {
+    specialties.push(specialtyName);
+    setSpecialties(attributeId, specialties);
+  }
+}
+
+// Remove a specialty
+function removeSpecialty(attributeId, specialtyName) {
+  let specialties = getSpecialties(attributeId);
+  specialties = specialties.filter(s => s !== specialtyName);
+  setSpecialties(attributeId, specialties);
+}
+
+// Render specialties in the UI
+function renderSpecialties(attributeId) {
+  const container = document.querySelector(`.specialty-container[data-for="${attributeId}"]`);
+  if (!container) return;
+
+  const specialtyList = container.querySelector('.specialty-list');
+  const specialties = getSpecialties(attributeId);
+
+  specialtyList.innerHTML = '';
+
+  specialties.forEach(specialtyName => {
+    const tag = document.createElement('span');
+    tag.className = 'specialty-tag';
+    tag.setAttribute('data-specialty', specialtyName);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'specialty-delete';
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '×';
+    deleteBtn.title = 'Eliminar';
+
+    deleteBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (confirm(`¿Eliminar especialidad "${specialtyName}"?`)) {
+        removeSpecialty(attributeId, specialtyName);
+        renderSpecialties(attributeId);
+        updateSpecialtyVisibility(attributeId);
+        saveCharacterData();
+      }
+    });
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'specialty-name';
+    nameSpan.textContent = specialtyName;
+
+    // Click on specialty name to use it in dice roller
+    nameSpan.addEventListener('click', (e) => {
+      e.preventDefault();
+      useSpecialtyInDiceRoller(attributeId, specialtyName);
+    });
+
+    tag.appendChild(deleteBtn);
+    tag.appendChild(nameSpan);
+    specialtyList.appendChild(tag);
+  });
+}
+
+// Use specialty in dice roller (click on specialty name)
+function useSpecialtyInDiceRoller(attributeId, specialtyName) {
+  // Find the label for this attribute
+  const formGroup = document.getElementById(`${attributeId}-value`).closest('.form-group');
+  const label = formGroup.querySelector('label');
+
+  if (label) {
+    // Trigger click on the label to load the attribute into dice pool
+    label.click();
+
+    // Auto-check the specialty checkbox
+    const specialtyCheckbox = document.querySelector('#specialty');
+    if (specialtyCheckbox) {
+      specialtyCheckbox.checked = true;
+
+      // Update label to show which specialty is being used
+      const specialtyLabel = document.querySelector('label[for="specialty"]');
+      if (specialtyLabel) {
+        specialtyLabel.textContent = `Usar Especialidad (${specialtyName})`;
+      }
+    }
+  }
+}
+
+// Update visibility of specialty container based on attribute value
+function updateSpecialtyVisibility(attributeId) {
+  const hiddenInput = document.getElementById(`${attributeId}-value`);
+  const value = parseInt(hiddenInput.value);
+  const container = document.querySelector(`.specialty-container[data-for="${attributeId}"]`);
+
+  if (!container) return;
+
+  const addBtn = container.querySelector('.specialty-add-btn');
+  const inputRow = container.querySelector('.specialty-input-row');
+
+  if (value > 3) {
+    // Show container
+    container.style.display = 'block';
+
+    // Check if we can add more specialties
+    const maxSpecialties = value - 3;
+    const currentSpecialties = getSpecialties(attributeId);
+
+    if (currentSpecialties.length >= maxSpecialties) {
+      // Hide add button if max reached
+      addBtn.style.display = 'none';
+      inputRow.style.display = 'none';
+    } else {
+      addBtn.style.display = 'inline-block';
+    }
+
+    // Render existing specialties
+    renderSpecialties(attributeId);
+  } else {
+    // Hide container if value <= 3
+    container.style.display = 'none';
+  }
+}
+
+// Update all specialty containers visibility
+function updateAllSpecialtyVisibility() {
+  const allFormGroups = document.querySelectorAll('.form-group.attribute');
+
+  allFormGroups.forEach(formGroup => {
+    const hiddenInput = formGroup.querySelector('input[type="hidden"]');
+    if (hiddenInput) {
+      const attributeId = hiddenInput.id.replace('-value', '');
+      updateSpecialtyVisibility(attributeId);
+    }
+  });
+}
+
+// Call initialization after DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeSpecialtyContainers);
+} else {
+  initializeSpecialtyContainers();
 }

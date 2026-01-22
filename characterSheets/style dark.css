@@ -1707,6 +1707,147 @@ input {
 
 .historial .botch {
 	background-color: var(--historyBotchColor);
+}
 
+/* ============================================ */
+/* SPECIALTIES SYSTEM STYLES */
+/* ============================================ */
 
+.specialty-container {
+	margin-top: 4px;
+	margin-left: 20px;
+	padding: 4px 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	align-items: flex-start;
+}
+
+.specialty-add-btn {
+	background: transparent;
+	border: 1px solid var(--mutedColor);
+	color: var(--mutedColor);
+	font-size: 12px;
+	width: 20px;
+	height: 20px;
+	border-radius: 3px;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	line-height: 1;
+	transition: all 0.2s;
+}
+
+.specialty-add-btn:hover {
+	background: var(--mutedColor);
+	color: var(--backgroundColor);
+	border-color: var(--primaryColor);
+}
+
+.specialty-input-row {
+	display: none;
+	flex-direction: row;
+	gap: 4px;
+	align-items: center;
+}
+
+.specialty-input {
+	font-size: 11px;
+	padding: 2px 6px;
+	border: 1px solid var(--mutedColor);
+	background: var(--backgroundColor);
+	color: var(--primaryColor);
+	border-radius: 3px;
+	width: 140px;
+	font-family: 'Cormorant Garamond', serif;
+}
+
+.specialty-input:focus {
+	outline: none;
+	border-color: var(--accentColor);
+}
+
+.specialty-confirm-btn {
+	background: var(--successColor);
+	border: none;
+	color: white;
+	font-size: 13px;
+	width: 20px;
+	height: 20px;
+	border-radius: 3px;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	line-height: 1;
+	font-weight: bold;
+	transition: all 0.2s;
+}
+
+.specialty-confirm-btn:hover {
+	background: #25b557;
+	transform: scale(1.05);
+}
+
+.specialty-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 2px;
+}
+
+.specialty-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	background: rgba(180, 18, 0, 0.08);
+	border: 1px solid rgba(180, 18, 0, 0.25);
+	border-radius: 3px;
+	padding: 2px 6px;
+	font-size: 10px;
+	color: var(--primaryColor);
+	transition: all 0.2s;
+}
+
+.specialty-tag:hover {
+	background: rgba(180, 18, 0, 0.15);
+	border-color: var(--accentColor);
+}
+
+.specialty-delete {
+	background: transparent;
+	border: none;
+	color: var(--accentColor);
+	font-size: 14px;
+	font-weight: bold;
+	cursor: pointer;
+	padding: 0;
+	margin: 0;
+	line-height: 1;
+	width: 12px;
+	height: 12px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s;
+}
+
+.specialty-delete:hover {
+	color: var(--botchColor);
+	transform: scale(1.2);
+}
+
+.specialty-name {
+	cursor: pointer;
+	font-family: 'Cormorant Garamond', serif;
+	font-style: italic;
+	transition: all 0.2s;
+}
+
+.specialty-name:hover {
+	color: var(--accentColor);
+	font-weight: bold;
 }
