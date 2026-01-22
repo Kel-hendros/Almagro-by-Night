@@ -1362,6 +1362,12 @@ function rollTheDice() {
 function uncheckWillpowerAndSpecialty() {
   document.querySelector("#willpower").checked = false;
   document.querySelector("#specialty").checked = false;
+
+  // Reset specialty label to default text
+  const specialtyLabel = document.querySelector('label[for="specialty"]');
+  if (specialtyLabel) {
+    specialtyLabel.textContent = 'Usar Especialidad';
+  }
 }
 
 // History Rolls const
