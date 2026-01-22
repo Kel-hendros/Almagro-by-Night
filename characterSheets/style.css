@@ -95,6 +95,78 @@ body[data-theme="dark"] {
 	--specialtyModalInputBg: #2a2a2a;
 }
 
+/* Camarilla Theme - Tonos verdes como el mármol de las tapas */
+:root[data-theme="camarilla"],
+body[data-theme="camarilla"] {
+	--backgroundColor: #e8f0e8;
+	--accentColor: #2d5f3f;
+	--secondaryColor: #4a7c59;
+	--primaryColor: #1a3328;
+	--shadowColor: #00000069;
+	--successColor: #3d8b57;
+	--failureColor: #6b8e7d;
+	--botchColor: #8b3a3a;
+	--mutedColor: #9fb8a8;
+	--customPointer: url('images/pointer.png'), pointer;
+	--colorDeAdornos: var(--mutedColor);
+	--historySuccessColor: rgba(45, 95, 63, 0.308);
+	--historyFailureColor: #9e9e9e94;
+	--historyBotchColor: #f8484879;
+
+	/* Specialty system colors */
+	--specialtyIconColor: #2d5f3f;
+	--specialtyIconHoverColor: #4a7c59;
+	--specialtyModalInputBg: #f5faf5;
+}
+
+/* Sabbat Theme - Tonos rojizos oscuros */
+:root[data-theme="sabbat"],
+body[data-theme="sabbat"] {
+	--backgroundColor: #1a0f0f;
+	--accentColor: #8b0000;
+	--secondaryColor: #b22222;
+	--primaryColor: #e0d0d0;
+	--shadowColor: #000000ee;
+	--successColor: #4E9F3D;
+	--failureColor: #6b4848;
+	--botchColor: #ff0000;
+	--mutedColor: #6b4848;
+	--customPointer: url('images/pointer.png'), pointer;
+	--colorDeAdornos: var(--mutedColor);
+	--historySuccessColor: rgba(139, 0, 0, 0.308);
+	--historyFailureColor: #60606094;
+	--historyBotchColor: #ff000046;
+
+	/* Specialty system colors */
+	--specialtyIconColor: #8b0000;
+	--specialtyIconHoverColor: #b22222;
+	--specialtyModalInputBg: #0f0505;
+}
+
+/* Anarquista Theme - Tonos grises y azulados, estilo industrial */
+:root[data-theme="anarquista"],
+body[data-theme="anarquista"] {
+	--backgroundColor: #1e2429;
+	--accentColor: #4a7c8e;
+	--secondaryColor: #6b95a8;
+	--primaryColor: #d4dfe5;
+	--shadowColor: #000000ca;
+	--successColor: #5ba3c1;
+	--failureColor: #6b7c85;
+	--botchColor: #c15b5b;
+	--mutedColor: #6b7c85;
+	--customPointer: url('images/pointer.png'), pointer;
+	--colorDeAdornos: var(--mutedColor);
+	--historySuccessColor: rgba(74, 124, 142, 0.308);
+	--historyFailureColor: #60606094;
+	--historyBotchColor: #c15b5b46;
+
+	/* Specialty system colors */
+	--specialtyIconColor: #4a7c8e;
+	--specialtyIconHoverColor: #6b95a8;
+	--specialtyModalInputBg: #141a1f;
+}
+
 /* Fallback to system preference if no explicit theme is set */
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme="light"]) {
@@ -1723,4 +1795,123 @@ input {
 	font-style: italic;
 	text-align: center;
 	margin: 10px 0 0 0;
+}
+
+/* ================================================
+   THEME SELECTOR MODAL
+   ================================================ */
+
+#theme-modal {
+	display: none;
+	position: fixed;
+	z-index: 10000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	align-items: center;
+	justify-content: center;
+}
+
+#theme-modal.active {
+	display: flex;
+}
+
+.theme-modal-content {
+	background-color: var(--backgroundColor);
+	padding: 30px;
+	border-radius: 12px;
+	border: 2px solid var(--accentColor);
+	max-width: 500px;
+	width: 90%;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.theme-modal-content h1 {
+	color: var(--accentColor);
+	font-family: 'Special Elite', cursive;
+	text-align: center;
+	margin: 0 0 25px 0;
+	font-size: 1.8rem;
+	letter-spacing: 2px;
+}
+
+.theme-options {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.theme-option {
+	padding: 15px 20px;
+	background: rgba(0, 0, 0, 0.2);
+	border: 2px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.3s;
+	color: var(--primaryColor);
+	font-family: 'Special Elite', cursive;
+	font-size: 1.1rem;
+	text-align: center;
+	letter-spacing: 1px;
+}
+
+.theme-option:hover {
+	border-color: var(--accentColor);
+	background: rgba(0, 0, 0, 0.3);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.theme-option.active {
+	border-color: var(--accentColor);
+	background: var(--accentColor);
+	color: var(--backgroundColor);
+	font-weight: bold;
+}
+
+/* Preview colors for each theme option */
+.theme-option[data-theme="light"] {
+	background: linear-gradient(135deg, #fffaf1 0%, #f5f0e7 100%);
+	color: #b41200;
+}
+
+.theme-option[data-theme="dark"] {
+	background: linear-gradient(135deg, #2C3639 0%, #1a1f21 100%);
+	color: #A27B5C;
+}
+
+.theme-option[data-theme="camarilla"] {
+	background: linear-gradient(135deg, #e8f0e8 0%, #d0e0d0 100%);
+	color: #2d5f3f;
+}
+
+.theme-option[data-theme="sabbat"] {
+	background: linear-gradient(135deg, #1a0f0f 0%, #0f0505 100%);
+	color: #8b0000;
+}
+
+.theme-option[data-theme="anarquista"] {
+	background: linear-gradient(135deg, #1e2429 0%, #141a1f 100%);
+	color: #4a7c8e;
+}
+
+.theme-modal-close {
+	margin-top: 20px;
+	padding: 10px 20px;
+	background: transparent;
+	border: 2px solid var(--accentColor);
+	color: var(--accentColor);
+	font-family: 'Special Elite', cursive;
+	font-size: 1rem;
+	border-radius: 8px;
+	cursor: pointer;
+	width: 100%;
+	transition: all 0.3s;
+}
+
+.theme-modal-close:hover {
+	background: var(--accentColor);
+	color: var(--backgroundColor);
 }

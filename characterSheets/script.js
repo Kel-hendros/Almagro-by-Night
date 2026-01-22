@@ -67,9 +67,12 @@ function updateHTMLTitle() {
   }
 }
 
-// //////// Light / Dark Mode //////// //
+// //////// Theme System //////// //
 const modeToggle = document.querySelector("#modeToggle");
 const body = document.querySelector("body");
+const themeModal = document.getElementById('theme-modal');
+const themeOptions = document.querySelectorAll('.theme-option');
+const themeModalClose = document.querySelector('.theme-modal-close');
 
 // Initialize theme from localStorage or system preference
 function initializeTheme() {
@@ -78,20 +81,53 @@ function initializeTheme() {
 
   if (savedTheme) {
     body.setAttribute('data-theme', savedTheme);
+    updateActiveThemeOption(savedTheme);
   } else if (systemPrefersDark) {
     body.setAttribute('data-theme', 'dark');
+    updateActiveThemeOption('dark');
   } else {
     body.setAttribute('data-theme', 'light');
+    updateActiveThemeOption('light');
   }
 }
 
-// Toggle theme
-modeToggle.addEventListener("click", () => {
-  const currentTheme = body.getAttribute('data-theme') || 'light';
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+// Update active theme option in modal
+function updateActiveThemeOption(theme) {
+  themeOptions.forEach(option => {
+    if (option.getAttribute('data-theme') === theme) {
+      option.classList.add('active');
+    } else {
+      option.classList.remove('active');
+    }
+  });
+}
 
-  body.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
+// Open theme modal when clicking mode toggle
+modeToggle.addEventListener("click", () => {
+  themeModal.classList.add('active');
+  updateActiveThemeOption(body.getAttribute('data-theme') || 'light');
+});
+
+// Close theme modal
+themeModalClose.addEventListener('click', () => {
+  themeModal.classList.remove('active');
+});
+
+// Close modal when clicking outside
+themeModal.addEventListener('click', (e) => {
+  if (e.target === themeModal) {
+    themeModal.classList.remove('active');
+  }
+});
+
+// Theme selection
+themeOptions.forEach(option => {
+  option.addEventListener('click', () => {
+    const selectedTheme = option.getAttribute('data-theme');
+    body.setAttribute('data-theme', selectedTheme);
+    localStorage.setItem('theme', selectedTheme);
+    updateActiveThemeOption(selectedTheme);
+  });
 });
 
 // Initialize theme on page load
