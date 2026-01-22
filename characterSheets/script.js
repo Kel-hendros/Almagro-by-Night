@@ -1514,7 +1514,9 @@ attributesList.forEach((attribute) => {
 //REFACTOR: Add dice and name values to DicePool2 on click on abilities.
 abilitiesList.forEach((ability) => {
   ability.addEventListener("click", (event) => {
-    const input = event.currentTarget.nextElementSibling.nextElementSibling;
+    // Fixed: Use parentElement.querySelector instead of nextElementSibling
+    // to make it robust against DOM structure changes (e.g., specialty icons)
+    const input = event.currentTarget.parentElement.querySelector('input[type="hidden"]');
 
     //Update value and label for Pool2
     document.querySelector("#dicePool2").value = input.getAttribute("value");
