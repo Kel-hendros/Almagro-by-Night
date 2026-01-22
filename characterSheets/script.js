@@ -311,9 +311,9 @@ if (editMode === true) {
           blockTemporalWillpower();
           blockVirtues();
 
-          // Update specialty visibility after changing dots
+          // Update specialty icon visibility after changing dots
           const attributeId = input.id.replace('-value', '');
-          updateSpecialtyVisibility(attributeId);
+          updateSpecialtyIconVisibility(attributeId);
 
           saveCharacterData();
         });
@@ -1701,10 +1701,12 @@ function tirarIniciativa() {
 }
 
 // ============================================
-// SPECIALTIES SYSTEM
+// SPECIALTIES SYSTEM - ICON + FLOATING MODAL
 // ============================================
 
-// Initialize specialty containers for all attributes/abilities
+let currentOpenSpecialtyModal = null;
+
+// Initialize specialty icons for all attributes/abilities
 function initializeSpecialtyContainers() {
   const allFormGroups = document.querySelectorAll('.form-group.attribute');
 
@@ -1713,106 +1715,220 @@ function initializeSpecialtyContainers() {
     if (!hiddenInput) return;
 
     const attributeId = hiddenInput.id.replace('-value', '');
+    const rating = formGroup.querySelector('.rating');
+    if (!rating) return;
 
-    // Create specialty container
-    const specialtyContainer = document.createElement('div');
-    specialtyContainer.className = 'specialty-container';
-    specialtyContainer.setAttribute('data-for', attributeId);
-    specialtyContainer.style.display = 'none';
+    // Create specialty icon (star)
+    const specialtyIcon = document.createElement('span');
+    specialtyIcon.className = 'specialty-icon';
+    specialtyIcon.innerHTML = '⭐';
+    specialtyIcon.title = 'Ver/editar especialidades';
+    specialtyIcon.style.display = 'none';
+    specialtyIcon.setAttribute('data-for', attributeId);
 
-    // Create add button
-    const addBtn = document.createElement('button');
-    addBtn.className = 'specialty-add-btn';
-    addBtn.type = 'button';
-    addBtn.title = 'Agregar especialidad';
-    addBtn.textContent = '+';
+    // Insert icon before the rating
+    rating.parentNode.insertBefore(specialtyIcon, rating);
 
-    // Create input row
-    const inputRow = document.createElement('div');
-    inputRow.className = 'specialty-input-row';
-    inputRow.style.display = 'none';
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'specialty-input';
-    input.placeholder = 'Nueva especialidad...';
-    input.maxLength = 40;
-
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'specialty-confirm-btn';
-    confirmBtn.type = 'button';
-    confirmBtn.textContent = '✓';
-
-    inputRow.appendChild(input);
-    inputRow.appendChild(confirmBtn);
-
-    // Create specialty list
-    const specialtyList = document.createElement('div');
-    specialtyList.className = 'specialty-list';
-
-    // Assemble container
-    specialtyContainer.appendChild(addBtn);
-    specialtyContainer.appendChild(inputRow);
-    specialtyContainer.appendChild(specialtyList);
-
-    // Insert after hidden input
-    hiddenInput.parentNode.insertBefore(specialtyContainer, hiddenInput.nextSibling);
-
-    // Add event listeners
-    setupSpecialtyEventListeners(specialtyContainer, attributeId);
+    // Add click event to open modal
+    specialtyIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSpecialtyModal(attributeId, specialtyIcon);
+    });
   });
 }
 
-// Setup event listeners for specialty container
-function setupSpecialtyEventListeners(container, attributeId) {
-  const addBtn = container.querySelector('.specialty-add-btn');
-  const inputRow = container.querySelector('.specialty-input-row');
-  const input = container.querySelector('.specialty-input');
-  const confirmBtn = container.querySelector('.specialty-confirm-btn');
+// Open specialty modal anchored to icon
+function openSpecialtyModal(attributeId, iconElement) {
+  // Close any previously open modal
+  closeSpecialtyModal();
 
-  // Show input when clicking add button
-  addBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    inputRow.style.display = 'flex';
-    input.focus();
-  });
+  // Create modal
+  const modal = document.createElement('div');
+  modal.className = 'specialty-modal';
+  modal.setAttribute('data-for', attributeId);
 
-  // Confirm new specialty
-  const confirmSpecialty = () => {
-    const specialtyName = input.value.trim();
-    if (specialtyName === '') return;
+  // Get current specialties
+  const specialties = getSpecialties(attributeId);
+  const currentValue = parseInt(document.getElementById(`${attributeId}-value`).value);
+  const maxSpecialties = currentValue - 3;
 
-    // Check max specialties
-    const currentValue = parseInt(document.getElementById(`${attributeId}-value`).value);
-    const maxSpecialties = Math.max(0, currentValue - 3);
-    const currentSpecialties = getSpecialties(attributeId);
+  // Modal header
+  const header = document.createElement('div');
+  header.className = 'specialty-modal-header';
 
-    if (currentSpecialties.length >= maxSpecialties) {
-      alert(`Máximo ${maxSpecialties} especialidad(es) para ${currentValue} puntos.`);
-      return;
+  const title = document.createElement('h3');
+  title.textContent = 'Especialidades';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'specialty-modal-close';
+  closeBtn.innerHTML = '×';
+  closeBtn.onclick = () => closeSpecialtyModal();
+
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  // Modal body
+  const body = document.createElement('div');
+  body.className = 'specialty-modal-body';
+
+  // Specialty list
+  const list = document.createElement('div');
+  list.className = 'specialty-modal-list';
+
+  if (specialties.length === 0) {
+    const emptyMsg = document.createElement('p');
+    emptyMsg.className = 'specialty-empty-message';
+    emptyMsg.textContent = 'Sin especialidades';
+    list.appendChild(emptyMsg);
+  } else {
+    specialties.forEach(specialtyName => {
+      const item = document.createElement('div');
+      item.className = 'specialty-modal-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'specialty-modal-item-name';
+      nameSpan.textContent = specialtyName;
+      nameSpan.onclick = () => {
+        useSpecialtyInDiceRoller(attributeId, specialtyName);
+        closeSpecialtyModal();
+      };
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'specialty-modal-item-delete';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.title = 'Eliminar';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`¿Eliminar "${specialtyName}"?`)) {
+          removeSpecialty(attributeId, specialtyName);
+          closeSpecialtyModal();
+          openSpecialtyModal(attributeId, iconElement); // Reopen to refresh
+          updateSpecialtyIconVisibility(attributeId);
+          saveCharacterData();
+        }
+      };
+
+      item.appendChild(nameSpan);
+      item.appendChild(deleteBtn);
+      list.appendChild(item);
+    });
+  }
+
+  body.appendChild(list);
+
+  // Add specialty input (if not at max)
+  if (specialties.length < maxSpecialties) {
+    const addContainer = document.createElement('div');
+    addContainer.className = 'specialty-modal-add';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'specialty-modal-input';
+    input.placeholder = 'Nueva especialidad...';
+    input.maxLength = 40;
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'specialty-modal-add-btn';
+    addBtn.textContent = '+';
+    addBtn.onclick = () => addSpecialtyFromModal(attributeId, input, iconElement);
+
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addSpecialtyFromModal(attributeId, input, iconElement);
+      }
+    });
+
+    addContainer.appendChild(input);
+    addContainer.appendChild(addBtn);
+    body.appendChild(addContainer);
+  } else {
+    const maxMsg = document.createElement('p');
+    maxMsg.className = 'specialty-max-message';
+    maxMsg.textContent = `Máximo alcanzado (${maxSpecialties})`;
+    body.appendChild(maxMsg);
+  }
+
+  // Assemble modal
+  modal.appendChild(header);
+  modal.appendChild(body);
+  document.body.appendChild(modal);
+
+  // Position modal near icon
+  positionModalNearIcon(modal, iconElement);
+
+  currentOpenSpecialtyModal = modal;
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', handleOutsideClick);
+  }, 10);
+}
+
+// Add specialty from modal
+function addSpecialtyFromModal(attributeId, inputElement, iconElement) {
+  const specialtyName = inputElement.value.trim();
+  if (specialtyName === '') return;
+
+  const currentValue = parseInt(document.getElementById(`${attributeId}-value`).value);
+  const maxSpecialties = Math.max(0, currentValue - 3);
+  const currentSpecialties = getSpecialties(attributeId);
+
+  if (currentSpecialties.length >= maxSpecialties) {
+    alert(`Máximo ${maxSpecialties} especialidad(es) para ${currentValue} puntos.`);
+    return;
+  }
+
+  addSpecialty(attributeId, specialtyName);
+  closeSpecialtyModal();
+  openSpecialtyModal(attributeId, iconElement); // Reopen to refresh
+  updateSpecialtyIconVisibility(attributeId);
+  saveCharacterData();
+}
+
+// Position modal near the icon
+function positionModalNearIcon(modal, iconElement) {
+  const rect = iconElement.getBoundingClientRect();
+  const modalWidth = 250;
+  const modalHeight = modal.offsetHeight || 200;
+
+  let left = rect.right + 10;
+  let top = rect.top;
+
+  // Adjust if modal goes off screen
+  if (left + modalWidth > window.innerWidth) {
+    left = rect.left - modalWidth - 10;
+  }
+
+  if (top + modalHeight > window.innerHeight) {
+    top = window.innerHeight - modalHeight - 10;
+  }
+
+  if (top < 10) top = 10;
+  if (left < 10) left = 10;
+
+  modal.style.left = `${left}px`;
+  modal.style.top = `${top}px`;
+}
+
+// Close specialty modal
+function closeSpecialtyModal() {
+  if (currentOpenSpecialtyModal) {
+    currentOpenSpecialtyModal.remove();
+    currentOpenSpecialtyModal = null;
+    document.removeEventListener('click', handleOutsideClick);
+  }
+}
+
+// Handle click outside modal
+function handleOutsideClick(e) {
+  if (currentOpenSpecialtyModal && !currentOpenSpecialtyModal.contains(e.target)) {
+    const clickedIcon = e.target.closest('.specialty-icon');
+    if (!clickedIcon) {
+      closeSpecialtyModal();
     }
-
-    // Add specialty
-    addSpecialty(attributeId, specialtyName);
-    input.value = '';
-
-    // Update UI
-    renderSpecialties(attributeId);
-    updateSpecialtyVisibility(attributeId);
-    saveCharacterData();
-  };
-
-  confirmBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    confirmSpecialty();
-  });
-
-  input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      confirmSpecialty();
-    }
-  });
+  }
 }
 
 // Get specialties for an attribute from data structure
@@ -1853,70 +1969,20 @@ function removeSpecialty(attributeId, specialtyName) {
   setSpecialties(attributeId, specialties);
 }
 
-// Render specialties in the UI
-function renderSpecialties(attributeId) {
-  const container = document.querySelector(`.specialty-container[data-for="${attributeId}"]`);
-  if (!container) return;
+// (Removed - no longer needed with modal system)
 
-  const specialtyList = container.querySelector('.specialty-list');
-  const specialties = getSpecialties(attributeId);
-
-  specialtyList.innerHTML = '';
-
-  specialties.forEach(specialtyName => {
-    const tag = document.createElement('span');
-    tag.className = 'specialty-tag';
-    tag.setAttribute('data-specialty', specialtyName);
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'specialty-delete';
-    deleteBtn.type = 'button';
-    deleteBtn.textContent = '×';
-    deleteBtn.title = 'Eliminar';
-
-    deleteBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (confirm(`¿Eliminar especialidad "${specialtyName}"?`)) {
-        removeSpecialty(attributeId, specialtyName);
-        renderSpecialties(attributeId);
-        updateSpecialtyVisibility(attributeId);
-        saveCharacterData();
-      }
-    });
-
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'specialty-name';
-    nameSpan.textContent = specialtyName;
-
-    // Click on specialty name to use it in dice roller
-    nameSpan.addEventListener('click', (e) => {
-      e.preventDefault();
-      useSpecialtyInDiceRoller(attributeId, specialtyName);
-    });
-
-    tag.appendChild(deleteBtn);
-    tag.appendChild(nameSpan);
-    specialtyList.appendChild(tag);
-  });
-}
-
-// Use specialty in dice roller (click on specialty name)
+// Use specialty in dice roller (click on specialty name in modal)
 function useSpecialtyInDiceRoller(attributeId, specialtyName) {
-  // Find the label for this attribute
   const formGroup = document.getElementById(`${attributeId}-value`).closest('.form-group');
   const label = formGroup.querySelector('label');
 
   if (label) {
-    // Trigger click on the label to load the attribute into dice pool
     label.click();
 
-    // Auto-check the specialty checkbox
     const specialtyCheckbox = document.querySelector('#specialty');
     if (specialtyCheckbox) {
       specialtyCheckbox.checked = true;
 
-      // Update label to show which specialty is being used
       const specialtyLabel = document.querySelector('label[for="specialty"]');
       if (specialtyLabel) {
         specialtyLabel.textContent = `Usar Especialidad (${specialtyName})`;
@@ -1925,42 +1991,22 @@ function useSpecialtyInDiceRoller(attributeId, specialtyName) {
   }
 }
 
-// Update visibility of specialty container based on attribute value
-function updateSpecialtyVisibility(attributeId) {
+// Update visibility of specialty icon based on attribute value
+function updateSpecialtyIconVisibility(attributeId) {
   const hiddenInput = document.getElementById(`${attributeId}-value`);
   const value = parseInt(hiddenInput.value);
-  const container = document.querySelector(`.specialty-container[data-for="${attributeId}"]`);
+  const icon = document.querySelector(`.specialty-icon[data-for="${attributeId}"]`);
 
-  if (!container) return;
-
-  const addBtn = container.querySelector('.specialty-add-btn');
-  const inputRow = container.querySelector('.specialty-input-row');
+  if (!icon) return;
 
   if (value > 3) {
-    // Show container
-    container.style.display = 'block';
-
-    // Check if we can add more specialties
-    const maxSpecialties = value - 3;
-    const currentSpecialties = getSpecialties(attributeId);
-
-    if (currentSpecialties.length >= maxSpecialties) {
-      // Hide add button if max reached
-      addBtn.style.display = 'none';
-      inputRow.style.display = 'none';
-    } else {
-      addBtn.style.display = 'inline-block';
-    }
-
-    // Render existing specialties
-    renderSpecialties(attributeId);
+    icon.style.display = 'inline-block';
   } else {
-    // Hide container if value <= 3
-    container.style.display = 'none';
+    icon.style.display = 'none';
   }
 }
 
-// Update all specialty containers visibility
+// Update all specialty icons visibility
 function updateAllSpecialtyVisibility() {
   const allFormGroups = document.querySelectorAll('.form-group.attribute');
 
@@ -1968,7 +2014,7 @@ function updateAllSpecialtyVisibility() {
     const hiddenInput = formGroup.querySelector('input[type="hidden"]');
     if (hiddenInput) {
       const attributeId = hiddenInput.id.replace('-value', '');
-      updateSpecialtyVisibility(attributeId);
+      updateSpecialtyIconVisibility(attributeId);
     }
   });
 }
