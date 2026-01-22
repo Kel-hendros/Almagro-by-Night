@@ -1720,10 +1720,10 @@ function initializeSpecialtyContainers() {
     const rating = formGroup.querySelector('.rating');
     if (!rating) return;
 
-    // Create specialty icon (star)
+    // Create specialty icon (small circle)
     const specialtyIcon = document.createElement('span');
     specialtyIcon.className = 'specialty-icon';
-    specialtyIcon.innerHTML = '⭐';
+    specialtyIcon.innerHTML = '●'; // Círculo pequeño
     specialtyIcon.title = 'Ver/editar especialidades';
     specialtyIcon.style.display = 'none';
     specialtyIcon.setAttribute('data-for', attributeId);
