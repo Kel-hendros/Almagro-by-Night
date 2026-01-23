@@ -1043,13 +1043,23 @@ virtueButtons.forEach((button) => {
     const humanityValue = parseInt(
       document.querySelector("#humanidad-value").value
     );
+    const bloodPoolValue = parseInt(
+      document.querySelector("#blood-value").value
+    );
     let virtueDice =
       event.currentTarget.nextElementSibling.nextElementSibling
         .nextElementSibling.value;
 
-    // Limitar segun Humanidad
+    // Limitar segun Humanidad/Senda
     if (virtueDice > humanityValue) {
       virtueDice = humanityValue;
+    }
+
+    // Limitar segun Reserva de Sangre (Regla V20)
+    // Un jugador nunca puede tirar más dados en una tirada de Autocontrol/Instinto
+    // que puntos de Sangre tenga en su reserva
+    if (virtueDice > bloodPoolValue) {
+      virtueDice = bloodPoolValue;
     }
 
     //add to Pool1
