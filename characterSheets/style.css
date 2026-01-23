@@ -2036,6 +2036,12 @@ input {
 	color: #4a7c8e;
 }
 
+.theme-option[data-theme="phantomas"] {
+	background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
+	color: #00ff41;
+	text-shadow: 0 0 5px rgba(0, 255, 65, 0.8);
+}
+
 /* Font Options Styles */
 .font-options {
 	display: flex;
@@ -2084,9 +2090,12 @@ input {
 
 .font-option[data-font="phantomas"] {
 	font-family: 'VT323', monospace;
-	background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
+	background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
 	color: #00ff41;
-	/* letter-spacing: 1px; */
+	text-shadow: 0 0 3px rgba(0, 255, 65, 0.6);
+	font-size: 1.3rem;
+	letter-spacing: 2px;
+	text-transform: uppercase;
 }
 
 .theme-modal-close {
