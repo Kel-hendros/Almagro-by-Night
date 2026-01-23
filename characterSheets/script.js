@@ -133,6 +133,45 @@ themeOptions.forEach(option => {
 // Initialize theme on page load
 initializeTheme();
 
+// //////// Font System //////// //
+const fontOptions = document.querySelectorAll('.font-option');
+
+// Initialize font from localStorage or default to 'clasico'
+function initializeFont() {
+  const savedFont = localStorage.getItem('font') || 'clasico';
+  body.setAttribute('data-font', savedFont);
+  updateActiveFontOption(savedFont);
+}
+
+// Update active font option in modal
+function updateActiveFontOption(font) {
+  fontOptions.forEach(option => {
+    if (option.getAttribute('data-font') === font) {
+      option.classList.add('active');
+    } else {
+      option.classList.remove('active');
+    }
+  });
+}
+
+// Font selection
+fontOptions.forEach(option => {
+  option.addEventListener('click', () => {
+    const selectedFont = option.getAttribute('data-font');
+    body.setAttribute('data-font', selectedFont);
+    localStorage.setItem('font', selectedFont);
+    updateActiveFontOption(selectedFont);
+  });
+});
+
+// Update font option when modal opens
+modeToggle.addEventListener("click", () => {
+  updateActiveFontOption(body.getAttribute('data-font') || 'clasico');
+});
+
+// Initialize font on page load
+initializeFont();
+
 // MODAL DISCORD WEBHOOK
 const discordModal = document.getElementById("discord-modal");
 const discordBtn = document.getElementById("discord-btn");
@@ -1043,16 +1082,24 @@ virtueButtons.forEach((button) => {
     const humanityValue = parseInt(
       document.querySelector("#humanidad-value").value
     );
-    const bloodPoolValue = parseInt(
-      document.querySelector("#blood-value").value
-    );
-    let virtueDice =
+    const bloodValueString = document.querySelector("#blood-value").value;
+    // Contar cuántos puntos de sangre hay (caracteres que no son '0')
+    const bloodPoolValue = bloodValueString.replace(/0/g, "").length;
+    let virtueDice = parseInt(
       event.currentTarget.nextElementSibling.nextElementSibling
-        .nextElementSibling.value;
+        .nextElementSibling.value
+    );
+
+    console.log('=== DEBUG VIRTUE ROLL ===');
+    console.log('Virtue dice inicial:', virtueDice);
+    console.log('Humanity value:', humanityValue);
+    console.log('Blood value string:', bloodValueString);
+    console.log('Blood pool value:', bloodPoolValue);
 
     // Limitar segun Humanidad/Senda
     if (virtueDice > humanityValue) {
       virtueDice = humanityValue;
+      console.log('Limitado por Humanidad a:', virtueDice);
     }
 
     // Limitar segun Reserva de Sangre (Regla V20)
@@ -1060,7 +1107,20 @@ virtueButtons.forEach((button) => {
     // que puntos de Sangre tenga en su reserva
     if (virtueDice > bloodPoolValue) {
       virtueDice = bloodPoolValue;
+      console.log('Limitado por Sangre a:', virtueDice);
+
+      // Activar animación de advertencia en el título de Sangre
+      const sangreTitulo = document.getElementById('sangre-titulo');
+      sangreTitulo.classList.add('blood-limitation-warning');
+
+      // Remover la clase después de que termine la animación
+      setTimeout(() => {
+        sangreTitulo.classList.remove('blood-limitation-warning');
+      }, 600); // 600ms = duración de la animación
     }
+
+    console.log('Virtue dice final:', virtueDice);
+    console.log('========================');
 
     //add to Pool1
     addToPool1(virtueDice, virtueName);

@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Special+Elite&family=UnifrakturCook:wght@700&family=Lato:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Special+Elite&family=UnifrakturCook:wght@700&family=Lato:wght@400;700&family=Courier+Prime:wght@400;700&family=VT323&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml/dist/js-yaml.min.js"></script>
@@ -855,13 +855,27 @@
         <!-- Theme Selection Modal -->
         <div id="theme-modal">
             <div class="theme-modal-content">
-                <h1>Elige tu estilo</h1>
-                <div class="theme-options">
-                    <div class="theme-option" data-theme="light">Light</div>
-                    <div class="theme-option" data-theme="dark">Dark</div>
-                    <div class="theme-option" data-theme="camarilla">Camarilla</div>
-                    <div class="theme-option" data-theme="sabbat">Sabbat</div>
-                    <div class="theme-option" data-theme="anarquista">Anarquista</div>
+                <h1>Personaliza tu hoja</h1>
+                <div class="theme-modal-grid">
+                    <div class="theme-section">
+                        <h2>Tema de color</h2>
+                        <div class="theme-options">
+                            <div class="theme-option" data-theme="light">Light</div>
+                            <div class="theme-option" data-theme="dark">Dark</div>
+                            <div class="theme-option" data-theme="camarilla">Camarilla</div>
+                            <div class="theme-option" data-theme="sabbat">Sabbat</div>
+                            <div class="theme-option" data-theme="anarquista">Anarquista</div>
+                            <div class="theme-option" data-theme="phantomas">Phantomas</div>
+                        </div>
+                    </div>
+                    <div class="font-section">
+                        <h2>Estilo de fuente</h2>
+                        <div class="font-options">
+                            <div class="font-option" data-font="clasico">Clásico</div>
+                            <div class="font-option" data-font="noir">Noir</div>
+                            <div class="font-option" data-font="phantomas">Phantomas</div>
+                        </div>
+                    </div>
                 </div>
                 <button class="theme-modal-close">Cerrar</button>
             </div>
@@ -1534,12 +1548,12 @@
         <div class="blood-container">
             <div class="seccion-container">
                 <div class="seccion-linea"></div>
-                <h1 class="seccion">Sangre</h1>
+                <h1 class="seccion" id="sangre-titulo">Sangre</h1>
                 <div class="seccion-linea"></div>
             </div>
             <div class="blood-pool">
                 <div class="blood-action-consume">
-                    <i id="consumeBlood" class="fa-solid fa-droplet-slash" style="color: black;"></i>
+                    <i id="consumeBlood" class="fa-solid fa-droplet-slash"></i>
                 </div>
                 <div class="blood-row">
                     <div class="rating" id="blood-rating">
@@ -1582,7 +1596,7 @@
                     </div>
                 </div>
                 <div class="blood-action-add">
-                    <i id="addNormalBlood" class="fa-solid fa-droplet" style="color: black;"></i>
+                    <i id="addNormalBlood" class="fa-solid fa-droplet"></i>
                     <i id="addSpecialBlood1" class="fa-solid fa-droplet" style="color: red;"></i>
                     <i id="addSpecialBlood2" class="fa-solid fa-droplet" style="color: blue;"></i>
                 </div>

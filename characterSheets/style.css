@@ -167,6 +167,121 @@ body[data-theme="anarquista"] {
 	--specialtyModalInputBg: #141a1f;
 }
 
+/* Phantomas Theme - Terminal de computadora antigua, verde fosforescente */
+:root[data-theme="phantomas"],
+body[data-theme="phantomas"] {
+	--backgroundColor: #0a0a0a;
+	--accentColor: #00ff41;
+	--secondaryColor: #00cc33;
+	--primaryColor: #33ff66;
+	--shadowColor: #00ff4133;
+	--successColor: #00ff41;
+	--failureColor: #668866;
+	--botchColor: #ff0033;
+	--mutedColor: #115522;
+	--customPointer: url('images/pointer.png'), pointer;
+	--colorDeAdornos: var(--mutedColor);
+	--historySuccessColor: rgba(0, 255, 65, 0.2);
+	--historyFailureColor: #33553394;
+	--historyBotchColor: #ff003346;
+
+	/* Specialty system colors */
+	--specialtyIconColor: #00ff41;
+	--specialtyIconHoverColor: #33ff66;
+	--specialtyModalInputBg: #0f0f0f;
+}
+
+/* Phantomas terminal glow effects */
+body[data-theme="phantomas"] {
+	text-shadow: 0 0 2px rgba(0, 255, 65, 0.5);
+}
+
+body[data-theme="phantomas"] h1,
+body[data-theme="phantomas"] h2 {
+	text-shadow: 0 0 2px rgba(0, 255, 65, 0.8);
+}
+
+/* ================================================
+   FONT STYLE VARIABLES
+   Default: Clásico style
+   ================================================ */
+
+:root,
+:root[data-font="clasico"],
+body[data-font="clasico"] {
+	--fontHeading: 'delavan', serif;
+	--fontBody: 'Cormorant Garamond', serif;
+	--fontBodyBold: 'Cormorant Bold', serif;
+	--fontSizeBase: 1rem;
+	--fontSizeScale: 1;
+}
+
+:root[data-font="noir"],
+body[data-font="noir"] {
+	--fontHeading: 'Special Elite', cursive;
+	--fontBody: 'Courier Prime', monospace;
+	--fontBodyBold: 'Courier Prime', monospace;
+	--fontSizeScale: 0.8;
+	/* Un poco más pequeña para Courier Prime */
+}
+
+:root[data-font="phantomas"],
+body[data-font="phantomas"] {
+	--fontHeading: 'VT323', monospace;
+	--fontBody: 'VT323', monospace;
+	--fontBodyBold: 'VT323', monospace;
+	--fontSizeScale: 1.3;
+	/* VT323 necesita un leve aumento para legibilidad */
+}
+
+/* Noir font weight and size adjustments to prevent bold appearance */
+body[data-font="noir"] {
+	font-weight: 400;
+	font-size: calc(var(--fontSizeBase) * var(--fontSizeScale));
+}
+
+body[data-font="noir"] h1,
+body[data-font="noir"] h2,
+body[data-font="noir"] h3,
+body[data-font="noir"] h4 {
+	font-weight: 400;
+}
+
+body[data-font="noir"] input,
+body[data-font="noir"] textarea,
+body[data-font="noir"] select,
+body[data-font="noir"] label {
+	font-weight: 400;
+	letter-spacing: 0px;
+}
+
+body[data-font="noir"] .rating,
+body[data-font="noir"] .dot {
+	font-weight: 400;
+}
+
+/* Phantomas font adjustments for terminal look */
+body[data-font="phantomas"] {
+	font-weight: 400;
+	font-size: calc(var(--fontSizeBase) * var(--fontSizeScale));
+}
+
+body[data-font="phantomas"] h1,
+body[data-font="phantomas"] h2,
+body[data-font="phantomas"] h3,
+body[data-font="phantomas"] h4 {
+	font-weight: 400;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+}
+
+body[data-font="phantomas"] input,
+body[data-font="phantomas"] textarea,
+body[data-font="phantomas"] select {
+	font-weight: 400;
+	/* letter-spacing: 1px; */
+}
+
 /* Fallback to system preference if no explicit theme is set */
 @media (prefers-color-scheme: dark) {
 	:root:not([data-theme="light"]) {
@@ -208,7 +323,7 @@ body {
 }
 
 * {
-	font-family: 'Cormorant Bold', serif;
+	font-family: var(--fontBodyBold);
 	color: var(--primaryColor);
 
 	/* Make Everything UNSELECTABLE */
@@ -263,7 +378,7 @@ body {
 
 h1,
 h2 {
-	font-family: 'delavan', serif;
+	font-family: var(--fontHeading);
 }
 
 /* ================================================
@@ -297,7 +412,7 @@ h2 {
 
 .modal-content h1 {
 	text-align: center;
-	font-family: 'delavan', serif;
+	font-family: var(--fontHeading);
 	font-size: 2em;
 	margin: 0;
 }
@@ -381,7 +496,7 @@ h2 {
 
 .tab-button {
 	color: var(--mutedColor);
-	font-family: 'delavan', serif;
+	font-family: var(--fontHeading);
 	font-size: 11px;
 	flex-grow: 1;
 	background-color: var(--backgroundColor);
@@ -879,8 +994,8 @@ ion-icon {
 }
 
 .container.info label {
-	font-size: 17px;
-	font-family: 'Cormorant Garamond', serif;
+	font-size: calc(var(--fontSizeBase) * var(--fontSizeScale) * 1.0625);
+	font-family: var(--fontBody);
 }
 
 .container input {
@@ -888,7 +1003,7 @@ ion-icon {
 	padding: 5px;
 	border: 0;
 	background-color: transparent;
-	font-size: 19px;
+	font-size: calc(var(--fontSizeBase) * var(--fontSizeScale) * 1.1875);
 	font-weight: bold;
 	text-align: end;
 }
@@ -903,7 +1018,7 @@ ion-icon {
 }
 
 .column label {
-	font-size: 16px;
+	font-size: calc(var(--fontSizeBase) * var(--fontSizeScale));
 }
 
 .container.info label::after {
@@ -1021,7 +1136,7 @@ select {
 }
 
 .automatization-row label {
-	font-family: 'delavan', 'serif';
+	font-family: var(--fontHeading);
 	font-size: .8rem;
 	margin-inline: 5px;
 }
@@ -1062,7 +1177,7 @@ input[type="checkbox"] {
 	height: 40px;
 	border-radius: 5px;
 	text-align: center;
-	font-family: 'delavan', serif;
+	font-family: var(--fontHeading);
 	cursor: var(--customPointer);
 	background-color: transparent;
 	border: 2px solid var(--primaryColor);
@@ -1175,7 +1290,7 @@ input[type="checkbox"] {
 }
 
 .diceResults * {
-	font-family: 'delavan', serif;
+	font-family: var(--fontHeading);
 }
 
 .diceResult>p {
@@ -1430,6 +1545,12 @@ input[type="checkbox"] {
 	cursor: var(--customPointer);
 }
 
+/* Iconos de sangre normal usan el color del tema */
+#consumeBlood,
+#addNormalBlood {
+	color: var(--primaryColor);
+}
+
 .blood-action-add {
 	display: flex;
 	flex-direction: column;
@@ -1459,7 +1580,7 @@ input[type="checkbox"] {
 	height: 12px;
 	border-radius: 0;
 	border: 2px solid var(--primaryColor);
-	background-color: #000000;
+	background-color: var(--primaryColor);
 	margin: 0 1px;
 	cursor: var(--customPointer);
 }
@@ -1609,14 +1730,15 @@ input {
 
 .specialty-icon {
 	display: none;
-	font-size: 10px;
+	font-size: 1rem;
 	margin-right: 4px;
 	cursor: pointer;
 	color: var(--specialtyIconColor);
-	opacity: 0.7;
+	opacity: 0.9;
 	transition: all 0.2s;
 	user-select: none;
-	vertical-align: middle;
+	vertical-align: baseline;
+	align-self: flex-start;
 	line-height: 1;
 }
 
@@ -1635,7 +1757,7 @@ input {
 	z-index: 10000;
 	min-width: 250px;
 	max-width: 300px;
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--fontBody);
 }
 
 .specialty-modal-header {
@@ -1756,7 +1878,7 @@ input {
 	border: 1px solid var(--mutedColor);
 	border-radius: 4px;
 	font-size: 13px;
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--fontBody);
 	background: var(--specialtyModalInputBg);
 	color: var(--primaryColor);
 }
@@ -1823,9 +1945,26 @@ input {
 	padding: 30px;
 	border-radius: 12px;
 	border: 2px solid var(--accentColor);
-	max-width: 500px;
+	max-width: 800px;
 	width: 90%;
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.theme-modal-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 30px;
+	margin-bottom: 20px;
+}
+
+.theme-section h2,
+.font-section h2 {
+	color: var(--accentColor);
+	font-family: 'Special Elite', cursive;
+	font-size: 1.2rem;
+	margin: 0 0 15px 0;
+	text-align: center;
+	letter-spacing: 1px;
 }
 
 .theme-modal-content h1 {
@@ -1897,6 +2036,59 @@ input {
 	color: #4a7c8e;
 }
 
+/* Font Options Styles */
+.font-options {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.font-option {
+	padding: 15px 20px;
+	background: rgba(0, 0, 0, 0.2);
+	border: 2px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.3s;
+	color: var(--primaryColor);
+	font-size: 1.1rem;
+	text-align: center;
+	letter-spacing: 1px;
+}
+
+.font-option:hover {
+	border-color: var(--accentColor);
+	background: rgba(0, 0, 0, 0.3);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.font-option.active {
+	border-color: var(--accentColor);
+	background: var(--accentColor);
+	color: var(--backgroundColor);
+	font-weight: bold;
+}
+
+.font-option[data-font="clasico"] {
+	font-family: var(--fontBody);
+	background: linear-gradient(135deg, #f5f0e7 0%, #e8e0d5 100%);
+	color: #5a4a3a;
+}
+
+.font-option[data-font="noir"] {
+	font-family: 'Courier Prime', monospace;
+	background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+	color: #b0b0b0;
+}
+
+.font-option[data-font="phantomas"] {
+	font-family: 'VT323', monospace;
+	background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
+	color: #00ff41;
+	/* letter-spacing: 1px; */
+}
+
 .theme-modal-close {
 	margin-top: 20px;
 	padding: 10px 20px;
@@ -1914,4 +2106,63 @@ input {
 .theme-modal-close:hover {
 	background: var(--accentColor);
 	color: var(--backgroundColor);
+}
+
+/* ================================================
+   BLOOD LIMITATION WARNING ANIMATION
+   Variables configurables para ajustar el efecto
+   ================================================ */
+
+:root {
+	/* Ángulo de rotación máximo (en grados) */
+	--blood-warning-rotation: 8deg;
+
+	/* Duración de la animación completa (en segundos) */
+	--blood-warning-duration: .5s;
+
+	/* Colores del flash */
+	--blood-warning-color-1: #ff0000;
+	/* Rojo */
+	--blood-warning-color-2: #ffffff;
+	/* Blanco */
+
+	/* Intensidad del brillo (glow) */
+	--blood-warning-glow: 5px;
+	--blood-warning-glow-opacity: 0.7;
+}
+
+@keyframes bloodLimitationShake {
+
+	0%,
+	100% {
+		transform: rotate(0deg);
+		transform-origin: center;
+		color: inherit;
+		text-shadow: none;
+	}
+
+	10%,
+	30%,
+	50%,
+	70%,
+	90% {
+		transform: rotate(var(--blood-warning-rotation));
+		color: var(--blood-warning-color-1);
+		text-shadow: 0 0 var(--blood-warning-glow) rgba(255, 0, 0, var(--blood-warning-glow-opacity));
+	}
+
+	20%,
+	40%,
+	60%,
+	80% {
+		transform: rotate(calc(var(--blood-warning-rotation) * -1));
+		color: var(--blood-warning-color-2);
+		text-shadow: 0 0 var(--blood-warning-glow) rgba(255, 255, 255, var(--blood-warning-glow-opacity));
+	}
+}
+
+.blood-limitation-warning {
+	animation: bloodLimitationShake var(--blood-warning-duration) ease-in-out;
+	display: inline-block;
+	/* Necesario para que rotate funcione correctamente */
 }
