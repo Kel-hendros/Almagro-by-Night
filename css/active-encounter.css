@@ -1,121 +1,85 @@
+/* ============================================
+   Active Encounter – Compact Modern VTT
+   ============================================ */
+
 /* Base Container */
 .active-encounter-container {
-    padding: 20px;
+    padding: 8px 12px;
     color: #e0e0e0;
     background-color: #000;
-    /* Deepest black */
     min-height: 100vh;
 }
 
 .ae-input {
     width: 100%;
-    padding: 8px;
-    background: #222;
+    padding: 5px 8px;
+    background: #1a1a1a;
     color: #fff;
-    border: 1px solid #444;
+    border: 1px solid #333;
     border-radius: 4px;
+    font-size: 0.8rem;
 }
 
 .mb-2 {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
-/* Header */
+/* ── Header ── */
 .ae-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 10px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* ... existing content ... */
-
-.ae-hp-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 11px;
-    color: #fff;
-    font-weight: bold;
-    pointer-events: none;
-    text-shadow: 0 0 2px #000;
-}
-
-.ae-bubble-input {
-    background: transparent;
-    border: none;
-    color: white;
-    width: 100%;
-    height: 100%;
-    text-align: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    padding: 0;
-    margin: 0;
-    /* Remove Spinners Firefox */
-    -moz-appearance: textfield;
-}
-
-.ae-bubble-input:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-}
-
-/* Remove Spinners WebKit */
-.ae-bubble-input::-webkit-outer-spin-button,
-.ae-bubble-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.ae-status-row {
-    margin-top: 5px;
-    border-top: 1px solid #333;
-    padding-top: 4px;
-    font-size: 0.8rem;
-    color: #888;
-    text-transform: uppercase;
-    text-align: center;
-    letter-spacing: 1px;
+.ae-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .ae-title {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.1rem;
     color: var(--color-gold, #c5a059);
-    margin-right: 15px;
+    letter-spacing: 0.5px;
 }
 
 .ae-status-chip {
-    background: #27ae60;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    background: rgba(39, 174, 96, 0.2);
+    color: #2ecc71;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 0.6rem;
     text-transform: uppercase;
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(39, 174, 96, 0.3);
 }
 
+/* ── Buttons ── */
 .ae-btn {
-    padding: 8px 16px;
+    padding: 4px 12px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-weight: bold;
-    transition: background 0.2s;
+    font-weight: 600;
+    font-size: 0.75rem;
+    transition: all 0.15s ease;
+    letter-spacing: 0.3px;
 }
 
 .ae-btn.secondary {
-    background: #444;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    color: #bbb;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .ae-btn.secondary:hover {
-    background: #555;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
 }
 
 .ae-btn.primary {
@@ -123,242 +87,585 @@
     color: #fff;
 }
 
-/* Using fallback red */
 .ae-btn.primary:hover {
     background: #a62121;
 }
 
 .ae-btn.success {
-    background: #27ae60;
-    color: #fff;
+    background: rgba(39, 174, 96, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.ae-btn.success:hover {
+    background: rgba(39, 174, 96, 0.3);
 }
 
 .ae-btn.danger {
-    background: #c0392b;
-    color: #fff;
+    background: rgba(192, 57, 43, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(192, 57, 43, 0.3);
+}
+
+.ae-btn.danger:hover {
+    background: rgba(192, 57, 43, 0.3);
 }
 
 .ae-btn.full-width {
     width: 100%;
 }
 
-/* Layout */
-.ae-layout {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 20px;
-    height: calc(100vh - 100px);
-    /* Fill remaining height */
+/* ── VTT Layout ── */
+.ae-vtt-layout {
+    display: flex;
+    height: calc(100vh - 50px);
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    background: #050505;
 }
 
-/* Left Panel (Map Placeholder + Add NPC for now) */
-.ae-sidebar {
+/* ── Map Area ── */
+.ae-map-area {
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
+    background: #050505;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ae-map-placeholder {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    border-right: 1px solid #333;
-    /* Visual separation */
-    padding-right: 20px;
-}
-
-.ae-panel {
-    background: #111;
-    border: 1px solid #333;
-    padding: 15px;
-    border-radius: 8px;
-}
-
-.ae-panel h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #ccc;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    border-bottom: 1px solid #333;
-    padding-bottom: 5px;
-}
-
-.ae-form-group {
-    margin-bottom: 15px;
-}
-
-.ae-form-group label {
-    display: block;
-    margin-bottom: 5px;
-    color: #aaa;
-    font-size: 0.85rem;
-}
-
-/* Turn Controls */
-.ae-turn-controls {
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 10px 20px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
     align-items: center;
+    color: #333;
+    z-index: 10;
+}
+
+.ae-map-placeholder p {
+    font-size: 1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.ae-map-grid-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: 40px 40px;
+    background-image:
+        linear-gradient(to right, #0a0a0a 1px, transparent 1px),
+        linear-gradient(to bottom, #0a0a0a 1px, transparent 1px);
+    z-index: 0;
+}
+
+/* ── Timeline Sidebar (Right) ── */
+.ae-timeline-sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: rgba(10, 10, 10, 0.95);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px;
+    z-index: 20;
+}
+
+/* ── Turn Controls ── */
+.ae-turn-controls {
+    margin-bottom: 8px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
 }
 
 .ae-round-info {
     display: flex;
-    align-items: baseline;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
-.ae-round-label {
-    color: #aaa;
-    font-size: 0.9em;
-    text-transform: uppercase;
-    margin-right: 10px;
-}
 
 .ae-round-val {
+    font-size: 1.1rem;
     color: #fff;
-    font-size: 1.5em;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
 }
 
-.ae-btn-play {
-    background: #2ecc71;
-    border: none;
-    color: #000;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    font-size: 1.2em;
+.ae-turn-buttons {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-grow: 1;
+    justify-content: flex-end;
+}
+
+.primary-action {
+    flex-grow: 1;
+    background: rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    color: #4ade80;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+    height: 28px;
     cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    transition: all 0.15s ease;
+}
+
+.primary-action:hover {
+    background: rgba(46, 204, 113, 0.35);
+    color: #86efac;
+}
+
+.small-action {
+    width: 28px;
+    height: 28px;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s, box-shadow 0.2s;
-    padding-left: 4px;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: #bbb;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.ae-btn-play:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 10px rgba(46, 204, 113, 0.4);
+.small-action:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
 }
 
-/* Timeline */
+/* ── Timeline ── */
 .ae-timeline {
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 2px;
     gap: 10px;
-    position: relative;
-    padding-left: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: #222 transparent;
 }
 
-/* Visual line for timeline */
+.ae-timeline::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ae-timeline::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ae-timeline::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
 .ae-timeline::before {
-    content: '';
-    position: absolute;
-    left: 11%;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: #3a3a3a;
-    z-index: 0;
-    border-radius: 20px;
+    display: none;
 }
 
 .ae-timeline-row {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 6px;
     position: relative;
     z-index: 1;
-    /* Above the line */
 }
 
+/* ── Initiative Bubble ── */
 .ae-init-bubble {
-    width: 40px;
-    height: 40px;
-    background: #000;
-    border: 2px solid #555;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    font-weight: bold;
+    color: #ccc;
+    font-weight: 700;
     flex-shrink: 0;
+    font-size: 0.7rem;
 }
 
-/* ... existing ... */
-
-/* New Card Title Styles */
-.ae-card-name {
-    color: var(--color-red-accent);
-    font-weight: bold;
-    font-size: 1.1em;
+.ae-bubble-input {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.7rem;
+    padding: 0;
+    margin: 0;
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
-.ae-card-code {
-    color: var(--color-cream);
-    font-weight: normal;
-    font-size: 0.9em;
-    opacity: 0.8;
+.ae-bubble-input:focus {
+    outline: none;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 50%;
 }
 
-/* Updated Card Styles */
+.ae-bubble-input::-webkit-outer-spin-button,
+.ae-bubble-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ── Card Styles ── */
 .ae-card {
-    background: #1a1a1a;
-    border: 1px solid #333;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    padding: 10px;
+    padding: 6px 8px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    justify-content: center;
+    gap: 3px;
     cursor: pointer;
-    /* Clickable */
     position: relative;
     overflow: hidden;
-    /* For the bar */
-    transition: border-color 0.2s;
+    transition: all 0.15s ease;
+    height: 38px;
 }
 
 .ae-card:hover {
-    border-color: #666;
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Active card */
 .ae-card.active {
-    border-color: var(--color-red-muted);
-    background-color: var(--color-red-muted);
-    box-shadow: 0 0 10px rgba(173, 29, 29, 0.796);
+    border-color: var(--color-red-accent, #ad3838);
+    background: rgba(173, 56, 56, 0.1);
+    box-shadow: 0 0 8px rgba(173, 29, 29, 0.3), inset 0 0 0 1px rgba(173, 56, 56, 0.1);
+    animation: pulse-active 2.5s ease-in-out infinite;
 }
 
-/* Slim Health Bar on Card */
+@keyframes pulse-active {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px rgba(173, 29, 29, 0.3), inset 0 0 0 1px rgba(173, 56, 56, 0.1);
+    }
+
+    50% {
+        box-shadow: 0 0 14px rgba(173, 29, 29, 0.5), inset 0 0 0 1px rgba(173, 56, 56, 0.2);
+    }
+}
+
+/* Dead card */
 .ae-card.dead {
-    opacity: 0.5;
+    opacity: 0.35;
     filter: grayscale(100%);
-    border-color: #333 !important;
-    /* Prevent hover highlight */
+    border-color: rgba(255, 255, 255, 0.04) !important;
 }
 
-.ae-card-hp-bar {
+/* PC card */
+.ae-card.pc .ae-card-name {
+    color: var(--color-gold, #c5a059);
+}
+
+/* Card Header */
+.ae-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ae-card-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.ae-card-name {
+    color: var(--color-red-accent, #c44);
+    font-weight: 700;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.ae-card-code {
+    color: #888;
+    font-weight: normal;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+}
+
+/* Delete button */
+.ae-btn-delete {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: #333;
+    top: 2px;
+    right: 2px;
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 0.8rem;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.15s ease;
+    z-index: 2;
+    opacity: 0;
 }
 
-.ae-card-hp-fill,
+.ae-card:hover .ae-btn-delete {
+    opacity: 1;
+}
+
+.ae-btn-delete:hover {
+    background: rgba(192, 57, 43, 0.3);
+    color: #e74c3c;
+}
+
+/* ── Health Bar (on card) ── */
+.ae-card-hp-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.05);
+    margin-top: 2px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ae-card-hp-fill {
+    height: 100%;
+    width: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* PC Health Boxes */
+.ae-pc-health-row {
+    display: flex;
+    gap: 2px;
+    margin-top: 3px;
+    justify-content: center;
+}
+
+.ae-health-sq {
+    width: 10px;
+    height: 10px;
+    border: 1px solid #555;
+    background: transparent;
+    display: inline-block;
+}
+
+.ae-health-sq.contundente {
+    background-color: #aaa;
+}
+
+.ae-health-sq.letal {
+    background-color: #e8aa5a;
+}
+
+.ae-health-sq.agravado {
+    background-color: #e02020;
+}
+
+/* Health Fill Colors */
+.ae-hp-fill.high,
+.ae-card-hp-fill.high {
+    background-color: var(--color-health-100, #27ae60);
+}
+
+.ae-hp-fill.med,
+.ae-card-hp-fill.med {
+    background-color: var(--color-health-50, #f39c12);
+}
+
+.ae-hp-fill.low,
+.ae-card-hp-fill.low {
+    background-color: var(--color-health-20, #c0392b);
+}
+
+.ae-hp-fill.dead,
+.ae-card-hp-fill.dead {
+    background-color: #333;
+}
+
 .ae-hp-fill {
     height: 100%;
     transition: width 0.3s, background-color 0.3s;
 }
 
-/* Modal Styles */
+.ae-hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.65rem;
+    color: #fff;
+    font-weight: 700;
+    pointer-events: none;
+    text-shadow: 0 0 3px #000;
+    z-index: 2;
+}
+
+/* ── Tools Drawer ── */
+.ae-drawer {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background: rgba(15, 15, 15, 0.98);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.6);
+    z-index: 200;
+    transition: left 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.ae-drawer.open {
+    left: 0;
+}
+
+.ae-drawer-header {
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ae-drawer-header h3 {
+    margin: 0;
+    color: var(--color-gold, #c5a059);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ae-btn-close-drawer {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.ae-btn-close-drawer:hover {
+    color: #fff;
+}
+
+.ae-drawer-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Floating Tools Button ── */
+.ae-fab-tools {
+    position: fixed;
+    left: 14px;
+    bottom: 14px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-gold, #c5a059);
+    color: #000;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    z-index: 90;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ae-fab-tools span {
+    font-size: 1.4rem;
+    line-height: 1;
+    font-weight: bold;
+}
+
+.ae-fab-tools:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(197, 160, 89, 0.3);
+}
+
+/* ── Panels in drawer ── */
+.ae-panel {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.ae-panel h4 {
+    color: #aaa;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.ae-form-group {
+    margin-bottom: 6px;
+}
+
+.ae-form-group label {
+    display: block;
+    font-size: 0.65rem;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+
+/* ── Modal ── */
 .ae-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -366,35 +673,43 @@
 }
 
 .ae-modal-content {
-    background: #111;
-    border: 1px solid #444;
+    background: #0e0e0e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 8px;
-    width: 500px;
-    max-width: 90%;
-    padding: 20px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    width: 750px;
+    max-width: 95%;
+    padding: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .ae-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
 }
 
 .ae-modal-header h3 {
     margin: 0;
     color: var(--color-cream);
+    font-size: 1rem;
 }
 
 .ae-btn-close {
     background: none;
     border: none;
-    color: #888;
-    font-size: 1.5rem;
+    color: #999;
+    font-size: 1.2rem;
     cursor: pointer;
+    transition: color 0.15s;
+}
+
+.ae-btn-close:hover {
+    color: #fff;
 }
 
 .ae-title-name {
@@ -404,154 +719,156 @@
 .ae-title-code {
     color: var(--color-cream);
     font-weight: normal;
-    opacity: 0.8;
+    opacity: 0.6;
+    font-size: 0.85rem;
 }
 
-/* Grouped Stats in Modal */
+/* ── Stats in Modal ── */
 .ae-group-fieldset {
-    border: 1px solid #555;
-    margin-bottom: 20px;
-    padding: 15px;
-    border-radius: 4px;
-    background: #111;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .ae-group-fieldset legend {
-    padding: 0 10px;
+    padding: 0 8px;
     color: var(--color-red-accent);
     font-family: 'Special Elite', cursive;
-    font-size: 1.1em;
+    font-size: 0.85rem;
 }
 
 .ae-stat-grid-3col {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    gap: 12px;
+}
+
+.ae-stat-grid-4col {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
 }
 
 .ae-stat-col h4 {
-    color: #888;
-    margin: 0 0 10px 0;
-    font-size: 0.85rem;
+    color: #999;
+    margin: 0 0 6px 0;
+    font-size: 0.65rem;
     text-transform: uppercase;
-    border-bottom: 1px solid #333;
-    padding-bottom: 4px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 3px;
 }
 
 .ae-stat-row {
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
-    margin-bottom: 4px;
-    padding: 2px 0;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    padding: 1px 0;
 }
 
 .stat-label {
-    color: #bbb;
+    color: #aaa;
 }
 
 .stat-val {
-    color: #fff;
-    font-weight: bold;
+    color: #f0f0f0;
+    font-weight: 700;
 }
 
 .ae-divider {
     border: 0;
-    border-top: 1px solid #333;
-    margin: 20px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 12px 0;
+}
+
+/* ── Modal Health Controls ── */
+.ae-health-section h4 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    margin-bottom: 6px;
 }
 
 .ae-modal-health-controls {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
-    margin-top: 10px;
+    gap: 8px;
+    margin-top: 6px;
 }
 
 .ae-ctrl-btn.large {
-    width: 50px;
-    height: 50px;
-    font-size: 1.5rem;
-    background: #222;
-    border: 1px solid #444;
-    border-radius: 4px;
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #ccc;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
 }
 
 .ae-ctrl-btn.large:hover {
-    background: #333;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
 }
 
 .ae-hp-bar.large {
     flex-grow: 1;
-    height: 30px;
+    height: 24px;
     border-radius: 4px;
     overflow: hidden;
     position: relative;
-    background: #000;
-    border: 1px solid #333;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.ae-hp-text {
-    z-index: 2;
-    /* Ensure on top */
+/* Damage/Heal Input */
+.ae-damage-input {
+    width: 36px;
+    height: 36px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: 6px;
+    flex-shrink: 0;
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
-/* ... helpers ... */
-/* ... helpers ... */
-.ae-hp-fill.high,
-.ae-card-hp-fill.high {
-    background-color: var(--color-health-100);
+.ae-damage-input::-webkit-outer-spin-button,
+.ae-damage-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
 }
 
-.ae-hp-fill.med,
-.ae-card-hp-fill.med {
-    background-color: var(--color-health-50);
+.ae-damage-input:focus {
+    outline: none;
+    border-color: var(--color-red-accent, #ad3838);
 }
 
-.ae-hp-fill.low,
-.ae-card-hp-fill.low {
-    background-color: var(--color-health-20);
-}
-
-.ae-hp-fill.dead,
-.ae-card-hp-fill.dead {
-    background-color: #555;
-}
-
-/* Card Health Bar (Slim) */
-.ae-card-hp-bar {
-    width: 100%;
-    height: 6px;
-    background: #222;
-    margin-top: 4px;
-    /* Space between name and bar */
-    border-radius: 2px;
-    overflow: hidden;
-    /* Position matches 'debajo del nombre' */
-}
-
-.ae-card-hp-fill {
-    height: 100%;
-    width: 100%;
-    /* Default, controlled by JS */
-    transition: width 0.3s ease, background-color 0.3s ease;
-}
-
-/* Numeric Picker */
+/* ── Editable Stat Picker ── */
 .editable-stat {
     cursor: pointer;
     border-bottom: 1px dotted #555;
-    transition: color 0.2s, border-color 0.2s;
+    transition: all 0.15s ease;
     position: relative;
-    padding: 0 4px;
+    padding: 0 3px;
 }
 
 .editable-stat:hover {
     color: var(--color-red-accent);
     border-color: var(--color-red-accent);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
 }
 
 .ae-stat-picker-overlay {
@@ -566,44 +883,41 @@
 
 .ae-stat-picker {
     position: absolute;
-    background: rgba(10, 10, 10, 0.95);
-    backdrop-filter: blur(5px);
+    background: rgba(10, 10, 10, 0.97);
+    backdrop-filter: blur(8px);
     border: 1px solid var(--color-red-accent);
-    border-radius: 8px;
-    padding: 10px;
+    border-radius: 6px;
+    padding: 6px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+    gap: 3px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
     z-index: 20001;
     display: none;
-    /* Toggled by JS */
-    min-width: 120px;
+    min-width: 100px;
 }
 
 .ae-picker-btn {
-    background: #222;
-    border: 1px solid #444;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: #eee;
-    font-weight: bold;
+    font-weight: 700;
     font-family: 'Special Elite', cursive;
-    padding: 10px 0;
+    padding: 6px 0;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.1rem;
-    min-width: 35px;
+    font-size: 0.85rem;
+    min-width: 28px;
 }
 
 .ae-picker-btn:hover {
-    background: #333;
+    background: rgba(255, 255, 255, 0.15);
     border-color: var(--color-red-accent);
     color: var(--color-red-accent);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .ae-picker-btn.active {
@@ -611,3 +925,410 @@
     color: var(--color-cream);
     border-color: var(--color-red-accent);
 }
+
+/* ── PC Badge ── */
+.ae-pc-badge {
+    font-size: 0.55rem;
+    background: rgba(197, 160, 89, 0.15);
+    color: var(--color-gold, #c5a059);
+    padding: 1px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(197, 160, 89, 0.2);
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+/* ── PC Temp Stat ── */
+.ae-stat-temp {
+    color: #27ae60;
+    margin-left: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(39, 174, 96, 0.1);
+    padding: 0 3px;
+    border-radius: 3px;
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+/* ── PC Readonly View ── */
+.ae-pc-readonly-view .ae-stat-row {
+    padding: 3px 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 2px;
+    margin-bottom: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ae-pc-readonly-view .ae-stat-row:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ae-pc-readonly-view .ae-stat-col h4 {
+    margin: 6px 0 5px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+    color: #999;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ae-pc-readonly-view .ae-group-fieldset {
+    margin-bottom: 14px;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* =============================================
+   Entity Browser Modal
+   ============================================= */
+
+.ae-browser-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(6px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+}
+
+.ae-browser-content {
+    background: #0c0c0c;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    width: 620px;
+    max-width: 95%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 50px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+}
+
+.ae-browser-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.ae-browser-header h3 {
+    margin: 0;
+    color: var(--color-gold, #c5a059);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ae-browser-search {
+    flex-grow: 1;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #eee;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.ae-browser-search::placeholder {
+    color: #666;
+}
+
+.ae-browser-search:focus {
+    border-color: var(--color-red-accent, #ad3838);
+}
+
+/* ── Tags Filter Bar ── */
+.ae-browser-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.ae-browser-tags:empty {
+    display: none;
+}
+
+.ae-browser-tag {
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #999;
+    user-select: none;
+}
+
+.ae-browser-tag:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ccc;
+}
+
+.ae-browser-tag.active {
+    background: rgba(173, 56, 56, 0.2);
+    border-color: var(--color-red-accent, #ad3838);
+    color: var(--color-red-accent, #ad3838);
+}
+
+/* ── Grid ── */
+.ae-browser-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px 14px;
+    overflow-y: auto;
+    flex-grow: 1;
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+}
+
+.ae-browser-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ae-browser-grid::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 2px;
+}
+
+.ae-browser-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #555;
+    font-size: 0.8rem;
+    padding: 30px 0;
+}
+
+/* ── Browser Card ── */
+.ae-browser-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ae-browser-card:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.ae-browser-card.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.ae-browser-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ae-browser-card-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #999;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.ae-browser-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ae-browser-card-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.ae-browser-card-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.ae-browser-card-meta {
+    font-size: 0.65rem;
+    color: #777;
+    display: flex;
+    gap: 8px;
+    margin-top: 1px;
+}
+
+.ae-browser-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.ae-browser-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.ae-browser-card-tag {
+    font-size: 0.55rem;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #888;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ae-browser-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.ae-browser-qty {
+    width: 36px;
+    height: 26px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #eee;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 4px;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.ae-browser-qty::-webkit-outer-spin-button,
+.ae-browser-qty::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.ae-browser-qty:focus {
+    outline: none;
+    border-color: var(--color-red-accent, #ad3838);
+}
+
+.ae-browser-add-btn {
+    flex-grow: 1;
+    padding: 4px 10px;
+    background: rgba(46, 204, 113, 0.15);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+    border-radius: 4px;
+    color: #4ade80;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ae-browser-add-btn:hover {
+    background: rgba(46, 204, 113, 0.3);
+    color: #86efac;
+}
+
+.ae-browser-added-badge {
+    font-size: 0.6rem;
+    color: #555;
+    font-style: italic;
+}
+/* Tactical Map Styles */
+.ae-map-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #1a1a1a;
+    display: block; /* Ensure it's not flex/grid unless intended */
+}
+
+#ae-map-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.ae-map-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+}
+
+.ae-map-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #333;
+    border: 1px solid #555;
+    color: #eee;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: all 0.2s;
+}
+
+.ae-map-btn:hover {
+    background: #444;
+    transform: scale(1.1);
+}
+
+/* Browser Header Tweaks */
+.ae-browser-header {
+    display: flex; 
+    align-items: center; 
+    gap: 10px;
+}
+#ae-add-token-check {
+    cursor: pointer;
+}
+

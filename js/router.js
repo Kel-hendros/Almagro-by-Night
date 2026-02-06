@@ -8,6 +8,23 @@ let __currentRoute = null;
 let __lastRenderedPath = null;
 let __lastUserId = null;
 
+// Helper: Update Sidebar based on width OR route
+function updateSidebarResponsiveState() {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const isSmallScreen = window.matchMedia("(max-width: 1400px)").matches;
+  // Use current hash or global __currentRoute
+  const hash = window.location.hash.slice(1);
+  const isForcedMode = hash.startsWith("active-encounter");
+
+  if (isSmallScreen || isForcedMode) {
+    sidebar.classList.add("sidebar-slim-mode");
+  } else {
+    sidebar.classList.remove("sidebar-slim-mode");
+  }
+}
+
 // 1) Update the sidebar based on session state
 async function updateSidebar() {
   const liLogout = document.getElementById("menu-logout");
@@ -105,7 +122,7 @@ async function loadRoute(force = false) {
     scripts.forEach((oldScript) => {
       const newScript = document.createElement("script");
       Array.from(oldScript.attributes).forEach((attr) =>
-        newScript.setAttribute(attr.name, attr.value)
+        newScript.setAttribute(attr.name, attr.value),
       );
       newScript.appendChild(document.createTextNode(oldScript.innerHTML));
       oldScript.parentNode.replaceChild(newScript, oldScript);
@@ -151,6 +168,9 @@ async function loadRoute(force = false) {
     }
   }
 
+  // Handle Sidebar Responsive State
+  updateSidebarResponsiveState();
+
   // Update guards
   __currentRoute = targetHash;
   __lastRenderedPath = path;
@@ -160,12 +180,16 @@ async function loadRoute(force = false) {
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Router: DOMContentLoaded");
 
+  // Initial Sidebar Check
+  updateSidebarResponsiveState();
+  window.addEventListener("resize", updateSidebarResponsiveState);
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
   console.log(
     "Router: Initial session check ->",
-    session ? "LOGGED IN" : "NO SESSION"
+    session ? "LOGGED IN" : "NO SESSION",
   );
 
   sessionReady = true;

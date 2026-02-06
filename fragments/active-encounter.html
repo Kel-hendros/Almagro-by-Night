@@ -8,27 +8,26 @@
             <span id="ae-encounter-status" class="ae-status-chip">Activo</span>
         </div>
         <div class="ae-header-right">
-            <button id="btn-ae-back" class="ae-btn secondary">Volver</button>
+            <button id="btn-ae-back" class="ae-btn secondary" title="Volver al listado">&#x2190;</button>
         </div>
     </header>
 
-    <!-- Main Layout -->
-    <div class="ae-layout">
-        <!-- Sidebar Controls (Left) -->
-        <aside class="ae-sidebar">
+    <!-- Floating Tools Toggle -->
+    <button id="btn-ae-toggle-tools" class="ae-fab-tools" title="Herramientas">
+        <span>+</span>
+    </button>
+
+    <!-- Tools Drawer (formerly Sidebar) -->
+    <div id="ae-tools-drawer" class="ae-drawer">
+        <div class="ae-drawer-header">
+            <h3>Herramientas</h3>
+            <button id="btn-ae-close-tools" class="ae-btn-close-drawer">&times;</button>
+        </div>
+        <div class="ae-drawer-content">
             <div class="ae-panel">
-                <h4>Agregar PNJ</h4>
-                <div class="ae-form-group">
-                    <label>Plantilla</label>
-                    <select id="ae-template-select" class="ae-input">
-                        <option value="">Seleccionar...</option>
-                    </select>
-                </div>
-                <div class="ae-form-group">
-                    <label>Cantidad</label>
-                    <input type="number" id="ae-npc-count" value="1" min="1" class="ae-input">
-                </div>
-                <button id="btn-ae-add-npc" class="ae-btn primary full-width">Agregar</button>
+                <h4>Agregar</h4>
+                <button id="btn-ae-browse-npc" class="ae-btn primary full-width mb-2">+ PNJ</button>
+                <button id="btn-ae-browse-pc" class="ae-btn primary full-width">+ PJ</button>
             </div>
 
             <div class="ae-panel">
@@ -36,27 +35,62 @@
                 <button id="btn-ae-save" class="ae-btn success full-width mb-2">Guardar</button>
                 <button id="btn-ae-archive" class="ae-btn danger full-width">Archivar</button>
             </div>
-        </aside>
+        </div>
+    </div>
 
-        <!-- Main Timeline (Center/Right) -->
-        <main class="ae-main">
-            <!-- Turn Controls -->
+    <!-- VTT Layout (Map + Right Sidebar) -->
+    <div class="ae-vtt-layout">
+
+        <!-- MAP AREA (Left/Center) -->
+        <div class="ae-map-area" id="ae-map-container">
+            <canvas id="ae-map-canvas"></canvas>
+
+            <!-- Map Controls Overlay -->
+            <div class="ae-map-controls">
+                <button id="btn-map-zoom-in" class="ae-map-btn" title="Zoom In">+</button>
+                <button id="btn-map-zoom-out" class="ae-map-btn" title="Zoom Out">-</button>
+                <button id="btn-map-reset" class="ae-map-btn" title="Recentrar">⌖</button>
+            </div>
+        </div>
+
+        <!-- TIMELINE SIDEBAR (Right) -->
+        <aside class="ae-timeline-sidebar">
             <div class="ae-turn-controls">
                 <div class="ae-round-info">
-                    <span class="ae-round-label">Ronda</span>
                     <strong id="ae-round-counter" class="ae-round-val">1</strong>
                 </div>
-                <button id="btn-ae-next-turn" class="ae-btn-play" title="Pasar Turno">
-                    ▶
-                </button>
+                <div class="ae-turn-buttons">
+                    <button id="btn-ae-next-turn" class="ae-btn-play primary-action"
+                        title="Avanzar al siguiente turno">&#x25B6;</button>
+                    <button id="btn-ae-reroll" class="ae-btn secondary small-action"
+                        title="Resetear Iniciativa">&#x21BA;</button>
+                </div>
             </div>
 
-            <!-- Instances Grid/Timeline -->
             <div id="ae-timeline-container" class="ae-timeline">
-                <!-- JS Renders here -->
-                <p style="color: #666; text-align: center;">Cargando participantes...</p>
+                <p style="color: #444; text-align: center; font-size: 0.75rem;">Cargando...</p>
             </div>
-        </main>
+        </aside>
+
+    </div>
+
+    <!-- Entity Browser Modal -->
+    <div id="ae-browser-modal" class="ae-browser-overlay" style="display: none;">
+        <div class="ae-browser-content">
+            <div class="ae-browser-header">
+                <h3 id="ae-browser-title">Agregar PNJ</h3>
+                <div
+                    style="margin-left:auto; margin-right: 10px; display: flex; align-items:center; gap: 5px; color: #aaa; font-size: 0.9rem;">
+                    <input type="checkbox" id="ae-add-token-check" checked>
+                    <label for="ae-add-token-check">Crear Token</label>
+                </div>
+                <input type="text" id="ae-browser-search" class="ae-browser-search" placeholder="Buscar...">
+                <button id="btn-ae-browser-close" class="ae-btn-close">&times;</button>
+            </div>
+            <div id="ae-browser-tags" class="ae-browser-tags"></div>
+            <div id="ae-browser-grid" class="ae-browser-grid">
+            </div>
+        </div>
     </div>
 
     <!-- Instance Detail Modal -->
@@ -68,12 +102,11 @@
             </div>
             <div class="ae-modal-body">
                 <div class="ae-detail-info">
-                    <p><strong>Código:</strong> <span id="ae-modal-code"></span></p>
+
                     <div id="ae-modal-stats" class="ae-stats-grid">
-                        <!-- Stats injected here -->
                     </div>
                     <div id="ae-modal-notes" class="ae-notes-section"
-                        style="margin-top: 15px; color: #aaa; font-style: italic;"></div>
+                        style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.8rem;"></div>
                 </div>
 
                 <hr class="ae-divider">
@@ -82,10 +115,12 @@
                     <h4>Salud</h4>
                     <div class="ae-modal-health-controls">
                         <button class="ae-ctrl-btn large" id="btn-modal-dmg">-</button>
+                        <input type="number" id="ae-damage-amount" class="ae-damage-input" value="1" min="1" max="20">
                         <div class="ae-hp-bar large">
                             <div id="ae-modal-hp-fill" class="ae-hp-fill"></div>
                             <span id="ae-modal-hp-text" class="ae-hp-text"></span>
                         </div>
+                        <input type="number" id="ae-heal-amount" class="ae-damage-input" value="1" min="1" max="20">
                         <button class="ae-ctrl-btn large" id="btn-modal-heal">+</button>
                     </div>
                 </div>
@@ -94,4 +129,5 @@
     </div>
 </div>
 
+<script src="js/tactical-map.js"></script>
 <script src="js/active-encounter.js"></script>

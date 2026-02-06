@@ -449,63 +449,53 @@ button.gameButton:hover {
 
 
 
-@media (max-width: 1400px) {
-    .sidebar {
-        width: 70px;
-        /* much narrower */
-        align-items: center;
-    }
-
-    .icono-grande {
-        display: none;
-    }
-
-    .nav li.grabado {
-
-        display: none;
-    }
-
-    .icono {
-        display: block;
-        width: 100%;
-        height: auto;
-    }
-
-    .nav {
-        width: 100%;
-
-    }
-
-    .nav li {
-        margin-bottom: 0;
-        /* justify-content: center; */
-        align-items: center;
-        padding-left: 0;
-
-    }
-
-    .nav li a {
-        padding-left: 0px;
-        /* more padding for touch targets */
-        justify-content: center;
-        /* center icons in narrow mode */
-    }
-
-
-    .nav span {
-        display: none;
-        /* hide text in narrow mode */
-    }
-
-    .nav a .lucide,
-    .nav span .lucide {
-        display: block;
-        /* avoid baseline misalignment */
-        width: 26px;
-        height: 26px;
-        flex: 0 0 auto;
-    }
+/* Siempre ultimo */
 
 
 
+/* Sidebar Slim Mode (Responsive + Forced) */
+.sidebar.sidebar-slim-mode {
+    width: 70px;
+    align-items: center;
+}
+
+.sidebar.sidebar-slim-mode .icono-grande {
+    display: none;
+}
+
+.sidebar.sidebar-slim-mode .nav li.grabado {
+    display: none;
+}
+
+.sidebar.sidebar-slim-mode .icono {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.sidebar.sidebar-slim-mode .nav {
+    width: 100%;
+}
+
+.sidebar.sidebar-slim-mode .nav li {
+    margin-bottom: 20px;
+    align-items: center;
+    padding-left: 0;
+}
+
+.sidebar.sidebar-slim-mode .nav li a {
+    padding-left: 0px;
+    justify-content: center;
+}
+
+.sidebar.sidebar-slim-mode .nav span {
+    display: none;
+}
+
+.sidebar.sidebar-slim-mode .nav a .lucide,
+.sidebar.sidebar-slim-mode .nav span .lucide {
+    display: block;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
 }
