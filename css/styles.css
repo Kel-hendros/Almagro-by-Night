@@ -39,6 +39,9 @@
     --color-health-100: #27ae60;
     --color-health-50: #f39c12;
     --color-health-20: #c0392b;
+
+    /* Selection Colors */
+    --color-selected-token: #ff9800;
 }
 
 html,

@@ -59,25 +59,21 @@
                 isAdmin = true;
             }
 
-            // 2. Fetch Sheets
+            // 2. Fetch ALL Sheets (everyone sees all cards)
             let query = supabase
                 .from('character_sheets')
                 .select('id, name, updated_at, data, user_id, avatar_url')
                 .order('updated_at', { ascending: false });
 
-            // If not admin, filter by own user
-            if (!isAdmin) {
-                query = query.eq('user_id', user.id);
-            } else {
-                // If ID is admin, fetch map of players
-                const { data: allPlayers } = await supabase
-                    .from('players')
-                    .select('user_id, name');
-                if (allPlayers) {
-                    allPlayers.forEach(p => {
-                        playerMap[p.user_id] = p.name;
-                    });
-                }
+            // Always fetch player names for display
+            // 2. Prepare Player Map (Fetch for everyone so we can show who owns what)
+            const { data: allPlayers } = await supabase
+                .from('players')
+                .select('user_id, name');
+            if (allPlayers) {
+                allPlayers.forEach(p => {
+                    playerMap[p.user_id] = p.name;
+                });
             }
 
             const { data: sheets, error } = await query;
@@ -111,35 +107,59 @@
 
             // 2. Existing Sheets
             sheets.forEach(sheet => {
+                const isOwner = sheet.user_id === user.id;
+                const canAccess = isAdmin || isOwner;
+
                 const card = document.createElement('div');
                 card.className = 'tool-card';
-                // Inline styles for consistency with tools.html
                 card.style.cssText = `
                     background: rgba(0,0,0,0.6);
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     border-radius: 12px;
                     overflow: hidden;
-                    cursor: pointer;
+                    cursor: ${canAccess ? 'pointer' : 'default'};
                     transition: transform 0.2s, box-shadow 0.2s;
                     position: relative;
                 `;
-                card.onclick = () => window.openSheet(sheet.id);
+                if (canAccess) {
+                    card.onclick = () => window.openSheet(sheet.id);
+                }
 
-                // Extract useful info (maybe Clan/Gen if available in JSON)
                 const clan = sheet.data?.clan || 'Desconocido';
                 const sigil = getClanSigil(clan);
                 const gen = sheet.data?.generacion || '?';
                 const lastEdit = new Date(sheet.updated_at).toLocaleDateString();
-                const avatarUrl = sheet.avatar_url; // New Column
+                const avatarUrl = sheet.avatar_url;
 
-                // Admin Info
+                // Owner check
+                const canEdit = isAdmin || isOwner;
+
+                // Camera button for avatar upload (owner or admin only)
+                const cameraButtonHTML = canEdit ? `
+                    <button onclick="openAvatarUpload(event, '${sheet.id}')" style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); border: 1px solid var(--color-gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-gold); font-size: 0.8rem;" title="Cambiar avatar">
+                        <i data-lucide="camera" style="width:16px;height:16px;"></i>
+                    </button>
+                ` : '';
+
+                // Delete button (owner or admin only)
+                const deleteButtonHTML = canEdit ? `
+                    <button onclick="event.stopPropagation(); deleteSheet('${sheet.id}')" style="background: none; border: 1px solid #ff4444; color: #ff4444; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.7rem;" title="Eliminar personaje">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                    </button>
+                ` : '';
+
+                // Admin Info or Public Owner Info
                 let playerInfoHTML = '';
-                if (isAdmin) {
-                    const playerName = playerMap[sheet.user_id] || 'Desconocido';
-                    playerInfoHTML = `<div style="font-size: 0.85rem; color: var(--color-gold); margin-bottom: 5px; font-weight: bold;">Jugador: ${playerName}</div>`;
-                }
-
-                // Decide what to show: Avatar or Sigil
+                // Always try to show a name if we have it in the map, otherwise maybe fetch it? 
+                // For now, let's just show it if we have it (admins load it). 
+                // Optimally we should load player names for everyone, but let's stick to current pattern:
+                if (playerMap[sheet.user_id]) {
+                    const pName = playerMap[sheet.user_id];
+                    playerInfoHTML = `<div style="font-size: 0.85rem; color: var(--color-gold); margin-bottom: 5px; font-weight: bold;">Jugador: ${pName}</div>`;
+                } else if (!isOwner) {
+                    // If not owner and no map (non-admin view), maybe show generic?
+                    // Or just leave it blank.
+                } // Decide what to show: Avatar or Sigil
                 let visualContent;
                 if (avatarUrl) {
                     visualContent = `<img src="${avatarUrl}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-gold); box-shadow: 0 0 10px rgba(0,0,0,0.5);">`;
@@ -147,16 +167,11 @@
                     visualContent = `<span style="font-family: 'vampire-sigils'; font-size: 5rem; color: #fff; text-shadow: 0 0 10px rgba(255,0,0,0.5);">${sigil}</span>`;
                 }
 
+
                 card.innerHTML = `
-                    <div style="height: 140px; background: linear-gradient(to bottom right, #2a0a0a, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center; position: relative;">
+                    <div style="height: 140px; background: linear-gradient(to bottom right, ${canAccess ? '#2a0a0a' : '#4a4a4a'}, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center; position: relative;">
                         ${visualContent}
-                        
-                        <!-- Upload Button (Camera) -->
-                        <div onclick="window.openAvatarUpload(event, '${sheet.id}')" 
-                             style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 50%; cursor: pointer; color: #ccc;"
-                             title="Cambiar Foto">
-                            <i data-lucide="camera" style="width: 16px; height: 16px;"></i>
-                        </div>
+                        ${cameraButtonHTML}
                     </div>
                     <div style="padding: 24px;">
                         <h3 style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
@@ -169,10 +184,7 @@
                         </p>
                         <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size: 0.7rem; color: #666;">Editado: ${lastEdit}</span>
-                            <span onclick="event.stopPropagation(); window.deleteSheet('${sheet.id}')"
-                                style="color: #ff4444; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; cursor: pointer; padding: 5px;">
-                                <i data-lucide="trash-2"></i>
-                            </span>
+                            ${deleteButtonHTML}
                         </div>
                     </div>
                 `;

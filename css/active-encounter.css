@@ -59,6 +59,30 @@
     border: 1px solid rgba(39, 174, 96, 0.3);
 }
 
+.ae-status-chip.wip {
+    background: rgba(241, 196, 15, 0.18);
+    color: #f1c40f;
+    border-color: rgba(241, 196, 15, 0.35);
+}
+
+.ae-status-chip.ready {
+    background: rgba(93, 173, 226, 0.18);
+    color: #5dade2;
+    border-color: rgba(93, 173, 226, 0.35);
+}
+
+.ae-status-chip.in_game {
+    background: rgba(39, 174, 96, 0.2);
+    color: #2ecc71;
+    border-color: rgba(39, 174, 96, 0.3);
+}
+
+.ae-status-chip.archived {
+    background: rgba(170, 170, 170, 0.18);
+    color: #bbb;
+    border-color: rgba(170, 170, 170, 0.28);
+}
+
 /* ── Buttons ── */
 .ae-btn {
     padding: 4px 12px;
@@ -368,6 +392,13 @@
     animation: pulse-active 2.5s ease-in-out infinite;
 }
 
+/* Selected Token Sync */
+.ae-card.selected-token {
+    box-shadow: 0 0 0 2px var(--color-selected-token, #ff9800), 0 0 10px rgba(255, 152, 0, 0.3);
+    border-color: var(--color-selected-token, #ff9800);
+    z-index: 10;
+}
+
 @keyframes pulse-active {
 
     0%,
@@ -382,9 +413,22 @@
 
 /* Dead card */
 .ae-card.dead {
-    opacity: 0.35;
-    filter: grayscale(100%);
-    border-color: rgba(255, 255, 255, 0.04) !important;
+    opacity: 0.72;
+    filter: grayscale(65%);
+    background: rgba(180, 180, 180, 0.06);
+    border-color: rgba(190, 190, 190, 0.22) !important;
+}
+
+.ae-card.dead .ae-card-name {
+    color: #d8cdc0 !important;
+}
+
+.ae-card.dead .ae-card-code {
+    color: #b4a79a;
+}
+
+.ae-card.dead .ae-card-hp-fill {
+    opacity: 0.6;
 }
 
 /* PC card */
@@ -1275,6 +1319,7 @@
     color: #555;
     font-style: italic;
 }
+
 /* Tactical Map Styles */
 .ae-map-area {
     position: relative;
@@ -1282,7 +1327,8 @@
     height: 100%;
     overflow: hidden;
     background-color: #1a1a1a;
-    display: block; /* Ensure it's not flex/grid unless intended */
+    display: block;
+    /* Ensure it's not flex/grid unless intended */
 }
 
 #ae-map-canvas {
@@ -1313,7 +1359,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     transition: all 0.2s;
 }
 
@@ -1322,13 +1368,23 @@
     transform: scale(1.1);
 }
 
+/* ── Token Section ── */
+.ae-token-preview:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1) !important;
+}
+
+.ae-token-preview.active:hover {
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.3) !important;
+}
+
 /* Browser Header Tweaks */
 .ae-browser-header {
-    display: flex; 
-    align-items: center; 
+    display: flex;
+    align-items: center;
     gap: 10px;
 }
+
 #ae-add-token-check {
     cursor: pointer;
 }
-

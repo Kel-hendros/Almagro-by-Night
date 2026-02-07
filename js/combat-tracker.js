@@ -5,6 +5,7 @@
     templates: [],
     encounters: [],
     user: null,
+    isAdmin: false,
     templateEdit: { data: {}, type: "npc", tags: [] },
   };
 
@@ -35,13 +36,39 @@
       return;
     }
     state.user = session.user;
+    state.isAdmin = await fetchIsAdmin(session.user.id);
 
     setupTabs();
     setupModalListeners();
     setupEncounterListeners();
+    updateRoleUI();
 
     await loadTemplates();
     await loadEncounters();
+  }
+
+  async function fetchIsAdmin(userId) {
+    if (!userId) return false;
+    const { data, error } = await supabase
+      .from("players")
+      .select("is_admin")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) {
+      console.warn("No se pudo resolver rol admin:", error.message);
+      return false;
+    }
+    return !!data?.is_admin;
+  }
+
+  function updateRoleUI() {
+    const createEncounterBtn = document.getElementById("btn-create-encounter");
+    const createTemplateBtn = document.getElementById("btn-create-template");
+
+    if (!state.isAdmin) {
+      if (createEncounterBtn) createEncounterBtn.style.display = "none";
+      if (createTemplateBtn) createTemplateBtn.style.display = "none";
+    }
   }
 
   // --- Tab Switching ---
@@ -68,6 +95,12 @@
 
   // --- DATA: TEMPLATES ---
   async function loadTemplates() {
+    if (!state.isAdmin) {
+      state.templates = [];
+      lists.templates.innerHTML =
+        "<p>Solo administradores pueden gestionar plantillas.</p>";
+      return;
+    }
     lists.templates.innerHTML = "<p>Cargando...</p>";
     const { data, error } = await supabase
       .from("templates")
@@ -407,11 +440,17 @@
   // --- DATA: ENCOUNTERS ---
   async function loadEncounters() {
     lists.encounters.innerHTML = "<p>Cargando...</p>";
-    const { data, error } = await supabase
+    let query = supabase
       .from("encounters")
       .select("*")
       .neq("status", "archived")
       .order("created_at", { ascending: false });
+
+    if (!state.isAdmin) {
+      query = query.in("status", ["in_game", "active"]);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error(error);
@@ -426,7 +465,7 @@
 
   function renderEncounters() {
     if (state.encounters.length === 0) {
-      lists.encounters.innerHTML = "<p>No hay encuentros activos.</p>";
+      lists.encounters.innerHTML = "<p>No hay encuentros visibles.</p>";
       return;
     }
 
@@ -438,9 +477,14 @@
       const dateStr = new Date(enc.created_at).toLocaleDateString();
       const roundInfo =
         enc.data?.round > 1 ? ` | Ronda ${enc.data.round}` : "";
+      const status = normalizeEncounterStatus(enc.status);
+      const statusLabel = formatEncounterStatus(status);
 
       card.innerHTML = `
-        <h3>${enc.name}</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <h3 style="margin:0;">${enc.name}</h3>
+          <span class="ct-encounter-status ${status}">${statusLabel}</span>
+        </div>
         <p>${dateStr} - ${instanceCount} participantes${roundInfo}</p>
         <div style="margin-top:10px;">
           <button class="ct-btn primary btn-open-encounter" data-id="${enc.id}">Abrir</button>
@@ -462,12 +506,17 @@
   }
 
   async function createEncounter(name) {
+    if (!state.isAdmin) {
+      alert("Solo administradores pueden crear encuentros.");
+      return;
+    }
     const payload = {
       user_id: state.user.id,
       name: name,
-      status: "active",
+      status: "wip",
       data: {
         instances: [],
+        tokens: [],
         round: 1,
         activeInstanceId: null,
       },
@@ -484,6 +533,21 @@
   function openEncounter(encounter) {
     if (!encounter || !encounter.id) return;
     window.location.hash = "active-encounter?id=" + encounter.id;
+  }
+
+  function normalizeEncounterStatus(status) {
+    if (status === "active") return "in_game";
+    return status || "wip";
+  }
+
+  function formatEncounterStatus(status) {
+    const labels = {
+      wip: "WIP",
+      ready: "Listo",
+      in_game: "En juego",
+      archived: "Archivado",
+    };
+    return labels[status] || status;
   }
 
   // --- SETUP LISTENERS ---
@@ -513,7 +577,7 @@
   function setupEncounterListeners() {
     document
       .getElementById("btn-create-encounter")
-      .addEventListener("click", openEncounterModal);
+      ?.addEventListener("click", openEncounterModal);
 
     // Encounter creation modal
     const formEnc = document.getElementById("form-encounter");

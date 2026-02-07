@@ -74,6 +74,43 @@
     margin: 4px 0;
 }
 
+.ct-encounter-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.ct-encounter-status.wip {
+    color: #f1c40f;
+    background: rgba(241, 196, 15, 0.12);
+    border-color: rgba(241, 196, 15, 0.35);
+}
+
+.ct-encounter-status.ready {
+    color: #5dade2;
+    background: rgba(93, 173, 226, 0.12);
+    border-color: rgba(93, 173, 226, 0.35);
+}
+
+.ct-encounter-status.in_game {
+    color: #2ecc71;
+    background: rgba(46, 204, 113, 0.14);
+    border-color: rgba(46, 204, 113, 0.35);
+}
+
+.ct-encounter-status.archived {
+    color: #aaa;
+    background: rgba(170, 170, 170, 0.12);
+    border-color: rgba(170, 170, 170, 0.25);
+}
+
 .ct-btn {
     background: #333;
     color: #eee;

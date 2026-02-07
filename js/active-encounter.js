@@ -5,12 +5,29 @@
     templates: [],
     characterSheets: [],
     user: null,
+    isAdmin: false,
     selectedInstanceId: null,
+    selectedTokenId: null,
+    isApplyingRemoteUpdate: false,
+    encounterSyncTimer: null,
+    lastEncounterSyncKey: null,
     browserMode: null, // 'npc' | 'pc'
     browserActiveTags: [],
   };
 
   const els = {};
+  const ENCOUNTER_STATUS = {
+    WIP: "wip",
+    READY: "ready",
+    IN_GAME: "in_game",
+    ARCHIVED: "archived",
+  };
+  const STATUS_LABELS = {
+    [ENCOUNTER_STATUS.WIP]: "WIP",
+    [ENCOUNTER_STATUS.READY]: "Listo",
+    [ENCOUNTER_STATUS.IN_GAME]: "En juego",
+    [ENCOUNTER_STATUS.ARCHIVED]: "Archivado",
+  };
 
   // --- Field mapping: character sheet flat keys → display names ---
   const PC_ATTR_MAP = {
@@ -83,7 +100,10 @@
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (session) state.user = session.user;
+    if (session) {
+      state.user = session.user;
+      state.isAdmin = await fetchIsAdmin(session.user.id);
+    }
 
     // DOM Elements
     els.name = document.getElementById("ae-encounter-name");
@@ -108,10 +128,11 @@
     els.modalNotes = document.getElementById("ae-modal-notes");
 
     setupListeners();
-    setupRealtimeSubscription();
 
     await Promise.all([loadTemplates(), loadCharacterSheets()]);
-    await loadEncounterData();
+    const ok = await loadEncounterData();
+    if (!ok) return;
+    setupRealtimeSubscription();
 
     // Init Map
     state.map = new TacticalMap("ae-map-canvas", "ae-map-container");
@@ -119,16 +140,221 @@
       state.encounter?.data?.tokens,
       state.encounter?.data?.instances,
     );
-    state.map.onTokenMove = (id, x, y) => {
+    state.map.setActiveInstance(
+      state.encounter?.data?.activeInstanceId || null,
+    );
+    state.map.onTokenMove = async (id, x, y, oldX, oldY) => {
       const t = state.encounter.data.tokens.find((tk) => tk.id === id);
       if (t) {
-        t.x = x;
-        t.y = y;
-        saveEncounter();
+        if (state.isAdmin) {
+          t.x = x;
+          t.y = y;
+          saveEncounter();
+          return;
+        }
+
+        try {
+          await moveTokenViaRpc(id, x, y);
+        } catch (err) {
+          t.x = oldX ?? t.x;
+          t.y = oldY ?? t.y;
+          if (state.map) state.map.draw();
+          alert(err?.message || "No tienes permisos para mover este token.");
+        }
       }
     };
+    state.map.onTokenSelect = (instId) => {
+      handleTokenSelection(instId);
+    };
+    state.map.onTokenContext = (tokenInfo) => {
+      if (!canEditEncounter()) return;
+      if (!tokenInfo || !tokenInfo.tokenId) {
+        hideTokenContextMenu();
+        return;
+      }
+      openTokenContextMenu(tokenInfo);
+    };
+    state.map.canDragToken = (token) => canCurrentUserControlToken(token);
 
     setupMapControls();
+    applyPermissionsUI();
+    render();
+    window.addEventListener("beforeunload", stopEncounterSyncPolling);
+    window.addEventListener("hashchange", () => {
+      if (!window.location.hash.startsWith("#active-encounter")) {
+        stopEncounterSyncPolling();
+      }
+    });
+  }
+
+  async function fetchIsAdmin(userId) {
+    if (!userId) return false;
+    const { data, error } = await supabase
+      .from("players")
+      .select("is_admin")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) {
+      console.warn("No se pudo resolver rol admin:", error.message);
+      return false;
+    }
+    return !!data?.is_admin;
+  }
+
+  function normalizeEncounterStatus(status) {
+    if (status === "active") return ENCOUNTER_STATUS.IN_GAME;
+    if (
+      status === ENCOUNTER_STATUS.WIP ||
+      status === ENCOUNTER_STATUS.READY ||
+      status === ENCOUNTER_STATUS.IN_GAME ||
+      status === ENCOUNTER_STATUS.ARCHIVED
+    ) {
+      return status;
+    }
+    return ENCOUNTER_STATUS.WIP;
+  }
+
+  function getEncounterStatusLabel(status) {
+    return STATUS_LABELS[normalizeEncounterStatus(status)] || "WIP";
+  }
+
+  function canEditEncounter() {
+    return state.isAdmin;
+  }
+
+  function canCurrentUserControlToken(token) {
+    if (!token || !state.encounter?.data) return false;
+    if (state.isAdmin) return true;
+
+    const status = normalizeEncounterStatus(state.encounter.status);
+    if (status !== ENCOUNTER_STATUS.IN_GAME) return false;
+
+    const inst = (state.encounter.data.instances || []).find(
+      (i) => i.id === token.instanceId,
+    );
+    if (!inst || !inst.isPC || !inst.characterSheetId) return false;
+
+    const sheet = state.characterSheets.find(
+      (s) => s.id === inst.characterSheetId,
+    );
+    return !!sheet && !!state.user && sheet.user_id === state.user.id;
+  }
+
+  async function moveTokenViaRpc(tokenId, x, y) {
+    const { error } = await supabase.rpc("move_encounter_token", {
+      p_encounter_id: state.encounterId,
+      p_token_id: tokenId,
+      p_x: x,
+      p_y: y,
+    });
+    if (error) throw error;
+  }
+
+  function applyPermissionsUI() {
+    const adminOnlyIds = [
+      "btn-ae-browse-npc",
+      "btn-ae-browse-pc",
+      "btn-ae-save",
+      "btn-ae-status-ready",
+      "btn-ae-status-in-game",
+      "btn-ae-status-pause",
+      "btn-ae-archive",
+      "btn-ae-next-turn",
+      "btn-ae-reroll",
+    ];
+
+    adminOnlyIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = canEditEncounter() ? "" : "none";
+    });
+  }
+
+  function handleTokenSelection(selection) {
+    state.selectedTokenId = selection?.tokenId || null;
+
+    // Clear previous selection
+    document.querySelectorAll(".ae-card.selected-token").forEach((el) => {
+      el.classList.remove("selected-token");
+    });
+
+    const instanceId =
+      selection && typeof selection === "object" ? selection.instanceId : null;
+    if (instanceId) {
+      const card = document.querySelector(`.ae-card[data-id="${instanceId}"]`);
+      if (card) {
+        card.classList.add("selected-token");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }
+
+  function ensureTokenContextMenu() {
+    if (els.tokenContextMenu) return els.tokenContextMenu;
+
+    const menu = document.createElement("div");
+    menu.id = "ae-token-context-menu";
+    menu.style.position = "fixed";
+    menu.style.display = "none";
+    menu.style.zIndex = "2000";
+    menu.style.background = "rgba(18, 18, 18, 0.98)";
+    menu.style.border = "1px solid rgba(255, 255, 255, 0.14)";
+    menu.style.borderRadius = "8px";
+    menu.style.padding = "4px";
+    menu.style.minWidth = "140px";
+    menu.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.45)";
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Borrar token";
+    deleteBtn.style.width = "100%";
+    deleteBtn.style.background = "transparent";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.color = "var(--color-cream, #e4d7c5)";
+    deleteBtn.style.padding = "8px 10px";
+    deleteBtn.style.textAlign = "left";
+    deleteBtn.style.borderRadius = "6px";
+    deleteBtn.style.cursor = "pointer";
+    deleteBtn.style.fontSize = "0.86rem";
+
+    deleteBtn.addEventListener("mouseenter", () => {
+      deleteBtn.style.background = "rgba(173, 56, 56, 0.2)";
+    });
+    deleteBtn.addEventListener("mouseleave", () => {
+      deleteBtn.style.background = "transparent";
+    });
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const tokenId = menu.dataset.tokenId;
+      hideTokenContextMenu();
+      if (tokenId) removeTokenById(tokenId);
+    });
+
+    menu.appendChild(deleteBtn);
+    document.body.appendChild(menu);
+    els.tokenContextMenu = menu;
+    return menu;
+  }
+
+  function hideTokenContextMenu() {
+    const menu = els.tokenContextMenu;
+    if (!menu) return;
+    menu.style.display = "none";
+    delete menu.dataset.tokenId;
+  }
+
+  function openTokenContextMenu(tokenInfo) {
+    const menu = ensureTokenContextMenu();
+    menu.dataset.tokenId = tokenInfo.tokenId;
+
+    const maxX = window.innerWidth - 160;
+    const maxY = window.innerHeight - 56;
+    const x = Math.max(8, Math.min(tokenInfo.clientX || 8, maxX));
+    const y = Math.max(8, Math.min(tokenInfo.clientY || 8, maxY));
+
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    menu.style.display = "block";
   }
 
   function setupMapControls() {
@@ -136,7 +362,7 @@
       .getElementById("btn-map-zoom-in")
       ?.addEventListener("click", () => {
         if (state.map) {
-          state.map.scale = Math.min(5, state.map.scale + 0.2);
+          state.map.zoomIn();
           state.map.draw();
         }
       });
@@ -144,7 +370,7 @@
       .getElementById("btn-map-zoom-out")
       ?.addEventListener("click", () => {
         if (state.map) {
-          state.map.scale = Math.max(0.1, state.map.scale - 0.2);
+          state.map.zoomOut();
           state.map.draw();
         }
       });
@@ -202,6 +428,73 @@
         },
       )
       .subscribe();
+
+    supabase
+      .channel(`encounter-${state.encounterId}-changes`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "encounters",
+          filter: `id=eq.${state.encounterId}`,
+        },
+        (payload) => {
+          if (state.isApplyingRemoteUpdate) return;
+          const updated = payload.new;
+          if (!updated) return;
+          applyRemoteEncounterUpdate(updated);
+        },
+      )
+      .subscribe();
+
+    startEncounterSyncPolling();
+  }
+
+  function applyRemoteEncounterUpdate(updated) {
+    if (!updated || !state.encounter) return;
+    state.encounter.status = normalizeEncounterStatus(updated.status);
+    state.encounter.data = updated.data || state.encounter.data;
+    state.lastEncounterSyncKey = buildEncounterSyncKey(updated);
+    sanitizeEncounterTokens();
+    ensureActiveInstance();
+    render();
+  }
+
+  function buildEncounterSyncKey(encounterLike) {
+    if (!encounterLike) return "";
+    return JSON.stringify({
+      status: normalizeEncounterStatus(encounterLike.status),
+      data: encounterLike.data || {},
+    });
+  }
+
+  function startEncounterSyncPolling() {
+    stopEncounterSyncPolling();
+    state.encounterSyncTimer = setInterval(async () => {
+      if (!state.encounterId || state.isApplyingRemoteUpdate) return;
+
+      const { data, error } = await supabase
+        .from("encounters")
+        .select("id, status, data")
+        .eq("id", state.encounterId)
+        .maybeSingle();
+      if (error || !data) return;
+
+      const incomingKey = buildEncounterSyncKey(data);
+      if (
+        !state.lastEncounterSyncKey ||
+        incomingKey !== state.lastEncounterSyncKey
+      ) {
+        applyRemoteEncounterUpdate(data);
+      }
+    }, 1500);
+  }
+
+  function stopEncounterSyncPolling() {
+    if (!state.encounterSyncTimer) return;
+    clearInterval(state.encounterSyncTimer);
+    state.encounterSyncTimer = null;
   }
 
   function extractPCHealth(charData) {
@@ -218,24 +511,41 @@
     return healthKeys.map((key) => parseInt(charData[key]) || 0);
   }
 
+  function requireAdminAction() {
+    if (canEditEncounter()) return true;
+    alert("Solo administradores pueden realizar esta acción.");
+    return false;
+  }
+
   function setupListeners() {
     document.getElementById("btn-ae-back").addEventListener("click", () => {
       window.location.hash = "combat-tracker";
     });
 
-    document
-      .getElementById("btn-ae-save")
-      .addEventListener("click", saveEncounter);
+    document.getElementById("btn-ae-save").addEventListener("click", () => {
+      if (!requireAdminAction()) return;
+      saveEncounter();
+    });
     document
       .getElementById("btn-ae-browse-npc")
-      .addEventListener("click", () => openBrowser("npc"));
+      .addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        openBrowser("npc");
+      });
     document
       .getElementById("btn-ae-browse-pc")
-      .addEventListener("click", () => openBrowser("pc"));
+      .addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        openBrowser("pc");
+      });
     document
       .getElementById("btn-ae-next-turn")
-      .addEventListener("click", nextTurn);
+      .addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        nextTurn();
+      });
     document.getElementById("btn-ae-reroll").addEventListener("click", () => {
+      if (!requireAdminAction()) return;
       if (
         confirm(
           "¿Resetear iniciativa? Esto reiniciará la ronda y mezclará el orden.",
@@ -246,8 +556,28 @@
     });
 
     document
+      .getElementById("btn-ae-status-ready")
+      ?.addEventListener("click", async () => {
+        if (!requireAdminAction()) return;
+        await updateEncounterStatus(ENCOUNTER_STATUS.READY);
+      });
+    document
+      .getElementById("btn-ae-status-in-game")
+      ?.addEventListener("click", async () => {
+        if (!requireAdminAction()) return;
+        await updateEncounterStatus(ENCOUNTER_STATUS.IN_GAME);
+      });
+    document
+      .getElementById("btn-ae-status-pause")
+      ?.addEventListener("click", async () => {
+        if (!requireAdminAction()) return;
+        await updateEncounterStatus(ENCOUNTER_STATUS.READY);
+      });
+
+    document
       .getElementById("btn-ae-archive")
       .addEventListener("click", async () => {
+        if (!requireAdminAction()) return;
         if (
           confirm(
             `¿Archivar "${state.encounter?.name || "este encuentro"}"? No aparecerá en la lista de encuentros activos.`,
@@ -255,7 +585,7 @@
         ) {
           const { error } = await supabase
             .from("encounters")
-            .update({ status: "archived" })
+            .update({ status: ENCOUNTER_STATUS.ARCHIVED })
             .eq("id", state.encounterId);
           if (!error) window.location.hash = "combat-tracker";
         }
@@ -296,11 +626,34 @@
     document
       .getElementById("btn-modal-heal")
       .addEventListener("click", () => handleModalAction("heal"));
+
+    document.addEventListener("click", (e) => {
+      if (
+        !els.tokenContextMenu ||
+        els.tokenContextMenu.style.display === "none"
+      )
+        return;
+      if (!els.tokenContextMenu.contains(e.target)) hideTokenContextMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hideTokenContextMenu();
+    });
+    window.addEventListener(
+      "scroll",
+      () => {
+        hideTokenContextMenu();
+      },
+      true,
+    );
   }
 
   // --- DATA LOADING ---
 
   async function loadTemplates() {
+    if (!canEditEncounter()) {
+      state.templates = [];
+      return;
+    }
     const { data } = await supabase
       .from("templates")
       .select("*")
@@ -314,7 +667,7 @@
   async function loadCharacterSheets() {
     const { data } = await supabase
       .from("character_sheets")
-      .select("id, name, data, avatar_url")
+      .select("id, name, data, avatar_url, user_id")
       .order("name");
     if (data) {
       state.characterSheets = data;
@@ -329,9 +682,26 @@
       .single();
     if (error || !data) {
       alert("Error cargando encuentro: " + (error?.message || "No encontrado"));
-      return;
+      return false;
     }
     state.encounter = data;
+    state.encounter.status = normalizeEncounterStatus(state.encounter.status);
+    state.lastEncounterSyncKey = buildEncounterSyncKey(state.encounter);
+
+    // Legacy migration: active -> in_game
+    if (data.status === "active" && canEditEncounter()) {
+      updateEncounterStatus(ENCOUNTER_STATUS.IN_GAME, { silent: true });
+    }
+
+    if (
+      !canEditEncounter() &&
+      normalizeEncounterStatus(state.encounter.status) !==
+        ENCOUNTER_STATUS.IN_GAME
+    ) {
+      alert("Este encuentro no está disponible para jugadores.");
+      window.location.hash = "combat-tracker";
+      return false;
+    }
 
     // Data migration & Health Init
     if (Array.isArray(state.encounter.data)) {
@@ -354,6 +724,8 @@
       state.encounter.data.tokens = [];
     }
 
+    const { changed } = sanitizeEncounterTokens();
+
     // Sync PC data from character sheets on load
     state.encounter.data.instances.forEach((inst) => {
       if (inst.isPC) {
@@ -363,32 +735,110 @@
         if (sheet) {
           inst.pcHealth = extractPCHealth(sheet.data);
           inst.avatarUrl = sheet.avatar_url || inst.avatarUrl;
+
+          // Also update token imgUrl
+          const token = state.encounter.data.tokens.find(
+            (t) => t.instanceId === inst.id,
+          );
+          if (token && sheet.avatar_url) {
+            token.imgUrl = sheet.avatar_url;
+          }
         }
       }
     });
 
     ensureActiveInstance();
     render();
+    if (changed) {
+      saveEncounter();
+    }
+    return true;
+  }
+
+  async function updateEncounterStatus(nextStatus, options = {}) {
+    if (!state.encounter || !nextStatus) return;
+    const prevStatus = normalizeEncounterStatus(state.encounter.status);
+    if (prevStatus === nextStatus) return;
+
+    const allowedTransitions = {
+      [ENCOUNTER_STATUS.WIP]: [
+        ENCOUNTER_STATUS.READY,
+        ENCOUNTER_STATUS.ARCHIVED,
+      ],
+      [ENCOUNTER_STATUS.READY]: [
+        ENCOUNTER_STATUS.IN_GAME,
+        ENCOUNTER_STATUS.ARCHIVED,
+      ],
+      [ENCOUNTER_STATUS.IN_GAME]: [
+        ENCOUNTER_STATUS.READY,
+        ENCOUNTER_STATUS.ARCHIVED,
+      ],
+      [ENCOUNTER_STATUS.ARCHIVED]: [],
+    };
+    const canTransition =
+      nextStatus === ENCOUNTER_STATUS.ARCHIVED ||
+      (allowedTransitions[prevStatus] || []).includes(nextStatus);
+    if (!canTransition) {
+      if (!options.silent) {
+        alert("Transición de estado no permitida.");
+      }
+      return;
+    }
+
+    state.isApplyingRemoteUpdate = true;
+    const { error } = await supabase
+      .from("encounters")
+      .update({ status: nextStatus })
+      .eq("id", state.encounterId);
+    if (error) {
+      if (!options.silent) alert("Error actualizando estado: " + error.message);
+      setTimeout(() => {
+        state.isApplyingRemoteUpdate = false;
+      }, 200);
+      return;
+    }
+    state.encounter.status = nextStatus;
+    render();
+    setTimeout(() => {
+      state.isApplyingRemoteUpdate = false;
+    }, 200);
   }
 
   function ensureActiveInstance() {
     const d = state.encounter.data;
-    if (!d.activeInstanceId && d.instances && d.instances.length > 0) {
-      const sorted = [...d.instances].sort(
+    if (!d.instances || d.instances.length === 0) {
+      d.activeInstanceId = null;
+      return;
+    }
+
+    const current = d.instances.find((i) => i.id === d.activeInstanceId);
+    if (current && !isInstanceDown(current)) return;
+
+    const alive = d.instances.filter((i) => !isInstanceDown(i));
+    if (alive.length > 0) {
+      const sortedAlive = [...alive].sort(
         (a, b) => (b.initiative || 0) - (a.initiative || 0),
       );
-      d.activeInstanceId = sorted[0].id;
+      d.activeInstanceId = sortedAlive[0].id;
+      return;
     }
+
+    d.activeInstanceId = null;
   }
 
   // --- RENDER ---
 
   function render() {
     if (!state.encounter) return;
+    sanitizeEncounterTokens();
+    hideTokenContextMenu();
 
     els.name.textContent = state.encounter.name;
-    els.status.textContent = state.encounter.status;
+    const status = normalizeEncounterStatus(state.encounter.status);
+    els.status.textContent = getEncounterStatusLabel(status);
+    els.status.className = `ae-status-chip ${status}`;
     els.roundCounter.textContent = state.encounter.data.round || 1;
+    updateStatusButtons(status);
 
     // Refresh Map Data
     if (state.map) {
@@ -419,7 +869,7 @@
       row.className = "ae-timeline-row";
 
       const isActive = activeId && inst.id === activeId;
-      const isDead = inst.status === "dead" || inst.health <= 0;
+      const isDead = isInstanceDown(inst);
       const isPC = inst.isPC === true;
 
       const hpPct = (inst.health / inst.maxHealth) * 100;
@@ -479,8 +929,8 @@
       }
 
       row.innerHTML = `
-        <div class="ae-init-bubble">
-          <input type="number" class="init-input ae-bubble-input" value="${inst.initiative || 0}">
+        <div class="ae-init-bubble" style="${isDead ? "visibility: hidden !important; opacity: 0;" : ""}">
+          ${isDead ? "" : `<input type="number" class="init-input ae-bubble-input" value="${inst.initiative || 0}">`}
         </div>
 
         <div class="ae-card ${activeClass} ${deadClass} ${pcClass}" data-id="${inst.id}">
@@ -498,9 +948,12 @@
 
       // Initiative change
       const inputInit = row.querySelector(".init-input");
-      inputInit.addEventListener("change", (e) =>
-        updateInitiative(inst.id, e.target.value),
-      );
+      if (inputInit) {
+        inputInit.disabled = !canEditEncounter();
+        inputInit.addEventListener("change", (e) =>
+          updateInitiative(inst.id, e.target.value),
+        );
+      }
 
       // Card click -> Open Modal
       row.querySelector(".ae-card").addEventListener("click", (e) => {
@@ -516,10 +969,16 @@
       // Delete button
       row.querySelector(".ae-btn-delete").addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!requireAdminAction()) return;
         if (confirm(`¿Eliminar ${inst.name} (${inst.code})?`)) {
           removeInstance(inst.id);
         }
       });
+
+      if (!canEditEncounter()) {
+        const delBtn = row.querySelector(".ae-btn-delete");
+        if (delBtn) delBtn.style.display = "none";
+      }
 
       els.timeline.appendChild(row);
     });
@@ -533,9 +992,28 @@
     });
   }
 
+  function updateStatusButtons(status) {
+    const btnReady = document.getElementById("btn-ae-status-ready");
+    const btnInGame = document.getElementById("btn-ae-status-in-game");
+    const btnPause = document.getElementById("btn-ae-status-pause");
+    if (!btnReady || !btnInGame || !btnPause) return;
+
+    if (!canEditEncounter()) {
+      btnReady.style.display = "none";
+      btnInGame.style.display = "none";
+      btnPause.style.display = "none";
+      return;
+    }
+
+    btnReady.style.display = status === ENCOUNTER_STATUS.WIP ? "" : "none";
+    btnInGame.style.display = status === ENCOUNTER_STATUS.READY ? "" : "none";
+    btnPause.style.display = status === ENCOUNTER_STATUS.IN_GAME ? "" : "none";
+  }
+
   // --- ADD NPC ---
 
   async function addNPC(tplId, count) {
+    if (!canEditEncounter()) return;
     if (!tplId) return;
     count = count || 1;
 
@@ -608,6 +1086,7 @@
   // --- ADD PC from Character Sheet ---
 
   async function addPC(sheetId) {
+    if (!canEditEncounter()) return;
     if (!sheetId) return;
 
     const sheet = state.characterSheets.find((s) => s.id === sheetId);
@@ -687,8 +1166,19 @@
   }
 
   function buildPCGroups(charData) {
+    const flatAttrMap = {
+      ...PC_ATTR_MAP.physical,
+      ...PC_ATTR_MAP.social,
+      ...PC_ATTR_MAP.mental,
+    };
+    const flatAbilityMap = {
+      ...PC_ABILITY_MAP.talents,
+      ...PC_ABILITY_MAP.skills,
+      ...PC_ABILITY_MAP.knowledges,
+    };
+
     // Build Atributos
-    const attrFields = Object.entries(PC_FIELD_MAP).map(([key, name]) => {
+    const attrFields = Object.entries(flatAttrMap).map(([key, name]) => {
       const def = window.TEMPLATE_DEFINITIONS.npc.groups[0].fields.find(
         (f) => f.name === name,
       );
@@ -700,7 +1190,7 @@
     });
 
     // Build Habilidades
-    const skillFields = Object.entries(PC_SKILL_MAP).map(([key, name]) => {
+    const skillFields = Object.entries(flatAbilityMap).map(([key, name]) => {
       const def = window.TEMPLATE_DEFINITIONS.npc.groups[1].fields.find(
         (f) => f.name === name,
       );
@@ -735,8 +1225,10 @@
   // --- INSTANCE MANAGEMENT ---
 
   function removeInstance(id) {
+    if (!canEditEncounter()) return;
     const d = state.encounter.data;
     d.instances = d.instances.filter((i) => i.id !== id);
+    d.tokens = (d.tokens || []).filter((t) => t.instanceId !== id);
 
     if (d.activeInstanceId === id) {
       d.activeInstanceId = null;
@@ -752,7 +1244,25 @@
     saveEncounter();
   }
 
+  function removeTokenById(tokenId) {
+    if (!canEditEncounter()) return;
+    if (!state.encounter?.data) return;
+    const d = state.encounter.data;
+    const prevLen = (d.tokens || []).length;
+    d.tokens = (d.tokens || []).filter((t) => t.id !== tokenId);
+    if (d.tokens.length === prevLen) return;
+
+    state.selectedTokenId = null;
+    if (state.map) {
+      state.map.selectedTokenId = null;
+    }
+
+    render();
+    saveEncounter();
+  }
+
   function updateInitiative(id, val) {
+    if (!canEditEncounter()) return;
     const inst = state.encounter.data.instances.find((i) => i.id === id);
     if (inst) {
       inst.initiative = parseInt(val) || 0;
@@ -762,6 +1272,7 @@
   }
 
   function rerollAllInitiatives() {
+    if (!canEditEncounter()) return;
     const d = state.encounter.data;
     if (!d.instances || d.instances.length === 0) return;
 
@@ -786,10 +1297,19 @@
   // --- TURN MANAGEMENT ---
 
   function nextTurn() {
+    if (!canEditEncounter()) return;
     const d = state.encounter.data;
     if (!d.instances || d.instances.length === 0) return;
 
-    const sorted = [...d.instances].sort(
+    const alive = d.instances.filter((i) => !isInstanceDown(i));
+    if (alive.length === 0) {
+      d.activeInstanceId = null;
+      render();
+      saveEncounter();
+      return;
+    }
+
+    const sorted = [...alive].sort(
       (a, b) => (b.initiative || 0) - (a.initiative || 0),
     );
 
@@ -816,6 +1336,7 @@
   }
 
   function handleAction(id, type) {
+    if (!canEditEncounter()) return;
     const inst = state.encounter.data.instances.find((i) => i.id === id);
     if (!inst) return;
 
@@ -842,6 +1363,7 @@
   // --- ENTITY BROWSER ---
 
   function openBrowser(mode) {
+    if (!canEditEncounter()) return;
     state.browserMode = mode;
     state.browserActiveTags = [];
     els.browserSearch.value = "";
@@ -1072,6 +1594,14 @@
   function openModal(inst) {
     if (window.AE_Picker) window.AE_Picker.init();
 
+    const dmgBtn = document.getElementById("btn-modal-dmg");
+    const healBtn = document.getElementById("btn-modal-heal");
+    const dmgInput = document.getElementById("ae-damage-amount");
+    const healInput = document.getElementById("ae-heal-amount");
+    [dmgBtn, healBtn, dmgInput, healInput].forEach((el) => {
+      if (el) el.disabled = !canEditEncounter();
+    });
+
     if (inst.isPC) {
       renderPCModal(inst);
     } else {
@@ -1099,6 +1629,7 @@
     els.modalTitle.appendChild(codeSpan);
 
     nameSpan.addEventListener("click", () => {
+      if (!canEditEncounter()) return;
       const input = document.createElement("input");
       input.type = "text";
       input.value = inst.name;
@@ -1141,7 +1672,8 @@
 
     // Show health controls for NPCs
     const healthControls = els.modal.querySelector(".ae-health-section");
-    if (healthControls) healthControls.style.display = "block";
+    if (healthControls)
+      healthControls.style.display = canEditEncounter() ? "block" : "none";
 
     // Show Notes for NPCs
     if (els.modalNotes) {
@@ -1159,6 +1691,9 @@
     const groups = inst.groups
       ? inst.groups
       : window.TEMPLATE_DEFINITIONS.npc.groups;
+
+    // Token Section
+    els.modalStats.appendChild(renderTokenSection(inst, els.modalStats));
 
     groups.forEach((group, gIdx) => {
       const fieldset = document.createElement("fieldset");
@@ -1204,6 +1739,7 @@
           valSpan.dataset.statName = f.name;
 
           valSpan.addEventListener("click", (e) => {
+            if (!canEditEncounter()) return;
             e.stopPropagation();
             const currentInt = parseInt(valSpan.textContent) || 0;
             if (window.AE_Picker) {
@@ -1266,6 +1802,9 @@
 
     els.modalStats.innerHTML = "";
     els.modalStats.className = "ae-pc-readonly-view";
+
+    // Token Section
+    els.modalStats.appendChild(renderTokenSection(inst, els.modalStats));
 
     // Attributes
     const attrFieldset = document.createElement("fieldset");
@@ -1461,6 +2000,154 @@
     }
   }
 
+  function renderTokenSection(inst, container) {
+    // Check if token already exists
+    const token = state.encounter.data.tokens.find(
+      (t) => t.instanceId === inst.id,
+    );
+    const isOnMap = !!token;
+
+    const section = document.createElement("div");
+    section.className = "ae-token-section";
+    section.style.textAlign = "center";
+    section.style.marginBottom = "16px";
+    section.style.borderBottom = "1px solid rgba(255,255,255,0.1)";
+    section.style.paddingBottom = "16px";
+
+    const title = document.createElement("h4");
+    title.textContent = "Token";
+    title.style.color = "#aaa";
+    title.style.textTransform = "uppercase";
+    title.style.fontSize = "0.7rem";
+    title.style.letterSpacing = "1px";
+    title.style.marginBottom = "8px";
+    section.appendChild(title);
+
+    const previewContainer = document.createElement("div");
+    previewContainer.className = `ae-token-preview ${isOnMap ? "active" : ""}`;
+    previewContainer.style.width = "60px";
+    previewContainer.style.height = "60px";
+    previewContainer.style.borderRadius = "50%";
+    previewContainer.style.margin = "0 auto";
+    previewContainer.style.cursor = "pointer";
+    previewContainer.style.position = "relative";
+    previewContainer.style.overflow = "hidden";
+
+    let borderColor = "#444"; // Default off-map/inactive
+    if (isOnMap) {
+      borderColor = inst.isPC
+        ? "var(--color-gold, #c5a059)"
+        : "var(--color-selected-token, #ff9800)";
+    }
+
+    previewContainer.style.border = `2px solid ${borderColor}`;
+    previewContainer.style.transition = "all 0.2s ease";
+
+    // Image logic
+    const imgUrl = inst.avatarUrl || inst.data?.avatarUrl;
+    if (imgUrl) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.objectFit = "cover";
+      previewContainer.appendChild(img);
+    } else {
+      const initials = document.createElement("div");
+      initials.textContent = inst.name[0];
+      initials.style.width = "100%";
+      initials.style.height = "100%";
+      initials.style.display = "flex";
+      initials.style.alignItems = "center";
+      initials.style.justifyContent = "center";
+      initials.style.backgroundColor = "#333";
+      initials.style.color = "#ccc";
+      initials.style.fontSize = "1.5rem";
+      initials.style.fontWeight = "bold";
+      previewContainer.appendChild(initials);
+    }
+
+    // Code Overlay (mimic map)
+    if (!imgUrl) {
+      const codeOverlay = document.createElement("div");
+      codeOverlay.textContent = inst.code;
+      codeOverlay.style.position = "absolute";
+      codeOverlay.style.top = "50%";
+      codeOverlay.style.left = "50%";
+      codeOverlay.style.transform = "translate(-50%, -50%)";
+      codeOverlay.style.color = "#fff";
+      codeOverlay.style.fontWeight = "bold";
+      codeOverlay.style.fontSize = "0.9rem";
+      codeOverlay.style.textShadow = "0 0 3px #000";
+      codeOverlay.style.background = "rgba(0,0,0,0.5)";
+      codeOverlay.style.borderRadius = "50%";
+      codeOverlay.style.width = "36px";
+      codeOverlay.style.height = "36px";
+      codeOverlay.style.display = "flex";
+      codeOverlay.style.alignItems = "center";
+      codeOverlay.style.justifyContent = "center";
+      previewContainer.appendChild(codeOverlay);
+    }
+
+    section.appendChild(previewContainer);
+
+    const statusText = document.createElement("div");
+    statusText.textContent = isOnMap
+      ? "En Mapa (Click para quitar)"
+      : "Oculto (Click para agregar)";
+    statusText.style.fontSize = "0.7rem";
+    statusText.style.marginTop = "6px";
+    statusText.style.color = isOnMap ? "#2ecc71" : "#888"; // Green if active, gray if not
+    section.appendChild(statusText);
+
+    // Toggle Click Logic
+    previewContainer.addEventListener("click", () => {
+      if (!canEditEncounter()) return;
+      if (isOnMap) {
+        // Remove token
+        state.encounter.data.tokens = state.encounter.data.tokens.filter(
+          (t) => t.instanceId !== inst.id,
+        );
+      } else {
+        // Add token
+        // Calculate center of view
+        let x = 0;
+        let y = 0;
+        if (state.map) {
+          // Center of viewport in world coords
+          const canvasW = state.map.canvas.width;
+          const canvasH = state.map.canvas.height;
+          x = Math.round(
+            (-state.map.offsetX + canvasW / 2) / state.map.scale / 50,
+          );
+          y = Math.round(
+            (-state.map.offsetY + canvasH / 2) / state.map.scale / 50,
+          );
+        }
+
+        state.encounter.data.tokens.push({
+          id: crypto.randomUUID(),
+          instanceId: inst.id,
+          x: x,
+          y: y,
+          size: 1,
+          imgUrl: imgUrl || null,
+        });
+      }
+
+      saveEncounter();
+      render(); // Updates map
+
+      // Re-render this section in place to update UI
+      if (container.contains(section)) {
+        const newSection = renderTokenSection(inst, container);
+        container.replaceChild(newSection, section);
+      }
+    });
+
+    return section;
+  }
+
   function closeModal() {
     els.modal.style.display = "none";
     state.selectedInstanceId = null;
@@ -1480,21 +2167,61 @@
 
   // --- SAVE ---
 
+  function sanitizeEncounterTokens() {
+    const d = state.encounter?.data;
+    if (!d) return { changed: false, removedCount: 0 };
+
+    const validIds = new Set((d.instances || []).map((i) => i.id));
+    const tokens = d.tokens || [];
+    const nextTokens = tokens.filter((t) => t && validIds.has(t.instanceId));
+    const removedCount = tokens.length - nextTokens.length;
+    const changed = removedCount > 0;
+
+    if (changed) {
+      d.tokens = nextTokens;
+      if (state.selectedTokenId) {
+        const stillExists = nextTokens.some(
+          (t) => t.id === state.selectedTokenId,
+        );
+        if (!stillExists) {
+          state.selectedTokenId = null;
+          if (state.map) state.map.selectedTokenId = null;
+        }
+      }
+    }
+
+    return { changed, removedCount };
+  }
+
   async function saveEncounter() {
     if (!state.encounter) return;
+    if (!canEditEncounter()) return;
+    sanitizeEncounterTokens();
     const btn = document.getElementById("btn-ae-save");
     const prevText = btn.textContent;
     btn.textContent = "Guardando...";
 
+    // Remove runtime-only image objects before persisting.
+    const cleanData = {
+      ...state.encounter.data,
+      tokens: (state.encounter.data.tokens || []).map(({ img, ...token }) => ({
+        ...token,
+      })),
+    };
+
+    state.isApplyingRemoteUpdate = true;
     const { error } = await supabase
       .from("encounters")
-      .update({ data: state.encounter.data })
+      .update({ data: cleanData })
       .eq("id", state.encounterId);
 
     if (error) alert("Error: " + error.message);
 
     btn.textContent = "Guardado";
     setTimeout(() => (btn.textContent = prevText), 1000);
+    setTimeout(() => {
+      state.isApplyingRemoteUpdate = false;
+    }, 200);
   }
 
   // --- UTILITIES ---
@@ -1540,6 +2267,24 @@
     if (pct > 50) return "high";
     if (pct > 20) return "med";
     return "low";
+  }
+
+  function isInstanceDown(inst) {
+    if (!inst) return false;
+
+    if (
+      inst.status === "dead" ||
+      inst.status === "incapacitated" ||
+      (parseInt(inst.health, 10) || 0) <= 0
+    ) {
+      return true;
+    }
+
+    if (inst.isPC && Array.isArray(inst.pcHealth) && inst.pcHealth.length > 0) {
+      return inst.pcHealth.every((val) => (parseInt(val, 10) || 0) > 0);
+    }
+
+    return false;
   }
 
   // Auto-init
