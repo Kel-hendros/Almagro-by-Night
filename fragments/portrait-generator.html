@@ -146,15 +146,9 @@
     </div>
 </div>
 
-<script>
-    // Using dynamic import because the router executes this via eval(), which doesn't support static imports
-    // Using relative path 'tools/...' because this script is eval'd by router.js which is in 'js/' directory
-    import('./tools/portrait-generator/generator.js')
-        .then(module => {
-            module.initPortraitGenerator();
-        })
-        .catch(err => {
-            console.error("Failed to load Portrait Generator:", err);
-            document.getElementById('preset-list').innerHTML = `<p style="color:red; padding:1rem">Error cargando el módulo: ${err.message}</p>`;
-        });
+<script type="module">
+    import { initPortraitGenerator } from './js/tools/portrait-generator/generator.js';
+
+    // Init when the module is loaded
+    initPortraitGenerator();
 </script>
