@@ -135,7 +135,7 @@ async function loadRoute(force = false) {
   }
 
   // Execute any embedded <script> tags in the fragment
-  contentEl.querySelectorAll("script").forEach((s) => eval(s.textContent));
+  // contentEl.querySelectorAll("script").forEach((s) => eval(s.textContent));
 
   // View-specific initialization
   if (

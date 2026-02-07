@@ -1,4 +1,4 @@
-class TacticalMap {
+window.TacticalMap = class TacticalMap {
   constructor(canvasId, containerId) {
     this.canvas = document.getElementById(canvasId);
     this.container = document.getElementById(containerId);
@@ -172,6 +172,7 @@ class TacticalMap {
     // Pan and Zoom listeners
     this.canvas.addEventListener("wheel", (e) => this.handleWheel(e));
     this.canvas.addEventListener("mousedown", (e) => this.handleMouseDown(e));
+    this.canvas.addEventListener("contextmenu", (e) => e.preventDefault()); // Stop right-click menu
     window.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     window.addEventListener("mouseup", (e) => this.handleMouseUp(e));
   }
@@ -201,6 +202,7 @@ class TacticalMap {
   handleMouseDown(e) {
     if (e.button === 1 || e.button === 2 || e.metaKey) {
       // Pan: Middle, Right, or Meta+Left
+      e.preventDefault(); // Stop default browser behavior (scrolling etc)
       this.isPanning = true;
       this.dragStart = { x: e.clientX, y: e.clientY };
     } else if (e.button === 0) {
@@ -280,6 +282,4 @@ class TacticalMap {
       this.draggedToken = null;
     }
   }
-}
-
-window.TacticalMap = TacticalMap;
+};
