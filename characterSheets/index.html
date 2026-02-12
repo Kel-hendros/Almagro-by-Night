@@ -1,25 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
-    <title>
-        Vampiro v20 - Hoja de Personaje
-    </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampiro v20 - Hoja de Personaje</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans:wght@400;500;600;700&family=UnifrakturCook:wght@700&family=Lato:wght@400;700&family=Courier+Prime:wght@400;700&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://code.iconify.design/iconify-icon/2.2.0/iconify-icon.min.js"></script>
     <script src="https://kit.fontawesome.com/8a611956c8.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
     <script src="../js/supabase.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Special+Elite&family=UnifrakturCook:wght@700&family=Lato:wght@400;700&family=Courier+Prime:wght@400;700&family=VT323&display=swap"
-        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml/dist/js-yaml.min.js"></script>
     <link rel="stylesheet" href="../css/ghoul.css">
     <script src="../js/ghoul.js" defer></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 
 <body>
@@ -45,7 +44,7 @@
     <div id="ghoul-modal-overlay">
         <div id="ghoul-modal-content">
             <div class="ghoul-modal-header">
-                <h2 id="ghoul-modal-title">Título</h2>
+                <h2 id="ghoul-modal-title">Titulo</h2>
                 <button id="ghoul-modal-close" class="ghoul-modal-close">&times;</button>
             </div>
             <div id="ghoul-markdown-body" class="ghoul-markdown-body"></div>
@@ -65,1565 +64,1049 @@
         </div>
     </div>
 
-    <div style="position: absolute; top: 10px; left: 10px; z-index: 1000;">
-        <a href="../index.html#character-sheets"
-            style="color: white; text-decoration: none; background: #333; padding: 5px 10px; border-radius: 5px;">&larr;
-            Volver</a>
-    </div>
-    <div class="super-container">
-        <div class="column-left">
-            <!-- INFORMACION -->
-            <div class="container info">
-                <div class="column">
-                    <div class="form-group info">
-                        <label for="naturaleza">Naturaleza:</label>
-                        <input type="text" id="naturaleza" autocomplete="off">
+    <!-- Background effect -->
+    <div class="beta-bg"></div>
+
+    <div class="beta-shell">
+        <!-- ==================== HEADER ==================== -->
+        <header class="beta-header">
+            <a class="profile-back-link" id="profile-link" href="../index.html#character-sheets" aria-label="Volver">
+                <input type="hidden" id="header-logo-value" name="logo" value="G">
+                <p id="header-logo-display" class="header-clan-sigil">G</p>
+            </a>
+            <div class="character-identity">
+                <div class="identity-grid identity-grid-primary">
+                    <div class="identity-item identity-item-name">
+                        <label for="nombre">Nombre</label>
+                        <input id="nombre" type="text" autocomplete="off">
                     </div>
-                    <div class="form-group info">
-                        <label for="conducta">Conducta:</label>
-                        <input type="text" id="conducta" autocomplete="off">
+                    <div class="identity-item identity-item-clan">
+                        <label for="clan">Clan</label>
+                        <div class="clan-field-wrap">
+                            <input id="clan" class="clan-picker-input" type="text" autocomplete="off" readonly>
+                            <span id="clan-field-sigil" class="clan-field-sigil"></span>
+                        </div>
                     </div>
-                    <div class="form-group info">
-                        <label for="concepto">Concepto:</label>
-                        <input type="text" id="concepto" autocomplete="off">
+                    <div class="identity-item">
+                        <label for="generacion">Generacion</label>
+                        <select id="generacion" autocomplete="off">
+                            <option value="14">14</option>
+                            <option value="13" selected>13</option>
+                            <option value="12">12</option>
+                            <option value="11">11</option>
+                            <option value="10">10</option>
+                            <option value="9">9</option>
+                            <option value="8">8</option>
+                            <option value="7">7</option>
+                            <option value="6">6</option>
+                            <option value="5">5</option>
+                            <option value="4">4</option>
+                            <option value="3">3</option>
+                        </select>
                     </div>
-                    <div class="form-group info">
-                        <label for="debilidad">Debilidad del Clan:</label>
-                        <input type="text" id="debilidad" autocomplete="off">
+                    <div class="identity-item">
+                        <label for="sire">Sire</label>
+                        <input id="sire" type="text" autocomplete="off">
+                    </div>
+                </div>
+                <div class="identity-grid identity-grid-secondary">
+                    <div class="identity-item">
+                        <label for="naturaleza">Naturaleza</label>
+                        <input id="naturaleza" type="text" autocomplete="off">
+                    </div>
+                    <div class="identity-item">
+                        <label for="conducta">Conducta</label>
+                        <input id="conducta" type="text" autocomplete="off">
+                    </div>
+                    <div class="identity-item">
+                        <label for="concepto">Concepto</label>
+                        <input id="concepto" type="text" autocomplete="off">
+                    </div>
+                    <div class="identity-item">
+                        <label for="debilidad">Debilidad del Clan</label>
+                        <input id="debilidad" type="text" autocomplete="off">
                     </div>
                 </div>
             </div>
-            <!-- TAB CONTENEDOR -->
-            <div class="tab-container">
-                <div class="seccion-container">
-                    <div class="seccion-linea"></div>
-                    <h1 class="seccion">Ventajas</h1>
-                    <div class="seccion-linea"></div>
-                </div>
-                <div class="tab-buttons-container">
-                    <button class="tab-button active" data-tab="tab1">Disciplinas</button>
-                    <button class="tab-button" data-tab="tab2">Trasfondos</button>
-                    <button class="tab-button" data-tab="tab3">Virtudes</button>
-                    <button class="tab-button" data-tab="tab4">Meritos y Defectos</button>
-                </div>
-                <!-- DISCIPLINAS -->
-                <div id="tab1" class="tab-content active">
-                    <div class="discipline-container">
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina1" autocomplete="off">
-                            <div class="rating" id="disciplina1-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+            <div class="header-actions" aria-label="Acciones rapidas">
+                <button class="header-mini-btn" type="button" id="modeToggle" aria-label="Opciones" title="Opciones">
+                    <i class="bi bi-gear-fill" aria-hidden="true"></i>
+                </button>
+                <button class="header-mini-btn discord-btn" type="button" id="discord-btn" aria-label="Discord" title="Configurar Discord webhook">
+                    <i class="bi bi-discord" aria-hidden="true"></i>
+                </button>
+                <button class="header-mini-btn" type="button" aria-label="Guardar JSON" title="Guardar JSON" onclick="downloadCharacterData()">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                </button>
+                <button class="header-mini-btn" type="button" aria-label="Cargar JSON" title="Cargar JSON" onclick="clickOnFileInput()">
+                    <i class="bi bi-upload" aria-hidden="true"></i>
+                </button>
+                <input type="file" id="file-input" hidden accept=".json">
+            </div>
+        </header>
+
+        <!-- ==================== MAIN GRID ==================== -->
+        <main class="beta-grid">
+
+            <!-- ========== CORE COLUMN (LEFT) ========== -->
+            <aside class="core-column">
+
+                <!-- SALUD -->
+                <section class="card card-soft health-card health-container">
+                    <div class="vital vital-health">
+                        <h1 class="health-title">Salud</h1>
+                        <div class="health-ladder">
+                            <div class="health-row">
+                                <span>Magullado</span>
+                                <span></span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Magullado"></button>
+                                <input class="inputHealth" type="hidden" id="magullado-value" name="magullado" value="0">
                             </div>
-                            <input type="hidden" id="disciplina1-value" name="disciplina1" value="0">
+                            <div class="health-row">
+                                <span>Lastimado</span>
+                                <span>-1</span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Lastimado"></button>
+                                <input class="inputHealth" type="hidden" id="lastimado-value" name="lastimado" value="0">
+                            </div>
+                            <div class="health-row">
+                                <span>Lesionado</span>
+                                <span>-1</span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Lesionado"></button>
+                                <input class="inputHealth" type="hidden" id="lesionado-value" name="lesionado" value="0">
+                            </div>
+                            <div class="health-row">
+                                <span>Herido</span>
+                                <span>-2</span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Herido"></button>
+                                <input class="inputHealth" type="hidden" id="herido-value" name="herido" value="0">
+                            </div>
+                            <div class="health-row">
+                                <span>Malherido</span>
+                                <span>-2</span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Malherido"></button>
+                                <input class="inputHealth" type="hidden" id="malherido-value" name="Malherido" value="0">
+                            </div>
+                            <div class="health-row">
+                                <span>Tullido</span>
+                                <span>-5</span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Tullido"></button>
+                                <input class="inputHealth" type="hidden" id="tullido-value" name="tullido" value="0">
+                            </div>
+                            <div class="health-row">
+                                <span>Incapacitado</span>
+                                <span></span>
+                                <button class="health-square square" data-health-value="0" type="button" aria-label="Incapacitado"></button>
+                                <input class="inputHealth" type="hidden" id="incapacitado-value" name="incapacitado" value="0">
+                            </div>
                         </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina2" autocomplete="off">
-                            <div class="rating" id="disciplina2-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                        <div class="health-controls">
+                            <div class="health-type-row">
+                                <span class="health-type-label contundente">Contundente</span>
+                                <div class="health-type-controls">
+                                    <button class="health-btn" data-health-op="remove" data-health-type="1" id="contundenteRemove" type="button">-</button>
+                                    <button class="health-btn" data-health-op="add" data-health-type="1" id="contundenteAdd" type="button">+</button>
+                                </div>
                             </div>
-                            <input type="hidden" id="disciplina2-value" name="disciplina2" value="0">
+                            <div class="health-type-row">
+                                <span class="health-type-label letal">Letal</span>
+                                <div class="health-type-controls">
+                                    <button class="health-btn" data-health-op="remove" data-health-type="2" id="letalRemove" type="button">-</button>
+                                    <button class="health-btn" data-health-op="add" data-health-type="2" id="letalAdd" type="button">+</button>
+                                </div>
+                            </div>
+                            <div class="health-type-row">
+                                <span class="health-type-label agravado">Agravado</span>
+                                <div class="health-type-controls">
+                                    <button class="health-btn" data-health-op="remove" data-health-type="3" id="agravadoRemove" type="button">-</button>
+                                    <button class="health-btn" data-health-op="add" data-health-type="3" id="agravadoAdd" type="button">+</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina3" autocomplete="off">
-                            <div class="rating" id="disciplina3-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina3-value" name="disciplina3" value="0">
+                        <p id="health-impediment" class="health-impediment hidden"></p>
+                    </div>
+                </section>
+
+                <!-- SANGRE -->
+                <section class="card card-soft blood-card">
+                    <div class="vital">
+                        <div class="blood-header">
+                            <h1 class="health-title">Sangre</h1>
+                            <button id="consumeBlood" class="blood-btn consume blood-consume-btn vital-header-action-btn"
+                                data-blood-op="consume" type="button" title="Gastar sangre (más vieja)"
+                                aria-label="Gastar sangre (más vieja)">
+                                <iconify-icon class="blood-consume-icon" icon="mdi:drop-remove" aria-hidden="true"></iconify-icon>
+                            </button>
                         </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina4" autocomplete="off">
-                            <div class="rating" id="disciplina4-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina4-value" name="disciplina4" value="0">
+                        <p class="blood-meta">Máximo: <strong id="blood-max-label">10</strong> | Sangre por turno: <strong id="bloodPerTurn">1</strong></p>
+                        <div id="blood-track" class="blood-track" aria-label="Pool de sangre">
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
+                            <button class="blood-cell" type="button"></button>
                         </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina5" autocomplete="off">
-                            <div class="rating" id="disciplina5-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina5-value" name="disciplina5" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina6" autocomplete="off">
-                            <div class="rating" id="disciplina6-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina6-value" name="disciplina6" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina7" autocomplete="off">
-                            <div class="rating" id="disciplina7-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina7-value" name="disciplina7" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina8" autocomplete="off">
-                            <div class="rating" id="disciplina8-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina8-value" name="disciplina8" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina9" autocomplete="off">
-                            <div class="rating" id="disciplina9-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina9-value" name="disciplina9" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina10" autocomplete="off">
-                            <div class="rating" id="disciplina10-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina10-value" name="disciplina10" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina11" autocomplete="off">
-                            <div class="rating" id="disciplina11-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina11-value" name="disciplina11" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <ion-icon class="discipline-icon" name="dice-sharp"></ion-icon>
-                            <input type="text" id="disciplina12" autocomplete="off">
-                            <div class="rating" id="disciplina12-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="disciplina12-value" name="disciplina12" value="0">
+                        <input type="hidden" id="blood-value" name="blood" value="0">
+                        <div class="blood-controls blood-add-controls">
+                            <button class="blood-btn add type-1" data-blood-op="add" data-blood-type="1" type="button">Agregar Tipo 1</button>
+                            <button class="blood-btn add type-2" data-blood-op="add" data-blood-type="2" type="button">Agregar Tipo 2</button>
+                            <button class="blood-btn add type-3" data-blood-op="add" data-blood-type="3" type="button">Agregar Tipo 3</button>
                         </div>
                     </div>
-                </div>
-                <!-- TRASFONDOS -->
-                <div id="tab2" class="tab-content">
-                    <div class="discipline-container">
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo1" autocomplete="off">
-                            <div class="rating" id="trasfondo1-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                </section>
+
+                <!-- FUERZA DE VOLUNTAD -->
+                <section class="card card-soft willpower-card">
+                    <div class="vital">
+                        <div class="willpower-header">
+                            <h1 class="health-title">Fuerza de Voluntad</h1>
+                            <div class="willpower-roll">
+                                <button id="willpower-roll-trigger" class="blood-btn consume vital-header-action-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Tirar fuerza de voluntad" title="Tirar fuerza de voluntad">
+                                    <iconify-icon class="willpower-roll-icon" icon="mdi:dice-d10" aria-hidden="true"></iconify-icon>
+                                </button>
+                                <div id="willpower-roll-menu" class="willpower-roll-menu" role="menu">
+                                    <button class="blood-btn" type="button" role="menuitem" data-willpower-roll="perm">Tirar Permanente</button>
+                                    <button class="blood-btn" type="button" role="menuitem" data-willpower-roll="temp">Tirar Temporal</button>
+                                </div>
                             </div>
-                            <input type="hidden" id="trasfondo1-value" name="trasfondo1" value="0">
                         </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo2" autocomplete="off">
-                            <div class="rating" id="trasfondo2-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo2-value" name="trasfondo2" value="0">
+                        <div class="willpower-track" id="willpower-track">
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="0" aria-label="Permanente 1"></button><button class="willpower-temp locked" type="button" data-index="0" aria-label="Temporal 1"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="1" aria-label="Permanente 2"></button><button class="willpower-temp locked" type="button" data-index="1" aria-label="Temporal 2"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="2" aria-label="Permanente 3"></button><button class="willpower-temp locked" type="button" data-index="2" aria-label="Temporal 3"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="3" aria-label="Permanente 4"></button><button class="willpower-temp locked" type="button" data-index="3" aria-label="Temporal 4"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="4" aria-label="Permanente 5"></button><button class="willpower-temp locked" type="button" data-index="4" aria-label="Temporal 5"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="5" aria-label="Permanente 6"></button><button class="willpower-temp locked" type="button" data-index="5" aria-label="Temporal 6"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="6" aria-label="Permanente 7"></button><button class="willpower-temp locked" type="button" data-index="6" aria-label="Temporal 7"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="7" aria-label="Permanente 8"></button><button class="willpower-temp locked" type="button" data-index="7" aria-label="Temporal 8"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="8" aria-label="Permanente 9"></button><button class="willpower-temp locked" type="button" data-index="8" aria-label="Temporal 9"></button></div>
+                            <div class="willpower-slot"><button class="willpower-perm empty" type="button" data-index="9" aria-label="Permanente 10"></button><button class="willpower-temp locked" type="button" data-index="9" aria-label="Temporal 10"></button></div>
                         </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo3" autocomplete="off">
-                            <div class="rating" id="trasfondo3-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo3-value" name="trasfondo3" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo4" autocomplete="off">
-                            <div class="rating" id="trasfondo4-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo4-value" name="trasfondo4" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo5" autocomplete="off">
-                            <div class="rating" id="trasfondo5-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo5-value" name="trasfondo5" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo6" autocomplete="off">
-                            <div class="rating" id="trasfondo6-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo6-value" name="trasfondo6" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo7" autocomplete="off">
-                            <div class="rating" id="trasfondo7-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo7-value" name="trasfondo7" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo8" autocomplete="off">
-                            <div class="rating" id="trasfondo8-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo8-value" name="trasfondo8" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo9" autocomplete="off">
-                            <div class="rating" id="trasfondo9-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo9-value" name="trasfondo9" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo10" autocomplete="off">
-                            <div class="rating" id="trasfondo10-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo10-value" name="trasfondo10" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo11" autocomplete="off">
-                            <div class="rating" id="trasfondo11-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo11-value" name="trasfondo11" value="0">
-                        </div>
-                        <div class="form-group discipline">
-                            <input type="text" id="trasfondo12" autocomplete="off">
-                            <div class="rating" id="trasfondo12-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
-                            </div>
-                            <input type="hidden" id="trasfondo12-value" name="trasfondo12" value="0">
-                        </div>
+                        <input type="hidden" id="voluntadPerm-value" name="Vol.Perm." value="0">
+                        <input type="hidden" id="voluntadTemp-value" name="Vol.Temp." value="0">
                     </div>
-                </div>
-                <!-- Virtudes -->
-                <div id="tab3" class="tab-content">
-                    <div class="discipline-container">
-                        <!-- dropdown field with two options-->
-                        <div class="virtue-container">
+                </section>
 
-                            <div class="form-group discipline">
-                                <ion-icon class="virtue-icon" name="dice-sharp"></ion-icon>
-                                <select id="virtue1" name="virtue1">
-                                    <option value="conciencia" selected>Conciencia</option>
-                                    <option value="conviccion">Conviccion</option>
-                                </select>
-                                <div class="rating" id="virtue1-rating">
-                                    <span class="dot" data-value="0"></span>
-                                    <span class="dot" data-value="1"></span>
-                                    <span class="dot" data-value="2"></span>
-                                    <span class="dot" data-value="3"></span>
-                                    <span class="dot" data-value="4"></span>
-                                </div>
-                                <input type="hidden" id="virtue1-value" name="virtue1" value="0">
-                            </div>
+                <!-- ACCIONES -->
+                <section class="card card-soft">
+                    <div class="rolls-toolbar">
+                        <h1 class="health-title">Acciones</h1>
+                        <button id="saved-roll-add-btn" class="rolls-add-btn" type="button" aria-label="Agregar acción">+</button>
+                    </div>
+                    <div id="saved-rolls-list" class="quick-actions quick-rolls"></div>
+                </section>
+            </aside>
 
-                            <div class="form-group discipline">
-                                <ion-icon class="virtue-icon" name="dice-sharp"></ion-icon>
-                                <select id="virtue2" name="virtue2">
-                                    <option value="autocontrol" selected>Autocontrol</option>
-                                    <option value="instinto">Instinto</option>
-                                </select>
-                                <div class="rating" id="virtue2-rating">
-                                    <span class="dot" data-value="0"></span>
-                                    <span class="dot" data-value="1"></span>
-                                    <span class="dot" data-value="2"></span>
-                                    <span class="dot" data-value="3"></span>
-                                    <span class="dot" data-value="4"></span>
-                                </div>
-                                <input type="hidden" id="virtue2-value" name="virtue2" value="0">
-                            </div>
+            <!-- ========== MAIN COLUMN (CENTER) ========== -->
+            <section class="main-column">
 
-                            <div class="form-group discipline">
-                                <ion-icon class="virtue-icon" name="dice-sharp"></ion-icon>
-                                <input for="virtue3" value="Coraje" readonly>
-                                <div class="rating" id="virtue3-rating">
-                                    <span class="dot" data-value="0"></span>
-                                    <span class="dot" data-value="1"></span>
-                                    <span class="dot" data-value="2"></span>
-                                    <span class="dot" data-value="3"></span>
-                                    <span class="dot" data-value="4"></span>
-                                </div>
-                                <input type="hidden" id="virtue3-value" name="virtue3" value="0">
-                            </div>
-                        </div>
-
-                        <div class="humanidad-container">
-                            <div class="seccion-container">
-                                <div class="seccion-linea"></div>
-                                <h2 class="seccion">Humanidad/Senda</h2>
-                                <div class="seccion-linea"></div>
-                            </div>
-
-                            <!-- Contenido Humanidad/Senda -->
-                            <div class="form-group humanidad">
-                                <input type="text" id="humanidad" autocomplete="off" placeholder="Humanidad/Senda">
-                                <div class="humanidad-form-group">
-                                    <ion-icon class="senda-icon" name="dice-sharp"></ion-icon>
-                                    <div class="rating" id="humanidad-rating">
+                <!-- ATRIBUTOS -->
+                <article class="card sheet-panel attributes-pane attributes">
+                    <h2>Atributos</h2>
+                    <div class="sheet-columns">
+                        <!-- Fisicos -->
+                        <section class="sheet-subsection">
+                            <h3>Fisicos</h3>
+                            <div class="sheet-row form-group attribute physical-attr" data-attr-key="fuerza">
+                                <span class="attr-label-wrap">
+                                    <label>Fuerza</label>
+                                    <button class="attr-boost-trigger" type="button" aria-label="Aumentar Fuerza temporalmente">+</button>
+                                </span>
+                                <div class="attr-rating-wrap">
+                                    <span class="attr-temp-boost" data-boost-for="fuerza"></span>
+                                    <div class="rating" id="fuerza-rating">
                                         <span class="dot" data-value="0"></span>
                                         <span class="dot" data-value="1"></span>
                                         <span class="dot" data-value="2"></span>
                                         <span class="dot" data-value="3"></span>
                                         <span class="dot" data-value="4"></span>
-                                        <span class="dot" data-value="5"></span>
-                                        <span class="dot" data-value="6"></span>
-                                        <span class="dot" data-value="7"></span>
-                                        <span class="dot" data-value="8"></span>
-                                        <span class="dot" data-value="9"></span>
                                     </div>
-                                    <input type="hidden" id="humanidad-value" name="humanidad" value="0">
+                                </div>
+                                <input type="hidden" id="fuerza-value" name="fuerza" value="0">
+                                <input type="hidden" id="tempFuerza" value="0">
+                            </div>
+                            <div class="sheet-row form-group attribute physical-attr" data-attr-key="destreza">
+                                <span class="attr-label-wrap">
+                                    <label>Destreza</label>
+                                    <button class="attr-boost-trigger" type="button" aria-label="Aumentar Destreza temporalmente">+</button>
+                                </span>
+                                <div class="attr-rating-wrap">
+                                    <span class="attr-temp-boost" data-boost-for="destreza"></span>
+                                    <div class="rating" id="destreza-rating">
+                                        <span class="dot" data-value="0"></span>
+                                        <span class="dot" data-value="1"></span>
+                                        <span class="dot" data-value="2"></span>
+                                        <span class="dot" data-value="3"></span>
+                                        <span class="dot" data-value="4"></span>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="destreza-value" name="destreza" value="0">
+                                <input type="hidden" id="tempDestreza" value="0">
+                            </div>
+                            <div class="sheet-row form-group attribute physical-attr" data-attr-key="resistencia">
+                                <span class="attr-label-wrap">
+                                    <label>Resistencia</label>
+                                    <button class="attr-boost-trigger" type="button" aria-label="Aumentar Resistencia temporalmente">+</button>
+                                </span>
+                                <div class="attr-rating-wrap">
+                                    <span class="attr-temp-boost" data-boost-for="resistencia"></span>
+                                    <div class="rating" id="resistencia-rating">
+                                        <span class="dot" data-value="0"></span>
+                                        <span class="dot" data-value="1"></span>
+                                        <span class="dot" data-value="2"></span>
+                                        <span class="dot" data-value="3"></span>
+                                        <span class="dot" data-value="4"></span>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="resistencia-value" name="resistencia" value="0">
+                                <input type="hidden" id="tempResistencia" value="0">
+                            </div>
+                        </section>
+                        <!-- Sociales -->
+                        <section class="sheet-subsection">
+                            <h3>Sociales</h3>
+                            <div class="sheet-row form-group attribute">
+                                <label>Carisma</label>
+                                <div class="rating" id="carisma-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="carisma-value" name="carisma" value="0">
+                            </div>
+                            <div class="sheet-row form-group attribute">
+                                <label>Manipulacion</label>
+                                <div class="rating" id="manipulacion-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="manipulacion-value" name="manipulacion" value="0">
+                            </div>
+                            <div class="sheet-row form-group attribute">
+                                <label>Apariencia</label>
+                                <div class="rating" id="apariencia-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="apariencia-value" name="apariencia" value="0">
+                            </div>
+                        </section>
+                        <!-- Mentales -->
+                        <section class="sheet-subsection">
+                            <h3>Mentales</h3>
+                            <div class="sheet-row form-group attribute">
+                                <label>Percepcion</label>
+                                <div class="rating" id="percepcion-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="percepcion-value" name="percepcion" value="0">
+                            </div>
+                            <div class="sheet-row form-group attribute">
+                                <label>Inteligencia</label>
+                                <div class="rating" id="inteligencia-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="inteligencia-value" name="inteligencia" value="0">
+                            </div>
+                            <div class="sheet-row form-group attribute">
+                                <label>Astucia</label>
+                                <div class="rating" id="astucia-rating">
+                                    <span class="dot" data-value="0"></span>
+                                    <span class="dot" data-value="1"></span>
+                                    <span class="dot" data-value="2"></span>
+                                    <span class="dot" data-value="3"></span>
+                                    <span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="astucia-value" name="astucia" value="0">
+                            </div>
+                        </section>
+                    </div>
+                </article>
+
+                <!-- HABILIDADES -->
+                <article class="card sheet-panel abilities">
+                    <h2>Habilidades</h2>
+                    <div class="sheet-columns">
+                        <!-- Talentos -->
+                        <section class="sheet-subsection">
+                            <h3>Talentos</h3>
+                            <div class="sheet-row form-group attribute"><label>Alerta</label><div class="rating" id="alerta-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="alerta-value" name="alerta" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Atletismo</label><div class="rating" id="atletismo-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="atletismo-value" name="atletismo" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Callejeo</label><div class="rating" id="callejeo-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="callejeo-value" name="callejeo" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Consciencia</label><div class="rating" id="consciencia-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="consciencia-value" name="consciencia" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Empatia</label><div class="rating" id="empatia-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="empatia-value" name="empatia" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Expresion</label><div class="rating" id="expresion-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="expresion-value" name="expresion" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Intimidacion</label><div class="rating" id="intimidacion-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="intimidacion-value" name="intimidacion" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Liderazgo</label><div class="rating" id="liderazgo-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="liderazgo-value" name="liderazgo" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Pelea</label><div class="rating" id="pelea-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="pelea-value" name="pelea" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Subterfugio</label><div class="rating" id="subterfugio-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="subterfugio-value" name="subterfugio" value="0"></div>
+                        </section>
+                        <!-- Tecnicas -->
+                        <section class="sheet-subsection">
+                            <h3>Tecnicas</h3>
+                            <div class="sheet-row form-group attribute"><label>Armas de Fuego</label><div class="rating" id="armasDeFuego-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="armasDeFuego-value" name="armasDeFuego" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Artesania</label><div class="rating" id="artesania-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="artesania-value" name="artesania" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Conducir</label><div class="rating" id="conducir-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="conducir-value" name="conducir" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Etiqueta</label><div class="rating" id="etiqueta-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="etiqueta-value" name="etiqueta" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Interpretacion</label><div class="rating" id="interpretacion-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="interpretacion-value" name="interpretacion" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Latrocinio</label><div class="rating" id="latrocinio-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="latrocinio-value" name="latrocinio" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Pelea con Armas</label><div class="rating" id="peleaConArmas-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="peleaConArmas-value" name="peleaConArmas" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Sigilo</label><div class="rating" id="sigilo-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="sigilo-value" name="sigilo" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Supervivencia</label><div class="rating" id="supervivencia-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="supervivencia-value" name="supervivencia" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Trato con Animales</label><div class="rating" id="tratoConAnimales-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="tratoConAnimales-value" name="tratoConAnimales" value="0"></div>
+                        </section>
+                        <!-- Conocimientos -->
+                        <section class="sheet-subsection">
+                            <h3>Conocimientos</h3>
+                            <div class="sheet-row form-group attribute"><label>Academicismo</label><div class="rating" id="academicismo-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="academicismo-value" name="academicismo" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Ciencias</label><div class="rating" id="ciencias-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="ciencias-value" name="ciencias" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Finanzas</label><div class="rating" id="finanzas-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="finanzas-value" name="finanzas" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Informatica</label><div class="rating" id="informatica-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="informatica-value" name="informatica" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Investigacion</label><div class="rating" id="investigacion-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="investigacion-value" name="investigacion" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Leyes</label><div class="rating" id="leyes-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="leyes-value" name="leyes" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Medicina</label><div class="rating" id="medicina-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="medicina-value" name="medicina" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Ocultismo</label><div class="rating" id="ocultismo-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="ocultismo-value" name="ocultismo" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Politica</label><div class="rating" id="politica-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="politica-value" name="politica" value="0"></div>
+                            <div class="sheet-row form-group attribute"><label>Tecnologia</label><div class="rating" id="tecnologia-rating"><span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span></div><input type="hidden" id="tecnologia-value" name="tecnologia" value="0"></div>
+                        </section>
+                    </div>
+                </article>
+
+                <!-- TIRADOR DE DADOS -->
+                <article class="card sheet-panel dice-widget-panel">
+                    <div class="dice-widget">
+                        <div class="dice-widget-main">
+                            <div class="dice-inline-track">
+                                <div class="dice-field dice-field-compact">
+                                    <label class="diceLabel" for="dicePool1" id="dicePool1Label"></label>
+                                    <input id="dicePool1" class="dicePool" type="number" min="0" step="1" value="0">
+                                </div>
+                                <span class="dice-plus">+</span>
+                                <div class="dice-field dice-field-compact">
+                                    <label class="diceLabel" for="dicePool2" id="dicePool2Label"></label>
+                                    <input id="dicePool2" class="dicePool" type="number" min="0" step="1" value="0">
+                                </div>
+                                <span class="dice-plus">+</span>
+                                <div class="dice-field dice-field-compact dice-popover-wrapper">
+                                    <label for="diceMod" id="modLabel">Modif.</label>
+                                    <input id="diceMod" class="diceMod" type="number" value="0" readonly>
+                                    <div id="diceModPopover" class="dice-popover hidden" role="listbox" aria-label="Seleccionar modificador">
+                                        <button type="button" data-val="-5">-5</button>
+                                        <button type="button" data-val="-4">-4</button>
+                                        <button type="button" data-val="-3">-3</button>
+                                        <button type="button" data-val="-2">-2</button>
+                                        <button type="button" data-val="-1">-1</button>
+                                        <button type="button" data-val="0" class="pop-highlight">0</button>
+                                        <button type="button" data-val="1">+1</button>
+                                        <button type="button" data-val="2">+2</button>
+                                        <button type="button" data-val="3">+3</button>
+                                        <button type="button" data-val="4">+4</button>
+                                        <button type="button" data-val="5">+5</button>
+                                    </div>
+                                </div>
+                                <span class="dice-separator">|</span>
+                                <div class="dice-field dice-field-compact dice-popover-wrapper">
+                                    <label for="difficulty">Dif.</label>
+                                    <input id="difficulty" type="number" value="6" readonly>
+                                    <div id="diceDiffPopover" class="dice-popover hidden" role="listbox" aria-label="Seleccionar dificultad">
+                                        <button type="button" data-val="3">3</button>
+                                        <button type="button" data-val="4">4</button>
+                                        <button type="button" data-val="5">5</button>
+                                        <button type="button" data-val="6" class="pop-highlight">6</button>
+                                        <button type="button" data-val="7">7</button>
+                                        <button type="button" data-val="8">8</button>
+                                        <button type="button" data-val="9">9</button>
+                                        <button type="button" data-val="10">10</button>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="dice-action-buttons">
+                                <button id="diceButton" class="dice-roll-btn" type="button">Lanzar</button>
+                                <button id="diceResetBtn" class="dice-reset-btn" type="button"
+                                    aria-label="Resetear tirada">Limpiar</button>
+                                <button id="dice-history-btn" class="dice-history-btn" type="button"
+                                    aria-label="Ver historial de tiradas" title="Historial de tiradas">
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="dice-widget-top">
+                            <label class="dice-toggle">
+                                <input type="checkbox" id="penalizadorSalud" name="penalizadorSalud" checked>
+                                <span>Penalizador de Salud: <span id="penalizadorSaludLabel">0</span></span>
+                            </label>
+                            <label class="dice-toggle">
+                                <input type="checkbox" id="willpower" name="usaVoluntad">
+                                <span>Usar Fuerza de Voluntad</span>
+                            </label>
+                            <label class="dice-toggle">
+                                <input type="checkbox" id="specialty" name="usaEspecialidad">
+                                <span><label for="specialty">Usar Especialidad</label></span>
+                            </label>
+                        </div>
+
+                        <div id="diceResults" class="dice-result hidden">
+                            <h3 id="diceResult" class="dice-result-summary"></h3>
+                            <div id="diceRolls" class="dice-result-rolls"></div>
                         </div>
                     </div>
+                </article>
+            </section>
+
+            <!-- ========== DOCK COLUMN (RIGHT) ========== -->
+            <aside class="dock-column card card-soft">
+                <div class="dock-tabs">
+                    <button class="dock-tab active" data-panel="panel-disciplinas">Disciplinas</button>
+                    <button class="dock-tab" data-panel="panel-virtudes">Virtudes</button>
+                    <button class="dock-tab" data-panel="panel-trasfondos">Trasfondos</button>
+                    <button class="dock-tab" data-panel="panel-meritos-defectos">Meritos y Defectos</button>
+                    <button class="dock-tab" data-panel="panel-experiencia">Experiencia</button>
+                    <button class="dock-tab" data-panel="panel-notas">Notas</button>
                 </div>
-                <!-- Meritos y Defectos -->
-                <div id="tab4" class="tab-content">
-                    <div class="discipline-container">
-                        <div class="seccion-container">
-                            <div class="seccion-linea"></div>
-                            <h2 class="seccion">Meritos</h2>
-                            <div class="seccion-linea"></div>
-                        </div>
-                        <div class="form-group merito">
-                            <input type="text" id="merito1" autocomplete="off">
-                            <div class="rating" id="merito1-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+
+                <div class="dock-content">
+                    <!-- TAB: DISCIPLINAS -->
+                    <section class="dock-panel active" id="panel-disciplinas">
+                        <div class="discipline-pane">
+                            <div class="discipline-header">
+                                <h3>Disciplinas</h3>
+                                <button id="open-discipline-repo" class="discipline-repo-trigger" type="button"
+                                    title="Gestionar disciplinas" aria-label="Gestionar disciplinas">⚙</button>
                             </div>
-                            <input type="hidden" id="merito1-value" name="merito1" value="0">
-                        </div>
-                        <div class="form-group merito">
-                            <input type="text" id="merito2" autocomplete="off">
-                            <div class="rating" id="merito2-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                            <div id="discipline-list" class="discipline-list">
+                                <!-- Rendered dynamically by script.js -->
                             </div>
-                            <input type="hidden" id="merito2-value" name="merito2" value="0">
-                        </div>
-                        <div class="form-group merito">
-                            <input type="text" id="merito3" autocomplete="off">
-                            <div class="rating" id="merito3-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                            <div class="discipline-detail">
+                                <div class="discipline-powers-header">
+                                    <h3>Poderes</h3>
+                                    <button id="discipline-add-power-toggle" class="discipline-power-header-add" type="button"
+                                        aria-label="Agregar poder">+</button>
+                                </div>
+                                <div id="discipline-powers-list" class="discipline-powers-list"></div>
+                                <form id="discipline-add-power-form" class="discipline-power-form hidden">
+                                    <input id="discipline-power-name" type="text" placeholder="Nombre del poder" autocomplete="off">
+                                    <textarea id="discipline-power-description" rows="3"
+                                        placeholder="Descripción breve del poder"></textarea>
+                                    <div class="form-actions">
+                                        <button type="submit" class="discipline-power-save-btn">Guardar poder</button>
+                                        <button id="discipline-add-power-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                                    </div>
+                                </form>
                             </div>
-                            <input type="hidden" id="merito3-value" name="merito3" value="0">
                         </div>
-                        <div class="form-group merito">
-                            <input type="text" id="merito4" autocomplete="off">
-                            <div class="rating" id="merito4-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                    </section>
+
+                    <!-- TAB: VIRTUDES -->
+                    <section class="dock-panel" id="panel-virtudes">
+                        <div class="virtue-pane">
+                            <!-- HUMANIDAD / SENDA -->
+                            <div class="virtue-path-block">
+                                <div class="virtue-path-header">
+                                    <h3 id="virtue-path-label">Humanidad</h3>
+                                    <button id="open-path-repo" class="discipline-repo-trigger" type="button" aria-label="Elegir senda" title="Elegir senda">⚙</button>
+                                </div>
+                                <div class="rating virtue-rating virtue-humanity-rating" id="humanidad-rating">
+                                    <span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span><span class="dot" data-value="5"></span><span class="dot" data-value="6"></span><span class="dot" data-value="7"></span><span class="dot" data-value="8"></span><span class="dot" data-value="9"></span>
+                                </div>
+                                <input type="hidden" id="humanidad-value" name="humanidad" value="0">
+                                <input type="hidden" id="humanidad" name="humanidad-nombre" value="Humanidad">
                             </div>
-                            <input type="hidden" id="merito4-value" name="merito4" value="0">
-                        </div>
-                        <div class="form-group merito">
-                            <input type="text" id="merito5" autocomplete="off">
-                            <div class="rating" id="merito5-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                            <!-- VIRTUDES -->
+                            <div class="sheet-row virtue-sheet-row">
+                                <span id="virtue1-label">Conciencia</span>
+                                <div class="rating virtue-rating" id="virtue1-rating">
+                                    <span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="virtue1-value" name="virtue1-val" value="0">
+                                <input type="hidden" id="virtue1" name="virtue1" value="conciencia">
                             </div>
-                            <input type="hidden" id="merito5-value" name="merito5" value="0">
-                        </div>
-                        <div class="seccion-container">
-                            <div class="seccion-linea"></div>
-                            <h2 class="seccion">Defectos</h2>
-                            <div class="seccion-linea"></div>
-                        </div>
-                        <!-- need to repeat all form groups as in Merito but with defecto, 5 of them -->
-                        <div class="form-group defecto">
-                            <input type="text" id="defecto1" autocomplete="off">
-                            <div class="rating" id="defecto1-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                            <div class="sheet-row virtue-sheet-row">
+                                <span id="virtue2-label">Autocontrol</span>
+                                <div class="rating virtue-rating" id="virtue2-rating">
+                                    <span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="virtue2-value" name="virtue2-val" value="0">
+                                <input type="hidden" id="virtue2" name="virtue2" value="autocontrol">
                             </div>
-                            <input type="hidden" id="defecto1-value" name="defecto1" value="0">
-                        </div>
-                        <div class="form-group defecto">
-                            <input type="text" id="defecto2" autocomplete="off">
-                            <div class="rating" id="defecto2-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                            <div class="sheet-row virtue-sheet-row">
+                                <span>Coraje</span>
+                                <div class="rating virtue-rating" id="virtue3-rating">
+                                    <span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span>
+                                </div>
+                                <input type="hidden" id="virtue3-value" name="virtue3-val" value="0">
                             </div>
-                            <input type="hidden" id="defecto2-value" name="defecto2" value="0">
+                            <!-- PATH INFO (populated dynamically) -->
+                            <div id="path-info" class="path-info"></div>
                         </div>
-                        <div class="form-group defecto">
-                            <input type="text" id="defecto3" autocomplete="off">
-                            <div class="rating" id="defecto3-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                    </section>
+
+                    <!-- TAB: TRASFONDOS -->
+                    <section class="dock-panel" id="panel-trasfondos">
+                        <div class="background-pane">
+                            <div class="discipline-powers-header">
+                                <h3>Trasfondos</h3>
+                                <button id="background-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar trasfondo">+</button>
                             </div>
-                            <input type="hidden" id="defecto3-value" name="defecto3" value="0">
+                            <div id="background-list" class="background-list"></div>
+                            <form id="background-add-form" class="background-form hidden">
+                                <input id="background-name" type="text" placeholder="Nombre del trasfondo" autocomplete="off">
+                                <textarea id="background-description" rows="3" placeholder="Descripción breve del trasfondo (opcional)"></textarea>
+                                <div class="form-actions">
+                                    <button type="submit" class="background-save-btn">Guardar trasfondo</button>
+                                    <button id="background-add-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="form-group defecto">
-                            <input type="text" id="defecto4" autocomplete="off">
-                            <div class="rating" id="defecto4-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                    </section>
+
+                    <!-- TAB: MERITOS Y DEFECTOS -->
+                    <section class="dock-panel" id="panel-meritos-defectos">
+                        <div class="merits-defects-pane">
+                            <!-- MERITOS -->
+                            <div class="background-pane">
+                                <div class="discipline-powers-header">
+                                    <h3>Méritos</h3>
+                                    <button id="merit-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar mérito">+</button>
+                                </div>
+                                <div id="merit-list" class="background-list"></div>
+                                <form id="merit-add-form" class="background-form hidden">
+                                    <input id="merit-name" type="text" placeholder="Nombre del mérito" autocomplete="off">
+                                    <input id="merit-cost" type="number" min="1" step="1" value="1" placeholder="Valor (N)">
+                                    <textarea id="merit-description" rows="3" placeholder="Descripción del mérito (opcional)"></textarea>
+                                    <div class="form-actions">
+                                        <button type="submit" class="background-save-btn">Guardar mérito</button>
+                                        <button id="merit-add-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                                    </div>
+                                </form>
                             </div>
-                            <input type="hidden" id="defecto4-value" name="defecto4" value="0">
-                        </div>
-                        <div class="form-group defecto">
-                            <input type="text" id="defecto5" autocomplete="off">
-                            <div class="rating" id="defecto5-rating">
-                                <span class="dot" data-value="0"></span>
-                                <span class="dot" data-value="1"></span>
-                                <span class="dot" data-value="2"></span>
-                                <span class="dot" data-value="3"></span>
-                                <span class="dot" data-value="4"></span>
+                            <!-- DEFECTOS -->
+                            <div class="background-pane">
+                                <div class="discipline-powers-header">
+                                    <h3>Defectos</h3>
+                                    <button id="defect-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar defecto">+</button>
+                                </div>
+                                <div id="defect-list" class="background-list"></div>
+                                <form id="defect-add-form" class="background-form hidden">
+                                    <input id="defect-name" type="text" placeholder="Nombre del defecto" autocomplete="off">
+                                    <input id="defect-cost" type="number" min="1" step="1" value="1" placeholder="Valor (N)">
+                                    <textarea id="defect-description" rows="3" placeholder="Descripción del defecto (opcional)"></textarea>
+                                    <div class="form-actions">
+                                        <button type="submit" class="background-save-btn">Guardar defecto</button>
+                                        <button id="defect-add-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                                    </div>
+                                </form>
                             </div>
-                            <input type="hidden" id="defecto5-value" name="defecto5" value="0">
                         </div>
-                    </div>
-                    <div class="defectos-container"></div>
+                    </section>
+
+                    <!-- TAB: EXPERIENCIA -->
+                    <section class="dock-panel" id="panel-experiencia">
+                        <div class="xp-pane">
+                            <h3>Pool de Experiencia <span id="xp-total" class="xp-total"></span></h3>
+                            <div id="xp-pool" class="xp-pool"></div>
+                            <input type="hidden" id="experiencia-value" name="experiencia" value="0">
+
+                            <div class="discipline-powers-header">
+                                <h3>Gastos</h3>
+                                <div class="xp-actions">
+                                    <button id="xp-new-spend-btn" class="discipline-power-header-add" type="button" aria-label="Agregar nuevo gasto">Nuevo gasto</button>
+                                    <button id="xp-new-arc-btn" class="discipline-power-header-add" type="button" aria-label="Crear nuevo arco">Nuevo arco</button>
+                                </div>
+                            </div>
+
+                            <form id="xp-spend-form" class="background-form hidden">
+                                <input id="xp-spend-name" type="text" placeholder="Nombre del gasto (ej. Celeridad 4)" autocomplete="off">
+                                <input id="xp-spend-cost" type="number" min="1" step="1" value="1" placeholder="Costo">
+                                <div class="form-actions">
+                                    <button type="submit" class="background-save-btn">Guardar gasto</button>
+                                    <button id="xp-spend-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                                </div>
+                            </form>
+
+                            <div id="xp-arc-list" class="xp-arc-list"></div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: NOTAS -->
+                    <section class="dock-panel" id="panel-notas">
+                        <div class="notes-pane">
+                            <div class="discipline-powers-header">
+                                <h3>Notas</h3>
+                                <button id="note-new-btn" class="discipline-power-header-add" type="button"
+                                    aria-label="Crear nueva nota">Nueva nota</button>
+                            </div>
+
+                            <input id="note-search" class="discipline-repo-search note-search" type="text"
+                                placeholder="Buscar por título, cuerpo o tag..." autocomplete="off">
+
+                            <form id="note-form" class="background-form hidden">
+                                <input id="note-title" type="text" placeholder="Título" autocomplete="off">
+                                <textarea id="note-body" rows="4" placeholder="Cuerpo de la nota"></textarea>
+                                <input id="note-tags" type="text" placeholder="Tags separados por coma (ej: caza, eliseo, boons)">
+                                <div class="form-actions">
+                                    <button id="note-save-btn" type="submit" class="background-save-btn">Guardar nota</button>
+                                    <button id="note-cancel-btn" type="button" class="form-cancel-btn">Cancelar</button>
+                                </div>
+                            </form>
+
+                            <div class="note-tabs">
+                                <button class="note-tab active" data-note-tab="active" type="button">Activas</button>
+                                <button class="note-tab" data-note-tab="archived" type="button">Archivadas</button>
+                            </div>
+                            <div id="note-list" class="note-list"></div>
+                            <div id="note-archive-list" class="note-list hidden"></div>
+                        </div>
+                    </section>
                 </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Modal Discord -->
+    <div id="discord-webhook-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card discord-webhook-card" role="dialog" aria-modal="true"
+            aria-labelledby="discord-webhook-title">
+            <div class="specialty-modal-header">
+                <h2 id="discord-webhook-title">Discord webhook</h2>
+                <button id="discord-webhook-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
             </div>
-            <!-- VOLUNTAD CONTENEDOR -->
-            <div class="voluntad-container">
-                <div class="seccion-container">
-                    <div class="seccion-linea"></div>
-                    <h1 class="seccion">Fuerza de Voluntad</h1>
-                    <div class="seccion-linea"></div>
+            <p class="discord-webhook-copy">
+                Introduce la URL del webhook de Discord para enviar mensajes de tiradas.
+                Dejar en blanco para desactivar.
+            </p>
+            <a class="discord-webhook-help" href="https://support.discord.com/hc/es/articles/228383668-Usando-Webhooks" target="_blank" rel="noopener noreferrer">
+                ¿Cómo crear un webhook?
+            </a>
+            <form id="discord-webhook-form" class="discord-webhook-form">
+                <label for="discord-webhook-url" class="discord-webhook-label">Webhook URL</label>
+                <div class="discord-webhook-row">
+                    <input id="discord-webhook-url" class="discord-webhook-input" type="url"
+                        placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+                    <label class="discord-webhook-toggle" for="discord-webhook-enabled" title="Activar webhook">
+                        <input id="discord-webhook-enabled" type="checkbox" checked>
+                        <span class="discord-webhook-toggle-ui" aria-hidden="true"></span>
+                    </label>
                 </div>
-                <div class="form-group voluntad">
-                    <ion-icon class="will-icon perm" name="dice-sharp"
-                        onclick="rollVoluntad('voluntadPerm-value')"></ion-icon>
-                    <div class="rating" id="voluntad-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                        <span class="dot" data-value="5"></span>
-                        <span class="dot" data-value="6"></span>
-                        <span class="dot" data-value="7"></span>
-                        <span class="dot" data-value="8"></span>
-                        <span class="dot" data-value="9"></span>
-                    </div>
-                    <input type="hidden" id="voluntadPerm-value" name="Vol.Perm." value="0">
+                <div class="discord-webhook-actions">
+                    <button id="discord-webhook-save" class="discord-webhook-save" type="submit">Guardar</button>
+                    <button id="discord-webhook-cancel" class="discord-webhook-cancel" type="button">Cancelar</button>
                 </div>
-                <div class="form-group voluntadTemp">
-                    <ion-icon class="will-icon temp" name="dice-sharp" onclick="rollVoluntad('voluntadTemp-value')" "></ion-icon>
-                        <div class=" rating" id="voluntadTemp-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                        <span class="dot" data-value="5"></span>
-                        <span class="dot" data-value="6"></span>
-                        <span class="dot" data-value="7"></span>
-                        <span class="dot" data-value="8"></span>
-                        <span class="dot" data-value="9"></span>
-                </div>
-                <input type="hidden" id="voluntadTemp-value" name="Vol.Temp." value="0">
-            </div>
+            </form>
         </div>
-        <!-- EXPERIENCIA -->
-        <div class="experiencia-container">
-            <div class="seccion-container">
-                <div class="seccion-linea"></div>
-                <h2 class="seccion">Experiencia</h2>
-                <div class="seccion-linea"></div>
+    </div>
+
+    <!-- Modal CLAN -->
+    <div id="clan-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card clan-selector-card" role="dialog" aria-modal="true">
+            <div class="specialty-modal-header">
+                <h2>Elegir Clan</h2>
+                <button id="close-btn" class="specialty-close" type="button" aria-label="Cerrar">×</button>
             </div>
-            <div class="experiencia-pool">
-                <div class="xp-row">
-                    <div class="rating" id="xp-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                        <span class="dot" data-value="5"></span>
-                        <span class="dot" data-value="6"></span>
-                        <span class="dot" data-value="7"></span>
-                        <span class="dot" data-value="8"></span>
-                        <span class="dot" data-value="9"></span>
-                        <span class="dot" data-value="10"></span>
-                        <span class="dot" data-value="11"></span>
-                        <span class="dot" data-value="12"></span>
-                        <span class="dot" data-value="13"></span>
-                        <span class="dot" data-value="14"></span>
-                        <span class="dot" data-value="15"></span>
-                        <span class="dot" data-value="16"></span>
-                        <span class="dot" data-value="17"></span>
-                        <span class="dot" data-value="18"></span>
-                        <span class="dot" data-value="19"></span>
-                        <span class="dot" data-value="20"></span>
-                        <span class="dot" data-value="21"></span>
-                        <span class="dot" data-value="22"></span>
-                        <span class="dot" data-value="23"></span>
-                        <span class="dot" data-value="24"></span>
-                        <span class="dot" data-value="25"></span>
-                        <span class="dot" data-value="26"></span>
-                        <span class="dot" data-value="27"></span>
-                        <span class="dot" data-value="28"></span>
-                        <span class="dot" data-value="29"></span>
-                        <span class="dot" data-value="30"></span>
-                        <span class="dot" data-value="31"></span>
-                        <span class="dot" data-value="32"></span>
-                        <span class="dot" data-value="33"></span>
-                        <span class="dot" data-value="34"></span>
-                        <span class="dot" data-value="35"></span>
-                        <span class="dot" data-value="36"></span>
-                        <span class="dot" data-value="37"></span>
-                        <span class="dot" data-value="38"></span>
-                        <span class="dot" data-value="39"></span>
-                        <span class="dot" data-value="40"></span>
-                        <span class="dot" data-value="41"></span>
-                        <span class="dot" data-value="42"></span>
-                        <span class="dot" data-value="43"></span>
-                        <span class="dot" data-value="44"></span>
-                    </div>
-                    <input type="hidden" id="experiencia-value" name="experiencia" value="0">
+
+            <div class="clan-selector-layout">
+                <div class="clan-selector-groups">
+                    <section class="clan-group">
+                        <h3>Camarilla</h3>
+                        <div class="clan-chip-list">
+                            <button class="clan-chip" type="button" data-clan="1"><span class="clan-sigil">1</span>Brujah</button>
+                            <button class="clan-chip" type="button" data-clan="2"><span class="clan-sigil">2</span>Gangrel</button>
+                            <button class="clan-chip" type="button" data-clan="3"><span class="clan-sigil">3</span>Malkavian</button>
+                            <button class="clan-chip" type="button" data-clan="4"><span class="clan-sigil">4</span>Nosferatu</button>
+                            <button class="clan-chip" type="button" data-clan="5"><span class="clan-sigil">5</span>Toreador</button>
+                            <button class="clan-chip" type="button" data-clan="6"><span class="clan-sigil">6</span>Tremere</button>
+                            <button class="clan-chip" type="button" data-clan="7"><span class="clan-sigil">7</span>Ventrue</button>
+                        </div>
+                    </section>
+
+                    <section class="clan-group">
+                        <h3>Sabbat</h3>
+                        <div class="clan-chip-list">
+                            <button class="clan-chip" type="button" data-clan="R"><span class="clan-sigil">R</span>Lasombra</button>
+                            <button class="clan-chip" type="button" data-clan="E"><span class="clan-sigil">E</span>Tzimisce</button>
+                        </div>
+                    </section>
+
+                    <section class="clan-group">
+                        <h3>Independientes</h3>
+                        <div class="clan-chip-list">
+                            <button class="clan-chip" type="button" data-clan="9"><span class="clan-sigil">9</span>Assamita</button>
+                            <button class="clan-chip" type="button" data-clan="e"><span class="clan-sigil">e</span>Giovanni</button>
+                            <button class="clan-chip" type="button" data-clan="0"><span class="clan-sigil">0</span>Ravnos</button>
+                            <button class="clan-chip" type="button" data-clan="="><span class="clan-sigil">=</span>Seguidores de Set</button>
+                        </div>
+                    </section>
+
+                    <section class="clan-group">
+                        <h3>Líneas de sangre</h3>
+                        <div class="clan-chip-list">
+                            <button class="clan-chip" type="button" data-clan="É"><span class="clan-sigil">É</span>Ahriman</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Anda</button>
+                            <button class="clan-chip" type="button" data-clan="ã"><span class="clan-sigil">ã</span>Baali</button>
+                            <button class="clan-chip" type="button" data-clan="T"><span class="clan-sigil">T</span>Brujah Verdadero</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Capadocio</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Gárgola</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Heraldo de las Calaveras</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Hermanos de sangre</button>
+                            <button class="clan-chip" type="button" data-clan="q"><span class="clan-sigil">q</span>Hijas de la Cacofonía</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Hijos de Osiris</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Kiasyd</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Lamia</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Lhiannan</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Nagaraja</button>
+                            <button class="clan-chip" type="button" data-clan="`"><span class="clan-sigil">`</span>Noiad</button>
+                            <button class="clan-chip" type="button" data-clan="-"><span class="clan-sigil">-</span>Salubri</button>
+                            <button class="clan-chip" type="button" data-clan="t"><span class="clan-sigil">t</span>Samedi</button>
+                        </div>
+                    </section>
                 </div>
+            </div>
+
+            <div class="clan-selector-actions">
+                <button id="accept-btn" class="discord-webhook-save" type="button">Aceptar</button>
+                <button class="discord-webhook-cancel" type="button" id="cancel-btn">Cerrar</button>
             </div>
         </div>
     </div>
-    <div class="column-middle">
-        <!-- TITULO -->
-        <div class="header">
-            <div class="container info">
-                <div class="form-group info">
-                    <label for="nombre">Nombre:</label>
-                    <input type="text" id="nombre" autocomplete="off">
-                </div>
-                <div class="form-group info">
-                    <label for="clan">Clan:</label>
-                    <input type="text" id="clan" autocomplete="off">
-                </div>
-                <div class="form-group info">
-                    <label for="generacion">Generacion:</label>
-                    <select id="generacion" autocomplete="off">
-                        <option value="14">14</option>
-                        <option value="13" selected>13</option>
-                        <option value="12">12</option>
-                        <option value="11">11</option>
-                        <option value="10">10</option>
-                        <option value="9">9</option>
-                        <option value="8">8</option>
-                        <option value="7">7</option>
-                        <option value="6">6</option>
-                        <option value="5">5</option>
-                        <option value="4">4</option>
-                        <option value="3">3</option>
-                    </select>
-                </div>
-                <div class="form-group info">
-                    <label for="sire">Sire:</label>
-                    <input type="text" id="sire" autocomplete="off">
-                </div>
-            </div>
-            <div class="title-container">
-                <div class="title-logo">/</div>
-            </div>
-            <div class="button-and-image">
-                <div class="header-clandetail-container">
-                    <div class="header-clan-logo">
-                        <p id="header-logo-display">G</p>
-                        <input type="hidden" id="header-logo-value" name="logo" value="G">
-                    </div>
-                </div>
-            </div>
-            <div class="buttons-container">
-                <!-- <button title="Guardar personaje" class="gg-export" onclick="downloadCharacterData()"></button> -->
-                <ion-icon aria-label="Guardar personaje" title="Guardar personaje" name="save-sharp"
-                    onclick="downloadCharacterData()"></ion-icon>
-                <!-- <label title="Cargar personaje" for="file-input" class="gg-import"></label> -->
-                <ion-icon for="file-input-icon" name="download-sharp" onclick="clickOnFileInput()"></ion-icon>
-                <input type="file" id="file-input" hidden accept=".json">
-                <!-- <button title="cambiarModo" class="gg-dark-mode""></button> -->
-                <ion-icon name="logo-discord" id="discord-btn"></ion-icon>
-                <ion-icon name="contrast-sharp" id="modeToggle"></ion-icon>
-            </div>
-        </div>
 
-        <!-- Modal discord token -->
-        <div id="discord-modal" class="modal">
-            <div class="modal-content">
-                <h1>Discord webhook</h1>
-                <p>Introduce la URL del webhook de Discord para que se envíen los mensajes de las tiradas de dados.
-                    <br>
-                    Dejar en blanco para desactivar.
-                    <br><br>
-                    <a href="https://support.discord.com/hc/es/articles/228383668-Usando-Webhooks" target="_blank">¿Cómo
-                        crear
-                        un webhook?</a>
-                </p>
-                <div class="discord-container">
-                    <div class="discordlist">
-                        <label for="discord-webhook">Webhook URL:</label>
-                        <input type="text" id="discord-modal-webhook-input" autocomplete="off">
-                    </div>
-                    <ion-icon class="toggle" id="discord-toggle" name="toggle-sharp"></ion-icon>
-                    <input type="hidden" id="discord-toggle-input" name="discord-toggle-input" value="true">
-                </div>
-                <div class="modal-buttons">
-                    <button class="modal-button-save" id="discord-modal-save-button">Guardar</button>
-                    <button class="modal-button-close" id="discord-modal-close-button">Cancelar</button>
-                </div>
+    <!-- Path/Senda Repository Modal -->
+    <div id="path-repo-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card path-repo-card" role="dialog" aria-modal="true" aria-labelledby="path-repo-title">
+            <div class="specialty-modal-header">
+                <h2 id="path-repo-title">Elegir Senda</h2>
+                <button id="path-repo-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
             </div>
+            <p class="specialty-subtitle">Selecciona la senda principal del personaje.</p>
+            <input id="path-repo-search" class="discipline-repo-search" type="text" placeholder="Buscar senda..." autocomplete="off">
+            <div id="path-repo-list" class="path-repo-list"></div>
+            <button id="path-repo-apply" class="specialty-add-action" type="button">Aplicar selección</button>
         </div>
+    </div>
 
-        <!-- Modal CLAN HTML -->
-        <div id="clan-modal" class="modal">
-            <div class="modal-content">
-                <h1>Elegir Clan</h1>
-                <div class="clan-container">
-                    <div class="clanlist-container">
-                        <h2>Camarilla</h2>
-                        <ul>
-                            <li data-clan="1">Brujah</li>
-                            <li data-clan="2">Gangrel</li>
-                            <li data-clan="3">Malkavian</li>
-                            <li data-clan="4">Nosferatu</li>
-                            <li data-clan="5">Toreador</li>
-                            <li data-clan="6">Tremere</li>
-                            <li data-clan="7">Ventrue</li>
-                        </ul>
-                        <h2>Sabbat</h2>
-                        <ul>
-                            <li data-clan="R">Lasombra</li>
-                            <li data-clan="E">Tzimisce</li>
-                        </ul>
-                        <h2>Indepedientes</h2>
-                        <ul>
-                            <li data-clan="9">Assamita</li>
-                            <li data-clan="e">Giovanni</li>
-                            <li data-clan="0">Ravnos</li>
-                            <li data-clan="=">Seguidores de Set</li>
-                        </ul>
-                        <h2>Lineas de sangre</h2>
-                        <ul>
-                            <li data-clan="É">Ahriman</li>
-                            <li data-clan="`">Anda</li>
-                            <li data-clan="ã">Baali</li>
-                            <li data-clan="T">
-                                Brujah Verdadero</li>
-                            <li data-clan="`">Capadocio</li>
-                            <li data-clan="`">Gargola</li>
-                            <li data-clan="`">Heraldo de las Calaveras</li>
-                            <li data-clan="`">Hermanos de sangre</li>
-                            <li data-clan="q">Hijas de la Cacofonia</li>
-                            <li data-clan="`">Hijos de Osiris</li>
-                            <li data-clan="`">Kiasyd</li>
-                            <li data-clan="`">Lamia</li>
-                            <li data-clan="`">Lhiannan</li>
-                            <li data-clan="`">Nagaraja</li>
-                            <li data-clan="`">Noiad</li>
-                            <li data-clan="-">Salubri</li>
-                            <li data-clan="t">Samedi</li>
-                        </ul>
-                    </div>
-                    <div class="clandetail-container">
-                        <div class="clan-logo">
-                            <p id="logo-display">G</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-buttons">
-                    <button class="modal-button-save" id="accept-btn">Aceptar</button>
-                    <button class="modal-button-close" id="close-btn">Cerrar</button>
-                </div>
+    <!-- Discipline Repository Modal -->
+    <div id="discipline-repo-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card discipline-repo-card" role="dialog" aria-modal="true">
+            <div class="specialty-modal-header">
+                <h2 id="discipline-repo-title">Repositorio de Disciplinas</h2>
+                <button id="discipline-repo-close" class="specialty-close" type="button">×</button>
             </div>
+            <p class="specialty-subtitle">Selecciona disciplinas para agregarlas a la hoja.</p>
+            <input id="discipline-repo-search" class="discipline-repo-search" type="text"
+                placeholder="Buscar disciplina..." autocomplete="off">
+            <div id="discipline-repo-list" class="discipline-repo-list"></div>
+            <button id="discipline-repo-apply" class="specialty-add-action" type="button">Aplicar selección</button>
         </div>
+    </div>
 
-        <!-- Theme Selection Modal -->
-        <div id="theme-modal">
-            <div class="theme-modal-content">
-                <h1>Personaliza tu hoja</h1>
-                <div class="theme-modal-grid">
-                    <div class="theme-section">
-                        <h2>Tema de color</h2>
-                        <div class="theme-options">
-                            <div class="theme-option" data-theme="light">Light</div>
-                            <div class="theme-option" data-theme="dark">Dark</div>
-                            <div class="theme-option" data-theme="camarilla">Camarilla</div>
-                            <div class="theme-option" data-theme="sabbat">Sabbat</div>
-                            <div class="theme-option" data-theme="anarquista">Anarquista</div>
-                            <div class="theme-option" data-theme="phantomas">Phantomas</div>
-                        </div>
-                    </div>
-                    <div class="font-section">
-                        <h2>Estilo de fuente</h2>
-                        <div class="font-options">
-                            <div class="font-option" data-font="clasico">Clásico</div>
-                            <div class="font-option" data-font="noir">Noir</div>
-                            <div class="font-option" data-font="phantomas">Phantomas</div>
-                        </div>
-                    </div>
-                </div>
-                <button class="theme-modal-close">Cerrar</button>
+    <!-- Theme & Options Modal -->
+    <div id="theme-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card theme-modal-card" role="dialog" aria-modal="true"
+            aria-labelledby="theme-modal-title">
+            <div class="specialty-modal-header">
+                <h2 id="theme-modal-title">Opciones</h2>
+                <button id="theme-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
             </div>
-        </div>
 
-        <!--  ATRIBUTOS  -->
-        <div class="seccion-container">
-            <div class="seccion-linea-izq">3</div>
-            <div class="linea-recta"></div>
-            <h1 class="seccion">Atributos</h1>
-            <div class="linea-recta"></div>
-            <div class="seccion-linea-der">4</div>
-        </div>
-        <div class="container attributes">
-            <!-- PRIMERA COLUMNA ATRIBUTOS: FISICOS  -->
-            <div class="column">
-                <h2>Fisicos</h2>
-                <div class="form-group attribute fisicos">
-                    <label for="fuerza">Fuerza:</label>
-                    <!-- TO DO -->
-                    <select class="tempAttr fuerza" id="tempFuerza">
-                        <option value="0" selected>+0</option>
-                        <option value="1">+1</option>
-                        <option value="2">+2</option>
-                        <option value="3">+3</option>
-                        <option value="4">+4</option>
-                        <option value="5">+5</option>
-                        <option value="6">+6</option>
-                        <option value="7">+7</option>
-                        <option value="8">+8</option>
-                    </select>
-                    <!-- end of TO DO -->
-                    <div class="rating" id="fuerza-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="fuerza-value" name="fuerza" value="0">
-                </div>
-                <div class="form-group attribute fisicos">
-                    <label for="destreza">Destreza:</label>
-                    <!-- TO DO -->
-                    <select class="tempAttr destreza" id="tempDestreza">
-                        <option value="0" selected>+0</option>
-                        <option value="1">+1</option>
-                        <option value="2">+2</option>
-                        <option value="3">+3</option>
-                        <option value="4">+4</option>
-                        <option value="5">+5</option>
-                        <option value="6">+6</option>
-                        <option value="7">+7</option>
-                        <option value="8">+8</option>
-                    </select>
-                    <!-- end of TO DO -->
-                    <div class="rating" id="destreza-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="destreza-value" name="destreza" value="0">
-                </div>
-                <div class="form-group attribute fisicos">
-                    <label for="resistencia">Resistencia:</label>
-                    <!-- TO DO -->
-                    <select class="tempAttr resistencia" id="tempResistencia">
-                        <option value="0" selected>+0</option>
-                        <option value="1">+1</option>
-                        <option value="2">+2</option>
-                        <option value="3">+3</option>
-                        <option value="4">+4</option>
-                        <option value="5">+5</option>
-                        <option value="6">+6</option>
-                        <option value="7">+7</option>
-                        <option value="8">+8</option>
-                    </select>
-                    <!-- end of TO DO -->
-                    <div class="rating" id="resistencia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="resistencia-value" name="resistencia" value="0">
-                </div>
-            </div>
-            <!-- SEGUNDA COLUMNA ATRIBUTOS: SOCIALES  -->
-            <div class="column">
-                <h2>Sociales</h2>
-                <div class="form-group attribute">
-                    <label for="carisma">Carisma:</label>
-                    <div class="rating" id="carisma-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="carisma-value" name="carisma" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="manipulacion">Manipulacion:</label>
-                    <div class="rating" id="manipulacion-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="manipulacion-value" name="manipulacion" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="apariencia">Apariencia:</label>
-                    <div class="rating" id="apariencia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="apariencia-value" name="apariencia" value="0">
-                </div>
-            </div>
-            <!-- TERCERA COLUMNA ATRIBUTOS: MENTALES  -->
-            <div class="column">
-                <h2>Mentales</h2>
-                <div class="form-group attribute">
-                    <label for="percepcion">Percepcion:</label>
-                    <div class="rating" id="percepcion-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="percepcion-value" name="percepcion" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="inteligencia">Inteligencia:</label>
-                    <div class="rating" id="inteligencia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="inteligencia-value" name="inteligencia" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="astucia">Astucia:</label>
-                    <div class="rating" id="astucia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="astucia-value" name="astucia" value="0">
-                </div>
-            </div>
-        </div>
-
-        <!-- HABILIDADES -->
-        <div class="seccion-container">
-            <div class="seccion-linea-izq">3</div>
-            <div class="linea-recta"></div>
-            <h1 class="seccion">Habilidades</h1>
-            <div class="linea-recta"></div>
-            <div class="seccion-linea-der">4</div>
-        </div>
-        <div class="container abilities">
-            <!-- PRIMERA COLUMNA HABILIDADES: TALENTOS  -->
-            <div class="column">
-                <h2>Talentos</h2>
-                <div class="form-group attribute">
-                    <label for="alerta">Alerta:</label>
-                    <div class="rating" id="alerta-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="alerta-value" name="alerta" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="atletismo">Atletismo:</label>
-                    <div class="rating" id="atletismo-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="atletismo-value" name="atletismo" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="callejeo">Callejeo:</label>
-                    <div class="rating" id="callejeo-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="callejeo-value" name="callejeo" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="consciencia">Consciencia:</label>
-                    <div class="rating" id="consciencia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="consciencia-value" name="consciencia" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="empatia">Empatia:</label>
-                    <div class="rating" id="empatia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="empatia-value" name="empatia" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="expresion">Expresion:</label>
-                    <div class="rating" id="expresion-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="expresion-value" name="expresion" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="intimidacion">Intimidacion:</label>
-                    <div class="rating" id="intimidacion-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="intimidacion-value" name="intimidacion" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="liderazgo">Liderazgo:</label>
-                    <div class="rating" id="liderazgo-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="liderazgo-value" name="liderazgo" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="pelea">Pelea:</label>
-                    <div class="rating" id="pelea-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="pelea-value" name="pelea" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="subterfugio">Subterfugio:</label>
-                    <div class="rating" id="subterfugio-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="subterfugio-value" name="subterfugio" value="0">
-                </div>
-            </div>
-            <!-- SEGUNDA COLUMNA HABILIDADES: TECNICAS  -->
-            <div class="column">
-                <h2>Tecnicas</h2>
-                <div class="form-group attribute">
-                    <label for="armasDeFuego">Armas de Fuego:</label>
-                    <div class="rating" id="armasDeFuego-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="armasDeFuego-value" name="armasDeFuego" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="artesania">Artesania:</label>
-                    <div class="rating" id="artesania-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="artesania-value" name="artesania" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="conducir">Conducir:</label>
-                    <div class="rating" id="conducir-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="conducir-value" name="conducir" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="etiqueta">Etiqueta:</label>
-                    <div class="rating" id="etiqueta-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="etiqueta-value" name="etiqueta" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="interpretacion">Interpretacion:</label>
-                    <div class="rating" id="interpretacion-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="interpretacion-value" name="interpretacion" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="latrocinio">Latrocinio:</label>
-                    <div class="rating" id="latrocinio-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="latrocinio-value" name="latrocinio" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="peleaConArmas">Pelea con Armas:</label>
-                    <div class="rating" id="peleaConArmas-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="peleaConArmas-value" name="peleaConArmas" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="sigilo">Sigilo:</label>
-                    <div class="rating" id="sigilo-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="sigilo-value" name="sigilo" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="supervivencia">Supervivencia:</label>
-                    <div class="rating" id="supervivencia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="supervivencia-value" name="supervivencia" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="tratoConAnimales">Trato con Animales:</label>
-                    <div class="rating" id="tratoConAnimales-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="tratoConAnimales-value" name="tratoConAnimales" value="0">
-                </div>
-            </div>
-            <!-- TERCERA COLUMNA HABILIDADES: CONOCIMIENTOS  -->
-            <div class="column">
-                <h2>Conocimientos</h2>
-                <div class="form-group attribute">
-                    <label for="academicismo">Academicismo:</label>
-                    <div class="rating" id="academicismo-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="academicismo-value" name="academicismo" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="ciencias">Ciencias:</label>
-                    <div class="rating" id="ciencias-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="ciencias-value" name="ciencias" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="finanzas">Finanzas:</label>
-                    <div class="rating" id="finanzas-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="finanzas-value" name="finanzas" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="informatica">Informatica:</label>
-                    <div class="rating" id="informatica-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="informatica-value" name="informatica" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="investigacion">Investigacion:</label>
-                    <div class="rating" id="investigacion-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="investigacion-value" name="investigacion" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="leyes">Leyes:</label>
-                    <div class="rating" id="leyes-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="leyes-value" name="leyes" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="medicina">Medicina:</label>
-                    <div class="rating" id="medicina-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="medicina-value" name="medicina" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="ocultismo">Ocultismo:</label>
-                    <div class="rating" id="ocultismo-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="ocultismo-value" name="ocultismo" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="politica">Politica:</label>
-                    <div class="rating" id="politica-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="politica-value" name="politica" value="0">
-                </div>
-                <div class="form-group attribute">
-                    <label for="tecnologia">Tecnologia:</label>
-                    <div class="rating" id="tecnologia-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                    </div>
-                    <input type="hidden" id="tecnologia-value" name="tecnologia" value="0">
-                </div>
-            </div>
-        </div>
-
-        <!-- SEPARADOR  -->
-        <div class="seccion-container">
-            <div class="seccion-linea-izq">3</div>
-            <div class="linea-recta"></div>
-            <div class="seccion-linea-der">4</div>
-        </div>
-
-        <!-- DADOS! -->
-        <div class="dice-container">
-            <div class="dice-automatizations">
-
-                <!-- Checkbox Penalizador Salud -->
-                <div class="automatization-row">
-                    <input type="checkbox" id="penalizadorSalud" name="penalizadorSalud" checked>
-                    <label for="penalizadorSalud">Penalizador de Salud:</label>
-                    <label for="penalizadorSalud" id="penalizadorSaludLabel">0</label>
-                </div>
-                <!-- Checkbox Fuerza de Voluntad -->
-                <div class="automatization-row">
-                    <input type="checkbox" id="willpower" name="usaVoluntad">
-                    <label for="willpower">Usar Fuerza de Voluntad</label>
-                </div>
-                <!-- Checkbox Especialidad -->
-                <div class="automatization-row">
-                    <input type="checkbox" id="specialty" name="usaEspecialidad">
-                    <label for="specialty">Usar Especialidad</label>
-                </div>
-            </div>
-            <div class="dice-column">
-                <div class="dice-row">
-                    <div class="groupDie">
-                        <label class="diceLabel" for="dicePool1" id="dicePool1Label"></label>
-                        <input class="dicePool" id="dicePool1" type="number" value="0">
-                    </div>
-                    <div class="groupDie-span">
-                        <span></span>
-                        <span>
-                            +
+            <!-- Color Theme Section -->
+            <div class="theme-section-block">
+                <h3 class="theme-section-label">Tema de color</h3>
+                <div class="theme-swatches" id="theme-swatches">
+                    <button class="theme-swatch" data-theme="dark" type="button" title="Dark">
+                        <span class="swatch-colors">
+                            <span class="swatch-c" style="background:#111111"></span>
+                            <span class="swatch-c" style="background:#bf5a3d"></span>
+                            <span class="swatch-c" style="background:#f2ece4"></span>
                         </span>
-                    </div>
-                    <div class="groupDie">
-                        <label class="diceLabel" for="dicePool2" id="dicePool2Label"></label>
-                        <input class="dicePool" id="dicePool2" type="number" value="0">
-                    </div>
-                    <div class="groupDie-span">
-                        <span></span>
-                        <span>
-                            +
+                        <span class="swatch-name">Dark</span>
+                    </button>
+                    <button class="theme-swatch" data-theme="light" type="button" title="Light">
+                        <span class="swatch-colors">
+                            <span class="swatch-c" style="background:#f5f0e7"></span>
+                            <span class="swatch-c" style="background:#b41200"></span>
+                            <span class="swatch-c" style="background:#2a1f14"></span>
                         </span>
-                    </div>
-                    <div class="groupDie">
-                        <label class="diceLabel" for="dieMod" id="modLabel">Modif.</label>
-                        <input class="diceMod" id="diceMod" type="number" value="0">
-                    </div>
-                    <div class="groupDie">
-                        <label class="dificultadLabel" for="difficulty">Dif.</label>
-                        <!-- <input class="diceDifficulty" id="difficulty" type="number" value=6> -->
-                        <select id="difficulty" autocomplete="off">
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6" selected>6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                        </select>
-                    </div>
-                    <button class="diceButton" id="diceButton">Lanzar</button>
-                    <i class="gg-trash"></i>
-                </div>
-                <div class="diceResults" id="diceResults">
-                    <label class="diceRolls" id="diceRolls"></label>
-                    <label class="diceResult" id="diceResult"></label>
+                        <span class="swatch-name">Light</span>
+                    </button>
+                    <button class="theme-swatch" data-theme="camarilla" type="button" title="Camarilla">
+                        <span class="swatch-colors">
+                            <span class="swatch-c" style="background:#0e1a12"></span>
+                            <span class="swatch-c" style="background:#2d5f3f"></span>
+                            <span class="swatch-c" style="background:#d4e8dc"></span>
+                        </span>
+                        <span class="swatch-name">Camarilla</span>
+                    </button>
+                    <button class="theme-swatch" data-theme="sabbat" type="button" title="Sabbat">
+                        <span class="swatch-colors">
+                            <span class="swatch-c" style="background:#0f0505"></span>
+                            <span class="swatch-c" style="background:#8b0000"></span>
+                            <span class="swatch-c" style="background:#e0d0d0"></span>
+                        </span>
+                        <span class="swatch-name">Sabbat</span>
+                    </button>
+                    <button class="theme-swatch" data-theme="anarquista" type="button" title="Anarquista">
+                        <span class="swatch-colors">
+                            <span class="swatch-c" style="background:#141a1f"></span>
+                            <span class="swatch-c" style="background:#4a7c8e"></span>
+                            <span class="swatch-c" style="background:#d4dfe5"></span>
+                        </span>
+                        <span class="swatch-name">Anarquista</span>
+                    </button>
+                    <button class="theme-swatch" data-theme="phantomas" type="button" title="Phantomas">
+                        <span class="swatch-colors">
+                            <span class="swatch-c" style="background:#0a0a0a"></span>
+                            <span class="swatch-c" style="background:#00ff41"></span>
+                            <span class="swatch-c" style="background:#115522"></span>
+                        </span>
+                        <span class="swatch-name">Phantomas</span>
+                    </button>
                 </div>
             </div>
 
-        </div>
-    </div>
-    <div class="column-right">
-        <!-- SALUD -->
-        <div class="health-container">
-            <div class="seccion-container">
-                <div class="seccion-linea"></div>
-                <h1 class="seccion">Salud</h1>
-                <div class="seccion-linea"></div>
-            </div>
-            <div class="health-table">
-                <div class="table-row salud">
-                    <label for="magullado">Magullado:</label>
-                    <label for="magullado"></label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="magullado-value" name="magullado" value="0">
-                </div>
-                <div class="table-row salud">
-                    <label for="lastimado">Lastimado:</label>
-                    <label for="lastimado">-1</label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="lastimado-value" name="lastimado" value="0">
-                </div>
-                <div class="table-row salud">
-                    <label for="lesionado">Lesionado:</label>
-                    <label for="lesionado">-1</label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="lesionado-value" name="lesionado" value="0">
-                </div>
-                <div class="table-row salud">
-                    <label for="herido">Herido:</label>
-                    <label for="herido">-2</label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="herido-value" name="herido" value="0">
-                </div>
-                <div class="table-row salud">
-                    <label for="malherido">Malherido:</label>
-                    <label for="malherido">-2</label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="malherido-value" name="Malherido" value="0">
-                </div>
-                <div class="table-row salud">
-                    <label for="tullido">Tullido:</label>
-                    <label for="tullido">-5</label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="tullido-value" name="tullido" value="0">
-                </div>
-                <div class="table-row salud">
-                    <label for="incapacitado">Incapacitado:</label>
-                    <label for="incapacitado"></label>
-                    <span class="square" data-value="0"></span>
-                    <input class="inputHealth" type="hidden" id="incapacitado-value" name="incapacitado" value="0">
+            <!-- Font Section -->
+            <div class="theme-section-block">
+                <h3 class="theme-section-label">Fuente</h3>
+                <div class="theme-font-options" id="font-options">
+                    <button class="theme-font-btn" data-font="clasico" type="button">
+                        <span class="font-preview" style="font-family:'Cormorant Garamond',serif">Aa</span>
+                        <span class="font-label">Clásico</span>
+                    </button>
+                    <button class="theme-font-btn" data-font="noir" type="button">
+                        <span class="font-preview" style="font-family:'Courier Prime',monospace;font-size:0.85em">Aa</span>
+                        <span class="font-label">Noir</span>
+                    </button>
+                    <button class="theme-font-btn" data-font="phantomas" type="button">
+                        <span class="font-preview" style="font-family:'Space Mono',monospace">Aa</span>
+                        <span class="font-label">Terminal</span>
+                    </button>
                 </div>
             </div>
-            <div class="health-buttons-container">
-                <div class="botonera contundente">
-                    <button type="button" class="button-add" id="contundenteAdd">+</button>
-                    <label class="health-button-label contundente">Contundente</label>
-                    <button type="button" class="button-remove" id="contundenteRemove">-</button>
-                </div>
-                <div class="botonera letal">
-                    <button type="button" class="button-add" id="letalAdd">+</button>
-                    <label class="health-button-label letal">Letal</label>
-                    <button type="button" class="button-remove" id="letalRemove">-</button>
-                </div>
-                <div class="botonera agravado">
-                    <button type="button" class="button-add" id="agravadoAdd">+</button>
-                    <label class="health-button-label agravado">Agravado</label>
-                    <button type="button" class="button-remove" id="agravadoRemove">-</button>
-                </div>
-            </div>
-        </div>
-        <!-- SANGRE -->
-        <div class="blood-container">
-            <div class="seccion-container">
-                <div class="seccion-linea"></div>
-                <h1 class="seccion" id="sangre-titulo">Sangre</h1>
-                <div class="seccion-linea"></div>
-            </div>
-            <div class="blood-pool">
-                <div class="blood-action-consume">
-                    <i id="consumeBlood" class="fa-solid fa-droplet-slash"></i>
-                </div>
-                <div class="blood-row">
-                    <div class="rating" id="blood-rating">
-                        <span class="dot" data-value="0"></span>
-                        <span class="dot" data-value="1"></span>
-                        <span class="dot" data-value="2"></span>
-                        <span class="dot" data-value="3"></span>
-                        <span class="dot" data-value="4"></span>
-                        <span class="dot" data-value="5"></span>
-                        <span class="dot" data-value="6"></span>
-                        <span class="dot" data-value="7"></span>
-                        <span class="dot" data-value="8"></span>
-                        <span class="dot" data-value="9"></span>
-                        <span class="dot" data-value="10"></span>
-                        <span class="dot" data-value="11"></span>
-                        <span class="dot" data-value="12"></span>
-                        <span class="dot" data-value="13"></span>
-                        <span class="dot" data-value="14"></span>
-                        <span class="dot" data-value="15"></span>
-                        <span class="dot" data-value="16"></span>
-                        <span class="dot" data-value="17"></span>
-                        <span class="dot" data-value="18"></span>
-                        <span class="dot" data-value="19"></span>
-                        <span class="dot" data-value="20"></span>
-                        <span class="dot" data-value="21"></span>
-                        <span class="dot" data-value="22"></span>
-                        <span class="dot" data-value="23"></span>
-                        <span class="dot" data-value="24"></span>
-                        <span class="dot" data-value="25"></span>
-                        <span class="dot" data-value="26"></span>
-                        <span class="dot" data-value="27"></span>
-                        <span class="dot" data-value="28"></span>
-                        <span class="dot" data-value="29"></span>
-                    </div>
 
-                    <input type="hidden" id="blood-value" name="blood" value="0">
-                    <div class="info-sangre">
-                        <label for="blood">Sangre por turno:</label>
-                        <label id="bloodPerTurn" for="blood">1</label>
-                    </div>
-                </div>
-                <div class="blood-action-add">
-                    <i id="addNormalBlood" class="fa-solid fa-droplet"></i>
-                    <i id="addSpecialBlood1" class="fa-solid fa-droplet" style="color: red;"></i>
-                    <i id="addSpecialBlood2" class="fa-solid fa-droplet" style="color: blue;"></i>
-                </div>
-            </div>
-        </div>
-        <!-- TIRADAS! -->
-        <div class="seccion-container">
-            <div class="seccion-linea"></div>
-            <h1 class="seccion">Tiradas</h1>
-            <div class="seccion-linea"></div>
-        </div>
-        <div class="tiradas-container">
-            <div class="tiradas-botonera">
-                <button class="iniciativa-button" type="button" id="iniciativa-button"
-                    onclick="tirarIniciativa()">Iniciativa</button>
-                <label for="iniciativa" id="valorIniciativa">
-                    1d10 + Destreza + Astucia - Penalizadores por daño</label>
-            </div>
-            <div class="historial">
-                <!-- Se genera automatico con JS -->
+            <div class="theme-section-block">
+                <h3 class="theme-section-label">Exportar</h3>
+                <button id="export-character-pdf-btn" class="theme-export-btn" type="button">Descargar hoja PDF</button>
             </div>
         </div>
     </div>
-    </div>
+
+    <!-- Ion Icons (for backward compatibility with discipline/virtue icons) -->
     <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+
+    <!-- Attr Boost Modal -->
+    <div id="attr-boost-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card attr-boost-modal-card" role="dialog" aria-modal="true" aria-labelledby="attr-boost-modal-title">
+            <div class="specialty-modal-header">
+                <h2 id="attr-boost-modal-title">Boost temporal</h2>
+                <button id="attr-boost-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <p class="specialty-subtitle">Selecciona el bono temporal por Sangre.</p>
+            <div class="attr-boost-options">
+                <button class="attr-boost-option" type="button" data-boost-value="1">+1</button>
+                <button class="attr-boost-option" type="button" data-boost-value="2">+2</button>
+                <button class="attr-boost-option" type="button" data-boost-value="3">+3</button>
+                <button class="attr-boost-option" type="button" data-boost-value="4">+4</button>
+            </div>
+            <button class="specialty-add-action attr-boost-clear" type="button">Quitar boost</button>
+        </div>
+    </div>
+
+    <!-- Dice History Modal -->
+    <div id="dice-history-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card dice-history-card" role="dialog" aria-modal="true"
+            aria-labelledby="dice-history-title">
+            <div class="specialty-modal-header">
+                <h2 id="dice-history-title">Historial de Tiradas</h2>
+                <button id="dice-history-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <div id="dice-history-list" class="dice-history-list"></div>
+        </div>
+    </div>
+
+    <!-- Saved Roll Modal -->
+    <div id="saved-roll-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card saved-roll-modal-card" role="dialog" aria-modal="true"
+            aria-labelledby="saved-roll-modal-title">
+            <div class="specialty-modal-header">
+                <h2 id="saved-roll-modal-title">Nueva Tirada</h2>
+                <button id="saved-roll-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <form id="saved-roll-form" class="saved-roll-form">
+                <div class="saved-roll-field">
+                    <label for="saved-roll-name">Nombre</label>
+                    <input id="saved-roll-name" type="text" placeholder="Ej: Disparar arma" autocomplete="off">
+                </div>
+                <div class="saved-roll-field">
+                    <label for="saved-roll-pool1">Atributo (Pool 1)</label>
+                    <select id="saved-roll-pool1"></select>
+                </div>
+                <div class="saved-roll-field">
+                    <label for="saved-roll-pool2">Habilidad (Pool 2)</label>
+                    <select id="saved-roll-pool2"></select>
+                </div>
+                <div class="saved-roll-row">
+                    <div class="saved-roll-field">
+                        <label for="saved-roll-mod">Modificador</label>
+                        <select id="saved-roll-mod"></select>
+                    </div>
+                    <div class="saved-roll-field">
+                        <label for="saved-roll-diff">Dificultad</label>
+                        <select id="saved-roll-diff"></select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="background-save-btn">Guardar</button>
+                    <button id="saved-roll-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="disciplineRepository.js"></script>
+    <script src="pathRepository.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
 </body>
-<script src="script.js"></script>
 
 </html>
