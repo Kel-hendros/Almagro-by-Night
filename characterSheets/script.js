@@ -2932,15 +2932,21 @@ attributesList.forEach((attribute) => {
     let pool1Value = finalAttribute;
     let pool1Label = capitalizeFirstLetter(attrName);
 
-    // Check for physical discipline bonus (e.g. Potencia → Fuerza)
+    // Check for physical discipline bonus (e.g. Potencia → Fuerza, Celeridad → Destreza)
     const physBonus = getPhysicalDisciplineBonus(attrName);
     if (physBonus) {
-      if (!activatedDisciplines.has(physBonus.id)) {
-        // Passive mode: add discipline dots as extra dice
+      if (physBonus.id === 5) {
+        // Celeridad: always add passive bonus (already reduced by activated points)
+        if (physBonus.level > 0) {
+          pool1Value += physBonus.level;
+          pool1Label += `+${physBonus.shortName}`;
+        }
+      } else if (!activatedDisciplines.has(physBonus.id)) {
+        // Potencia/Fortaleza: passive mode — add all discipline dots as extra dice
         pool1Value += physBonus.level;
         pool1Label += `+${physBonus.shortName}`;
       }
-      // Active mode: pool stays normal, auto-successes handled in rollTheDice()
+      // Potencia active mode: pool stays normal, auto-successes handled in rollTheDice()
     }
 
     document.querySelector("#dicePool1").value = pool1Value;
@@ -3155,19 +3161,23 @@ const disciplineRepo = window.DISCIPLINE_REPO || [];
 // Key: discipline ID, Value: attribute name (lowercase)
 const PHYSICAL_DISCIPLINE_MAP = {
   30: "fuerza",       // Potencia → Fuerza
-  // 5:  "destreza",  // Celeridad → Destreza (future)
-  // 11: "resistencia", // Fortaleza → Resistencia (future)
+  5:  "destreza",     // Celeridad → Destreza
+  11: "resistencia",  // Fortaleza → Resistencia (always passive)
 };
 
 const PHYSICAL_DISCIPLINE_SHORT = { 30: "Pot", 5: "Cel", 11: "Fort" };
 const PHYSICAL_DISCIPLINE_FULL = { 30: "Potencia", 5: "Celeridad", 11: "Fortaleza" };
 
-// Set of discipline IDs currently activated (blood spent, auto-successes mode)
+// Disciplines with all-or-nothing activation (Potencia only)
 let activatedDisciplines = new Set();
+
+// Celeridad: per-point activation (each point costs 1 blood, gives extra action)
+let celeridadActivatedPoints = 0;
 
 /**
  * Given an attribute name, returns info about the physical discipline that boosts it.
- * Returns { id, level, shortName, fullName } or null if none found.
+ * For Celeridad, returns the PASSIVE level (total - activated points).
+ * Returns { id, level, totalLevel, shortName, fullName } or null if none found.
  */
 function getPhysicalDisciplineBonus(attrName) {
   const normalized = attrName.toLowerCase();
@@ -3176,9 +3186,14 @@ function getPhysicalDisciplineBonus(attrName) {
       const id = Number(discId);
       const disc = selectedDisciplines.find(d => d.id === id);
       if (disc && disc.level > 0) {
+        // Celeridad: passive level = total - activated points
+        const passiveLevel = (id === 5)
+          ? Math.max(0, disc.level - celeridadActivatedPoints)
+          : disc.level;
         return {
           id: id,
-          level: disc.level,
+          level: passiveLevel,
+          totalLevel: disc.level,
           shortName: PHYSICAL_DISCIPLINE_SHORT[id] || "",
           fullName: PHYSICAL_DISCIPLINE_FULL[id] || "",
         };
@@ -3249,12 +3264,19 @@ function refreshPool1ForPhysicalDiscipline(discId) {
   let newLabel = capitalizeFirstLetter(mappedAttr);
 
   const physBonus = getPhysicalDisciplineBonus(mappedAttr);
-  if (physBonus && !activatedDisciplines.has(physBonus.id)) {
-    // Passive: add dice
-    pool1Value += physBonus.level;
-    newLabel += `+${physBonus.shortName}`;
+  if (physBonus) {
+    if (physBonus.id === 5) {
+      // Celeridad: always add passive bonus (already reduced by activated points)
+      if (physBonus.level > 0) {
+        pool1Value += physBonus.level;
+        newLabel += `+${physBonus.shortName}`;
+      }
+    } else if (!activatedDisciplines.has(physBonus.id)) {
+      // Potencia/Fortaleza: passive mode
+      pool1Value += physBonus.level;
+      newLabel += `+${physBonus.shortName}`;
+    }
   }
-  // Active: pool stays as base attribute only
 
   document.querySelector("#dicePool1").value = pool1Value;
   document.querySelector("#dicePool1Label").innerHTML = newLabel;
@@ -3295,7 +3317,7 @@ function renderDisciplineList() {
     const isActivated = activatedDisciplines.has(disc.id);
     const row = document.createElement("div");
     row.className = "discipline-row";
-    if (isActivated) row.classList.add("discipline-activated");
+    if (isActivated || (disc.id === 5 && celeridadActivatedPoints > 0)) row.classList.add("discipline-activated");
 
     // Build name area: name + optional icons (physical activation, sendas)
     const hasSendas = disciplineHasSendas(disc.id);
@@ -3303,7 +3325,19 @@ function renderDisciplineList() {
     if (isPhysical || hasSendas) {
       nameAreaHTML = `<span class="discipline-name-area">
            <span class="discipline-name" data-disc-index="${index}" title="Click para agregar al tirador">${name}</span>`;
-      if (isPhysical) {
+      if (isPhysical && disc.id === 5) {
+        // Celeridad: per-point activation icons
+        nameAreaHTML += `<span class="celeridad-points">`;
+        for (let p = 1; p <= disc.level; p++) {
+          const isPointActive = p <= celeridadActivatedPoints;
+          nameAreaHTML += `<button class="celeridad-point${isPointActive ? " active" : ""}" type="button"
+                     data-point="${p}" title="${isPointActive ? "Desactivar" : "Activar"} punto ${p} de Celeridad${isPointActive ? "" : " (gasta 1 sangre)"}">
+               <iconify-icon icon="bi:lightning-fill" width="12" aria-hidden="true"></iconify-icon>
+             </button>`;
+        }
+        nameAreaHTML += `</span>`;
+      } else if (isPhysical && disc.id === 30) {
+        // Potencia: single toggle button (Fortaleza is always passive, no button)
         nameAreaHTML += `<button class="discipline-activate-btn${isActivated ? " active" : ""}" type="button"
                    data-disc-id="${disc.id}" title="${isActivated ? "Desactivar" : "Activar"} ${PHYSICAL_DISCIPLINE_FULL[disc.id] || name} (gasta 1 sangre)">
              <iconify-icon icon="game-icons:fist" width="14" aria-hidden="true"></iconify-icon>
@@ -3400,10 +3434,17 @@ function renderDisciplineList() {
         const clickedLevel = Number(dot.dataset.value);
         const newLevel = (clickedLevel === disc.level) ? clickedLevel - 1 : clickedLevel;
         disc.level = newLevel;
-        ratingEl.dataset.rating = String(newLevel);
-        dots.forEach(d => {
-          d.classList.toggle("filled", Number(d.dataset.value) <= newLevel);
-        });
+        // Celeridad: clamp activated points and re-render to update activation buttons
+        if (disc.id === 5) {
+          celeridadActivatedPoints = Math.min(celeridadActivatedPoints, newLevel);
+          renderDisciplineList();
+          refreshPool1ForPhysicalDiscipline(5);
+        } else {
+          ratingEl.dataset.rating = String(newLevel);
+          dots.forEach(d => {
+            d.classList.toggle("filled", Number(d.dataset.value) <= newLevel);
+          });
+        }
         saveCharacterData();
       });
     });
@@ -3447,6 +3488,38 @@ function renderDisciplineList() {
         refreshPool1ForPhysicalDiscipline(discId);
       });
     }
+
+    // Celeridad per-point activation
+    const celPoints = row.querySelectorAll(".celeridad-point");
+    celPoints.forEach(pointBtn => {
+      pointBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const pointNum = Number(pointBtn.dataset.point);
+
+        if (pointBtn.classList.contains("active")) {
+          // Deactivate this point and all higher points (free)
+          celeridadActivatedPoints = pointNum - 1;
+        } else {
+          // Activate up to this point — spend blood for each new activation
+          const pointsToActivate = pointNum - celeridadActivatedPoints;
+          // Check enough blood
+          const bloodValue = document.querySelector("#blood-value").value;
+          const availableBlood = bloodValue.replace(/0/g, "").length;
+          if (availableBlood < pointsToActivate) {
+            flashBloodWarning();
+            return;
+          }
+          // Spend blood for each new point
+          for (let i = 0; i < pointsToActivate; i++) {
+            modifyBlood("consume", "");
+          }
+          celeridadActivatedPoints = pointNum;
+        }
+        // Re-render to update UI and recalculate pool
+        renderDisciplineList();
+        refreshPool1ForPhysicalDiscipline(5);
+      });
+    });
 
     // Senda button click → open senda modal
     const sendaBtn = row.querySelector(".discipline-senda-btn");

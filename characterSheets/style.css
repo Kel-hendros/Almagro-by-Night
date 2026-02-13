@@ -78,6 +78,9 @@ body[data-theme="dark"] {
 	--ui-accent-subtle: rgba(196, 168, 130, 0.1);
 	--dot: #c4a882;
 	--dot-strong: #e2d0ba;
+	--blood-1: #d48b7a;
+	--blood-2: #c41e3a;
+	--blood-3: #7b5ea7;
 }
 
 /* Light Theme */
@@ -108,6 +111,9 @@ body[data-theme="light"] {
 	--ui-accent-subtle: rgba(122, 59, 46, 0.08);
 	--dot: #bf5a3d;
 	--dot-strong: #ee995f;
+	--blood-1: #d48b7a;
+	--blood-2: #c41e3a;
+	--blood-3: #7b5ea7;
 }
 
 /* Camarilla Theme — mármol verde clásico VtM */
@@ -138,6 +144,9 @@ body[data-theme="camarilla"] {
 	--ui-accent-subtle: rgba(45, 107, 63, 0.08);
 	--dot: #2d6b3f;
 	--dot-strong: #4a9960;
+	--blood-1: #d48b7a;
+	--blood-2: #c41e3a;
+	--blood-3: #7b5ea7;
 }
 
 /* Sabbat Theme */
@@ -168,6 +177,9 @@ body[data-theme="sabbat"] {
 	--ui-accent-subtle: rgba(139, 0, 0, 0.12);
 	--dot: #8b0000;
 	--dot-strong: #b22222;
+	--blood-1: #d48b7a;
+	--blood-2: #c41e3a;
+	--blood-3: #7b5ea7;
 }
 
 /* Anarquista Theme */
@@ -198,6 +210,9 @@ body[data-theme="anarquista"] {
 	--ui-accent-subtle: rgba(74, 124, 142, 0.12);
 	--dot: #4a7c8e;
 	--dot-strong: #6b95a8;
+	--blood-1: #d48b7a;
+	--blood-2: #c41e3a;
+	--blood-3: #7b5ea7;
 }
 
 /* Phantomas Theme */
@@ -228,6 +243,9 @@ body[data-theme="phantomas"] {
 	--ui-accent-subtle: rgba(0, 255, 65, 0.1);
 	--dot: #00ff41;
 	--dot-strong: #33ff66;
+	--blood-1: #d48b7a;
+	--blood-2: #c41e3a;
+	--blood-3: #7b5ea7;
 }
 
 /* ================================================
@@ -986,18 +1004,18 @@ body[data-theme="camarilla"] .health-container {
 }
 
 .blood-cell.type-1 {
-	border-color: rgba(191, 90, 61, 0.85);
-	background: #bf5a3d;
+	border-color: color-mix(in srgb, var(--blood-1) 85%, transparent);
+	background: var(--blood-1);
 }
 
 .blood-cell.type-2 {
-	border-color: rgba(178, 34, 34, 0.85);
-	background: #b22222;
+	border-color: color-mix(in srgb, var(--blood-2) 85%, transparent);
+	background: var(--blood-2);
 }
 
 .blood-cell.type-3 {
-	border-color: rgba(70, 130, 180, 0.85);
-	background: #4682b4;
+	border-color: color-mix(in srgb, var(--blood-3) 85%, transparent);
+	background: var(--blood-3);
 }
 
 .blood-cell.disabled {
@@ -1060,8 +1078,9 @@ body[data-theme="camarilla"] .health-container {
 }
 
 .blood-add-controls {
-	display: grid;
-	grid-template-columns: 1fr;
+	display: flex;
+	justify-content: center;
+	gap: 8px;
 	opacity: 0;
 	max-height: 0;
 	overflow: hidden;
@@ -1072,20 +1091,53 @@ body[data-theme="camarilla"] .health-container {
 .blood-card:hover .blood-add-controls,
 .blood-card:focus-within .blood-add-controls {
 	opacity: 1;
-	max-height: 140px;
+	max-height: 50px;
 	transform: translateY(0);
 }
 
-.blood-btn.add.type-1 {
-	border-color: rgba(191, 90, 61, 0.6);
+.blood-add-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	border: 1.5px solid;
+	background: transparent;
+	cursor: pointer;
+	transition: background 0.15s ease, box-shadow 0.15s ease;
+	padding: 0;
 }
 
-.blood-btn.add.type-2 {
-	border-color: rgba(178, 34, 34, 0.6);
+.blood-add-btn:active {
+	opacity: 0.7;
 }
 
-.blood-btn.add.type-3 {
-	border-color: rgba(70, 130, 180, 0.6);
+.blood-add-btn.type-1 {
+	color: var(--blood-1);
+	border-color: color-mix(in srgb, var(--blood-1) 60%, transparent);
+}
+.blood-add-btn.type-1:hover {
+	background: color-mix(in srgb, var(--blood-1) 15%, transparent);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--blood-1) 30%, transparent);
+}
+
+.blood-add-btn.type-2 {
+	color: var(--blood-2);
+	border-color: color-mix(in srgb, var(--blood-2) 60%, transparent);
+}
+.blood-add-btn.type-2:hover {
+	background: color-mix(in srgb, var(--blood-2) 15%, transparent);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--blood-2) 30%, transparent);
+}
+
+.blood-add-btn.type-3 {
+	color: var(--blood-3);
+	border-color: color-mix(in srgb, var(--blood-3) 60%, transparent);
+}
+.blood-add-btn.type-3:hover {
+	background: color-mix(in srgb, var(--blood-3) 15%, transparent);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--blood-3) 30%, transparent);
 }
 
 /* .rating .dot.disabled is used by attribute/skill ratings */
@@ -2162,7 +2214,7 @@ ul li.active {
 	padding: 10px 0 4px 0;
 	background: transparent;
 	min-height: 0;
-	overflow: hidden;
+	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
 }
@@ -2325,6 +2377,40 @@ ul li.active {
 
 .discipline-rating {
 	gap: 4px;
+}
+
+/* Celeridad per-point activation */
+.celeridad-points {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.celeridad-point {
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	border: 1px solid var(--ui-border-strong);
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	transition: all 0.25s ease;
+}
+
+.celeridad-point:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.celeridad-point.active {
+	background: #bb1515;
+	border-color: #bb1515;
+	color: #fff;
 }
 
 /* Senda button (book icon) for disciplines with sendas */
