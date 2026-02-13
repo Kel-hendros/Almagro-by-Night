@@ -273,7 +273,7 @@ body[data-font="noir"] {
 body[data-font="phantomas"] {
 	--fontHeading: 'Share Tech Mono', monospace;
 	--fontBody: 'Space Mono', monospace;
-	--fontHeadingScale: 1;
+	--fontHeadingScale: 1.5;
 	font-size: 0.92em;
 	letter-spacing: -0.04em;
 }
@@ -883,13 +883,33 @@ body[data-theme="camarilla"] .health-container {
 
 /* Hit impact animation on profile picture */
 @keyframes hit-shake {
-	0%   { transform: translate(0, 0) scale(1); }
-	15%  { transform: translate(-4px, 2px) scale(1.03); }
-	30%  { transform: translate(3px, -2px) scale(1.02); }
-	45%  { transform: translate(-2px, 1px) scale(1.01); }
-	60%  { transform: translate(2px, -1px); }
-	75%  { transform: translate(-1px, 1px); }
-	100% { transform: translate(0, 0) scale(1); }
+	0% {
+		transform: translate(0, 0) scale(1);
+	}
+
+	15% {
+		transform: translate(-4px, 2px) scale(1.03);
+	}
+
+	30% {
+		transform: translate(3px, -2px) scale(1.02);
+	}
+
+	45% {
+		transform: translate(-2px, 1px) scale(1.01);
+	}
+
+	60% {
+		transform: translate(2px, -1px);
+	}
+
+	75% {
+		transform: translate(-1px, 1px);
+	}
+
+	100% {
+		transform: translate(0, 0) scale(1);
+	}
 }
 
 .profile-back-link.hit {
@@ -1005,29 +1025,83 @@ body[data-theme="camarilla"] .health-container {
 }
 
 @keyframes frenzyShake1 {
-	0%, 100% { transform: translate(0, 0); }
-	15%      { transform: translate(-2px, 1px); }
-	30%      { transform: translate(2px, -1px); }
-	45%      { transform: translate(-1px, -1px); }
-	60%      { transform: translate(1px, 1px); }
-	75%      { transform: translate(-1px, 0px); }
+
+	0%,
+	100% {
+		transform: translate(0, 0);
+	}
+
+	15% {
+		transform: translate(-2px, 1px);
+	}
+
+	30% {
+		transform: translate(2px, -1px);
+	}
+
+	45% {
+		transform: translate(-1px, -1px);
+	}
+
+	60% {
+		transform: translate(1px, 1px);
+	}
+
+	75% {
+		transform: translate(-1px, 0px);
+	}
 }
 
 @keyframes frenzyShake2 {
-	0%, 100% { transform: translate(0, 0); }
-	20%      { transform: translate(1px, -2px); }
-	40%      { transform: translate(-2px, 1px); }
-	60%      { transform: translate(1px, 1px); }
-	80%      { transform: translate(-1px, -1px); }
+
+	0%,
+	100% {
+		transform: translate(0, 0);
+	}
+
+	20% {
+		transform: translate(1px, -2px);
+	}
+
+	40% {
+		transform: translate(-2px, 1px);
+	}
+
+	60% {
+		transform: translate(1px, 1px);
+	}
+
+	80% {
+		transform: translate(-1px, -1px);
+	}
 }
 
 @keyframes frenzyShake3 {
-	0%, 100% { transform: translate(0, 0); }
-	10%      { transform: translate(2px, 1px); }
-	35%      { transform: translate(-1px, -2px); }
-	55%      { transform: translate(-2px, 1px); }
-	70%      { transform: translate(1px, -1px); }
-	90%      { transform: translate(-1px, 0px); }
+
+	0%,
+	100% {
+		transform: translate(0, 0);
+	}
+
+	10% {
+		transform: translate(2px, 1px);
+	}
+
+	35% {
+		transform: translate(-1px, -2px);
+	}
+
+	55% {
+		transform: translate(-2px, 1px);
+	}
+
+	70% {
+		transform: translate(1px, -1px);
+	}
+
+	90% {
+		transform: translate(-1px, 0px);
+	}
 }
 
 .blood-meta {
@@ -1167,6 +1241,7 @@ body[data-theme="camarilla"] .health-container {
 	color: var(--blood-1);
 	border-color: color-mix(in srgb, var(--blood-1) 60%, transparent);
 }
+
 .blood-add-btn.type-1:hover {
 	background: color-mix(in srgb, var(--blood-1) 15%, transparent);
 	box-shadow: 0 0 8px color-mix(in srgb, var(--blood-1) 30%, transparent);
@@ -1176,6 +1251,7 @@ body[data-theme="camarilla"] .health-container {
 	color: var(--blood-2);
 	border-color: color-mix(in srgb, var(--blood-2) 60%, transparent);
 }
+
 .blood-add-btn.type-2:hover {
 	background: color-mix(in srgb, var(--blood-2) 15%, transparent);
 	box-shadow: 0 0 8px color-mix(in srgb, var(--blood-2) 30%, transparent);
@@ -1185,6 +1261,7 @@ body[data-theme="camarilla"] .health-container {
 	color: var(--blood-3);
 	border-color: color-mix(in srgb, var(--blood-3) 60%, transparent);
 }
+
 .blood-add-btn.type-3:hover {
 	background: color-mix(in srgb, var(--blood-3) 15%, transparent);
 	box-shadow: 0 0 8px color-mix(in srgb, var(--blood-3) 30%, transparent);
@@ -1469,7 +1546,6 @@ body[data-theme="camarilla"] .health-container {
 .dice-result-info-flavor {
 	color: var(--text);
 	font-style: italic;
-	max-width: 340px;
 	margin-bottom: 6px;
 }
 
@@ -3831,12 +3907,15 @@ ul li.active {
 	0% {
 		transform: translateY(100vh);
 	}
+
 	70% {
 		transform: translateY(-8px);
 	}
+
 	85% {
 		transform: translateY(3px);
 	}
+
 	100% {
 		transform: translateY(0);
 	}
@@ -3857,6 +3936,7 @@ ul li.active {
 		filter: brightness(0.4) saturate(0);
 		transform: scale(1.08);
 	}
+
 	100% {
 		filter: brightness(1) saturate(1);
 		transform: scale(1);
@@ -3873,14 +3953,17 @@ ul li.active {
 		transform: scale(1);
 		opacity: 1;
 	}
+
 	20% {
 		transform: scale(1.15) rotate(-8deg);
 		opacity: 1;
 	}
+
 	50% {
 		transform: scale(0.85) rotate(5deg);
 		opacity: 0.5;
 	}
+
 	100% {
 		transform: scale(1) rotate(0deg);
 		opacity: 0.4;
@@ -3941,19 +4024,20 @@ ul li.active {
 	gap: 2px;
 }
 
-.dice-history-pool {
-	font-family: var(--fontHeading);
-	font-size: 0.92rem;
-	color: var(--text);
-	text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
-}
-
 .dice-history-summary {
+	margin: 0;
 	font-family: var(--fontHeading);
-	font-size: 1.18rem;
+	font-size: 1rem;
 	color: var(--text);
 	text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
 	line-height: 1;
+	font-weight: 400;
+}
+
+.dice-history-pool {
+	font-size: 0.82rem;
+	color: var(--muted);
+	line-height: 1.2;
 }
 
 /* Legacy dice roller styles */
@@ -4345,15 +4429,43 @@ ul li.active {
 
 /* Vibración cuando no hay sangre o hay limitación */
 @keyframes bloodShake {
-	0%, 100% { transform: translateX(0); }
-	10%      { transform: translateX(-4px); }
-	20%      { transform: translateX(4px); }
-	30%      { transform: translateX(-3px); }
-	40%      { transform: translateX(3px); }
-	50%      { transform: translateX(-2px); }
-	60%      { transform: translateX(2px); }
-	70%      { transform: translateX(-1px); }
-	80%      { transform: translateX(1px); }
+
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+
+	10% {
+		transform: translateX(-4px);
+	}
+
+	20% {
+		transform: translateX(4px);
+	}
+
+	30% {
+		transform: translateX(-3px);
+	}
+
+	40% {
+		transform: translateX(3px);
+	}
+
+	50% {
+		transform: translateX(-2px);
+	}
+
+	60% {
+		transform: translateX(2px);
+	}
+
+	70% {
+		transform: translateX(-1px);
+	}
+
+	80% {
+		transform: translateX(1px);
+	}
 }
 
 .blood-shake {

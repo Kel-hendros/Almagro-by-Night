@@ -2794,13 +2794,13 @@ function renderDiceHistory() {
     const main = document.createElement("div");
     main.className = "dice-history-main";
 
-    const pool = document.createElement("div");
-    pool.className = "dice-history-pool";
-    pool.textContent = `${entry.poolLabel} (${entry.diceCount}d10)`;
-
-    const summary = document.createElement("div");
+    const summary = document.createElement("h3");
     summary.className = "dice-history-summary";
     summary.textContent = entry.summary;
+
+    const pool = document.createElement("span");
+    pool.className = "dice-history-pool";
+    pool.textContent = `${entry.poolLabel} (${entry.diceCount}d10)`;
 
     main.appendChild(pool);
     main.appendChild(summary);
