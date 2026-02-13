@@ -940,6 +940,21 @@
         </div>
     </div>
 
+    <!-- Senda Repository Modal -->
+    <div id="senda-repo-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card discipline-repo-card" role="dialog" aria-modal="true">
+            <div class="specialty-modal-header">
+                <h2 id="senda-repo-title">Sendas</h2>
+                <button id="senda-repo-close" class="specialty-close" type="button">&times;</button>
+            </div>
+            <p class="specialty-subtitle">Selecciona sendas para esta disciplina.</p>
+            <input id="senda-repo-search" class="discipline-repo-search" type="text"
+                placeholder="Buscar senda..." autocomplete="off">
+            <div id="senda-repo-list" class="discipline-repo-list"></div>
+            <button id="senda-repo-apply" class="specialty-add-action" type="button">Aplicar selección</button>
+        </div>
+    </div>
+
     <!-- Theme & Options Modal -->
     <div id="theme-modal" class="specialty-modal hidden" aria-hidden="true">
         <div class="specialty-modal-card theme-modal-card" role="dialog" aria-modal="true"
@@ -1104,6 +1119,7 @@
     </div>
 
     <script src="disciplineRepository.js"></script>
+    <script src="sendasRepository.js"></script>
     <script src="pathRepository.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script.js"></script>

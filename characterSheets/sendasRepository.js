@@ -1,0 +1,130 @@
+// Repositorio de Sendas de Disciplinas V20
+
+window.SENDAS_REPO = [
+  {
+    id: 1,
+    name_es: "Senda de la Sangre",
+    name_en: "Path of Blood",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 2,
+    name_es: "Senda de la Conjuración",
+    name_en: "Path of Conjuring",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 3,
+    name_es: "Senda de la Corrupción",
+    name_en: "Path of Corruption",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 4,
+    name_es: "Control del Clima",
+    name_en: "Weather Control",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 5,
+    name_es: "Dominio Elemental",
+    name_en: "Elemental Mastery",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 6,
+    name_es: "Encanto de las Llamas",
+    name_en: "Lure of Flames",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 7,
+    name_es: "Manos de Destrucción",
+    name_en: "Hands of Destruction",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 8,
+    name_es: "Senda de Marte",
+    name_en: "Path of Mars",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 9,
+    name_es: "Movimiento Mental",
+    name_en: "Movement of the Mind",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 10,
+    name_es: "Poder de Neptuno",
+    name_en: "Neptune's Might",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 11,
+    name_es: "Senda de la Tecnomancia",
+    name_en: "Path of Technomancy",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 12,
+    name_es: "Senda de la venganza del Padre",
+    name_en: "Path of the Father's Vengeance",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 13,
+    name_es: "Senda Verde",
+    name_en: "Green Path",
+    parentDisciplineId: 39,
+  },
+  {
+    id: 14,
+    name_es: "Senda del Sepulcro",
+    name_en: "Sepulchre Path",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 15,
+    name_es: "Cadáver dentro del Monstruo",
+    name_en: "Corpse in the  Monster",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 16,
+    name_es: "Senda de las Cenizas",
+    name_en: "Path of Ashes",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 17,
+    name_es: "Senda del Cenotafio",
+    name_en: "Path of the Cenotaph",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 18,
+    name_es: "Senda de los cuatro Humores",
+    name_en: "Path of the Four Humours",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 19,
+    name_es: "Senda del Osario",
+    name_en: "Path of the Ossuary",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 20,
+    name_es: "Podredumbre de la Tumba",
+    name_en: "Grave's decay",
+    parentDisciplineId: 24,
+  },
+  {
+    id: 21,
+    name_es: "Senda Vitrea",
+    name_en: "Vitreous Path",
+    parentDisciplineId: 24,
+  },
+];

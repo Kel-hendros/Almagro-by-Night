@@ -596,25 +596,25 @@ h3 {
 .card {
 	border: 1px solid var(--line);
 	border-radius: 14px;
-	background: var(--card);
+	background-color: var(--card);
 	backdrop-filter: blur(8px);
 	padding: 14px;
 }
 
 .card-soft {
 	border-color: var(--ui-border);
-	background: var(--card);
+	background-color: var(--card);
 }
 
 body[data-theme="light"] .card {
 	border-color: rgba(139, 69, 19, 0.12);
-	background: rgba(255, 252, 245, 0.7);
+	background-color: rgba(255, 252, 245, 0.7);
 	box-shadow: 0 1px 4px rgba(100, 60, 20, 0.06);
 }
 
 body[data-theme="light"] .card-soft {
 	border-color: rgba(139, 69, 19, 0.1);
-	background: rgba(245, 240, 231, 0.55);
+	background-color: rgba(245, 240, 231, 0.55);
 }
 
 body[data-theme="light"] .sheet-panel {
@@ -629,13 +629,13 @@ body[data-theme="light"] .sheet-panel+.sheet-panel {
 
 body[data-theme="camarilla"] .card {
 	border-color: rgba(40, 80, 50, 0.12);
-	background: rgba(235, 242, 232, 0.7);
+	background-color: rgba(235, 242, 232, 0.7);
 	box-shadow: 0 1px 4px rgba(30, 60, 30, 0.06);
 }
 
 body[data-theme="camarilla"] .card-soft {
 	border-color: rgba(40, 80, 50, 0.1);
-	background: rgba(225, 235, 222, 0.55);
+	background-color: rgba(225, 235, 222, 0.55);
 }
 
 body[data-theme="camarilla"] .sheet-panel {
@@ -840,6 +840,15 @@ body[data-theme="camarilla"] .sheet-panel+.sheet-panel {
 	--contundente: #9a9a9a;
 	--letal: #d39c5e;
 	--agravado: #bb1515;
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-blend-mode: screen;
+}
+
+body[data-theme="light"] .health-container,
+body[data-theme="camarilla"] .health-container {
+	background-image: none !important;
 }
 
 .health-container.lesionado {
@@ -852,6 +861,52 @@ body[data-theme="camarilla"] .sheet-panel+.sheet-panel {
 
 .health-container.tullido {
 	background-image: url('images/health3.png');
+}
+
+/* Hit impact animation on profile picture */
+@keyframes hit-shake {
+	0%   { transform: translate(0, 0) scale(1); }
+	15%  { transform: translate(-4px, 2px) scale(1.03); }
+	30%  { transform: translate(3px, -2px) scale(1.02); }
+	45%  { transform: translate(-2px, 1px) scale(1.01); }
+	60%  { transform: translate(2px, -1px); }
+	75%  { transform: translate(-1px, 1px); }
+	100% { transform: translate(0, 0) scale(1); }
+}
+
+.profile-back-link.hit {
+	animation: hit-shake 0.4s ease-out;
+}
+
+/* Blood splatters on profile picture (overlay via pseudo-element) */
+.profile-back-link::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 999px;
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	mix-blend-mode: screen;
+	pointer-events: none;
+	z-index: 2;
+	opacity: 0;
+	transition: opacity 0.4s ease;
+}
+
+.profile-back-link.lesionado::after {
+	background-image: url('images/health1.png');
+	opacity: 1;
+}
+
+.profile-back-link.malherido::after {
+	background-image: url('images/health2.png');
+	opacity: 1;
+}
+
+.profile-back-link.tullido::after {
+	background-image: url('images/health3.png');
+	opacity: 1;
 }
 
 /* Legacy health squares — overridden by .health-square when both classes present */
@@ -1398,7 +1453,7 @@ body[data-theme="camarilla"] .sheet-panel+.sheet-panel {
 	background: transparent;
 }
 
-.sheet-panel > h2 {
+.sheet-panel>h2 {
 	text-align: center;
 }
 
@@ -2166,15 +2221,48 @@ ul li.active {
 	gap: 8px;
 }
 
+/* Drag handle for reordering disciplines and sendas */
+.drag-handle {
+	cursor: grab;
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1;
+	user-select: none;
+	opacity: 0.4;
+	transition: opacity 0.2s;
+}
+
+.drag-handle:active {
+	cursor: grabbing;
+}
+
+.discipline-row:hover .drag-handle,
+.senda-row:hover .drag-handle {
+	opacity: 1;
+}
+
 .discipline-row {
 	display: grid;
-	grid-template-columns: 1fr auto;
+	grid-template-columns: auto 1fr auto;
 	align-items: center;
 	gap: 10px;
 	border: 1px solid var(--ui-border);
 	border-radius: 10px;
 	padding: 8px 10px;
 	background: var(--ui-surface);
+}
+
+.discipline-row.dragging {
+	opacity: 0.35;
+	border-style: dashed;
+}
+
+.discipline-row.drag-over-top {
+	border-top: 2px solid var(--accent);
+}
+
+.discipline-row.drag-over-bottom {
+	border-bottom: 2px solid var(--accent);
 }
 
 .discipline-name {
@@ -2190,8 +2278,123 @@ ul li.active {
 	color: var(--accent);
 }
 
+/* Discipline activation button (physical disciplines like Potencia) */
+.discipline-name-area {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.discipline-name-area .discipline-name {
+	min-width: 0;
+}
+
+.discipline-activate-btn {
+	flex-shrink: 0;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 1px solid var(--ui-border-strong);
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	transition: all 0.3s ease;
+}
+
+.discipline-activate-btn:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.discipline-activate-btn.active {
+	opacity: 1;
+	background: #bb1515;
+	border-color: #bb1515;
+	color: #fff;
+}
+
+.discipline-row.discipline-activated {
+	border-color: #bb1515;
+	box-shadow: 0 0 8px rgba(187, 21, 21, 0.25);
+}
+
 .discipline-rating {
 	gap: 4px;
+}
+
+/* Senda button (book icon) for disciplines with sendas */
+.discipline-senda-btn {
+	flex-shrink: 0;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 1px solid var(--ui-border-strong);
+	background: transparent;
+	color: var(--text);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	transition: all 0.3s ease;
+}
+
+.discipline-senda-btn:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+/* Senda sub-rows (indented child rows under discipline) */
+.senda-row {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: center;
+	gap: 8px;
+	margin-left: 18px;
+	border-left: 2px solid var(--ui-border);
+	border-radius: 0;
+	padding: 4px 8px 4px 10px;
+	background: transparent;
+}
+
+.senda-row.dragging {
+	opacity: 0.35;
+	border-left-style: dashed;
+}
+
+.senda-row.drag-over-top {
+	border-top: 2px solid var(--accent);
+}
+
+.senda-row.drag-over-bottom {
+	border-bottom: 2px solid var(--accent);
+}
+
+.senda-name {
+	color: var(--text);
+	font-size: 0.78rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+.senda-name:hover {
+	color: var(--accent);
+}
+
+.senda-rating {
+	gap: 3px;
+}
+
+.senda-rating .dot {
+	width: 10px;
+	height: 10px;
 }
 
 .discipline-detail {
@@ -3406,6 +3609,16 @@ ul li.active {
 	background: linear-gradient(180deg, #ff7a7a, #f04141);
 }
 
+.dice-result-die.potencia-chip {
+	font-size: 0;
+	color: #102814;
+}
+
+.dice-result-die.potencia-chip iconify-icon {
+	font-size: 20px;
+	color: #102814;
+}
+
 .dice-history-card {
 	width: min(560px, calc(100vw - 24px));
 	max-height: 88dvh;
@@ -3840,28 +4053,43 @@ ul li.active {
 }
 
 /* ================================================
-   BLOOD LIMITATION WARNING ANIMATION
+   BLOOD ANIMATIONS
    ================================================ */
 
-@keyframes bloodLimitationFlash {
+/* Flash rojo al consumir sangre */
+@keyframes bloodConsumeFlash {
 	0% {
 		box-shadow: inset 0 0 0 rgba(255, 40, 40, 0);
-		background-color: var(--card);
 	}
 
 	20% {
-		box-shadow: inset 0 0 30px rgba(255, 40, 40, 0.35);
-		background-color: rgba(180, 30, 30, 0.25);
+		box-shadow: inset 0 0 30px rgba(255, 40, 40, 0.4);
 	}
 
 	100% {
 		box-shadow: inset 0 0 0 rgba(255, 40, 40, 0);
-		background-color: var(--card);
 	}
 }
 
-.blood-limitation-warning {
-	animation: bloodLimitationFlash 0.8s ease-out;
+.blood-consume-flash {
+	animation: bloodConsumeFlash 0.8s ease-out;
+}
+
+/* Vibración cuando no hay sangre o hay limitación */
+@keyframes bloodShake {
+	0%, 100% { transform: translateX(0); }
+	10%      { transform: translateX(-4px); }
+	20%      { transform: translateX(4px); }
+	30%      { transform: translateX(-3px); }
+	40%      { transform: translateX(3px); }
+	50%      { transform: translateX(-2px); }
+	60%      { transform: translateX(2px); }
+	70%      { transform: translateX(-1px); }
+	80%      { transform: translateX(1px); }
+}
+
+.blood-shake {
+	animation: bloodShake 0.5s ease-out;
 }
 
 /* ================================================

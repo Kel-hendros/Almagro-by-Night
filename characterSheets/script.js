@@ -652,6 +652,9 @@ function loadCharacterFromJSON(characterData) {
   // Load disciplines from JSON (new or legacy format)
   loadDisciplinesFromJSON(characterData);
 
+  // Load sendas from JSON
+  loadSendasFromJSON(characterData);
+
   // Load powers, then migrate any custom/unknown disciplines into powers
   loadPowersFromJSON(characterData);
   migrateCustomDisciplinesToPowers();
@@ -764,6 +767,9 @@ function getCharacterData() {
 
   // Add disciplines data (new format + legacy keys)
   characterData.disciplines = getDisciplinesData(characterData);
+
+  // Add sendas data
+  characterData.sendas = getSendasData();
 
   // Add powers data
   characterData.disciplinePowers = getPowersData();
@@ -1510,6 +1516,15 @@ addButtons.forEach((button) => {
 
     //Actualiza el Penalizador de Daño
     updateDamagePenalty();
+
+    // Hit animation on avatar
+    const avatar = document.querySelector(".profile-back-link");
+    if (avatar) {
+      avatar.classList.remove("hit");
+      void avatar.offsetWidth; // force reflow to restart animation
+      avatar.classList.add("hit");
+      avatar.addEventListener("animationend", () => avatar.classList.remove("hit"), { once: true });
+    }
   });
 });
 
@@ -1580,33 +1595,31 @@ function updateDamagePenalty() {
     }
   }
   //update value in damagePenalty based on the count
+  const healthEl = document.querySelector(".health-container");
+  const avatarEl = document.querySelector(".profile-back-link");
+  const bloodTargets = [healthEl, avatarEl].filter(Boolean);
+
   if (count >= 6) {
     damagePenalty = 0;
-    //remover otras clases al div .health-container
-    document.querySelector(".health-container").classList.remove("lesionado");
-    document.querySelector(".health-container").classList.remove("malherido");
-    document.querySelector(".health-container").classList.remove("tullido");
+    bloodTargets.forEach(el => el.classList.remove("lesionado", "malherido", "tullido"));
   } else if (count == 5 || count == 4) {
     damagePenalty = -1;
-    //remover otras clases al div .health-container
-    document.querySelector(".health-container").classList.remove("malherido");
-    document.querySelector(".health-container").classList.remove("tullido");
-    //agregar clase "lesionado" al div .health-container
-    document.querySelector(".health-container").classList.add("lesionado");
+    bloodTargets.forEach(el => {
+      el.classList.remove("malherido", "tullido");
+      el.classList.add("lesionado");
+    });
   } else if (count == 3 || count == 2) {
     damagePenalty = -2;
-    //remover otras clases al div .health-container
-    document.querySelector(".health-container").classList.remove("lesionado");
-    document.querySelector(".health-container").classList.remove("tullido");
-    //agregar clase "malherido" al div .health-container
-    document.querySelector(".health-container").classList.add("malherido");
+    bloodTargets.forEach(el => {
+      el.classList.remove("lesionado", "tullido");
+      el.classList.add("malherido");
+    });
   } else if (count == 1) {
     damagePenalty = -5;
-    //remover otras clases al div .health-container
-    document.querySelector(".health-container").classList.remove("lesionado");
-    document.querySelector(".health-container").classList.remove("malherido");
-    //agregar clase "tullido" al div .health-container
-    document.querySelector(".health-container").classList.add("tullido");
+    bloodTargets.forEach(el => {
+      el.classList.remove("lesionado", "malherido");
+      el.classList.add("tullido");
+    });
   } else if (count == 0) {
     damagePenalty = -5;
   }
@@ -1760,6 +1773,7 @@ document.querySelectorAll("[data-blood-op]").forEach(btn => {
 function modifyBlood(action, type) {
   let currentValue = document.querySelector("#blood-value").value;
   const maxBloodPool = getMaxBloodPool(); // Obtiene el máximo permitido de sangre basado en la generación.
+  const bloodBefore = currentValue.replace(/0/g, "").length;
 
   if (action === "add") {
     // La lógica de añadir sangre se mantiene igual.
@@ -1788,6 +1802,16 @@ function modifyBlood(action, type) {
 
   document.querySelector("#blood-value").value = currentValue;
   updateBloodUI();
+
+  if (action === "consume") {
+    const bloodAfter = currentValue.replace(/0/g, "").length;
+    if (bloodAfter < bloodBefore) {
+      flashBloodConsume();
+    } else {
+      flashBloodWarning();
+    }
+  }
+
   saveCharacterData();
 }
 
@@ -2092,14 +2116,7 @@ document.querySelectorAll(".virtue-sheet-row span[id$='-label'], .virtue-sheet-r
       const bloodPoolValue = bloodValueString.replace(/0/g, "").length;
       if (virtueDice > bloodPoolValue) {
         virtueDice = bloodPoolValue;
-
-        const bloodCard = document.querySelector('.blood-card');
-        if (bloodCard) {
-          bloodCard.classList.add('blood-limitation-warning');
-          setTimeout(() => {
-            bloodCard.classList.remove('blood-limitation-warning');
-          }, 800);
-        }
+        flashBloodWarning();
       }
     }
 
@@ -2414,25 +2431,40 @@ function rollTheDice() {
     willpowerTrueFalse = "Si";
   }
 
+  // Potencia (activated) — these count as regular successes (cancellable by 1s)
+  let potenciaSuccess = 0;
+  let potenciaTrueFalse = "No";
+  const pool1AttrName = pool1.split("+")[0].trim(); // "Fuerza+Pot" → "Fuerza", or just "Fuerza"
+  const potenciaBonus = getPhysicalDisciplineBonus(pool1AttrName);
+  if (potenciaBonus && activatedDisciplines.has(potenciaBonus.id)) {
+    potenciaSuccess = potenciaBonus.level;
+    potenciaTrueFalse = "Si";
+    // Add to successes so botches can cancel them
+    successes += potenciaSuccess;
+  }
+
+  // Willpower is the only true auto-success (immune to botches)
+  const autoSuccesses = willpowerSuccess;
+
   // calculate the final result
   let resultText;
-  if (willpowerSuccess === 0 && successes === 0 && botches === 0) {
+  if (autoSuccesses === 0 && successes === 0 && botches === 0) {
     color = "11247616";
     resultText = "Fallo";
-  } else if (willpowerSuccess === 0 && successes === 0 && botches > 0) {
+  } else if (autoSuccesses === 0 && successes === 0 && botches > 0) {
     resultText = "Fracaso";
     color = "14225681";
-  } else if (willpowerSuccess === 0 && successes <= botches) {
+  } else if (autoSuccesses === 0 && successes <= botches) {
     color = "11247616";
     resultText = "Fallo";
-  } else if (willpowerSuccess + successes - botches > 1) {
+  } else if (autoSuccesses + successes - botches > 1) {
     color = "58911";
     if (successes - botches < 0) {
       successes = 0;
     } else {
       successes -= botches;
     }
-    successes += willpowerSuccess;
+    successes += autoSuccesses;
     resultText = `${successes} Exitos`;
   } else {
     color = "58911";
@@ -2441,7 +2473,7 @@ function rollTheDice() {
     } else {
       successes -= botches;
     }
-    successes += willpowerSuccess;
+    successes += autoSuccesses;
     resultText = `${successes} Exito`;
   }
 
@@ -2462,8 +2494,21 @@ function rollTheDice() {
     resultContainer.classList.add("success");
   }
 
-  // Display individual rolls as beta dice chips
+  // Display results: Potencia chips first, then dice chips sorted descending
   rolls.sort((a, b) => b - a);
+
+  // Potencia successes go first (as green fist chips)
+  if (potenciaSuccess > 0) {
+    for (let i = 0; i < potenciaSuccess; i++) {
+      const potChip = document.createElement("span");
+      potChip.className = "dice-result-die success potencia-chip";
+      potChip.innerHTML = `<iconify-icon icon="game-icons:fist" width="20" aria-hidden="true"></iconify-icon>`;
+      potChip.title = `${potenciaBonus.fullName}`;
+      rollsList.appendChild(potChip);
+    }
+  }
+
+  // Then the actual dice rolls
   for (const roll of rolls) {
     const chip = document.createElement("span");
     let kind;
@@ -2481,8 +2526,12 @@ function rollTheDice() {
     rollsList.appendChild(chip);
   }
 
+  // Build rolls string for Discord: Ps first, then dice values
+  const potenciaPs = potenciaSuccess > 0 ? Array(potenciaSuccess).fill("P") : [];
+  const discordRolls = [...potenciaPs, ...rolls];
+
   // Post to Discord the result
-  messageToDiscord = `**${resultText}**\n${rolls.join(", ")}`;
+  messageToDiscord = `**${resultText}**\n${discordRolls.join(", ")}`;
   sendToDiscordRoll(
     characterName,
     characterClan,
@@ -2492,13 +2541,14 @@ function rollTheDice() {
     pool2Size,
     mods,
     resultText,
-    rolls,
+    discordRolls,
     difficulty,
     color,
     damagePenalty,
     damagePenaltyTrueFalse,
     willpowerTrueFalse,
-    specialtyTrueFalse
+    specialtyTrueFalse,
+    potenciaTrueFalse
   );
 
   // Determine status for history entry
@@ -2633,7 +2683,8 @@ function sendToDiscordRoll(
   damagePenalty,
   damagePenaltyTrueFalse,
   willpowerTrueFalse,
-  specialtyTrueFalse
+  specialtyTrueFalse,
+  potenciaTrueFalse
 ) {
   const webhookURL = discordWebhookUrl;
 
@@ -2693,6 +2744,11 @@ function sendToDiscordRoll(
             value: specialtyTrueFalse,
             inline: true,
           },
+          ...(potenciaTrueFalse === "Si" ? [{
+            name: "Potencia",
+            value: potenciaTrueFalse,
+            inline: true,
+          }] : []),
         ],
         footer: {
           text: "Powered by Kelhendros",
@@ -2803,11 +2859,7 @@ function actionWakeUp() {
 
   // Check there's blood to spend
   if (bloodPoolCurrent <= 0) {
-    const bloodCard = document.querySelector('.blood-card');
-    if (bloodCard) {
-      bloodCard.classList.add('blood-limitation-warning');
-      setTimeout(() => bloodCard.classList.remove('blood-limitation-warning'), 800);
-    }
+    flashBloodWarning();
     return;
   }
 
@@ -2876,10 +2928,23 @@ attributesList.forEach((attribute) => {
     const finalAttribute = permanentAttribute + temporalAtribute;
 
     //Update value and label for Pool1
-    document.querySelector("#dicePool1").value = finalAttribute;
-    document.querySelector("#dicePool1Label").innerHTML = capitalizeFirstLetter(
-      input.getAttribute("name")
-    );
+    const attrName = input.getAttribute("name");
+    let pool1Value = finalAttribute;
+    let pool1Label = capitalizeFirstLetter(attrName);
+
+    // Check for physical discipline bonus (e.g. Potencia → Fuerza)
+    const physBonus = getPhysicalDisciplineBonus(attrName);
+    if (physBonus) {
+      if (!activatedDisciplines.has(physBonus.id)) {
+        // Passive mode: add discipline dots as extra dice
+        pool1Value += physBonus.level;
+        pool1Label += `+${physBonus.shortName}`;
+      }
+      // Active mode: pool stays normal, auto-successes handled in rollTheDice()
+    }
+
+    document.querySelector("#dicePool1").value = pool1Value;
+    document.querySelector("#dicePool1Label").innerHTML = pool1Label;
 
     //Remove class from the previously selected attribute
     const previouslySelectedAttributes = document.querySelectorAll(
@@ -3086,10 +3151,129 @@ let selectedDisciplines = [];
 
 const disciplineRepo = window.DISCIPLINE_REPO || [];
 
+// Physical disciplines that passively add dice to attributes
+// Key: discipline ID, Value: attribute name (lowercase)
+const PHYSICAL_DISCIPLINE_MAP = {
+  30: "fuerza",       // Potencia → Fuerza
+  // 5:  "destreza",  // Celeridad → Destreza (future)
+  // 11: "resistencia", // Fortaleza → Resistencia (future)
+};
+
+const PHYSICAL_DISCIPLINE_SHORT = { 30: "Pot", 5: "Cel", 11: "Fort" };
+const PHYSICAL_DISCIPLINE_FULL = { 30: "Potencia", 5: "Celeridad", 11: "Fortaleza" };
+
+// Set of discipline IDs currently activated (blood spent, auto-successes mode)
+let activatedDisciplines = new Set();
+
+/**
+ * Given an attribute name, returns info about the physical discipline that boosts it.
+ * Returns { id, level, shortName, fullName } or null if none found.
+ */
+function getPhysicalDisciplineBonus(attrName) {
+  const normalized = attrName.toLowerCase();
+  for (const [discId, mappedAttr] of Object.entries(PHYSICAL_DISCIPLINE_MAP)) {
+    if (mappedAttr === normalized) {
+      const id = Number(discId);
+      const disc = selectedDisciplines.find(d => d.id === id);
+      if (disc && disc.level > 0) {
+        return {
+          id: id,
+          level: disc.level,
+          shortName: PHYSICAL_DISCIPLINE_SHORT[id] || "",
+          fullName: PHYSICAL_DISCIPLINE_FULL[id] || "",
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if there is blood available to spend.
+ */
+function hasBloodAvailable() {
+  const bloodValue = document.querySelector("#blood-value").value;
+  return bloodValue.replace(/0/g, "").length > 0;
+}
+
+/**
+ * Shake the blood card when blood is insufficient or a limitation applies.
+ */
+function flashBloodWarning() {
+  const bloodCard = document.querySelector('.blood-card');
+  if (bloodCard) {
+    bloodCard.classList.remove('blood-shake');
+    void bloodCard.offsetWidth; // force reflow to restart animation
+    bloodCard.classList.add('blood-shake');
+    bloodCard.addEventListener('animationend', () => bloodCard.classList.remove('blood-shake'), { once: true });
+  }
+}
+
+/**
+ * Red flash on the blood card when blood is consumed.
+ */
+function flashBloodConsume() {
+  const bloodCard = document.querySelector('.blood-card');
+  if (bloodCard) {
+    bloodCard.classList.remove('blood-consume-flash');
+    void bloodCard.offsetWidth;
+    bloodCard.classList.add('blood-consume-flash');
+    bloodCard.addEventListener('animationend', () => bloodCard.classList.remove('blood-consume-flash'), { once: true });
+  }
+}
+
+/**
+ * If Pool1 currently holds an attribute affected by a physical discipline,
+ * recalculate its value and label to reflect the current activation state.
+ */
+function refreshPool1ForPhysicalDiscipline(discId) {
+  const mappedAttr = PHYSICAL_DISCIPLINE_MAP[discId];
+  if (!mappedAttr) return;
+
+  // Check if Pool1 is currently set to this attribute
+  const pool1Label = document.querySelector("#dicePool1Label").innerHTML;
+  const baseAttrName = pool1Label.split("+")[0].trim(); // "Fuerza+Pot" → "Fuerza"
+  if (baseAttrName.toLowerCase() !== capitalizeFirstLetter(mappedAttr).toLowerCase()) return;
+
+  // Find the attribute input by name
+  const attrInput = document.querySelector(`input[type="hidden"][name="${mappedAttr}"][id$="-value"]`);
+  if (!attrInput) return;
+
+  const row = attrInput.closest(".form-group.attribute");
+  const boostInput = row ? row.querySelector('input[type="hidden"][id^="temp"]') : null;
+  const temporalAtribute = boostInput ? parseInt(boostInput.value) || 0 : 0;
+  const permanentAttribute = parseInt(attrInput.getAttribute("value"));
+  const finalAttribute = permanentAttribute + temporalAtribute;
+
+  let pool1Value = finalAttribute;
+  let newLabel = capitalizeFirstLetter(mappedAttr);
+
+  const physBonus = getPhysicalDisciplineBonus(mappedAttr);
+  if (physBonus && !activatedDisciplines.has(physBonus.id)) {
+    // Passive: add dice
+    pool1Value += physBonus.level;
+    newLabel += `+${physBonus.shortName}`;
+  }
+  // Active: pool stays as base attribute only
+
+  document.querySelector("#dicePool1").value = pool1Value;
+  document.querySelector("#dicePool1Label").innerHTML = newLabel;
+  updateFinalPoolSize();
+}
+
 function getDisciplineName(id) {
   const entry = disciplineRepo.find(d => d.id === id);
   return entry ? entry.name_es : "Desconocida";
 }
+
+// Helper: reorder an array item from one index to another
+function reorderArray(arr, fromIndex, toIndex) {
+  const [item] = arr.splice(fromIndex, 1);
+  arr.splice(toIndex, 0, item);
+}
+
+// Drag state for disciplines and sendas
+let dragState = { type: null, index: null, disciplineId: null };
 
 // Render discipline list in the panel
 function renderDisciplineList() {
@@ -3107,10 +3291,39 @@ function renderDisciplineList() {
 
   selectedDisciplines.forEach((disc, index) => {
     const name = disc.customName || getDisciplineName(disc.id);
+    const isPhysical = disc.id in PHYSICAL_DISCIPLINE_MAP;
+    const isActivated = activatedDisciplines.has(disc.id);
     const row = document.createElement("div");
     row.className = "discipline-row";
+    if (isActivated) row.classList.add("discipline-activated");
+
+    // Build name area: name + optional icons (physical activation, sendas)
+    const hasSendas = disciplineHasSendas(disc.id);
+    let nameAreaHTML = '';
+    if (isPhysical || hasSendas) {
+      nameAreaHTML = `<span class="discipline-name-area">
+           <span class="discipline-name" data-disc-index="${index}" title="Click para agregar al tirador">${name}</span>`;
+      if (isPhysical) {
+        nameAreaHTML += `<button class="discipline-activate-btn${isActivated ? " active" : ""}" type="button"
+                   data-disc-id="${disc.id}" title="${isActivated ? "Desactivar" : "Activar"} ${PHYSICAL_DISCIPLINE_FULL[disc.id] || name} (gasta 1 sangre)">
+             <iconify-icon icon="game-icons:fist" width="14" aria-hidden="true"></iconify-icon>
+           </button>`;
+      }
+      if (hasSendas) {
+        nameAreaHTML += `<button class="discipline-senda-btn" type="button" data-disc-id="${disc.id}" title="Gestionar sendas de ${name}">
+             <iconify-icon icon="gravity-ui:branches-down" width="14" aria-hidden="true"></iconify-icon>
+           </button>`;
+      }
+      nameAreaHTML += `</span>`;
+    } else {
+      nameAreaHTML = `<span class="discipline-name" data-disc-index="${index}" title="Click para agregar al tirador">${name}</span>`;
+    }
+
+    row.draggable = true;
+    row.dataset.discIndex = String(index);
     row.innerHTML = `
-      <span class="discipline-name" data-disc-index="${index}" title="Click para agregar al tirador">${name}</span>
+      <span class="drag-handle" title="Arrastrar para reordenar">⠿</span>
+      ${nameAreaHTML}
       <div class="rating discipline-rating" data-rating="${disc.level}">
         <button class="dot" type="button" data-value="1"></button>
         <button class="dot" type="button" data-value="2"></button>
@@ -3119,6 +3332,59 @@ function renderDisciplineList() {
         <button class="dot" type="button" data-value="5"></button>
       </div>
     `;
+
+    // Drag events for discipline reordering
+    const handle = row.querySelector(".drag-handle");
+    let canDrag = false;
+    handle.addEventListener("mousedown", () => { canDrag = true; });
+    document.addEventListener("mouseup", () => { canDrag = false; }, { once: false });
+    row.addEventListener("dragstart", (e) => {
+      if (!canDrag) { e.preventDefault(); return; }
+      dragState = { type: "discipline", index: index, disciplineId: null };
+      row.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      container.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach(el => {
+        el.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+      dragState = { type: null, index: null, disciplineId: null };
+    });
+    row.addEventListener("dragover", (e) => {
+      if (dragState.type !== "discipline") return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      container.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach(el => {
+        el.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+      if (e.clientY < midY) {
+        row.classList.add("drag-over-top");
+      } else {
+        row.classList.add("drag-over-bottom");
+      }
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drag-over-top", "drag-over-bottom");
+    });
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (dragState.type !== "discipline") return;
+      const fromIndex = dragState.index;
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      let toIndex = Number(row.dataset.discIndex);
+      if (e.clientY >= midY && toIndex < fromIndex) toIndex++;
+      if (e.clientY < midY && toIndex > fromIndex) toIndex--;
+      if (fromIndex !== toIndex) {
+        reorderArray(selectedDisciplines, fromIndex, toIndex);
+        renderDisciplineList();
+        saveCharacterData();
+      }
+      row.classList.remove("drag-over-top", "drag-over-bottom");
+    });
 
     // Apply filled dots
     const ratingEl = row.querySelector(".rating");
@@ -3151,7 +3417,162 @@ function renderDisciplineList() {
       updateFinalPoolSize();
     });
 
+    // Activation button click → toggle physical discipline (spend/refund blood)
+    const activateBtn = row.querySelector(".discipline-activate-btn");
+    if (activateBtn) {
+      activateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const discId = Number(activateBtn.dataset.discId);
+
+        if (activatedDisciplines.has(discId)) {
+          // Deactivate
+          activatedDisciplines.delete(discId);
+          activateBtn.classList.remove("active");
+          row.classList.remove("discipline-activated");
+          activateBtn.title = `Activar ${PHYSICAL_DISCIPLINE_FULL[discId] || name} (gasta 1 sangre)`;
+        } else {
+          // Activate — check blood first
+          if (!hasBloodAvailable()) {
+            flashBloodWarning();
+            return;
+          }
+          // Spend 1 blood
+          modifyBlood("consume", "");
+          activatedDisciplines.add(discId);
+          activateBtn.classList.add("active");
+          row.classList.add("discipline-activated");
+          activateBtn.title = `Desactivar ${PHYSICAL_DISCIPLINE_FULL[discId] || name}`;
+        }
+        // Recalculate Pool1 if the affected attribute is currently selected
+        refreshPool1ForPhysicalDiscipline(discId);
+      });
+    }
+
+    // Senda button click → open senda modal
+    const sendaBtn = row.querySelector(".discipline-senda-btn");
+    if (sendaBtn) {
+      sendaBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const discId = Number(sendaBtn.dataset.discId);
+        if (typeof window.openSendaModal === "function") {
+          window.openSendaModal(discId);
+        }
+      });
+    }
+
     container.appendChild(row);
+
+    // Render senda sub-rows for this discipline
+    if (hasSendas) {
+      const discSendas = selectedSendas.filter(s => s.disciplineId === disc.id);
+      discSendas.forEach(senda => {
+        const sendaRow = document.createElement("div");
+        sendaRow.className = "senda-row";
+
+        const sendaName = getSendaName(senda.sendaId);
+        // Find the global index of this senda in selectedSendas
+        const sendaGlobalIndex = selectedSendas.findIndex(s => s.disciplineId === senda.disciplineId && s.sendaId === senda.sendaId);
+        sendaRow.draggable = true;
+        sendaRow.dataset.sendaGlobalIndex = String(sendaGlobalIndex);
+        sendaRow.dataset.disciplineId = String(disc.id);
+        sendaRow.innerHTML = `
+          <span class="drag-handle" title="Arrastrar para reordenar">⠿</span>
+          <span class="senda-name" title="Click para agregar al tirador">${sendaName}</span>
+          <div class="rating senda-rating" data-rating="${senda.level}">
+            <button class="dot" type="button" data-value="1"></button>
+            <button class="dot" type="button" data-value="2"></button>
+            <button class="dot" type="button" data-value="3"></button>
+            <button class="dot" type="button" data-value="4"></button>
+            <button class="dot" type="button" data-value="5"></button>
+          </div>
+        `;
+
+        // Drag events for senda reordering
+        const sendaHandle = sendaRow.querySelector(".drag-handle");
+        let sendaCanDrag = false;
+        sendaHandle.addEventListener("mousedown", () => { sendaCanDrag = true; });
+        document.addEventListener("mouseup", () => { sendaCanDrag = false; }, { once: false });
+        sendaRow.addEventListener("dragstart", (e) => {
+          if (!sendaCanDrag) { e.preventDefault(); return; }
+          e.stopPropagation();
+          dragState = { type: "senda", index: sendaGlobalIndex, disciplineId: disc.id };
+          sendaRow.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+        });
+        sendaRow.addEventListener("dragend", () => {
+          sendaRow.classList.remove("dragging");
+          container.querySelectorAll(".drag-over-top, .drag-over-bottom").forEach(el => {
+            el.classList.remove("drag-over-top", "drag-over-bottom");
+          });
+          dragState = { type: null, index: null, disciplineId: null };
+        });
+        sendaRow.addEventListener("dragover", (e) => {
+          if (dragState.type !== "senda" || dragState.disciplineId !== disc.id) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "move";
+          const rect = sendaRow.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          container.querySelectorAll(".senda-row.drag-over-top, .senda-row.drag-over-bottom").forEach(el => {
+            el.classList.remove("drag-over-top", "drag-over-bottom");
+          });
+          if (e.clientY < midY) {
+            sendaRow.classList.add("drag-over-top");
+          } else {
+            sendaRow.classList.add("drag-over-bottom");
+          }
+        });
+        sendaRow.addEventListener("dragleave", () => {
+          sendaRow.classList.remove("drag-over-top", "drag-over-bottom");
+        });
+        sendaRow.addEventListener("drop", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (dragState.type !== "senda" || dragState.disciplineId !== disc.id) return;
+          const fromGlobal = dragState.index;
+          const toGlobal = Number(sendaRow.dataset.sendaGlobalIndex);
+          if (fromGlobal !== toGlobal) {
+            reorderArray(selectedSendas, fromGlobal, toGlobal);
+            renderDisciplineList();
+            saveCharacterData();
+          }
+          sendaRow.classList.remove("drag-over-top", "drag-over-bottom");
+        });
+
+        // Apply filled dots
+        const sendaRating = sendaRow.querySelector(".senda-rating");
+        const sendaDots = sendaRating.querySelectorAll(".dot");
+        sendaDots.forEach(dot => {
+          const dv = Number(dot.dataset.value);
+          dot.classList.toggle("filled", dv <= senda.level);
+        });
+
+        // Dot click → update senda level
+        sendaDots.forEach(dot => {
+          dot.addEventListener("click", () => {
+            const clickedLevel = Number(dot.dataset.value);
+            const newLevel = (clickedLevel === senda.level) ? clickedLevel - 1 : clickedLevel;
+            senda.level = newLevel;
+            sendaRating.dataset.rating = String(newLevel);
+            sendaDots.forEach(d => {
+              d.classList.toggle("filled", Number(d.dataset.value) <= newLevel);
+            });
+            saveCharacterData();
+          });
+        });
+
+        // Name click → feed dice roller Pool2
+        const sendaNameSpan = sendaRow.querySelector(".senda-name");
+        sendaNameSpan.addEventListener("click", () => {
+          resetDicePool2();
+          document.querySelector("#dicePool2").value = String(senda.level);
+          document.querySelector("#dicePool2Label").innerHTML = capitalizeFirstLetter(sendaName);
+          updateFinalPoolSize();
+        });
+
+        container.appendChild(sendaRow);
+      });
+    }
   });
 }
 
@@ -3323,6 +3744,161 @@ function updateDisciplineButtons() {
 
 // Initialize the modal
 initDisciplineRepoModal();
+
+/////////////////////////////////////
+////     Sistema de Sendas       ////
+/////////////////////////////////////
+
+// State: array of { disciplineId, sendaId, level }
+let selectedSendas = [];
+
+const sendasRepo = window.SENDAS_REPO || [];
+
+function getSendaName(sendaId) {
+  const entry = sendasRepo.find(s => s.id === sendaId);
+  return entry ? entry.name_es : "Desconocida";
+}
+
+function getSendasForDiscipline(discId) {
+  return sendasRepo.filter(s => s.parentDisciplineId === discId);
+}
+
+function disciplineHasSendas(discId) {
+  const entry = disciplineRepo.find(d => d.id === discId);
+  return entry && entry.hasSendas;
+}
+
+// ----- Senda Repository Modal -----
+function initSendaRepoModal() {
+  const modal = document.getElementById("senda-repo-modal");
+  const closeBtn = document.getElementById("senda-repo-close");
+  const searchInput = document.getElementById("senda-repo-search");
+  const list = document.getElementById("senda-repo-list");
+  const applyBtn = document.getElementById("senda-repo-apply");
+  const titleEl = document.getElementById("senda-repo-title");
+
+  if (!modal || !closeBtn || !searchInput || !list || !applyBtn) return;
+
+  let modalSelection = new Set();
+  let currentDisciplineId = null;
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  window.openSendaModal = function(discId) {
+    currentDisciplineId = discId;
+    const discName = getDisciplineName(discId);
+    titleEl.textContent = `Sendas de ${discName}`;
+
+    // Sync working set with current sendas for this discipline
+    modalSelection = new Set(
+      selectedSendas.filter(s => s.disciplineId === discId).map(s => s.sendaId)
+    );
+
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+    searchInput.value = "";
+    renderSendaRepository("");
+    searchInput.focus();
+  };
+
+  function renderSendaRepository(term) {
+    list.innerHTML = "";
+    const available = getSendasForDiscipline(currentDisciplineId);
+    const filtered = available.filter(s =>
+      s.name_es.toLowerCase().includes(term) || s.name_en.toLowerCase().includes(term)
+    );
+    filtered.forEach(s => {
+      const button = document.createElement("button");
+      button.className = "discipline-repo-item";
+      if (modalSelection.has(s.id)) button.classList.add("selected");
+      button.type = "button";
+      button.textContent = s.name_es;
+      button.addEventListener("click", () => {
+        if (modalSelection.has(s.id)) {
+          modalSelection.delete(s.id);
+        } else {
+          modalSelection.add(s.id);
+        }
+        renderSendaRepository(searchInput.value.trim().toLowerCase());
+      });
+      list.appendChild(button);
+    });
+  }
+
+  closeBtn.addEventListener("click", closeModal);
+
+  applyBtn.addEventListener("click", () => {
+    // Build existing level map for this discipline
+    const existingMap = {};
+    selectedSendas
+      .filter(s => s.disciplineId === currentDisciplineId)
+      .forEach(s => { existingMap[s.sendaId] = s.level; });
+
+    // Remove old sendas for this discipline
+    selectedSendas = selectedSendas.filter(s => s.disciplineId !== currentDisciplineId);
+
+    // Add selected sendas in repo order, preserving existing levels
+    const available = getSendasForDiscipline(currentDisciplineId);
+    available.forEach(s => {
+      if (modalSelection.has(s.id)) {
+        selectedSendas.push({
+          disciplineId: currentDisciplineId,
+          sendaId: s.id,
+          level: existingMap[s.id] || 1,
+        });
+      }
+    });
+
+    renderDisciplineList();
+    saveCharacterData();
+    closeModal();
+  });
+
+  searchInput.addEventListener("input", () => {
+    renderSendaRepository(searchInput.value.trim().toLowerCase());
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+  });
+}
+
+initSendaRepoModal();
+
+// ----- Senda Save/Load -----
+
+function getSendasData() {
+  return selectedSendas.map(s => ({
+    disciplineId: s.disciplineId,
+    sendaId: s.sendaId,
+    level: s.level,
+    name: getSendaName(s.sendaId),
+  }));
+}
+
+function loadSendasFromJSON(characterData) {
+  selectedSendas = [];
+  if (characterData.sendas && Array.isArray(characterData.sendas)) {
+    characterData.sendas.forEach(s => {
+      const repoEntry = sendasRepo.find(r => r.id === s.sendaId);
+      if (repoEntry) {
+        selectedSendas.push({
+          disciplineId: s.disciplineId,
+          sendaId: s.sendaId,
+          level: s.level || 1,
+        });
+      }
+    });
+  }
+  console.log("[Sendas] Loaded:", selectedSendas.length, "sendas", selectedSendas);
+}
 
 /////////////////////////////////////
 ////     Sistema de Poderes      ////
