@@ -332,7 +332,7 @@
 
                 <!-- ATRIBUTOS -->
                 <article class="card sheet-panel attributes-pane attributes">
-                    <h2>Atributos</h2>
+                    <h2 id="attributes-title">Atributos</h2>
                     <div class="sheet-columns">
                         <!-- Fisicos -->
                         <section class="sheet-subsection">
@@ -471,7 +471,7 @@
 
                 <!-- HABILIDADES -->
                 <article class="card sheet-panel abilities">
-                    <h2>Habilidades</h2>
+                    <h2 id="abilities-title">Habilidades</h2>
                     <div class="sheet-columns">
                         <!-- Talentos -->
                         <section class="sheet-subsection">
@@ -533,22 +533,9 @@
                                     <input id="dicePool2" class="dicePool" type="number" min="0" step="1" value="0">
                                 </div>
                                 <span class="dice-plus">+</span>
-                                <div class="dice-field dice-field-compact dice-popover-wrapper">
+                                <div class="dice-field dice-field-compact">
                                     <label for="diceMod" id="modLabel">Modif.</label>
-                                    <input id="diceMod" class="diceMod" type="number" value="0" readonly>
-                                    <div id="diceModPopover" class="dice-popover hidden" role="listbox" aria-label="Seleccionar modificador">
-                                        <button type="button" data-val="-5">-5</button>
-                                        <button type="button" data-val="-4">-4</button>
-                                        <button type="button" data-val="-3">-3</button>
-                                        <button type="button" data-val="-2">-2</button>
-                                        <button type="button" data-val="-1">-1</button>
-                                        <button type="button" data-val="0" class="pop-highlight">0</button>
-                                        <button type="button" data-val="1">+1</button>
-                                        <button type="button" data-val="2">+2</button>
-                                        <button type="button" data-val="3">+3</button>
-                                        <button type="button" data-val="4">+4</button>
-                                        <button type="button" data-val="5">+5</button>
-                                    </div>
+                                    <input id="diceMod" class="diceMod" type="number" value="0" step="1">
                                 </div>
                                 <span class="dice-separator">|</span>
                                 <div class="dice-field dice-field-compact dice-popover-wrapper">

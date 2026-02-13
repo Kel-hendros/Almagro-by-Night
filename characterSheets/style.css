@@ -980,6 +980,56 @@ body[data-theme="camarilla"] .health-container {
 	margin-bottom: 0;
 }
 
+/* Sangre urgente (2-4 puntos) */
+.blood-card.blood-urgent .health-title {
+	color: var(--blood-2);
+}
+
+/* Sangre frenesí (0-1 puntos) — títulos temblorosos desincronizados */
+.blood-card.blood-frenzy .health-title {
+	color: var(--blood-2);
+	animation: frenzyShake1 0.38s ease-in-out infinite;
+	font-style: italic;
+}
+
+#attributes-title.blood-frenzy-text {
+	color: var(--blood-2) !important;
+	animation: frenzyShake2 0.45s ease-in-out infinite 0.12s;
+	font-style: italic;
+}
+
+#abilities-title.blood-frenzy-text {
+	color: var(--blood-2) !important;
+	animation: frenzyShake3 0.33s ease-in-out infinite 0.07s;
+	font-style: italic;
+}
+
+@keyframes frenzyShake1 {
+	0%, 100% { transform: translate(0, 0); }
+	15%      { transform: translate(-2px, 1px); }
+	30%      { transform: translate(2px, -1px); }
+	45%      { transform: translate(-1px, -1px); }
+	60%      { transform: translate(1px, 1px); }
+	75%      { transform: translate(-1px, 0px); }
+}
+
+@keyframes frenzyShake2 {
+	0%, 100% { transform: translate(0, 0); }
+	20%      { transform: translate(1px, -2px); }
+	40%      { transform: translate(-2px, 1px); }
+	60%      { transform: translate(1px, 1px); }
+	80%      { transform: translate(-1px, -1px); }
+}
+
+@keyframes frenzyShake3 {
+	0%, 100% { transform: translate(0, 0); }
+	10%      { transform: translate(2px, 1px); }
+	35%      { transform: translate(-1px, -2px); }
+	55%      { transform: translate(-2px, 1px); }
+	70%      { transform: translate(1px, -1px); }
+	90%      { transform: translate(-1px, 0px); }
+}
+
 .blood-meta {
 	margin: 4px 0 10px;
 	color: var(--muted);
@@ -1408,6 +1458,12 @@ body[data-theme="camarilla"] .health-container {
 	line-height: 1.4;
 	text-align: center;
 	width: 100%;
+}
+
+.initiative-breakdown {
+	margin-top: 6px;
+	font-size: 0.72rem;
+	opacity: 0.85;
 }
 
 .dice-result-info-flavor {
@@ -3487,8 +3543,10 @@ ul li.active {
 	border: 1px solid var(--line);
 	border-radius: 8px;
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-	z-index: 90;
-	white-space: nowrap;
+	z-index: 9999;
+	flex-wrap: wrap;
+	max-width: 380px;
+	justify-content: center;
 }
 
 .dice-popover::after {
@@ -3646,6 +3704,15 @@ ul li.active {
 			rgba(20, 10, 30, 0.6) 100%);
 }
 
+/* Estado neutro mientras los dados se revelan */
+.dice-result.rolling {
+	border-color: rgba(150, 150, 150, 0.3);
+	background: linear-gradient(180deg,
+			rgba(150, 150, 150, 0.08),
+			rgba(150, 150, 150, 0.03));
+	transition: border-color 0.4s ease, background 0.4s ease;
+}
+
 .dice-result-summary {
 	margin: 0;
 	font-family: var(--fontHeading);
@@ -3653,6 +3720,11 @@ ul li.active {
 	color: var(--text);
 	text-align: center;
 	font-weight: 400;
+	transition: opacity 0.3s ease;
+}
+
+.dice-result-summary.hidden-result {
+	opacity: 0;
 }
 
 .dice-result-rolls {
@@ -3661,6 +3733,7 @@ ul li.active {
 	gap: 8px;
 	flex-wrap: wrap;
 	justify-content: center;
+	padding: 4px 0;
 }
 
 .dice-result-die {
@@ -3674,7 +3747,10 @@ ul li.active {
 	font-size: 0.85rem;
 	font-weight: 700;
 	line-height: 1;
+	position: relative;
+	z-index: 1;
 	border: 2px solid transparent;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .dice-result-die.success {
@@ -3703,6 +3779,112 @@ ul li.active {
 .dice-result-die.potencia-chip iconify-icon {
 	font-size: 20px;
 	color: #102814;
+}
+
+/* Éxito cancelado por un 1 */
+.dice-result-die.cancelled {
+	opacity: 0.4;
+}
+
+/* Chip bonus de especialidad (10 doble) */
+.dice-result-die.specialty-bonus {
+	font-size: 0;
+	margin-left: -20px;
+	z-index: 0;
+	position: relative;
+}
+
+.dice-result-die.specialty-bonus iconify-icon {
+	font-size: 18px;
+	color: #102814;
+}
+
+/* ---- Animación de tirada de dados ---- */
+
+/* Estado inicial: dado neutro fuera del viewport (abajo) */
+.dice-result-die.dice-unrevealed {
+	background: linear-gradient(180deg, #4a4a4a, #2a2a2a) !important;
+	color: transparent !important;
+	border-color: #555 !important;
+	transform: translateY(100vh);
+	opacity: 1;
+}
+
+/* Iconos ocultos en estado sin revelar */
+.dice-result-die.dice-unrevealed iconify-icon {
+	opacity: 0;
+}
+
+/* Aparición escalonada: sube desde fuera del viewport con rebote */
+.dice-result-die.dice-appearing {
+	animation: diceAppear 0.55s cubic-bezier(0.22, 0.9, 0.36, 1) forwards;
+	background: linear-gradient(180deg, #4a4a4a, #2a2a2a) !important;
+	color: transparent !important;
+	border-color: #555 !important;
+}
+
+.dice-result-die.dice-appearing iconify-icon {
+	opacity: 0;
+}
+
+@keyframes diceAppear {
+	0% {
+		transform: translateY(100vh);
+	}
+	70% {
+		transform: translateY(-8px);
+	}
+	85% {
+		transform: translateY(3px);
+	}
+	100% {
+		transform: translateY(0);
+	}
+}
+
+/* Revelación de color */
+.dice-result-die.dice-revealed {
+	animation: diceReveal 0.25s ease-out forwards;
+}
+
+.dice-result-die.dice-revealed iconify-icon {
+	opacity: 1;
+	transition: opacity 0.2s ease;
+}
+
+@keyframes diceReveal {
+	0% {
+		filter: brightness(0.4) saturate(0);
+		transform: scale(1.08);
+	}
+	100% {
+		filter: brightness(1) saturate(1);
+		transform: scale(1);
+	}
+}
+
+/* Golpe de cancelación: un 1 apaga un éxito */
+.dice-result-die.dice-cancel-hit {
+	animation: diceCancelHit 0.35s ease-out forwards;
+}
+
+@keyframes diceCancelHit {
+	0% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	20% {
+		transform: scale(1.15) rotate(-8deg);
+		opacity: 1;
+	}
+	50% {
+		transform: scale(0.85) rotate(5deg);
+		opacity: 0.5;
+	}
+	100% {
+		transform: scale(1) rotate(0deg);
+		opacity: 0.4;
+	}
 }
 
 .dice-history-card {

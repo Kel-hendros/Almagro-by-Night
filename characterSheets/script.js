@@ -1832,6 +1832,35 @@ function updateBloodUI() {
 
   // Block the blood pool based on generation
   blockBloodPool();
+
+  // Update blood title and frenzy state based on current blood level
+  const bloodCount = bloodValue.replace(/0/g, "").length;
+  const bloodTitle = document.querySelector(".blood-card .health-title");
+  const bloodCard = document.querySelector(".blood-card");
+  const attrTitle = document.getElementById("attributes-title");
+  const abilTitle = document.getElementById("abilities-title");
+
+  bloodCard.classList.remove("blood-urgent", "blood-frenzy");
+  attrTitle.classList.remove("blood-frenzy-text");
+  abilTitle.classList.remove("blood-frenzy-text");
+
+  if (bloodCount <= 1) {
+    bloodTitle.textContent = "SANGRE AHORA!";
+    bloodCard.classList.add("blood-frenzy");
+    attrTitle.textContent = "HAMBRE!";
+    attrTitle.classList.add("blood-frenzy-text");
+    abilTitle.textContent = "TENGO QUE BEBER";
+    abilTitle.classList.add("blood-frenzy-text");
+  } else if (bloodCount <= 4) {
+    bloodTitle.textContent = "Sangre! Ya!";
+    bloodCard.classList.add("blood-urgent");
+    attrTitle.textContent = "Atributos";
+    abilTitle.textContent = "Habilidades";
+  } else {
+    bloodTitle.textContent = "Sangre";
+    attrTitle.textContent = "Atributos";
+    abilTitle.textContent = "Habilidades";
+  }
 }
 
 ////////-------------------------------------------////////
@@ -2465,7 +2494,7 @@ function rollTheDice() {
       successes -= botches;
     }
     successes += autoSuccesses;
-    resultText = `${successes} Exitos`;
+    resultText = `${successes} Éxitos`;
   } else {
     color = "58911";
     if (successes - botches < 0) {
@@ -2474,7 +2503,7 @@ function rollTheDice() {
       successes -= botches;
     }
     successes += autoSuccesses;
-    resultText = `${successes} Exito`;
+    resultText = `${successes} Éxito`;
   }
 
   //add willpower notice to resultText
@@ -2482,49 +2511,192 @@ function rollTheDice() {
 
   //Show the results using beta dice-result styling
   rollsList.innerHTML = "";
-  resultElement.textContent = resultText;
 
-  // Determine overall result state for container styling
-  resultContainer.classList.remove("success", "fail", "botch", "hidden", "wakeup");
+  // Determine overall result state class
+  let stateClass = "success";
   if (resultText.includes("Fracaso")) {
-    resultContainer.classList.add("botch");
+    stateClass = "botch";
   } else if (resultText.includes("Fallo")) {
-    resultContainer.classList.add("fail");
-  } else {
-    resultContainer.classList.add("success");
+    stateClass = "fail";
   }
+
+  // Start in neutral "rolling" state — show "0 Éxitos" counter
+  resultContainer.classList.remove("success", "fail", "botch", "hidden", "wakeup", "rolling");
+  resultContainer.classList.add("rolling");
+  resultElement.textContent = "0 Éxitos";
+  resultElement.classList.remove("hidden-result");
 
   // Display results: Potencia chips first, then dice chips sorted descending
   rolls.sort((a, b) => b - a);
 
-  // Potencia successes go first (as green fist chips)
+  // --- Determine which successes get cancelled by botches ---
+  const successSlots = [];
+  for (let i = rolls.length - 1; i >= 0; i--) {
+    if (rolls[i] >= difficulty) {
+      if (specialty && rolls[i] === 10) {
+        successSlots.push({ source: "specialty-bonus", roll: 10, index: i });
+      }
+      successSlots.push({ source: "dice", roll: rolls[i], index: i });
+    }
+  }
+  for (let i = potenciaSuccess - 1; i >= 0; i--) {
+    successSlots.push({ source: "potencia", roll: 0, index: i });
+  }
+
+  let cancelsRemaining = botches;
+  const cancelledDiceIndices = new Set();
+  const cancelledSpecialtyIndices = new Set();
+  let cancelledPotenciaCount = 0;
+  for (const slot of successSlots) {
+    if (cancelsRemaining <= 0) break;
+    if (slot.source === "specialty-bonus") {
+      cancelledSpecialtyIndices.add(slot.index);
+    } else if (slot.source === "dice") {
+      cancelledDiceIndices.add(slot.index);
+    } else if (slot.source === "potencia") {
+      cancelledPotenciaCount++;
+    }
+    cancelsRemaining--;
+  }
+
+  // --- Build all chips (unrevealed) and track them for animation ---
+  // Each chip stores: revealClass (shown during reveal, NO cancelled yet) and finalClass (after cancel phase)
+  const allChips = []; // { element, revealClass, finalClass, isBonus, willCancel }
+
+  // Potencia chips
   if (potenciaSuccess > 0) {
     for (let i = 0; i < potenciaSuccess; i++) {
       const potChip = document.createElement("span");
-      potChip.className = "dice-result-die success potencia-chip";
+      const isCancelled = i >= (potenciaSuccess - cancelledPotenciaCount);
+      const revealClass = "dice-result-die success potencia-chip";
+      const finalClass = `dice-result-die success potencia-chip${isCancelled ? " cancelled" : ""}`;
+      potChip.className = "dice-result-die dice-unrevealed";
       potChip.innerHTML = `<iconify-icon icon="game-icons:fist" width="20" aria-hidden="true"></iconify-icon>`;
       potChip.title = `${potenciaBonus.fullName}`;
       rollsList.appendChild(potChip);
+      allChips.push({ element: potChip, revealClass, finalClass, isBonus: false, willCancel: isCancelled });
     }
   }
 
-  // Then the actual dice rolls
-  for (const roll of rolls) {
+  // Dice chips
+  for (let i = 0; i < rolls.length; i++) {
+    const roll = rolls[i];
     const chip = document.createElement("span");
-    let kind;
+    chip.textContent = roll;
+    let revealClass = "";
+    let finalClass = "";
+    let willCancel = false;
+
     if (roll === 1) {
-      kind = "botch";
-      chip.textContent = roll;
+      revealClass = "dice-result-die botch";
+      finalClass = revealClass;
     } else if (roll >= difficulty) {
-      kind = "success";
-      chip.textContent = roll;
+      const isCancelled = cancelledDiceIndices.has(i);
+      revealClass = "dice-result-die success";
+      finalClass = `dice-result-die success${isCancelled ? " cancelled" : ""}`;
+      willCancel = isCancelled;
     } else {
-      kind = "fail";
-      chip.textContent = roll;
+      revealClass = "dice-result-die fail";
+      finalClass = revealClass;
     }
-    chip.className = `dice-result-die ${kind}`;
+
+    chip.className = "dice-result-die dice-unrevealed";
     rollsList.appendChild(chip);
+    allChips.push({ element: chip, revealClass, finalClass, isBonus: false, willCancel });
+
+    // Specialty 10: add bonus chip right after
+    if (specialty && roll === 10 && roll >= difficulty) {
+      const bonusChip = document.createElement("span");
+      const isBonusCancelled = cancelledSpecialtyIndices.has(i);
+      const bonusRevealClass = "dice-result-die success specialty-bonus";
+      const bonusFinalClass = `dice-result-die success specialty-bonus${isBonusCancelled ? " cancelled" : ""}`;
+      bonusChip.className = "dice-result-die dice-unrevealed specialty-bonus";
+      bonusChip.innerHTML = `<iconify-icon icon="mdi:star-four-points" width="18" aria-hidden="true"></iconify-icon>`;
+      bonusChip.title = "Éxito extra por Especialidad";
+      rollsList.appendChild(bonusChip);
+      allChips.push({ element: bonusChip, revealClass: bonusRevealClass, finalClass: bonusFinalClass, isBonus: true, willCancel: isBonusCancelled });
+    }
   }
+
+  // --- Animation sequence ---
+  const APPEAR_DELAY = 100;   // ms between each die flying up
+  const APPEAR_ANIM = 550;    // ms for the fly-up animation itself
+  const REVEAL_PAUSE = 250;   // ms pause before revealing colors
+  const REVEAL_DELAY = 70;    // ms between each die revealing
+  const CANCEL_PAUSE = 350;   // ms pause before cancellation hits
+  const CANCEL_DELAY = 120;   // ms between each cancellation hit
+  const RESULT_PAUSE = 300;   // ms pause before showing result
+
+  // Phase 1: Staggered appearance (grey dice popping in)
+  allChips.forEach((item, idx) => {
+    const delay = item.isBonus ? (idx - 1) * APPEAR_DELAY : idx * APPEAR_DELAY;
+    setTimeout(() => {
+      item.element.classList.remove("dice-unrevealed");
+      item.element.classList.add("dice-appearing");
+    }, Math.max(0, delay));
+  });
+
+  // Phase 2: Reveal colors + live counter
+  const lastAppearTime = (allChips.length - 1) * APPEAR_DELAY + APPEAR_ANIM + REVEAL_PAUSE;
+  let runningCount = 0;
+
+  // Helper to update the live counter display
+  function updateLiveCounter(count) {
+    const n = Math.max(0, count);
+    resultElement.textContent = `${n} ${n === 1 ? "Éxito" : "Éxitos"}`;
+  }
+
+  setTimeout(() => {
+    allChips.forEach((item, idx) => {
+      const delay = item.isBonus ? (idx - 1) * REVEAL_DELAY : idx * REVEAL_DELAY;
+      setTimeout(() => {
+        item.element.className = item.revealClass;
+        item.element.classList.add("dice-revealed");
+
+        // Increment counter for each success revealed
+        if (item.revealClass.includes("success")) {
+          runningCount++;
+          updateLiveCounter(runningCount);
+        }
+      }, Math.max(0, delay));
+    });
+
+    // Phase 3: Cancellation hits (botches knock out successes)
+    const lastRevealTime = (allChips.length - 1) * REVEAL_DELAY + CANCEL_PAUSE;
+    const chipsToCancel = allChips.filter(c => c.willCancel);
+    const hasCancels = chipsToCancel.length > 0;
+
+    if (hasCancels) {
+      setTimeout(() => {
+        chipsToCancel.forEach((item, idx) => {
+          setTimeout(() => {
+            item.element.className = item.finalClass.replace(" cancelled", "");
+            item.element.classList.add("dice-cancel-hit");
+
+            // Decrement counter for each cancelled success
+            runningCount--;
+            updateLiveCounter(runningCount);
+          }, idx * CANCEL_DELAY);
+        });
+
+        // Phase 4: Apply final state after all cancellations
+        const lastCancelTime = (chipsToCancel.length - 1) * CANCEL_DELAY + RESULT_PAUSE + 350;
+        setTimeout(() => {
+          resultContainer.classList.remove("rolling");
+          resultContainer.classList.add(stateClass);
+          // Replace with final text only if it's Fracaso/Fallo (otherwise counter already shows it)
+          resultElement.textContent = resultText;
+        }, lastCancelTime);
+      }, lastRevealTime);
+    } else {
+      // No cancellations — apply final state after reveals
+      setTimeout(() => {
+        resultContainer.classList.remove("rolling");
+        resultContainer.classList.add(stateClass);
+        resultElement.textContent = resultText;
+      }, lastRevealTime);
+    }
+  }, lastAppearTime);
 
   // Build rolls string for Discord: Ps first, then dice values
   const potenciaPs = potenciaSuccess > 0 ? Array(potenciaSuccess).fill("P") : [];
@@ -2775,11 +2947,19 @@ function rollInitiative() {
   const boostInput = document.getElementById("tempDestreza");
   const boostVal = boostInput ? (parseInt(boostInput.value) || 0) : 0;
 
+  // Celeridad passive bonus to Destreza
+  let celBonus = 0;
+  const physBonus = getPhysicalDisciplineBonus("destreza");
+  if (physBonus && physBonus.id === 5 && physBonus.level > 0) {
+    celBonus = physBonus.level;
+  }
+
   // Damage penalty (already a negative number, e.g. -1, -2)
   const damagePenalty = parseInt(document.querySelector("#penalizadorSaludLabel").innerHTML) || 0;
 
   const d10 = Math.floor(Math.random() * 10) + 1;
-  const total = Math.max(0, d10 + destreza + boostVal + astucia + damagePenalty);
+  const totalDestreza = destreza + boostVal + celBonus;
+  const total = Math.max(0, d10 + totalDestreza + astucia + damagePenalty);
 
   // Show in dice widget
   const resultContainer = document.querySelector("#diceResults");
@@ -2796,8 +2976,23 @@ function rollInitiative() {
   chip.textContent = total;
   rollsList.appendChild(chip);
 
-  // Build summary with penalty if applicable
-  let summaryParts = `1d10: ${d10} + Des: ${destreza + boostVal} + Ast: ${astucia}`;
+  // Build detailed breakdown below the chip
+  const parts = [`d10: ${d10}`, `Destreza: ${destreza}`];
+  if (boostVal > 0) parts.push(`Des. Temporal: +${boostVal}`);
+  if (celBonus > 0) parts.push(`Celeridad: +${celBonus}`);
+  parts.push(`Astucia: ${astucia}`);
+  if (damagePenalty < 0) parts.push(`Penalizador Salud: ${damagePenalty}`);
+
+  const breakdown = document.createElement("div");
+  breakdown.className = "dice-result-info initiative-breakdown";
+  breakdown.textContent = parts.join("  +  ");
+  rollsList.appendChild(breakdown);
+
+  // Build summary for history
+  let summaryParts = `1d10: ${d10} + Des: ${destreza}`;
+  if (boostVal > 0) summaryParts += ` + Temp: ${boostVal}`;
+  if (celBonus > 0) summaryParts += ` + Cel: ${celBonus}`;
+  summaryParts += ` + Ast: ${astucia}`;
   if (damagePenalty < 0) summaryParts += ` − Daño: ${Math.abs(damagePenalty)}`;
 
   // Push to dice history
@@ -2811,7 +3006,7 @@ function rollInitiative() {
   if (diceRollHistory.length > DICE_HISTORY_MAX) diceRollHistory.pop();
 
   // Send to Discord
-  sendInitiativeToDiscord(total, d10, destreza + boostVal, astucia, damagePenalty);
+  sendInitiativeToDiscord(total, d10, totalDestreza, astucia, damagePenalty);
 }
 
 function sendInitiativeToDiscord(total, d10, destreza, astucia, damagePenalty) {
@@ -3010,7 +3205,9 @@ document.querySelector("#dicePool2").addEventListener("change", function () {
 
 //DiceMod manually change
 document.querySelector("#diceMod").addEventListener("change", function () {
+  this.value = parseInt(this.value) || 0;
   updateFinalPoolSize();
+  saveCharacterData();
 });
 
 //REFACTOR: Update the finalPoolSize whenever a checkbox is checked or unchecked
@@ -3030,10 +3227,14 @@ document.querySelector("#dicePool2").addEventListener("click", function () {
   resetDicePool2();
   this.select();
 });
-// Generic dice field popovers (modifier & difficulty)
+// Dice modifier: click to select all for easy typing
+document.querySelector("#diceMod").addEventListener("click", function () {
+  this.select();
+});
+
+// Generic dice field popovers (difficulty only)
 (function initDicePopovers() {
   const popovers = [
-    { inputId: "#diceMod", popoverId: "#diceModPopover" },
     { inputId: "#difficulty", popoverId: "#diceDiffPopover" }
   ];
 
@@ -5649,17 +5850,35 @@ function executeSavedRoll(roll) {
 
   // Check for boost on physical attributes
   let boostVal = 0;
+  let physBonusVal = 0;
+  let physBonusLabel = "";
   if (roll.pool1Attr) {
     const attrName = roll.pool1Attr.replace("-value", "");
     const boostInput = document.getElementById("temp" + attrName.charAt(0).toUpperCase() + attrName.slice(1));
     if (boostInput) boostVal = parseInt(boostInput.value) || 0;
+
+    // Physical discipline bonus (Potencia→Fuerza, Celeridad→Destreza, Fortaleza→Resistencia)
+    const physBonus = getPhysicalDisciplineBonus(attrName);
+    if (physBonus) {
+      if (physBonus.id === 5) {
+        // Celeridad: always add passive bonus
+        if (physBonus.level > 0) {
+          physBonusVal = physBonus.level;
+          physBonusLabel = `+${physBonus.shortName}`;
+        }
+      } else if (!activatedDisciplines.has(physBonus.id)) {
+        // Potencia/Fortaleza: passive mode
+        physBonusVal = physBonus.level;
+        physBonusLabel = `+${physBonus.shortName}`;
+      }
+    }
   }
 
   const pool1Label = roll.pool1Attr ? (document.getElementById(roll.pool1Attr)?.getAttribute("name") || "") : "";
   const pool2Label = roll.pool2Attr ? (document.getElementById(roll.pool2Attr)?.getAttribute("name") || "") : "";
 
-  document.querySelector("#dicePool1").value = String(pool1Val + boostVal);
-  document.querySelector("#dicePool1Label").innerHTML = pool1Label ? capitalizeFirstLetter(pool1Label) : "";
+  document.querySelector("#dicePool1").value = String(pool1Val + boostVal + physBonusVal);
+  document.querySelector("#dicePool1Label").innerHTML = pool1Label ? capitalizeFirstLetter(pool1Label) + physBonusLabel : "";
   document.querySelector("#dicePool2").value = String(pool2Val);
   document.querySelector("#dicePool2Label").innerHTML = pool2Label ? capitalizeFirstLetter(pool2Label) : "";
   document.querySelector("#diceMod").value = String(roll.modifier);
