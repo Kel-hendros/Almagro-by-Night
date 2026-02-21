@@ -773,7 +773,8 @@ function getCharacterData() {
     const value = input.value;
 
     // Check if the input has an ID and a value and is not a file input
-    if (id && value && input.type !== "file") {
+    // Skip ritual form inputs to prevent stale data leaking into save
+    if (id && value && input.type !== "file" && !id.startsWith("ritual-")) {
       // Add the input ID and value to the characterData object
       characterData[id] = value;
 
