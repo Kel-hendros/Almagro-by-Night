@@ -628,6 +628,27 @@ function saveCharacterData() {
   }
 }
 
+// Flush any pending debounced save immediately (e.g. before navigating away)
+function flushPendingSave() {
+  clearTimeout(saveTimeout);
+  if (!currentSheetId) return;
+
+  const characterJSON = getCharacterData();
+  const characterData = JSON.parse(characterJSON);
+  const name = document.getElementById("nombre").value || "Sin Nombre";
+
+  window.supabase
+    .from("character_sheets")
+    .update({ name, data: characterData, updated_at: new Date() })
+    .eq("id", currentSheetId);
+}
+
+// Save when user switches tabs, minimises or navigates away
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushPendingSave();
+});
+window.addEventListener("beforeunload", flushPendingSave);
+
 // Load character data from JSON object (DB)
 function loadCharacterFromJSON(characterData) {
   // Loop through all input or select elements
@@ -649,36 +670,35 @@ function loadCharacterFromJSON(characterData) {
       }
     }
   });
-  // Load disciplines from JSON (new or legacy format)
-  loadDisciplinesFromJSON(characterData);
+  // Each loader is isolated so an error in one system never prevents
+  // later systems (merits, defects, notes, etc.) from loading.
+  const safeLoad = (label, fn) => {
+    try { fn(); } catch (e) { console.error(`[Load] Error in ${label}:`, e); }
+  };
 
-  // Load sendas from JSON
-  loadSendasFromJSON(characterData);
+  safeLoad("Disciplines", () => {
+    loadDisciplinesFromJSON(characterData);
+    loadSendasFromJSON(characterData);
+    loadPowersFromJSON(characterData);
+    migrateCustomDisciplinesToPowers();
+    renderDisciplineList();
+    renderPowersList();
+  });
 
-  // Load powers, then migrate any custom/unknown disciplines into powers
-  loadPowersFromJSON(characterData);
-  migrateCustomDisciplinesToPowers();
-  renderDisciplineList();
-  renderPowersList();
+  safeLoad("Backgrounds", () => loadBackgroundsFromJSON(characterData));
 
-  // Load backgrounds from JSON (new or legacy format)
-  loadBackgroundsFromJSON(characterData);
+  safeLoad("Merits & Defects", () => {
+    loadMeritsFromJSON(characterData);
+    loadDefectsFromJSON(characterData);
+  });
 
-  // Load merits & defects from JSON (new or legacy format)
-  loadMeritsFromJSON(characterData);
-  loadDefectsFromJSON(characterData);
+  safeLoad("XP Arcs", () => loadXpArcsFromJSON(characterData));
 
-  // Load XP arcs and re-render pool
-  loadXpArcsFromJSON(characterData);
+  safeLoad("Notes", () => loadNotesFromJSON(characterData));
 
-  // Load notes
-  loadNotesFromJSON(characterData);
+  safeLoad("Saved Rolls", () => loadSavedRollsFromJSON(characterData));
 
-  // Load saved rolls
-  loadSavedRollsFromJSON(characterData);
-
-  // Load discord webhook config
-  loadDiscordWebhookFromJSON(characterData);
+  safeLoad("Discord Webhook", () => loadDiscordWebhookFromJSON(characterData));
 
   // Update Ghoul Visuals if function exists
   if (window.updateGhoulVisuals && characterData.selectedGhoul) {
@@ -765,8 +785,8 @@ function getCharacterData() {
     }
   });
 
-  // Add disciplines data (new format + legacy keys)
-  characterData.disciplines = getDisciplinesData(characterData);
+  // Add disciplines data
+  characterData.disciplines = getDisciplinesData();
 
   // Add sendas data
   characterData.sendas = getSendasData();
@@ -774,12 +794,12 @@ function getCharacterData() {
   // Add powers data
   characterData.disciplinePowers = getPowersData();
 
-  // Add backgrounds data (new format + legacy keys)
-  characterData.backgrounds = getBackgroundsData(characterData);
+  // Add backgrounds data
+  characterData.backgrounds = getBackgroundsData();
 
-  // Add merits & defects data (new format + legacy keys)
-  characterData.merits = getMeritsData(characterData);
-  characterData.defects = getDefectsData(characterData);
+  // Add merits & defects data
+  characterData.merits = getMeritsData();
+  characterData.defects = getDefectsData();
 
   // Add XP arcs data
   characterData.xpArcs = getXpArcsData();
@@ -1387,19 +1407,12 @@ fileInput.addEventListener("change", (e) => {
     const json = event.target.result;
     const characterData = JSON.parse(json);
 
-    // loop through keys in characterData object
-    for (const key in characterData) {
-      if (characterData.hasOwnProperty(key)) {
-        // find the corresponding input element with the same name
-        const inputElement = document.querySelector(`[id="${key}"]`);
-        if (inputElement) {
-          // set the value of the input element
-          inputElement.value = characterData[key];
-        }
-      }
-    }
+    // Use the full loader so new-format data (merits, defects, notes,
+    // disciplines, backgrounds, XP arcs, saved rolls, etc.) is restored.
+    loadCharacterFromJSON(characterData);
 
-    updateAll();
+    // Persist imported data to Supabase immediately
+    saveCharacterData();
   };
 
   reader.readAsText(file);
@@ -3938,29 +3951,13 @@ function initDisciplineRepoModal() {
 
 // ----- Save/Load Integration -----
 
-// Returns the disciplines array for JSON and also writes legacy keys
-function getDisciplinesData(characterData) {
-  const disciplines = selectedDisciplines.map(d => ({
+function getDisciplinesData() {
+  return selectedDisciplines.map(d => ({
     id: d.id,
     level: d.level,
     name: d.customName || getDisciplineName(d.id),
     customName: d.customName || "",
   }));
-
-  // Write legacy keys (disciplina1..12 + disciplina1-value..12) for backward compat
-  for (let i = 1; i <= 12; i++) {
-    if (i <= selectedDisciplines.length) {
-      const disc = selectedDisciplines[i - 1];
-      const name = disc.customName || getDisciplineName(disc.id);
-      characterData["disciplina" + i] = name;
-      characterData["disciplina" + i + "-value"] = String(disc.level);
-    } else {
-      characterData["disciplina" + i] = "";
-      characterData["disciplina" + i + "-value"] = "0";
-    }
-  }
-
-  return disciplines;
 }
 
 // Strip accents for flexible name matching (e.g. "Dominacion" → "dominacion")
@@ -3968,12 +3965,10 @@ function normalizeForMatch(str) {
   return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// Load disciplines from JSON (handles both new and legacy formats)
 function loadDisciplinesFromJSON(characterData) {
   selectedDisciplines = [];
 
   if (characterData.disciplines && Array.isArray(characterData.disciplines)) {
-    // New format: [{ id, level }]
     characterData.disciplines.forEach(d => {
       const repoEntry = disciplineRepo.find(r => r.id === d.id);
       if (repoEntry) {
@@ -3986,25 +3981,6 @@ function loadDisciplinesFromJSON(characterData) {
         });
       }
     });
-  } else {
-    // Legacy format: disciplina1="Presencia", disciplina1-value="3"
-    for (let i = 1; i <= 12; i++) {
-      const name = characterData["disciplina" + i];
-      const level = parseInt(characterData["disciplina" + i + "-value"]) || 0;
-      if (name && name.trim() !== "") {
-        // Match by name with accent-insensitive comparison
-        const nameNorm = normalizeForMatch(name.trim());
-        const repoEntry = disciplineRepo.find(d =>
-          normalizeForMatch(d.name_es) === nameNorm || normalizeForMatch(d.name_en) === nameNorm
-        );
-        if (repoEntry) {
-          selectedDisciplines.push({ id: repoEntry.id, level: level });
-        } else {
-          // Custom/unknown discipline — keep with customName
-          selectedDisciplines.push({ id: 0, customName: name.trim(), level: level });
-        }
-      }
-    }
   }
 
   console.log("[Disciplines] Loaded:", selectedDisciplines.length, "disciplines", selectedDisciplines);
@@ -4860,35 +4836,18 @@ function initBackgrounds() {
   });
 }
 
-// Save: returns array + writes legacy keys
-function getBackgroundsData(characterData) {
-  const backgrounds = characterBackgrounds.map(bg => ({
+function getBackgroundsData() {
+  return characterBackgrounds.map(bg => ({
     name: bg.name,
     description: bg.description || "",
     rating: bg.rating
   }));
-
-  // Write legacy keys for backward compat
-  for (let i = 1; i <= 12; i++) {
-    if (i <= characterBackgrounds.length) {
-      const bg = characterBackgrounds[i - 1];
-      characterData["trasfondo" + i] = bg.name;
-      characterData["trasfondo" + i + "-value"] = String(bg.rating);
-    } else {
-      characterData["trasfondo" + i] = "";
-      characterData["trasfondo" + i + "-value"] = "0";
-    }
-  }
-
-  return backgrounds;
 }
 
-// Load: handles both new and legacy formats
 function loadBackgroundsFromJSON(characterData) {
   characterBackgrounds = [];
 
   if (characterData.backgrounds && Array.isArray(characterData.backgrounds)) {
-    // New format
     characterData.backgrounds.forEach(bg => {
       characterBackgrounds.push({
         name: bg.name || "",
@@ -4896,15 +4855,6 @@ function loadBackgroundsFromJSON(characterData) {
         rating: bg.rating || 0
       });
     });
-  } else {
-    // Legacy format: trasfondo1..12
-    for (let i = 1; i <= 12; i++) {
-      const name = characterData["trasfondo" + i];
-      const rating = parseInt(characterData["trasfondo" + i + "-value"]) || 0;
-      if (name && name.trim() !== "") {
-        characterBackgrounds.push({ name: name.trim(), description: "", rating });
-      }
-    }
   }
 
   renderBackgroundList();
@@ -5360,50 +5310,20 @@ function initMeritsDefects() {
   wireSection("defect-add-toggle", "defect-add-form", "defect-name", "defect-cost", "defect-description", "defect-add-cancel", characterDefects, "defect-list", "+");
 }
 
-// Save: returns array + writes legacy keys
-function getMeritsData(characterData) {
-  const merits = characterMerits.map(m => ({ name: m.name, description: m.description || "", value: m.value }));
-  for (let i = 1; i <= 5; i++) {
-    if (i <= characterMerits.length) {
-      characterData["merito" + i] = characterMerits[i - 1].name;
-      characterData["merito" + i + "-value"] = String(characterMerits[i - 1].value);
-    } else {
-      characterData["merito" + i] = "";
-      characterData["merito" + i + "-value"] = "0";
-    }
-  }
-  return merits;
+function getMeritsData() {
+  return characterMerits.map(m => ({ name: m.name, description: m.description || "", value: m.value }));
 }
 
-function getDefectsData(characterData) {
-  const defects = characterDefects.map(d => ({ name: d.name, description: d.description || "", value: d.value }));
-  for (let i = 1; i <= 5; i++) {
-    if (i <= characterDefects.length) {
-      characterData["defecto" + i] = characterDefects[i - 1].name;
-      characterData["defecto" + i + "-value"] = String(characterDefects[i - 1].value);
-    } else {
-      characterData["defecto" + i] = "";
-      characterData["defecto" + i + "-value"] = "0";
-    }
-  }
-  return defects;
+function getDefectsData() {
+  return characterDefects.map(d => ({ name: d.name, description: d.description || "", value: d.value }));
 }
 
-// Load: handles both new and legacy formats
 function loadMeritsFromJSON(characterData) {
   characterMerits = [];
   if (characterData.merits && Array.isArray(characterData.merits)) {
     characterData.merits.forEach(m => {
       characterMerits.push({ name: m.name || "", description: m.description || "", value: m.value || 1 });
     });
-  } else {
-    for (let i = 1; i <= 5; i++) {
-      const name = characterData["merito" + i];
-      const value = parseInt(characterData["merito" + i + "-value"]) || 0;
-      if (name && name.trim() !== "") {
-        characterMerits.push({ name: name.trim(), description: "", value: value || 1 });
-      }
-    }
   }
   renderMeritDefectList(characterMerits, "merit-list", "-");
 }
@@ -5414,14 +5334,6 @@ function loadDefectsFromJSON(characterData) {
     characterData.defects.forEach(d => {
       characterDefects.push({ name: d.name || "", description: d.description || "", value: d.value || 1 });
     });
-  } else {
-    for (let i = 1; i <= 5; i++) {
-      const name = characterData["defecto" + i];
-      const value = parseInt(characterData["defecto" + i + "-value"]) || 0;
-      if (name && name.trim() !== "") {
-        characterDefects.push({ name: name.trim(), description: "", value: value || 1 });
-      }
-    }
   }
   renderMeritDefectList(characterDefects, "defect-list", "+");
 }
