@@ -2322,15 +2322,81 @@ ul li.active {
 }
 
 .dock-tabs {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	grid-auto-rows: minmax(0, auto);
-	align-content: center;
-	justify-content: stretch;
-	gap: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
 	height: 150px;
 	overflow: visible;
 	padding-right: 2px;
+}
+
+/* Dock pager navigation */
+.dock-pager {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 4px 0;
+}
+
+.dock-pager-btn {
+	background: transparent;
+	border: 1px solid var(--ui-border);
+	color: var(--muted);
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: color 0.15s, border-color 0.15s;
+}
+
+.dock-pager-btn:hover {
+	color: var(--accent);
+	border-color: var(--ui-border-strong);
+}
+
+.dock-dots {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.dock-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ui-border);
+	cursor: pointer;
+	transition: background 0.15s;
+}
+
+.dock-dot.active {
+	background: var(--accent);
+}
+
+/* Dock tab pages */
+.dock-tab-page {
+	display: none;
+	grid-template-columns: 1fr 1fr;
+	grid-auto-rows: minmax(0, auto);
+	gap: 8px;
+}
+
+.dock-tab-page.active {
+	display: grid;
+}
+
+/* Placeholder slots */
+.dock-tab-placeholder {
+	border: 1px dashed var(--ui-border);
+	border-radius: 8px;
+	background: transparent;
+	opacity: 0.3;
+	min-height: 32px;
 }
 
 .dock-tab.active {
@@ -3036,6 +3102,87 @@ ul li.active {
 .background-save-btn:hover,
 .background-title-btn:hover {
 	background: var(--ui-accent-subtle);
+}
+
+/* Ritual discipline select button (in form) */
+.ritual-discipline-select {
+	background: var(--ui-surface);
+	border: 1px solid var(--ui-border);
+	color: var(--muted);
+	padding: 6px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+	text-align: left;
+	font-size: 0.85rem;
+	transition: border-color 0.15s;
+}
+
+.ritual-discipline-select:hover {
+	border-color: var(--ui-border-strong);
+}
+
+.ritual-discipline-select.has-value {
+	color: var(--text);
+	border-color: var(--accent);
+}
+
+/* Ritual discipline group headers */
+.ritual-group {
+	margin-bottom: 8px;
+}
+
+.ritual-group-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	background: var(--ui-surface);
+	border: 1px solid var(--ui-border);
+	border-radius: 10px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.85rem;
+	color: var(--text);
+	transition: background 0.15s;
+	width: 100%;
+	text-align: left;
+}
+
+.ritual-group-header:hover {
+	background: var(--ui-accent-subtle);
+}
+
+.ritual-group-header::before {
+	content: "\25B8";
+	font-size: 0.75rem;
+	transition: transform 0.15s;
+}
+
+.ritual-group.open .ritual-group-header::before {
+	transform: rotate(90deg);
+}
+
+.ritual-group-body {
+	display: none;
+	padding: 4px 0 0 0;
+}
+
+.ritual-group.open .ritual-group-body {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* Ritual level badge */
+.ritual-level-badge {
+	background: var(--accent);
+	color: var(--bg);
+	font-size: 0.7rem;
+	font-weight: 700;
+	padding: 1px 6px;
+	border-radius: 10px;
+	min-width: 20px;
+	text-align: center;
 }
 
 /* ================================================
@@ -4537,7 +4684,7 @@ ul li.active {
 	}
 
 	.sheet-columns,
-	.dock-tabs,
+	.dock-tab-page,
 	.quick-actions {
 		grid-template-columns: 1fr;
 	}
