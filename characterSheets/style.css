@@ -2325,7 +2325,7 @@ ul li.active {
 .dock-tabs {
 	display: flex;
 	flex-direction: column;
-	gap: 0;
+	justify-content: center;
 	height: 150px;
 	overflow: visible;
 	padding-right: 2px;
