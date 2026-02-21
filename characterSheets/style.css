@@ -2319,6 +2319,7 @@ ul li.active {
 	min-height: 0;
 	overflow: hidden;
 	height: 100%;
+	position: relative;
 }
 
 .dock-tabs {
@@ -2330,44 +2331,49 @@ ul li.active {
 	padding-right: 2px;
 }
 
-/* Dock pager navigation */
+/* Dock pager navigation — floats inside card padding, takes no layout space */
 .dock-pager {
+	position: absolute;
+	top: 2px;
+	left: 0;
+	right: 0;
+	z-index: 1;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
-	padding: 4px 0;
+	gap: 4px;
+	height: 14px;
 }
 
 .dock-pager-btn {
 	background: transparent;
-	border: 1px solid var(--ui-border);
+	border: none;
 	color: var(--muted);
-	width: 24px;
-	height: 24px;
+	width: 14px;
+	height: 14px;
 	border-radius: 50%;
 	cursor: pointer;
-	font-size: 14px;
+	font-size: 10px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: color 0.15s, border-color 0.15s;
+	transition: color 0.15s;
+	padding: 0;
 }
 
 .dock-pager-btn:hover {
 	color: var(--accent);
-	border-color: var(--ui-border-strong);
 }
 
 .dock-dots {
 	display: flex;
-	gap: 6px;
+	gap: 5px;
 	align-items: center;
 }
 
 .dock-dot {
-	width: 8px;
-	height: 8px;
+	width: 5px;
+	height: 5px;
 	border-radius: 50%;
 	background: var(--ui-border);
 	cursor: pointer;
