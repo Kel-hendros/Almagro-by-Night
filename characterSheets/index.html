@@ -589,13 +589,31 @@
 
             <!-- ========== DOCK COLUMN (RIGHT) ========== -->
             <aside class="dock-column card card-soft">
+                <div class="dock-pager">
+                    <button class="dock-pager-btn" id="dock-prev" type="button" aria-label="Página anterior">&#8249;</button>
+                    <span class="dock-dots">
+                        <span class="dock-dot active" data-page="0"></span>
+                        <span class="dock-dot" data-page="1"></span>
+                    </span>
+                    <button class="dock-pager-btn" id="dock-next" type="button" aria-label="Página siguiente">&#8250;</button>
+                </div>
                 <div class="dock-tabs">
-                    <button class="dock-tab active" data-panel="panel-disciplinas">Disciplinas</button>
-                    <button class="dock-tab" data-panel="panel-virtudes">Virtudes</button>
-                    <button class="dock-tab" data-panel="panel-trasfondos">Trasfondos</button>
-                    <button class="dock-tab" data-panel="panel-meritos-defectos">Meritos y Defectos</button>
-                    <button class="dock-tab" data-panel="panel-experiencia">Experiencia</button>
-                    <button class="dock-tab" data-panel="panel-notas">Notas</button>
+                    <div class="dock-tab-page active" data-page="0">
+                        <button class="dock-tab active" data-panel="panel-disciplinas">Disciplinas</button>
+                        <button class="dock-tab" data-panel="panel-virtudes">Virtudes</button>
+                        <button class="dock-tab" data-panel="panel-trasfondos">Trasfondos</button>
+                        <button class="dock-tab" data-panel="panel-meritos-defectos">Méritos y Defectos</button>
+                        <button class="dock-tab" data-panel="panel-experiencia">Experiencia</button>
+                        <button class="dock-tab" data-panel="panel-notas">Notas</button>
+                    </div>
+                    <div class="dock-tab-page" data-page="1">
+                        <button class="dock-tab" data-panel="panel-rituales">Rituales</button>
+                        <button class="dock-tab" data-panel="panel-armas">Armas</button>
+                        <div class="dock-tab-placeholder"></div>
+                        <div class="dock-tab-placeholder"></div>
+                        <div class="dock-tab-placeholder"></div>
+                        <div class="dock-tab-placeholder"></div>
+                    </div>
                 </div>
 
                 <div class="dock-content">
@@ -789,6 +807,35 @@
                             </div>
                             <div id="note-list" class="note-list"></div>
                             <div id="note-archive-list" class="note-list hidden"></div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: RITUALES -->
+                    <section class="dock-panel" id="panel-rituales">
+                        <div class="background-pane">
+                            <div class="discipline-powers-header">
+                                <h3>Rituales</h3>
+                                <button id="ritual-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar ritual">+</button>
+                            </div>
+                            <form id="ritual-add-form" class="background-form hidden">
+                                <input id="ritual-name" type="text" placeholder="Nombre del ritual" autocomplete="off" required>
+                                <input id="ritual-level" type="number" min="1" step="1" value="1" placeholder="Nivel">
+                                <button id="ritual-discipline-btn" class="ritual-discipline-select" type="button">Seleccionar disciplina...</button>
+                                <input id="ritual-discipline-id" type="hidden" value="">
+                                <textarea id="ritual-description" rows="3" placeholder="Descripción del ritual (opcional)"></textarea>
+                                <div class="form-actions">
+                                    <button type="submit" class="background-save-btn">Guardar ritual</button>
+                                    <button id="ritual-add-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                                </div>
+                            </form>
+                            <div id="ritual-list" class="background-list"></div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: ARMAS -->
+                    <section class="dock-panel" id="panel-armas">
+                        <div class="background-pane">
+                            <p class="specialty-subtitle" style="text-align:center; margin:32px 0;">Próximamente: sistema de armas.</p>
                         </div>
                     </section>
                 </div>
