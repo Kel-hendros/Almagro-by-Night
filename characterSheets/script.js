@@ -692,6 +692,8 @@ function loadCharacterFromJSON(characterData) {
     loadDefectsFromJSON(characterData);
   });
 
+  safeLoad("Rituals", () => loadRitualsFromJSON(characterData));
+
   safeLoad("XP Arcs", () => loadXpArcsFromJSON(characterData));
 
   safeLoad("Notes", () => loadNotesFromJSON(characterData));
@@ -800,6 +802,9 @@ function getCharacterData() {
   // Add merits & defects data
   characterData.merits = getMeritsData();
   characterData.defects = getDefectsData();
+
+  // Add rituals data
+  characterData.rituals = getRitualsData();
 
   // Add XP arcs data
   characterData.xpArcs = getXpArcsData();
@@ -3876,17 +3881,25 @@ function initDisciplineRepoModal() {
 
   // Track which IDs are selected in the modal (temporary working set)
   let modalSelection = new Set();
+  let modalMode = "multi";
+  let modalOnSelect = null;
 
   function closeModal() {
     modal.classList.add("hidden");
     modal.setAttribute("aria-hidden", "true");
   }
 
-  function openModal() {
-    // Sync working set with current state
-    modalSelection = new Set(selectedDisciplines.map(d => d.id));
+  function openModal(options = {}) {
+    modalMode = options.mode || "multi";
+    modalOnSelect = options.onSelect || null;
+    if (modalMode === "multi") {
+      modalSelection = new Set(selectedDisciplines.map(d => d.id));
+    } else {
+      modalSelection = new Set();
+    }
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
+    applyBtn.style.display = modalMode === "single" ? "none" : "";
     searchInput.value = "";
     renderRepository("");
     searchInput.focus();
@@ -3904,6 +3917,12 @@ function initDisciplineRepoModal() {
       button.type = "button";
       button.textContent = d.name_es;
       button.addEventListener("click", () => {
+        if (modalMode === "single") {
+          if (modalOnSelect) modalOnSelect(d.id);
+          closeModal();
+          return;
+        }
+        // Existing multi-select toggle code
         if (modalSelection.has(d.id)) {
           modalSelection.delete(d.id);
         } else {
@@ -3947,6 +3966,8 @@ function initDisciplineRepoModal() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
   });
+
+  window.openDisciplineModal = openModal;
 }
 
 // ----- Save/Load Integration -----
@@ -5123,6 +5144,7 @@ renderXpArcs();
 
 let characterMerits = [];  // [{name, description, value}]
 let characterDefects = []; // [{name, description, value}]
+let characterRituals = [];
 
 function renderMeritDefectList(items, listId, prefix) {
   const listEl = document.getElementById(listId);
@@ -5308,6 +5330,77 @@ function initMeritsDefects() {
 
   wireSection("merit-add-toggle", "merit-add-form", "merit-name", "merit-cost", "merit-description", "merit-add-cancel", characterMerits, "merit-list", "-");
   wireSection("defect-add-toggle", "defect-add-form", "defect-name", "defect-cost", "defect-description", "defect-add-cancel", characterDefects, "defect-list", "+");
+
+  // ── Ritual form wiring ──
+  (function initRitualForm() {
+    const toggleBtn = document.getElementById("ritual-add-toggle");
+    const form = document.getElementById("ritual-add-form");
+    const nameInput = document.getElementById("ritual-name");
+    const levelInput = document.getElementById("ritual-level");
+    const discBtn = document.getElementById("ritual-discipline-btn");
+    const discIdInput = document.getElementById("ritual-discipline-id");
+    const descInput = document.getElementById("ritual-description");
+    const cancelBtn = document.getElementById("ritual-add-cancel");
+
+    if (!toggleBtn || !form) return;
+
+    toggleBtn.addEventListener("click", () => {
+      form.classList.toggle("hidden");
+      if (!form.classList.contains("hidden") && nameInput) nameInput.focus();
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => {
+        form.classList.add("hidden");
+        if (nameInput) nameInput.value = "";
+        if (levelInput) levelInput.value = "1";
+        if (discIdInput) discIdInput.value = "";
+        if (discBtn) {
+          discBtn.textContent = "Seleccionar disciplina...";
+          discBtn.classList.remove("has-value");
+        }
+        if (descInput) descInput.value = "";
+      });
+    }
+
+    if (discBtn) {
+      discBtn.addEventListener("click", () => {
+        if (window.openDisciplineModal) {
+          window.openDisciplineModal({
+            mode: "single",
+            onSelect: (id) => {
+              discIdInput.value = id;
+              discBtn.textContent = getDisciplineName(id);
+              discBtn.classList.add("has-value");
+            }
+          });
+        }
+      });
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameInput ? nameInput.value.trim() : "";
+      if (!name) return;
+      const level = Math.max(1, Number(levelInput ? levelInput.value : 1) || 1);
+      const disciplineId = discIdInput ? Number(discIdInput.value) || null : null;
+      const description = descInput ? descInput.value.trim() : "";
+
+      characterRituals.push({ name, level, disciplineId, description });
+      renderRitualList();
+      saveCharacterData();
+
+      if (nameInput) nameInput.value = "";
+      if (levelInput) levelInput.value = "1";
+      if (discIdInput) discIdInput.value = "";
+      if (discBtn) {
+        discBtn.textContent = "Seleccionar disciplina...";
+        discBtn.classList.remove("has-value");
+      }
+      if (descInput) descInput.value = "";
+      form.classList.add("hidden");
+    });
+  })();
 }
 
 function getMeritsData() {
@@ -5336,6 +5429,200 @@ function loadDefectsFromJSON(characterData) {
     });
   }
   renderMeritDefectList(characterDefects, "defect-list", "+");
+}
+
+function getRitualsData() {
+  return characterRituals.map(r => ({
+    name: r.name,
+    level: r.level,
+    disciplineId: r.disciplineId,
+    description: r.description || ""
+  }));
+}
+
+function loadRitualsFromJSON(characterData) {
+  characterRituals = [];
+  if (characterData.rituals && Array.isArray(characterData.rituals)) {
+    characterData.rituals.forEach(r => {
+      characterRituals.push({
+        name: r.name || "",
+        level: r.level || 1,
+        disciplineId: r.disciplineId || null,
+        description: r.description || ""
+      });
+    });
+  }
+  renderRitualList();
+}
+
+function renderRitualList() {
+  const listEl = document.getElementById("ritual-list");
+  if (!listEl) return;
+  listEl.innerHTML = "";
+
+  if (characterRituals.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "specialty-subtitle";
+    empty.style.textAlign = "center";
+    empty.style.margin = "16px 0";
+    empty.textContent = "No hay rituales. Usa + para agregar.";
+    listEl.appendChild(empty);
+    return;
+  }
+
+  // Group by disciplineId
+  const groups = {};
+  characterRituals.forEach((r, idx) => {
+    const key = r.disciplineId || 0;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ ...r, _index: idx });
+  });
+
+  // Sort groups by discipline name
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const nameA = getDisciplineName(Number(a));
+    const nameB = getDisciplineName(Number(b));
+    return nameA.localeCompare(nameB);
+  });
+
+  sortedKeys.forEach(key => {
+    const discName = Number(key) ? getDisciplineName(Number(key)) : "Sin disciplina";
+    const rituals = groups[key].sort((a, b) => a.level - b.level);
+
+    const group = document.createElement("div");
+    group.className = "ritual-group";
+
+    const header = document.createElement("button");
+    header.className = "ritual-group-header";
+    header.type = "button";
+    header.textContent = discName;
+    header.addEventListener("click", () => group.classList.toggle("open"));
+
+    const body = document.createElement("div");
+    body.className = "ritual-group-body";
+
+    rituals.forEach(r => {
+      const item = document.createElement("div");
+      item.className = "background-item";
+
+      const row = document.createElement("div");
+      row.className = "background-row";
+
+      const titleBtn = document.createElement("button");
+      titleBtn.className = "background-title-btn";
+      titleBtn.type = "button";
+      titleBtn.textContent = r.name;
+      titleBtn.addEventListener("click", () => item.classList.toggle("open"));
+
+      const levelBadge = document.createElement("span");
+      levelBadge.className = "ritual-level-badge";
+      levelBadge.textContent = "Nv. " + r.level;
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "background-edit-btn";
+      editBtn.type = "button";
+      editBtn.innerHTML = "✎";
+      editBtn.title = "Editar ritual";
+      editBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isEditing = item.classList.contains("editing");
+        if (isEditing) {
+          item.classList.remove("editing", "open");
+          renderRitualList();
+          return;
+        }
+        item.classList.add("editing", "open");
+        descEl.innerHTML = "";
+
+        const editForm = document.createElement("form");
+        editForm.className = "background-edit-form";
+
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.value = r.name;
+        nameInput.placeholder = "Nombre";
+        nameInput.maxLength = 100;
+
+        const levelInput = document.createElement("input");
+        levelInput.type = "number";
+        levelInput.min = "1";
+        levelInput.step = "1";
+        levelInput.value = r.level;
+        levelInput.placeholder = "Nivel";
+
+        const descInput = document.createElement("textarea");
+        descInput.rows = 3;
+        descInput.value = r.description || "";
+        descInput.placeholder = "Descripción (opcional)";
+
+        let editDisciplineId = r.disciplineId;
+        const discBtn = document.createElement("button");
+        discBtn.type = "button";
+        discBtn.className = "ritual-discipline-select" + (editDisciplineId ? " has-value" : "");
+        discBtn.textContent = editDisciplineId ? getDisciplineName(editDisciplineId) : "Seleccionar disciplina...";
+        discBtn.addEventListener("click", () => {
+          if (window.openDisciplineModal) {
+            window.openDisciplineModal({
+              mode: "single",
+              onSelect: (id) => {
+                editDisciplineId = id;
+                discBtn.textContent = getDisciplineName(id);
+                discBtn.classList.add("has-value");
+              }
+            });
+          }
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "form-actions";
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "submit";
+        saveBtn.className = "background-save-btn";
+        saveBtn.textContent = "Guardar";
+
+        editForm.append(nameInput, levelInput, discBtn, descInput, actions);
+        actions.appendChild(saveBtn);
+
+        editForm.addEventListener("submit", (ev) => {
+          ev.preventDefault();
+          const newName = nameInput.value.trim();
+          if (!newName) return;
+          characterRituals[r._index].name = newName;
+          characterRituals[r._index].level = Math.max(1, Number(levelInput.value) || 1);
+          characterRituals[r._index].disciplineId = editDisciplineId;
+          characterRituals[r._index].description = descInput.value.trim();
+          renderRitualList();
+          saveCharacterData();
+        });
+
+        descEl.appendChild(editForm);
+        nameInput.focus();
+      });
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "background-delete-btn";
+      deleteBtn.type = "button";
+      deleteBtn.innerHTML = "✕";
+      deleteBtn.title = "Eliminar ritual";
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        characterRituals.splice(r._index, 1);
+        renderRitualList();
+        saveCharacterData();
+      });
+
+      const descEl = document.createElement("div");
+      descEl.className = "background-description";
+      descEl.textContent = r.description || "";
+
+      row.append(titleBtn, levelBadge, editBtn, deleteBtn);
+      item.append(row, descEl);
+      body.appendChild(item);
+    });
+
+    group.append(header, body);
+    listEl.appendChild(group);
+  });
 }
 
 // Initialize on load
@@ -5924,15 +6211,46 @@ function loadSavedRollsFromJSON(characterData) {
 initSavedRolls();
 renderSavedRolls();
 
-// //////// Dock Tab Switching //////// //
+// ── Dock Pager ──
+let currentDockPage = 0;
+
+function switchDockPage(pageIndex) {
+  const pages = document.querySelectorAll('.dock-tab-page');
+  const dots = document.querySelectorAll('.dock-dot');
+  if (pageIndex < 0 || pageIndex >= pages.length) return;
+  currentDockPage = pageIndex;
+  pages.forEach(p => p.classList.remove('active'));
+  dots.forEach(d => d.classList.remove('active'));
+  pages[pageIndex].classList.add('active');
+  dots[pageIndex].classList.add('active');
+
+  // If the currently active panel belongs to the hidden page, activate
+  // the first real tab of the newly visible page.
+  const activePage = pages[pageIndex];
+  const activeTab = activePage.querySelector('.dock-tab.active');
+  if (!activeTab) {
+    const firstTab = activePage.querySelector('.dock-tab');
+    if (firstTab) firstTab.click();
+  }
+}
+
+document.getElementById('dock-prev')?.addEventListener('click', () => switchDockPage(currentDockPage - 1));
+document.getElementById('dock-next')?.addEventListener('click', () => switchDockPage(currentDockPage + 1));
+
+document.querySelectorAll('.dock-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    const page = parseInt(dot.getAttribute('data-page'), 10);
+    switchDockPage(page);
+  });
+});
+
+// ── Dock Tabs ──
 const dockTabs = document.querySelectorAll('.dock-tab');
 dockTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const panelId = tab.getAttribute('data-panel');
-    // Deactivate all tabs and panels
     dockTabs.forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
-    // Activate clicked tab and its panel
     tab.classList.add('active');
     const panel = document.getElementById(panelId);
     if (panel) panel.classList.add('active');
