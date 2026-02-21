@@ -2334,7 +2334,7 @@ ul li.active {
 /* Dock pager navigation — floats inside card padding, takes no layout space */
 .dock-pager {
 	position: absolute;
-	top: 2px;
+	top: 6px;
 	left: 0;
 	right: 0;
 	z-index: 1;
@@ -2349,11 +2349,11 @@ ul li.active {
 	background: transparent;
 	border: none;
 	color: var(--muted);
-	width: 14px;
-	height: 14px;
+	width: 16px;
+	height: 16px;
 	border-radius: 50%;
 	cursor: pointer;
-	font-size: 10px;
+	font-size: 12px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -2372,8 +2372,8 @@ ul li.active {
 }
 
 .dock-dot {
-	width: 5px;
-	height: 5px;
+	width: 6px;
+	height: 6px;
 	border-radius: 50%;
 	background: var(--ui-border);
 	cursor: pointer;
