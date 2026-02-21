@@ -6351,6 +6351,19 @@ function loadAttackRoll(attack) {
   loadPoolIntoRoller(attack.attackPool2, "#dicePool2", "#dicePool2Label");
   document.querySelector("#difficulty").value = attack.attackDifficulty;
   document.querySelector("#diceMod").value = 0;
+
+  // Activate specialty checkbox if any pool has a specialty
+  const specialtyName = attack.attackPool1?.specialty || attack.attackPool2?.specialty || null;
+  const specialtyCheckbox = document.querySelector("#specialty");
+  const specialtyLabel = document.querySelector('label[for="specialty"]');
+  if (specialtyName) {
+    if (specialtyCheckbox) specialtyCheckbox.checked = true;
+    if (specialtyLabel) specialtyLabel.textContent = `Usar Especialidad (${specialtyName})`;
+  } else {
+    if (specialtyCheckbox) specialtyCheckbox.checked = false;
+    if (specialtyLabel) specialtyLabel.textContent = "Usar Especialidad";
+  }
+
   updateFinalPoolSize();
 
   window.rollContext = { name: "Ataque: " + attack.name };
@@ -6391,6 +6404,19 @@ function loadDamageRoll(attack) {
 
   document.querySelector("#difficulty").value = 6; // damage always diff 6
   document.querySelector("#diceMod").value = 0;
+
+  // Activate specialty checkbox if any damage pool has a specialty
+  const dmgSpecialty = attack.damagePool1?.specialty || attack.damagePool2?.specialty || null;
+  const dmgSpecCheckbox = document.querySelector("#specialty");
+  const dmgSpecLabel = document.querySelector('label[for="specialty"]');
+  if (dmgSpecialty) {
+    if (dmgSpecCheckbox) dmgSpecCheckbox.checked = true;
+    if (dmgSpecLabel) dmgSpecLabel.textContent = `Usar Especialidad (${dmgSpecialty})`;
+  } else {
+    if (dmgSpecCheckbox) dmgSpecCheckbox.checked = false;
+    if (dmgSpecLabel) dmgSpecLabel.textContent = "Usar Especialidad";
+  }
+
   updateFinalPoolSize();
 
   window.rollContext = { name: "Daño: " + attack.name + ` (${attack.damageType})` };
@@ -6557,8 +6583,14 @@ function setupAttackPoolToggle(radioName, attrSelectId, fixedInputId) {
 function readPoolFromForm(radioName, attrSelectId, fixedInputId) {
   const selectedType = document.querySelector(`input[name="${radioName}"]:checked`)?.value || "attr";
   if (selectedType === "attr") {
-    const val = document.getElementById(attrSelectId)?.value || "";
-    return val ? { type: "attr", attr: val } : null;
+    const rawVal = document.getElementById(attrSelectId)?.value || "";
+    if (!rawVal) return null;
+    // Parse specialty suffix: "pelea-value|spec:Garras" → attr + specialty
+    if (rawVal.includes("|spec:")) {
+      const [attr, specPart] = rawVal.split("|spec:");
+      return { type: "attr", attr, specialty: specPart };
+    }
+    return { type: "attr", attr: rawVal };
   } else {
     const val = parseInt(document.getElementById(fixedInputId)?.value) || 0;
     return { type: "fixed", value: val };
@@ -6584,7 +6616,12 @@ function setPoolInForm(poolConfig, radioName, attrSelectId, fixedInputId) {
     fixedIn.classList.add("hidden");
     fixedIn.value = 0;
     if (poolConfig && poolConfig.type === "attr") {
-      attrSel.value = poolConfig.attr;
+      // Restore specialty suffix if present
+      if (poolConfig.specialty) {
+        attrSel.value = poolConfig.attr + "|spec:" + poolConfig.specialty;
+      } else {
+        attrSel.value = poolConfig.attr;
+      }
     } else {
       attrSel.value = "";
     }
