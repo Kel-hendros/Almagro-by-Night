@@ -694,6 +694,8 @@ function loadCharacterFromJSON(characterData) {
 
   safeLoad("Rituals", () => loadRitualsFromJSON(characterData));
 
+  safeLoad("Attacks", () => loadAttacksFromJSON(characterData));
+
   safeLoad("XP Arcs", () => loadXpArcsFromJSON(characterData));
 
   safeLoad("Notes", () => loadNotesFromJSON(characterData));
@@ -774,7 +776,7 @@ function getCharacterData() {
 
     // Check if the input has an ID and a value and is not a file input
     // Skip ritual form inputs to prevent stale data leaking into save
-    if (id && value && input.type !== "file" && !id.startsWith("ritual-")) {
+    if (id && value && input.type !== "file" && !id.startsWith("ritual-") && !id.startsWith("attack-") && !id.startsWith("damage-")) {
       // Add the input ID and value to the characterData object
       characterData[id] = value;
 
@@ -806,6 +808,9 @@ function getCharacterData() {
 
   // Add rituals data
   characterData.rituals = getRitualsData();
+
+  // Add attacks data
+  characterData.attacks = getAttacksData();
 
   // Add XP arcs data
   characterData.xpArcs = getXpArcsData();
@@ -2752,7 +2757,13 @@ function rollTheDice() {
 
   // Build pool label from selected attributes/abilities
   const poolParts = [pool1, pool2].filter(p => p && p.trim() !== "");
-  const poolLabel = poolParts.length > 0 ? poolParts.join(" + ") : "Manual";
+  let poolLabel = poolParts.length > 0 ? poolParts.join(" + ") : "Manual";
+
+  // Override pool label if rollContext exists (attacks system)
+  if (window.rollContext?.name) {
+    poolLabel = window.rollContext.name;
+    window.rollContext = null;
+  }
 
   // Push to dice history
   diceRollHistory.unshift({
@@ -2763,6 +2774,18 @@ function rollTheDice() {
     status: historyStatus
   });
   if (diceRollHistory.length > DICE_HISTORY_MAX) diceRollHistory.pop();
+
+  // Expose roll result for external consumers (attacks system)
+  window.lastRollResult = { successes, resultText };
+  if (window.onRollComplete) {
+    const cb = window.onRollComplete;
+    window.onRollComplete = null; // one-shot
+    // Delay callback until after dice animations finish
+    const chipCount = allChips.length;
+    const cancelCount = Math.min(botches, successSlots.length);
+    const totalAnimTime = chipCount * 100 + 550 + 250 + chipCount * 70 + 350 + (cancelCount > 0 ? cancelCount * 120 + 700 : 0) + 400;
+    setTimeout(() => cb(window.lastRollResult), totalAnimTime);
+  }
 
   uncheckWillpowerAndSpecialty();
 }
@@ -6244,6 +6267,432 @@ document.querySelectorAll('.dock-dot').forEach(dot => {
     switchDockPage(page);
   });
 });
+
+// ══════════════════════════════════════════════════════════════
+// ATTACKS SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+let characterAttacks = [];
+let attackEditingIndex = null;
+
+// ── Data helpers ──
+
+function getAttacksData() {
+  return characterAttacks.map(a => ({
+    name: a.name,
+    attackPool1: a.attackPool1,
+    attackPool2: a.attackPool2,
+    attackDifficulty: a.attackDifficulty,
+    damagePool1: a.damagePool1,
+    damagePool2: a.damagePool2,
+    damageType: a.damageType,
+  }));
+  // pendingExtra is transient — NOT saved
+}
+
+function loadAttacksFromJSON(characterData) {
+  characterAttacks = [];
+  if (characterData.attacks && Array.isArray(characterData.attacks)) {
+    characterData.attacks.forEach(a => {
+      characterAttacks.push({ ...a, pendingExtra: 0 });
+    });
+  }
+  renderAttackList();
+}
+
+// ── Pool loader ──
+
+function loadPoolIntoRoller(poolConfig, poolSelector, labelSelector) {
+  if (!poolConfig) {
+    document.querySelector(poolSelector).value = 0;
+    document.querySelector(labelSelector).innerHTML = "";
+    return;
+  }
+  if (poolConfig.type === "attr") {
+    const attrId = poolConfig.attr;
+    const val = parseInt(document.getElementById(attrId)?.value) || 0;
+    const attrName = attrId.replace("-value", "");
+
+    // Temp boost
+    const boostInput = document.getElementById("temp" + attrName.charAt(0).toUpperCase() + attrName.slice(1));
+    const boostVal = boostInput ? parseInt(boostInput.value) || 0 : 0;
+
+    // Physical discipline bonus (Potencia/Celeridad/Fortaleza)
+    let physVal = 0, physLabel = "";
+    const physBonus = getPhysicalDisciplineBonus(attrName);
+    if (physBonus) {
+      if (physBonus.id === 5) {
+        // Celeridad: always passive
+        if (physBonus.level > 0) {
+          physVal = physBonus.level;
+          physLabel = `+${physBonus.shortName}`;
+        }
+      } else if (!activatedDisciplines.has(physBonus.id)) {
+        // Potencia/Fortaleza: passive mode
+        physVal = physBonus.level;
+        physLabel = `+${physBonus.shortName}`;
+      }
+    }
+
+    const attrLabel = document.getElementById(attrId)?.getAttribute("name") || attrName;
+    document.querySelector(poolSelector).value = val + boostVal + physVal;
+    document.querySelector(labelSelector).innerHTML = capitalizeFirstLetter(attrLabel) + physLabel;
+  } else {
+    // Fixed value
+    document.querySelector(poolSelector).value = poolConfig.value;
+    document.querySelector(labelSelector).innerHTML = String(poolConfig.value);
+  }
+}
+
+// ── Attack roll loader ──
+
+function loadAttackRoll(attack) {
+  loadPoolIntoRoller(attack.attackPool1, "#dicePool1", "#dicePool1Label");
+  loadPoolIntoRoller(attack.attackPool2, "#dicePool2", "#dicePool2Label");
+  document.querySelector("#difficulty").value = attack.attackDifficulty;
+  document.querySelector("#diceMod").value = 0;
+  updateFinalPoolSize();
+
+  window.rollContext = { name: "Ataque: " + attack.name };
+  window.onRollComplete = (result) => {
+    const extra = Math.max(0, result.successes - 1);
+    attack.pendingExtra = extra;
+    renderAttackList();
+  };
+}
+
+// ── Damage roll loader ──
+
+function loadDamageRoll(attack) {
+  loadPoolIntoRoller(attack.damagePool1, "#dicePool1", "#dicePool1Label");
+
+  // Pool 2 = base weapon bonus + pending extra successes
+  let baseBonus = 0;
+  if (attack.damagePool2) {
+    if (attack.damagePool2.type === "fixed") {
+      baseBonus = attack.damagePool2.value;
+    } else if (attack.damagePool2.type === "attr") {
+      baseBonus = parseInt(document.getElementById(attack.damagePool2.attr)?.value) || 0;
+    }
+  }
+  const pool2Total = baseBonus + attack.pendingExtra;
+  document.querySelector("#dicePool2").value = pool2Total;
+
+  // Build label
+  let pool2Label = "";
+  if (attack.damagePool2 && attack.pendingExtra > 0) {
+    pool2Label = `${baseBonus}+${attack.pendingExtra}`;
+  } else if (attack.pendingExtra > 0) {
+    pool2Label = `+${attack.pendingExtra}`;
+  } else if (attack.damagePool2) {
+    pool2Label = String(baseBonus);
+  }
+  document.querySelector("#dicePool2Label").innerHTML = pool2Label;
+
+  document.querySelector("#difficulty").value = 6; // damage always diff 6
+  document.querySelector("#diceMod").value = 0;
+  updateFinalPoolSize();
+
+  window.rollContext = { name: "Daño: " + attack.name + ` (${attack.damageType})` };
+  attack.pendingExtra = 0;
+  renderAttackList();
+}
+
+// ── Render attack list ──
+
+function renderAttackList() {
+  const list = document.getElementById("attack-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (characterAttacks.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "discipline-detail-label";
+    empty.style.textAlign = "center";
+    empty.style.padding = "16px 0";
+    empty.textContent = "Sin ataques definidos";
+    list.appendChild(empty);
+    return;
+  }
+
+  characterAttacks.forEach((attack, idx) => {
+    const item = document.createElement("div");
+    item.className = "attack-item";
+
+    // Header row: name + edit/delete
+    const header = document.createElement("div");
+    header.className = "attack-item-header";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "attack-item-name";
+    nameSpan.textContent = attack.name;
+    nameSpan.title = attack.name;
+    header.appendChild(nameSpan);
+
+    const controls = document.createElement("div");
+    controls.className = "attack-item-controls";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = "✎";
+    editBtn.title = "Editar";
+    editBtn.addEventListener("click", () => openAttackModal(idx));
+    controls.appendChild(editBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "✕";
+    deleteBtn.title = "Eliminar";
+    deleteBtn.addEventListener("click", () => {
+      characterAttacks.splice(idx, 1);
+      renderAttackList();
+      saveCharacterData();
+    });
+    controls.appendChild(deleteBtn);
+
+    header.appendChild(controls);
+    item.appendChild(header);
+
+    // Action row: [Atacar] [Daño +N] [↺]
+    const actions = document.createElement("div");
+    actions.className = "attack-actions";
+
+    const atkBtn = document.createElement("button");
+    atkBtn.type = "button";
+    atkBtn.className = "attack-btn attack-btn-attack";
+    atkBtn.innerHTML = "⚔ Atacar";
+    atkBtn.addEventListener("click", () => loadAttackRoll(attack));
+    actions.appendChild(atkBtn);
+
+    const dmgBtn = document.createElement("button");
+    dmgBtn.type = "button";
+    dmgBtn.className = "attack-btn attack-btn-damage";
+
+    if (attack.pendingExtra > 0) {
+      dmgBtn.classList.add("has-pending");
+      dmgBtn.innerHTML = `💀 Daño <span class="attack-pending-badge">+${attack.pendingExtra}</span>`;
+    } else {
+      dmgBtn.innerHTML = "💀 Daño";
+    }
+    dmgBtn.addEventListener("click", () => loadDamageRoll(attack));
+    actions.appendChild(dmgBtn);
+
+    if (attack.pendingExtra > 0) {
+      const resetBtn = document.createElement("button");
+      resetBtn.type = "button";
+      resetBtn.className = "attack-btn-reset";
+      resetBtn.textContent = "↺";
+      resetBtn.title = "Resetear éxitos extra";
+      resetBtn.addEventListener("click", () => {
+        attack.pendingExtra = 0;
+        renderAttackList();
+      });
+      actions.appendChild(resetBtn);
+    }
+
+    item.appendChild(actions);
+    list.appendChild(item);
+  });
+}
+
+// ── Attack modal ──
+
+function populateAttackSelects() {
+  const attrOpts = getSavedRollAttrOptions();
+  const abilOpts = getSavedRollAbilityOptions();
+  const allOpts = [...attrOpts, ...abilOpts.filter(o => o.value !== "")]; // combined, skip duplicate "ninguno"
+
+  const selects = {
+    "attack-pool1-attr": attrOpts,
+    "attack-pool2-attr": abilOpts,
+    "damage-pool1-attr": attrOpts,
+    "damage-pool2-attr": allOpts,
+  };
+
+  for (const [id, opts] of Object.entries(selects)) {
+    const sel = document.getElementById(id);
+    if (!sel) continue;
+    sel.innerHTML = "";
+    opts.forEach(o => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      sel.appendChild(opt);
+    });
+  }
+
+  // Populate difficulty select (3-10, default 6)
+  const diffSel = document.getElementById("attack-difficulty");
+  if (diffSel) {
+    diffSel.innerHTML = "";
+    for (let d = 3; d <= 10; d++) {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      if (d === 6) opt.selected = true;
+      diffSel.appendChild(opt);
+    }
+  }
+}
+
+function setupAttackPoolToggle(radioName, attrSelectId, fixedInputId) {
+  const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+  const attrSel = document.getElementById(attrSelectId);
+  const fixedIn = document.getElementById(fixedInputId);
+  if (!attrSel || !fixedIn) return;
+
+  radios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      if (radio.value === "attr") {
+        attrSel.classList.remove("hidden");
+        fixedIn.classList.add("hidden");
+      } else {
+        attrSel.classList.add("hidden");
+        fixedIn.classList.remove("hidden");
+      }
+    });
+  });
+}
+
+function readPoolFromForm(radioName, attrSelectId, fixedInputId) {
+  const selectedType = document.querySelector(`input[name="${radioName}"]:checked`)?.value || "attr";
+  if (selectedType === "attr") {
+    const val = document.getElementById(attrSelectId)?.value || "";
+    return val ? { type: "attr", attr: val } : null;
+  } else {
+    const val = parseInt(document.getElementById(fixedInputId)?.value) || 0;
+    return { type: "fixed", value: val };
+  }
+}
+
+function setPoolInForm(poolConfig, radioName, attrSelectId, fixedInputId) {
+  const attrRadio = document.querySelector(`input[name="${radioName}"][value="attr"]`);
+  const fixedRadio = document.querySelector(`input[name="${radioName}"][value="fixed"]`);
+  const attrSel = document.getElementById(attrSelectId);
+  const fixedIn = document.getElementById(fixedInputId);
+  if (!attrSel || !fixedIn) return;
+
+  if (poolConfig && poolConfig.type === "fixed") {
+    if (fixedRadio) fixedRadio.checked = true;
+    attrSel.classList.add("hidden");
+    fixedIn.classList.remove("hidden");
+    fixedIn.value = poolConfig.value;
+    attrSel.value = "";
+  } else {
+    if (attrRadio) attrRadio.checked = true;
+    attrSel.classList.remove("hidden");
+    fixedIn.classList.add("hidden");
+    fixedIn.value = 0;
+    if (poolConfig && poolConfig.type === "attr") {
+      attrSel.value = poolConfig.attr;
+    } else {
+      attrSel.value = "";
+    }
+  }
+}
+
+function openAttackModal(editIndex) {
+  const modal = document.getElementById("attack-modal");
+  const title = document.getElementById("attack-modal-title");
+  if (!modal) return;
+
+  populateAttackSelects();
+
+  // Setup radio toggles
+  setupAttackPoolToggle("atkPool1Type", "attack-pool1-attr", "attack-pool1-fixed");
+  setupAttackPoolToggle("atkPool2Type", "attack-pool2-attr", "attack-pool2-fixed");
+  setupAttackPoolToggle("dmgPool1Type", "damage-pool1-attr", "damage-pool1-fixed");
+  setupAttackPoolToggle("dmgPool2Type", "damage-pool2-attr", "damage-pool2-fixed");
+
+  if (editIndex !== undefined && editIndex !== null) {
+    attackEditingIndex = editIndex;
+    title.textContent = "Editar Ataque";
+    const attack = characterAttacks[editIndex];
+
+    document.getElementById("attack-name").value = attack.name;
+
+    setPoolInForm(attack.attackPool1, "atkPool1Type", "attack-pool1-attr", "attack-pool1-fixed");
+    setPoolInForm(attack.attackPool2, "atkPool2Type", "attack-pool2-attr", "attack-pool2-fixed");
+    document.getElementById("attack-difficulty").value = attack.attackDifficulty || 6;
+
+    setPoolInForm(attack.damagePool1, "dmgPool1Type", "damage-pool1-attr", "damage-pool1-fixed");
+    setPoolInForm(attack.damagePool2, "dmgPool2Type", "damage-pool2-attr", "damage-pool2-fixed");
+    document.getElementById("attack-damage-type").value = attack.damageType || "L";
+  } else {
+    attackEditingIndex = null;
+    title.textContent = "Nuevo Ataque";
+    document.getElementById("attack-form").reset();
+
+    // Reset radio toggles to defaults
+    setPoolInForm(null, "atkPool1Type", "attack-pool1-attr", "attack-pool1-fixed");
+    setPoolInForm(null, "atkPool2Type", "attack-pool2-attr", "attack-pool2-fixed");
+    setPoolInForm(null, "dmgPool1Type", "damage-pool1-attr", "damage-pool1-fixed");
+    setPoolInForm({ type: "fixed", value: 0 }, "dmgPool2Type", "damage-pool2-attr", "damage-pool2-fixed");
+  }
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeAttackModal() {
+  const modal = document.getElementById("attack-modal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  attackEditingIndex = null;
+}
+
+// ── Attack modal event wiring ──
+
+(function initAttackSystem() {
+  const addBtn = document.getElementById("attack-add-btn");
+  const closeBtn = document.getElementById("attack-modal-close");
+  const cancelBtn = document.getElementById("attack-modal-cancel");
+  const form = document.getElementById("attack-form");
+  const modal = document.getElementById("attack-modal");
+
+  if (addBtn) addBtn.addEventListener("click", () => openAttackModal());
+  if (closeBtn) closeBtn.addEventListener("click", closeAttackModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeAttackModal);
+
+  // Close on backdrop click
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeAttackModal();
+    });
+  }
+
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = document.getElementById("attack-name")?.value?.trim();
+      if (!name) return;
+
+      const attackData = {
+        name,
+        attackPool1: readPoolFromForm("atkPool1Type", "attack-pool1-attr", "attack-pool1-fixed"),
+        attackPool2: readPoolFromForm("atkPool2Type", "attack-pool2-attr", "attack-pool2-fixed"),
+        attackDifficulty: parseInt(document.getElementById("attack-difficulty")?.value) || 6,
+        damagePool1: readPoolFromForm("dmgPool1Type", "damage-pool1-attr", "damage-pool1-fixed"),
+        damagePool2: readPoolFromForm("dmgPool2Type", "damage-pool2-attr", "damage-pool2-fixed"),
+        damageType: document.getElementById("attack-damage-type")?.value || "L",
+        pendingExtra: 0,
+      };
+
+      if (attackEditingIndex !== null && attackEditingIndex !== undefined) {
+        // Preserve pending extra from existing attack
+        attackData.pendingExtra = characterAttacks[attackEditingIndex].pendingExtra || 0;
+        characterAttacks[attackEditingIndex] = attackData;
+      } else {
+        characterAttacks.push(attackData);
+      }
+
+      renderAttackList();
+      saveCharacterData();
+      closeAttackModal();
+    });
+  }
+})();
 
 // ── Dock Tabs ──
 const dockTabs = document.querySelectorAll('.dock-tab');

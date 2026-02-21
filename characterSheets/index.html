@@ -608,7 +608,7 @@
                     </div>
                     <div class="dock-tab-page" data-page="1">
                         <button class="dock-tab" data-panel="panel-rituales">Rituales</button>
-                        <button class="dock-tab" data-panel="panel-armas">Armas</button>
+                        <button class="dock-tab" data-panel="panel-ataques">Ataques</button>
                         <div class="dock-tab-placeholder"></div>
                         <div class="dock-tab-placeholder"></div>
                         <div class="dock-tab-placeholder"></div>
@@ -832,10 +832,14 @@
                         </div>
                     </section>
 
-                    <!-- TAB: ARMAS -->
-                    <section class="dock-panel" id="panel-armas">
+                    <!-- TAB: ATAQUES -->
+                    <section class="dock-panel" id="panel-ataques">
                         <div class="background-pane">
-                            <p class="specialty-subtitle" style="text-align:center; margin:32px 0;">Próximamente: sistema de armas.</p>
+                            <div class="discipline-powers-header">
+                                <h3>Ataques</h3>
+                                <button id="attack-add-btn" class="discipline-power-header-add" type="button">+</button>
+                            </div>
+                            <div id="attack-list" class="background-list"></div>
                         </div>
                     </section>
                 </div>
@@ -1153,6 +1157,86 @@
                 <div class="form-actions">
                     <button type="submit" class="background-save-btn">Guardar</button>
                     <button id="saved-roll-cancel" type="button" class="form-cancel-btn">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Attack Modal -->
+    <div id="attack-modal" class="specialty-modal hidden" aria-hidden="true">
+        <div class="specialty-modal-card saved-roll-modal-card" role="dialog" aria-modal="true"
+            aria-labelledby="attack-modal-title">
+            <div class="specialty-modal-header">
+                <h2 id="attack-modal-title">Nuevo Ataque</h2>
+                <button id="attack-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+            </div>
+            <form id="attack-form" class="saved-roll-form">
+                <div class="saved-roll-field">
+                    <label for="attack-name">Nombre</label>
+                    <input id="attack-name" type="text" placeholder="Ej: Espada larga" autocomplete="off" required>
+                </div>
+
+                <h4 class="attack-section-title">Tirada de Ataque</h4>
+
+                <div class="saved-roll-field">
+                    <label>Pool 1 (Atributo)</label>
+                    <div class="attack-pool-toggle">
+                        <label><input type="radio" name="atkPool1Type" value="attr" checked> Atributo</label>
+                        <label><input type="radio" name="atkPool1Type" value="fixed"> Fijo</label>
+                    </div>
+                    <select id="attack-pool1-attr" class="attack-pool-field"></select>
+                    <input id="attack-pool1-fixed" type="number" min="0" value="0" class="attack-pool-field hidden">
+                </div>
+
+                <div class="saved-roll-field">
+                    <label>Pool 2 (Habilidad)</label>
+                    <div class="attack-pool-toggle">
+                        <label><input type="radio" name="atkPool2Type" value="attr" checked> Atributo</label>
+                        <label><input type="radio" name="atkPool2Type" value="fixed"> Fijo</label>
+                    </div>
+                    <select id="attack-pool2-attr" class="attack-pool-field"></select>
+                    <input id="attack-pool2-fixed" type="number" min="0" value="0" class="attack-pool-field hidden">
+                </div>
+
+                <div class="saved-roll-field">
+                    <label for="attack-difficulty">Dificultad</label>
+                    <select id="attack-difficulty"></select>
+                </div>
+
+                <h4 class="attack-section-title">Tirada de Daño</h4>
+
+                <div class="saved-roll-field">
+                    <label>Pool 1</label>
+                    <div class="attack-pool-toggle">
+                        <label><input type="radio" name="dmgPool1Type" value="attr" checked> Atributo</label>
+                        <label><input type="radio" name="dmgPool1Type" value="fixed"> Fijo</label>
+                    </div>
+                    <select id="damage-pool1-attr" class="attack-pool-field"></select>
+                    <input id="damage-pool1-fixed" type="number" min="0" value="0" class="attack-pool-field hidden">
+                </div>
+
+                <div class="saved-roll-field">
+                    <label>Pool 2 (Bonus arma)</label>
+                    <div class="attack-pool-toggle">
+                        <label><input type="radio" name="dmgPool2Type" value="attr"> Atributo</label>
+                        <label><input type="radio" name="dmgPool2Type" value="fixed" checked> Fijo</label>
+                    </div>
+                    <select id="damage-pool2-attr" class="attack-pool-field hidden"></select>
+                    <input id="damage-pool2-fixed" type="number" min="0" value="0" class="attack-pool-field">
+                </div>
+
+                <div class="saved-roll-field">
+                    <label for="attack-damage-type">Tipo de daño</label>
+                    <select id="attack-damage-type">
+                        <option value="L">Letal (L)</option>
+                        <option value="B">Contundente (B)</option>
+                        <option value="A">Agravado (A)</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="background-save-btn">Guardar</button>
+                    <button id="attack-modal-cancel" type="button" class="form-cancel-btn">Cancelar</button>
                 </div>
             </form>
         </div>
