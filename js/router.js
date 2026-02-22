@@ -2,11 +2,63 @@
 
 let sessionReady = false;
 let currentSession = null;
+const SIDEBAR_MODE_KEY = "abn_sidebar_mode";
+const APP_THEME_KEY = "abn_theme";
 
 // Route/render guards
 let __currentRoute = null;
 let __lastRenderedPath = null;
 let __lastUserId = null;
+
+function applyStoredTheme() {
+  const stored = localStorage.getItem(APP_THEME_KEY) || "dark";
+  document.documentElement.setAttribute("data-app-theme", stored);
+}
+
+function updateSidebarToggleIcon(sidebar) {
+  const toggleIcon = document.querySelector("#sidebar-toggle i");
+  if (!toggleIcon || !sidebar) return;
+  const isSlim = sidebar.classList.contains("sidebar-slim-mode");
+  toggleIcon.setAttribute(
+    "data-lucide",
+    isSlim ? "panel-left-open" : "panel-left-close",
+  );
+  if (window.lucide?.createIcons) lucide.createIcons();
+}
+
+function setActiveSidebarItem(baseHash) {
+  const routeToMenu = {
+    welcome: "menu-welcome",
+    user: "menu-user",
+    settings: "menu-settings",
+    chronicles: "menu-chronicles",
+    chronicle: "menu-chronicles",
+    "character-sheets": "menu-chars",
+    games: "menu-games",
+    game: "menu-games",
+    tools: "menu-tools",
+    "portrait-generator": "menu-tools",
+    "card-creator": "menu-tools",
+    "combat-tracker": "menu-tools",
+    "active-encounter": "menu-tools",
+    "temporal-codex": "menu-tools",
+  };
+
+  document.querySelectorAll(".nav li.active").forEach((li) => {
+    li.classList.remove("active");
+  });
+
+  const targetId = routeToMenu[baseHash];
+  if (!targetId) return;
+  document.getElementById(targetId)?.classList.add("active");
+}
+
+function updateContentBackgroundMode(baseHash) {
+  const contentShell = document.querySelector("main.content");
+  if (!contentShell) return;
+  const useFlatThemeBackground = baseHash === "settings";
+  contentShell.classList.toggle("content-theme-bg-only", useFlatThemeBackground);
+}
 
 // Helper: Update Sidebar based on width OR route
 function updateSidebarResponsiveState() {
@@ -17,12 +69,18 @@ function updateSidebarResponsiveState() {
   // Use current hash or global __currentRoute
   const hash = window.location.hash.slice(1);
   const isForcedMode = hash.startsWith("active-encounter");
+  const storedMode = localStorage.getItem(SIDEBAR_MODE_KEY);
 
   if (isSmallScreen || isForcedMode) {
     sidebar.classList.add("sidebar-slim-mode");
   } else {
-    sidebar.classList.remove("sidebar-slim-mode");
+    if (storedMode === "collapsed") {
+      sidebar.classList.add("sidebar-slim-mode");
+    } else {
+      sidebar.classList.remove("sidebar-slim-mode");
+    }
   }
+  updateSidebarToggleIcon(sidebar);
 }
 
 // 1) Update the sidebar based on session state
@@ -31,6 +89,8 @@ async function updateSidebar() {
   const liWelcome = document.getElementById("menu-welcome");
   const liUser = document.getElementById("menu-user");
   const liGames = document.getElementById("menu-games");
+  const liSettings = document.getElementById("menu-settings");
+  const liQuickActions = document.getElementById("menu-quick-actions");
   const spanName = document.getElementById("user-name");
 
   const {
@@ -41,6 +101,8 @@ async function updateSidebar() {
     liUser?.classList.remove("hidden");
     liGames?.classList.remove("hidden");
     liLogout?.classList.remove("hidden");
+    liSettings?.classList.remove("hidden");
+    liQuickActions?.classList.remove("hidden");
     const name = session.user.user_metadata?.full_name || session.user.email;
     if (spanName) spanName.textContent = name;
 
@@ -62,6 +124,8 @@ async function updateSidebar() {
     liUser?.classList.add("hidden");
     liGames?.classList.add("hidden");
     liLogout?.classList.add("hidden");
+    liSettings?.classList.add("hidden");
+    liQuickActions?.classList.add("hidden");
     document.getElementById("menu-tools")?.classList.add("hidden");
     document.getElementById("menu-chars")?.classList.add("hidden");
     document.getElementById("menu-chronicles")?.classList.add("hidden");
@@ -75,6 +139,7 @@ const routes = {
   chronicle: "fragments/chronicle.html",
   games: "fragments/games.html",
   game: "fragments/game.html",
+  settings: "fragments/settings.html",
   tools: "fragments/tools.html",
   "portrait-generator": "fragments/portrait-generator.html",
   "card-creator": "fragments/card-creator.html",
@@ -104,7 +169,8 @@ async function loadRoute(force = false) {
     (baseHash === "games" ||
       baseHash === "game" ||
       baseHash === "chronicles" ||
-      baseHash === "chronicle")
+      baseHash === "chronicle" ||
+      baseHash === "settings")
   ) {
     targetHash = "welcome";
   }
@@ -118,6 +184,7 @@ async function loadRoute(force = false) {
   }
 
   const path = routes[baseHash] || routes.welcome;
+  updateContentBackgroundMode(baseHash);
 
   // Guard: avoid redundant rerenders of the exact same route/path when not forced
   if (!force && __currentRoute === targetHash && __lastRenderedPath === path) {
@@ -184,6 +251,8 @@ async function loadRoute(force = false) {
     }
   }
 
+  setActiveSidebarItem(baseHash);
+
   // Handle Sidebar Responsive State
   updateSidebarResponsiveState();
 
@@ -195,6 +264,7 @@ async function loadRoute(force = false) {
 // 4) Initialize app on DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Router: DOMContentLoaded");
+  applyStoredTheme();
 
   // Initial Sidebar Check
   updateSidebarResponsiveState();
@@ -214,6 +284,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   await updateSidebar();
   __lastUserId = currentSession?.user?.id || null;
   await loadRoute(true);
+
+  // Sidebar collapse/expand control
+  const sidebarToggle = document.getElementById("sidebar-toggle");
+  if (sidebarToggle && !sidebarToggle._init) {
+    sidebarToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      const isSmallScreen = window.matchMedia("(max-width: 1400px)").matches;
+      if (isSmallScreen) return;
+      const sidebar = document.querySelector(".sidebar");
+      if (!sidebar) return;
+      const isCollapsed = sidebar.classList.toggle("sidebar-slim-mode");
+      localStorage.setItem(
+        SIDEBAR_MODE_KEY,
+        isCollapsed ? "collapsed" : "expanded",
+      );
+      updateSidebarToggleIcon(sidebar);
+    });
+    sidebarToggle._init = true;
+  }
+
+  // Theme control (Dark default)
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle && !themeToggle._init) {
+    themeToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      const currentTheme =
+        document.documentElement.getAttribute("data-app-theme") || "dark";
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-app-theme", nextTheme);
+      localStorage.setItem(APP_THEME_KEY, nextTheme);
+    });
+    themeToggle._init = true;
+  }
 
   // Logout link handler
   const logoutLink = document.getElementById("logout-link");
