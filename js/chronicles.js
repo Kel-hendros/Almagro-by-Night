@@ -33,7 +33,7 @@ async function loadChronicles() {
   const { data: participations, error: pErr } = await supabase
     .from("chronicle_participants")
     .select(
-      "role, chronicle:chronicles(id, name, status, creator_id, created_at)"
+      "role, chronicle:chronicles(id, name, status, creator_id, created_at, banner_url)"
     )
     .eq("player_id", player.id);
 
@@ -46,7 +46,7 @@ async function loadChronicles() {
   // Also find chronicles where the player is creator but might not be in participants yet
   const { data: ownedChronicles } = await supabase
     .from("chronicles")
-    .select("id, name, status, creator_id, created_at")
+    .select("id, name, status, creator_id, created_at, banner_url")
     .eq("creator_id", player.id);
 
   // Merge and deduplicate
@@ -117,7 +117,12 @@ async function loadChronicles() {
 
     const playerCount = countMap[chronicle.id] || 1;
 
+    const bannerHtml = chronicle.banner_url
+      ? `<div class="chronicle-card-banner"><img src="${chronicle.banner_url}" alt="" loading="lazy"></div>`
+      : "";
+
     card.innerHTML = `
+      ${bannerHtml}
       <h3>${chronicle.name}</h3>
       <div class="chronicle-card-meta">
         ${roleBadge}

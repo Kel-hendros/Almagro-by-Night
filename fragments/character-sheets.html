@@ -1,6 +1,5 @@
 <div class="main-container tools">
-    <div id="sheets-breadcrumb" class="chronicle-breadcrumb" style="display: none;"></div>
-    <h1>Hojas de Personaje</h1>
+    <h1>Personajes</h1>
 
     <div id="sheets-grid" class="tools-grid"
         style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
@@ -12,23 +11,6 @@
 <script>
     (async function initCharacterSheets() {
         const grid = document.getElementById('sheets-grid');
-        const chronicleId = localStorage.getItem('currentChronicleId');
-
-        // Show breadcrumb if inside a chronicle
-        if (chronicleId) {
-            const breadcrumb = document.getElementById('sheets-breadcrumb');
-            if (breadcrumb) {
-                const { data: chron } = await supabase
-                    .from('chronicles')
-                    .select('name')
-                    .eq('id', chronicleId)
-                    .maybeSingle();
-                if (chron) {
-                    breadcrumb.innerHTML = `<a href="#chronicle">${chron.name}</a> &rsaquo; Hojas de Personaje`;
-                    breadcrumb.style.display = 'block';
-                }
-            }
-        }
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -77,14 +59,14 @@
                 isAdmin = true;
             }
 
-            // 2. Fetch Sheets (filtered by chronicle if active)
+            // 2. Fetch Sheets (admin sees all, others see only own)
             let query = supabase
                 .from('character_sheets')
                 .select('id, name, updated_at, data, user_id, avatar_url')
                 .order('updated_at', { ascending: false });
 
-            if (chronicleId) {
-                query = query.eq('chronicle_id', chronicleId);
+            if (!isAdmin) {
+                query = query.eq('user_id', user.id);
             }
 
             // Always fetch player names for display
@@ -101,6 +83,22 @@
             const { data: sheets, error } = await query;
 
             if (error) throw error;
+
+            // Fetch chronicle associations for each sheet
+            const sheetIds = (sheets || []).map(s => s.id);
+            let chronicleMap = {};
+            if (sheetIds.length) {
+                const { data: charChronicles } = await supabase
+                    .from('chronicle_characters')
+                    .select('character_sheet_id, chronicle:chronicles(id, name)')
+                    .in('character_sheet_id', sheetIds);
+
+                (charChronicles || []).forEach(cc => {
+                    if (cc.chronicle && !chronicleMap[cc.character_sheet_id]) {
+                        chronicleMap[cc.character_sheet_id] = cc.chronicle;
+                    }
+                });
+            }
 
             grid.innerHTML = '';
 
@@ -181,7 +179,20 @@
                 } else if (!isOwner) {
                     // If not owner and no map (non-admin view), maybe show generic?
                     // Or just leave it blank.
-                } // Decide what to show: Avatar or Sigil
+                }
+
+                // Chronicle link
+                const chronicleInfo = chronicleMap[sheet.id];
+                const chronicleLinkHTML = chronicleInfo
+                    ? `<div style="font-size: 0.8rem; color: var(--color-red-accent); margin-bottom: 5px;">
+                         <a href="#" onclick="event.stopPropagation(); goToChronicle('${chronicleInfo.id}'); return false;"
+                            style="color: var(--color-red-accent); text-decoration: none;">
+                            ${chronicleInfo.name}
+                         </a>
+                       </div>`
+                    : '';
+
+                // Decide what to show: Avatar or Sigil
                 let visualContent;
                 if (avatarUrl) {
                     visualContent = `<img src="${avatarUrl}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-gold); box-shadow: 0 0 10px rgba(0,0,0,0.5);">`;
@@ -200,6 +211,7 @@
                             ${sheet.name}
                         </h3>
                         ${playerInfoHTML}
+                        ${chronicleLinkHTML}
                         <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5">
                             Clan: ${clan} <br>
                             Gen: ${gen}ª
@@ -235,11 +247,6 @@
             data: { nombre: name }
         };
 
-        const activeChronicle = localStorage.getItem('currentChronicleId');
-        if (activeChronicle) {
-            payload.chronicle_id = activeChronicle;
-        }
-
         const { data, error } = await supabase
             .from('character_sheets')
             .insert([payload])
@@ -248,13 +255,19 @@
 
         if (error) {
             alert("Error al crear: " + error.message);
-        } else {
-            window.openSheet(data.id);
+            return;
         }
+
+        window.openSheet(data.id);
     }
 
     window.openSheet = function (id) {
         window.location.href = `characterSheets/index.html?id=${id}`;
+    }
+
+    window.goToChronicle = function (chronicleId) {
+        localStorage.setItem('currentChronicleId', chronicleId);
+        window.location.hash = 'chronicle';
     }
 
     window.deleteSheet = async function (id) {

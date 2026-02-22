@@ -32,21 +32,28 @@ create table if not exists public.chronicle_participants (
 );
 
 -- ============================================================
--- 2. Add chronicle_id to existing tables
+-- 2. Junction table: chronicle_characters
 -- ============================================================
 
-alter table public.character_sheets
-  add column if not exists chronicle_id uuid references public.chronicles(id);
+create table if not exists public.chronicle_characters (
+  chronicle_id uuid not null references public.chronicles(id) on delete cascade,
+  character_sheet_id uuid not null references public.character_sheets(id) on delete cascade,
+  added_at timestamptz default now(),
+  primary key (chronicle_id, character_sheet_id)
+);
+
+create index if not exists idx_chronicle_characters_sheet
+  on public.chronicle_characters (character_sheet_id);
+
+-- ============================================================
+-- 3. Add chronicle_id to encounters and games
+-- ============================================================
 
 alter table public.encounters
   add column if not exists chronicle_id uuid references public.chronicles(id);
 
 alter table public.games
   add column if not exists chronicle_id uuid references public.chronicles(id);
-
--- Indexes for filtering
-create index if not exists idx_character_sheets_chronicle
-  on public.character_sheets (chronicle_id);
 
 create index if not exists idx_encounters_chronicle
   on public.encounters (chronicle_id);
@@ -58,7 +65,7 @@ create index if not exists idx_chronicles_invite_code
   on public.chronicles (invite_code);
 
 -- ============================================================
--- 3. Helper: generate invite code
+-- 4. Helper: generate invite code
 -- ============================================================
 
 create or replace function public.generate_invite_code()
@@ -78,7 +85,7 @@ end;
 $$;
 
 -- ============================================================
--- 4. RPC: join chronicle by invite code
+-- 5. RPC: join chronicle by invite code
 -- ============================================================
 
 create or replace function public.join_chronicle_by_code(p_code text)
@@ -150,7 +157,28 @@ $$;
 grant execute on function public.join_chronicle_by_code(text) to authenticated;
 
 -- ============================================================
--- 5. RLS for chronicles
+-- 6. Helper: get chronicle IDs for current user (SECURITY DEFINER
+--    to avoid infinite recursion in RLS policies that would
+--    otherwise self-reference chronicle_participants)
+-- ============================================================
+
+create or replace function public.get_my_chronicle_ids()
+returns setof uuid
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select cp.chronicle_id
+  from public.chronicle_participants cp
+  inner join public.players p on p.id = cp.player_id
+  where p.user_id = auth.uid();
+$$;
+
+grant execute on function public.get_my_chronicle_ids() to authenticated;
+
+-- ============================================================
+-- 7. RLS for chronicles
 -- ============================================================
 
 alter table public.chronicles enable row level security;
@@ -162,12 +190,7 @@ on public.chronicles
 for select
 to authenticated
 using (
-  id in (
-    select cp.chronicle_id
-    from public.chronicle_participants cp
-    inner join public.players p on p.id = cp.player_id
-    where p.user_id = auth.uid()
-  )
+  id in (select public.get_my_chronicle_ids())
   or creator_id in (
     select p.id from public.players p where p.user_id = auth.uid()
   )
@@ -206,7 +229,58 @@ using (
 );
 
 -- ============================================================
--- 6. RLS for chronicle_participants
+-- 8. RLS for chronicle_characters
+-- ============================================================
+
+alter table public.chronicle_characters enable row level security;
+
+drop policy if exists cc_select_participant on public.chronicle_characters;
+create policy cc_select_participant
+on public.chronicle_characters
+for select
+to authenticated
+using (
+  chronicle_id in (select public.get_my_chronicle_ids())
+);
+
+drop policy if exists cc_insert_narrator_or_owner on public.chronicle_characters;
+create policy cc_insert_narrator_or_owner
+on public.chronicle_characters
+for insert
+to authenticated
+with check (
+  chronicle_id in (
+    select c.id from public.chronicles c
+    where c.creator_id in (
+      select p.id from public.players p where p.user_id = auth.uid()
+    )
+  )
+  or character_sheet_id in (
+    select cs.id from public.character_sheets cs
+    where cs.user_id = auth.uid()
+  )
+);
+
+drop policy if exists cc_delete_narrator_or_owner on public.chronicle_characters;
+create policy cc_delete_narrator_or_owner
+on public.chronicle_characters
+for delete
+to authenticated
+using (
+  chronicle_id in (
+    select c.id from public.chronicles c
+    where c.creator_id in (
+      select p.id from public.players p where p.user_id = auth.uid()
+    )
+  )
+  or character_sheet_id in (
+    select cs.id from public.character_sheets cs
+    where cs.user_id = auth.uid()
+  )
+);
+
+-- ============================================================
+-- 9. RLS for chronicle_participants
 -- ============================================================
 
 alter table public.chronicle_participants enable row level security;
@@ -218,12 +292,7 @@ on public.chronicle_participants
 for select
 to authenticated
 using (
-  chronicle_id in (
-    select cp2.chronicle_id
-    from public.chronicle_participants cp2
-    inner join public.players p on p.id = cp2.player_id
-    where p.user_id = auth.uid()
-  )
+  chronicle_id in (select public.get_my_chronicle_ids())
 );
 
 -- Insert is handled via RPC (join_chronicle_by_code) or direct for narrator
@@ -251,7 +320,7 @@ using (
 );
 
 -- ============================================================
--- 7. Data migration: create chronicle from existing game
+-- 10. Data migration: create chronicle from existing game
 -- ============================================================
 
 do $$
@@ -312,16 +381,17 @@ begin
   set chronicle_id = v_chronicle_id
   where id = v_game.id;
 
-  -- Link existing character_sheets to chronicle (for all participants)
-  update public.character_sheets cs
-  set chronicle_id = v_chronicle_id
+  -- Link existing character_sheets to chronicle via junction table
+  insert into public.chronicle_characters (chronicle_id, character_sheet_id)
+  select v_chronicle_id, cs.id
+  from public.character_sheets cs
   where cs.user_id in (
     select p.user_id
     from public.chronicle_participants cp
     inner join public.players p on p.id = cp.player_id
     where cp.chronicle_id = v_chronicle_id
   )
-  and cs.chronicle_id is null;
+  on conflict do nothing;
 
   -- Link existing encounters to chronicle
   update public.encounters

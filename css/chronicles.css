@@ -177,33 +177,47 @@
     margin-bottom: 1.5rem;
 }
 
+.chronicle-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
 .chronicle-dashboard-header h2 {
-    margin: 0 0 0.5rem;
+    margin: 0;
 }
 
-.chronicle-dashboard-meta {
+.chronicle-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+}
+
+.chronicle-narrator {
     color: var(--color-cream-muted);
-    font-size: 0.95rem;
-}
-
-.chronicle-dashboard-meta span {
-    display: block;
-    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
 }
 
 .chronicle-invite-row {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--color-cream-muted);
 }
 
 .chronicle-invite-row code {
     background: rgba(0, 0, 0, 0.35);
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    font-size: 1.1rem;
+    padding: 0 0.4rem;
+    border-radius: 4px;
+    font-size: inherit;
     letter-spacing: 2px;
+    line-height: inherit;
 }
 
 .chronicle-sections {
@@ -239,52 +253,322 @@
     color: var(--color-red-accent);
 }
 
-.chronicle-players-list {
+.chronicle-section-card .lucide {
+    width: 28px;
+    height: 28px;
+    color: var(--color-cream-muted);
+}
+
+.chronicle-copy-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-cream-muted);
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.chronicle-copy-icon-btn:hover {
+    color: var(--color-cream);
+}
+
+.chronicle-copy-icon-btn .lucide {
+    width: 0.85em;
+    height: 0.85em;
+}
+
+.chronicle-invite-code-input {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+/* --- Chronicle Characters List --- */
+.chronicle-characters-list {
     border: 1px solid var(--color-red-muted);
     border-radius: 16px;
     padding: 1.5rem;
     background: rgba(14, 12, 16, 0.9);
 }
 
-.chronicle-players-list h3 {
-    margin: 0 0 1rem;
+.chronicle-characters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.chronicle-characters-header h3 {
+    margin: 0;
+}
+
+.chronicle-add-char-btn {
+    background: transparent;
+    border: 1px solid var(--color-red-muted);
+    color: var(--color-cream);
+    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: 'Special Elite', cursive;
+    font-size: 0.8rem;
+    transition: border-color 0.3s, background 0.2s;
+}
+
+.chronicle-add-char-btn:hover {
+    border-color: var(--color-red-accent);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.chronicle-add-char-btn .lucide {
+    width: 14px;
+    height: 14px;
+}
+
+.chronicle-character-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chronicle-character-row:last-child {
+    border-bottom: none;
+}
+
+.chronicle-character-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid var(--color-red-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.chronicle-character-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.chronicle-character-avatar .clan-sigil {
+    font-family: 'Sigils';
+    font-size: 1.6rem;
+    color: var(--color-cream);
+    text-shadow: 0 0 6px rgba(255, 0, 0, 0.3);
+}
+
+.chronicle-character-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chronicle-character-info .char-name {
+    font-size: 0.95rem;
+    font-weight: bold;
+}
+
+.chronicle-character-info .char-name.clickable {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.chronicle-character-info .char-name.clickable:hover {
+    color: var(--color-red-accent);
+}
+
+.chronicle-character-info .char-separator {
+    color: var(--color-red-muted);
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.chronicle-character-info .char-clan {
+    font-size: 0.85rem;
+    color: var(--color-cream-muted);
+}
+
+.chronicle-character-player {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--color-cream-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.chronicle-character-player .lucide {
+    width: 14px;
+    height: 14px;
+}
+
+.chronicle-character-actions {
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.chronicle-character-remove-btn {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+.chronicle-character-remove-btn:hover {
+    opacity: 0.7;
+}
+
+.chronicle-character-remove-btn .lucide {
+    width: 16px;
+    height: 16px;
+}
+
+/* --- Player Group (grouped list) --- */
+.chronicle-player-group {
+    margin-bottom: 0.25rem;
 }
 
 .chronicle-player-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.chronicle-player-row:last-child {
-    border-bottom: none;
-}
-
-.chronicle-player-avatar {
-    width: 36px;
-    height: 36px;
+.chronicle-player-icon {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: var(--color-red-muted);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
+    flex-shrink: 0;
+    color: var(--color-cream-muted);
+}
+
+.chronicle-player-icon .lucide {
+    width: 16px;
+    height: 16px;
+}
+
+.chronicle-player-name {
+    font-size: 0.95rem;
+    font-weight: bold;
+    flex: 1;
+    text-align: left;
+}
+
+.chronicle-role-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Special Elite', cursive;
     flex-shrink: 0;
 }
 
-.chronicle-player-info {
+.chronicle-role-badge.narrator {
+    background: rgba(212, 175, 55, 0.2);
+    color: var(--color-gold);
+    border: 1px solid var(--color-gold);
+}
+
+.chronicle-role-badge.player {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-cream-muted);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.chronicle-player-characters {
+    padding-left: 1.5rem;
+}
+
+/* --- Character Picker Modal --- */
+.chronicle-char-picker-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+}
+
+.chronicle-char-picker-overlay.visible {
+    display: flex;
+}
+
+.chronicle-char-picker {
+    background: #1a1a1a;
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 90%;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chronicle-char-picker h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+}
+
+.chronicle-char-picker-list {
+    overflow-y: auto;
     flex: 1;
 }
 
-.chronicle-player-info .name {
-    font-size: 0.95rem;
+.chronicle-char-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-.chronicle-player-info .role {
-    font-size: 0.8rem;
+.chronicle-char-picker-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.chronicle-char-picker-empty {
     color: var(--color-cream-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1.5rem 0;
+}
+
+.chronicle-char-picker-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
 }
 
 /* Breadcrumb */
@@ -303,6 +587,71 @@
     text-decoration: underline;
 }
 
+/* --- Chronicle Banner (Card View) --- */
+.chronicle-card-banner {
+    margin: -1.5rem -1.5rem 1rem -1.5rem;
+    height: 120px;
+    overflow: hidden;
+    border-radius: 16px 16px 0 0;
+}
+
+.chronicle-card-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* --- Chronicle Banner (Detail View) --- */
+.chronicle-banner-area {
+    position: relative;
+    margin: -1.5rem -1.5rem 1rem -1.5rem;
+    height: 80px;
+    overflow: hidden;
+    border-radius: 16px 16px 0 0;
+    background: rgba(0, 0, 0, 0.3);
+    transition: height 0.3s ease;
+}
+
+.chronicle-banner-area.has-banner {
+    height: 200px;
+}
+
+.chronicle-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.chronicle-banner-upload-btn {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--color-cream-muted);
+    color: var(--color-cream);
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: 'Special Elite', cursive;
+    font-size: 0.8rem;
+    transition: background-color 0.2s, border-color 0.3s;
+}
+
+.chronicle-banner-upload-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    border-color: var(--color-red-accent);
+}
+
+.chronicle-banner-upload-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 @media (max-width: 600px) {
     .chronicles-header {
         flex-direction: column;
@@ -315,5 +664,13 @@
 
     .chronicle-sections {
         grid-template-columns: 1fr;
+    }
+
+    .chronicle-banner-area.has-banner {
+        height: 140px;
+    }
+
+    .chronicle-card-banner {
+        height: 90px;
     }
 }
