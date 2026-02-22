@@ -463,6 +463,55 @@
     renderEncounters();
   }
 
+  function getStatusActions(status) {
+    const actions = {
+      wip: [
+        { nextStatus: "ready", label: "Marcar Listo", btnClass: "status-ready" },
+      ],
+      ready: [
+        { nextStatus: "in_game", label: "Poner en juego", btnClass: "status-in-game" },
+        { nextStatus: "wip", label: "Volver a WIP", btnClass: "status-wip" },
+      ],
+      in_game: [
+        { nextStatus: "ready", label: "Pausar", btnClass: "status-ready" },
+      ],
+    };
+    return actions[status] || [];
+  }
+
+  async function changeEncounterStatus(encounterId, nextStatus) {
+    const { error } = await supabase
+      .from("encounters")
+      .update({ status: nextStatus })
+      .eq("id", encounterId);
+
+    if (error) {
+      alert("Error actualizando estado: " + error.message);
+      return;
+    }
+    await loadEncounters();
+  }
+
+  async function archiveEncounter(enc) {
+    if (
+      !confirm(
+        `¿Archivar "${enc.name}"? No aparecerá en la lista de encuentros activos.`
+      )
+    )
+      return;
+
+    const { error } = await supabase
+      .from("encounters")
+      .update({ status: "archived" })
+      .eq("id", enc.id);
+
+    if (error) {
+      alert("Error al archivar: " + error.message);
+      return;
+    }
+    await loadEncounters();
+  }
+
   function renderEncounters() {
     if (state.encounters.length === 0) {
       lists.encounters.innerHTML = "<p>No hay encuentros visibles.</p>";
@@ -479,6 +528,19 @@
         enc.data?.round > 1 ? ` | Ronda ${enc.data.round}` : "";
       const status = normalizeEncounterStatus(enc.status);
       const statusLabel = formatEncounterStatus(status);
+      const actions = state.isAdmin ? getStatusActions(status) : [];
+
+      let statusActionsHtml = "";
+      if (actions.length > 0) {
+        const btns = actions
+          .map(
+            (a) =>
+              `<button class="ct-btn-status ${a.btnClass}" data-enc-id="${enc.id}" data-next-status="${a.nextStatus}">${a.label}</button>`
+          )
+          .join("");
+        const archiveBtn = `<button class="ct-btn-status status-archive" data-enc-id="${enc.id}" data-action="archive" title="Archivar">&#128451;</button>`;
+        statusActionsHtml = `<div class="ct-status-actions">${btns}${archiveBtn}</div>`;
+      }
 
       card.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
@@ -486,7 +548,8 @@
           <span class="ct-encounter-status ${status}">${statusLabel}</span>
         </div>
         <p>${dateStr} - ${instanceCount} participantes${roundInfo}</p>
-        <div style="margin-top:10px;">
+        ${statusActionsHtml}
+        <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
           <button class="ct-btn primary btn-open-encounter" data-id="${enc.id}">Abrir</button>
         </div>
       `;
@@ -494,6 +557,17 @@
       card
         .querySelector(".btn-open-encounter")
         .addEventListener("click", () => openEncounter(enc));
+
+      card.querySelectorAll(".ct-btn-status[data-next-status]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          changeEncounterStatus(btn.dataset.encId, btn.dataset.nextStatus);
+        });
+      });
+
+      const archiveBtn = card.querySelector('.ct-btn-status[data-action="archive"]');
+      if (archiveBtn) {
+        archiveBtn.addEventListener("click", () => archiveEncounter(enc));
+      }
 
       lists.encounters.appendChild(card);
     });
