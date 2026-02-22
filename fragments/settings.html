@@ -5,27 +5,30 @@
 
     .settings-title {
         margin: 0;
-        font-family: "Cormorant Garamond", serif;
+        font-family: var(--app-font-heading);
         font-size: 2.15rem;
         line-height: 1.1;
-        color: var(--color-cream);
-        font-weight: 600;
+        color: var(--sidebar-text-active);
+        font-weight: 700;
     }
 
     .settings-subtitle {
         margin-top: 0.25rem;
         margin-bottom: 1rem;
-        color: var(--color-cream-muted);
+        color: var(--sidebar-text);
         font-size: 0.75rem;
+        letter-spacing: 0.04em;
     }
 
     .settings-card {
         width: 100%;
         max-width: 860px;
-        border: 1px solid var(--color-red-muted);
+        border: 1px solid var(--sidebar-border);
         border-radius: 12px;
-        background: rgba(18, 17, 20, 0.78);
+        background: color-mix(in srgb, var(--content-theme-bg) 72%, transparent);
         padding: 14px 16px;
+        box-shadow: 0 10px 28px -10px var(--sidebar-shadow-outer);
+        backdrop-filter: blur(4px);
     }
 
     .settings-row {
@@ -44,11 +47,11 @@
         font-weight: 600;
         letter-spacing: 1.5px;
         text-transform: uppercase;
-        color: var(--color-red-accent);
+        color: var(--sidebar-text-active);
     }
 
     .settings-value {
-        color: var(--color-cream);
+        color: var(--sidebar-text);
         font-size: 0.82rem;
     }
 
@@ -62,9 +65,9 @@
         width: 20px;
         height: 20px;
         border-radius: 6px;
-        border: 1px solid var(--color-cream-muted);
-        background: rgba(0, 0, 0, 0.18);
-        color: var(--color-cream-muted);
+        border: 1px solid var(--sidebar-text);
+        background: var(--sidebar-action-bg);
+        color: var(--sidebar-text);
         display: inline-flex;
         justify-content: center;
         align-items: center;
@@ -73,8 +76,8 @@
     }
 
     .settings-edit-inline:hover {
-        color: var(--color-cream);
-        border-color: var(--color-cream);
+        color: var(--sidebar-text-active);
+        border-color: var(--sidebar-text-active);
     }
 
     .settings-edit-inline .lucide {
@@ -94,17 +97,34 @@
         min-width: 190px;
         height: 30px;
         border-radius: 8px;
-        border: 1px solid var(--color-cream-muted);
-        background: rgba(0, 0, 0, 0.2);
-        color: var(--color-cream);
+        border: 1px solid var(--sidebar-text);
+        background: var(--sidebar-action-bg);
+        color: var(--sidebar-text);
         font-size: 0.68rem;
-        font-family: "Special Elite", cursive;
+        font-family: var(--app-font-body);
         cursor: pointer;
+        letter-spacing: 0.02em;
     }
 
     .settings-reset-btn:hover {
-        border-color: var(--color-red-accent);
-        color: var(--color-red-accent);
+        border-color: var(--sidebar-text-active);
+        color: var(--sidebar-text-active);
+    }
+
+    .settings-password-field {
+        margin-bottom: 0;
+    }
+
+    @media (max-width: 680px) {
+        .settings-password-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .settings-reset-btn {
+            width: 100%;
+            min-width: 0;
+        }
     }
 </style>
 
@@ -129,7 +149,7 @@
         </div>
 
         <div class="settings-password-row">
-            <div class="settings-row" style="margin-bottom:0;">
+            <div class="settings-row settings-password-field">
                 <span class="settings-label">Contraseña</span>
                 <span class="settings-value">••••••••••</span>
             </div>

@@ -1,6 +1,6 @@
 /* === Gothic Dark Theme === */
 @import url('https://fonts.googleapis.com/css2?family=UnifrakturCook&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Special+Elite&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Special+Elite&family=Courier+Prime:wght@400;700&family=Space+Mono:wght@400;700&family=Share+Tech+Mono&display=swap');
 
 @font-face {
     font-family: 'Dingbats';
@@ -15,6 +15,28 @@
     /* Use relative path from css folder to fonts folder */
     src: url('../characterSheets/fonts/vampiresigils.woff2') format('truetype');
     font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'delavan';
+    src: url('../characterSheets/fonts/delavan-webfont.woff2') format('woff2'),
+        url('../characterSheets/fonts/delavan-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Cormorant Garamond';
+    src: url('../characterSheets/fonts/CormorantGaramond-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Cormorant Garamond';
+    src: url('../characterSheets/fonts/CormorantGaramond-Bold.woff') format('woff');
+    font-weight: 700;
     font-style: normal;
 }
 
@@ -46,30 +68,124 @@
     /* Sidebar (Dark default) */
     --sidebar-width-expanded: 180px;
     --sidebar-width-collapsed: 76px;
-    --sidebar-bg: var(--color-red-muted);
-    --sidebar-text: var(--color-cream-muted);
-    --sidebar-text-active: var(--color-red-accent);
-    --sidebar-border: var(--color-red);
+    --sidebar-bg: #242426;
+    --sidebar-text: #4A4A4C;
+    --sidebar-text-active: #C62828;
+    --sidebar-border: #2A2A2C;
     --sidebar-action-bg: rgba(0, 0, 0, 0.22);
-    --sidebar-shadow-outer: rgba(24, 5, 5, 0.5);
-    --sidebar-shadow-inner: rgba(7, 1, 1, 0.33);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.35);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.2);
     --sidebar-logo-shadow: drop-shadow(0px 4px 2px rgba(191, 174, 174, 0.23)) drop-shadow(0px -8px 3px rgba(0, 0, 0, 0.69));
-    --sidebar-sigil-color: var(--color-red-muted);
-    --sidebar-sigil-shadow: drop-shadow(0px 2px 2px rgba(148, 84, 84, 0.49)) drop-shadow(0px -2px 2px rgba(21, 1, 1, 0.94));
-    --content-theme-bg: var(--color-dark);
+    --sidebar-sigil-color: #4A4A4C;
+    --sidebar-sigil-shadow: drop-shadow(0px 2px 2px rgba(198, 40, 40, 0.28)) drop-shadow(0px -2px 2px rgba(0, 0, 0, 0.55));
+    --content-theme-bg: #1A1A1C;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(191, 90, 61, 0.18), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(120, 30, 30, 0.22), transparent 60%),
+        linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%);
+    --app-font-body: 'Special Elite', cursive;
+    --app-font-heading: 'Special Elite', cursive;
 }
 
 :root[data-app-theme="light"] {
-    --sidebar-bg: #ece8de;
-    --sidebar-text: #6e6456;
-    --sidebar-text-active: #8c1c1c;
-    --sidebar-border: #c8bba7;
+    --sidebar-bg: #ebe5da;
+    --sidebar-text: #b0a090;
+    --sidebar-text-active: #7a3b2e;
+    --sidebar-border: #ddd5c8;
     --sidebar-action-bg: rgba(255, 255, 255, 0.65);
-    --sidebar-shadow-outer: rgba(96, 86, 68, 0.18);
+    --sidebar-shadow-outer: rgba(96, 86, 68, 0.12);
     --sidebar-shadow-inner: rgba(255, 255, 255, 0.4);
-    --sidebar-sigil-color: #b7ab99;
-    --sidebar-sigil-shadow: none;
-    --content-theme-bg: #f3ede2;
+    --sidebar-sigil-color: #b0a090;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 1px rgba(122, 59, 46, 0.22)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.08));
+    --content-theme-bg: #f5f0e7;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(122, 59, 46, 0.08), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(123, 75, 55, 0.1), transparent 60%),
+        linear-gradient(135deg, #f5f0e7 0%, #fffaf1 35%, #f0ebe2 100%);
+}
+
+:root[data-app-theme="camarilla"] {
+    --sidebar-bg: #dce4d8;
+    --sidebar-text: #8aaa92;
+    --sidebar-text-active: #2d6b3f;
+    --sidebar-border: #c5d4be;
+    --sidebar-action-bg: rgba(255, 255, 255, 0.55);
+    --sidebar-shadow-outer: rgba(40, 80, 50, 0.15);
+    --sidebar-shadow-inner: rgba(255, 255, 255, 0.35);
+    --sidebar-sigil-color: #8aaa92;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 1px rgba(45, 107, 63, 0.24)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.1));
+    --content-theme-bg: #e8ede6;
+    --content-theme-bg-gradient:
+        radial-gradient(70% 55% at 10% 15%, rgba(45, 107, 63, 0.12), transparent 60%),
+        radial-gradient(50% 40% at 85% 80%, rgba(30, 90, 50, 0.1), transparent 55%),
+        radial-gradient(40% 30% at 50% 50%, rgba(60, 120, 70, 0.06), transparent 50%),
+        linear-gradient(160deg, #e2ebe0 0%, #e8ede6 30%, #dfe8dc 60%, #e5ece3 100%);
+}
+
+:root[data-app-theme="sabbat"] {
+    --sidebar-bg: #150808;
+    --sidebar-text: #6b4848;
+    --sidebar-text-active: #8b0000;
+    --sidebar-border: #1a0808;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.35);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.45);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.4);
+    --sidebar-sigil-color: #6b4848;
+    --sidebar-sigil-shadow: drop-shadow(0px 2px 2px rgba(139, 0, 0, 0.28)) drop-shadow(0px -2px 2px rgba(0, 0, 0, 0.45));
+    --content-theme-bg: #0f0505;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(139, 0, 0, 0.22), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(80, 10, 10, 0.25), transparent 60%),
+        linear-gradient(135deg, #0a0303 0%, #0f0505 35%, #0a0404 100%);
+}
+
+:root[data-app-theme="anarquista"] {
+    --sidebar-bg: #1a2128;
+    --sidebar-text: #6b7c85;
+    --sidebar-text-active: #4a7c8e;
+    --sidebar-border: #1e2830;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.28);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.35);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.22);
+    --sidebar-sigil-color: #6b7c85;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 1px rgba(74, 124, 142, 0.28)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.22));
+    --content-theme-bg: #141a1f;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(74, 124, 142, 0.15), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(50, 80, 100, 0.18), transparent 60%),
+        linear-gradient(135deg, #10161b 0%, #141a1f 35%, #111820 100%);
+}
+
+:root[data-app-theme="phantomas"] {
+    --sidebar-bg: #0f0f0f;
+    --sidebar-text: #1a5a2a;
+    --sidebar-text-active: #01a329;
+    --sidebar-border: #111111;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.32);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.55);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.35);
+    --sidebar-sigil-color: #1a5a2a;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 2px rgba(1, 163, 41, 0.35)) drop-shadow(0px -1px 2px rgba(0, 0, 0, 0.5));
+    --content-theme-bg: #0a0a0a;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(0, 255, 65, 0.06), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(0, 200, 50, 0.08), transparent 60%),
+        linear-gradient(135deg, #050505 0%, #0a0a0a 35%, #060606 100%);
+}
+
+:root[data-app-font="clasico"] {
+    --app-font-body: 'Cormorant Garamond', serif;
+    --app-font-heading: 'delavan', serif;
+}
+
+:root[data-app-font="noir"] {
+    --app-font-body: 'Courier Prime', monospace;
+    --app-font-heading: 'Special Elite', cursive;
+}
+
+:root[data-app-font="terminal"] {
+    --app-font-body: 'Space Mono', monospace;
+    --app-font-heading: 'Share Tech Mono', monospace;
 }
 
 html,
@@ -77,7 +193,7 @@ body {
     height: 100%;
     background-color: var(--color-dark);
     color: var(--color-cream);
-    font-family: 'Special Elite', cursive;
+    font-family: var(--app-font-body);
     color: #333;
     background-color: #f5f5f5;
 }
@@ -89,9 +205,13 @@ body {
 
 h1,
 h2,
+h3,
+h4,
+h5,
+h6,
 button,
 .welcome-panel {
-    font-family: 'Special Elite', cursive;
+    font-family: var(--app-font-heading);
 }
 
 
@@ -100,12 +220,9 @@ button,
 .sidebar {
     width: var(--sidebar-width-expanded);
     background-color: var(--sidebar-bg);
-    background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png");
-    background-repeat: repeat;
-    background-size: 500px;
-    background-position: center;
-    background-blend-mode: multiply;
-    border-right: 1px solid var(--sidebar-border);
+    background-image: none;
+    background-blend-mode: normal;
+    border-right: none;
     color: var(--sidebar-text);
     display: flex;
     flex-direction: column;
@@ -168,7 +285,7 @@ button,
 
 .sidebar .nav ul {
     list-style: none;
-    padding: 8px 0 10px;
+    padding: 8px 10px 10px;
     display: flex;
     flex-direction: column;
     min-height: 100%;
@@ -189,7 +306,7 @@ button,
     text-decoration: none;
     color: inherit;
     font-size: 0.82rem;
-    line-height: 1.25;
+    line-height: 1;
     transition: background-color 0.2s;
     gap: 8px;
     min-height: 40px;
@@ -199,6 +316,15 @@ button,
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
+    display: block;
+}
+
+.sidebar .nav li:not(.nav-quick-actions) > a span {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    position: relative;
+    top: 2px;
 }
 
 
@@ -216,16 +342,17 @@ button,
 .sidebar .nav li.grabado {
     /* avoid select text */
     user-select: none;
-    align-self: flex-start;
-    padding-left: 4px;
+    align-self: center;
+    padding-left: 0;
     margin-top: auto;
+    margin-bottom: auto;
     font-family: 'Sigils';
-    font-size: 1.5rem;
+    font-size: 15rem;
     line-height: 1;
     color: var(--sidebar-sigil-color);
     filter: var(--sidebar-sigil-shadow);
     cursor: default;
-    opacity: 0.9;
+    opacity: 0.8;
 }
 
 .sidebar .nav li.grabado:hover,
@@ -265,7 +392,6 @@ button,
     height: 12px;
 }
 
-
 .content {
     /* map background for the main area */
     /* background: url('https://queitmvjucbjoeodsgqk.supabase.co/storage/v1/object/public/maps/almagro.png') no-repeat center center; */
@@ -281,8 +407,9 @@ button,
 }
 
 .content.content-theme-bg-only {
-    background: var(--content-theme-bg);
-    background-image: none;
+    background: var(--content-theme-bg-gradient);
+    background-repeat: no-repeat;
+    background-size: cover;
     background-blend-mode: normal;
 }
 
@@ -570,6 +697,12 @@ button.gameButton:hover {
     padding: 0;
     min-height: 40px;
     justify-content: center;
+    gap: 0;
+    font-size: 0;
+}
+
+.sidebar.sidebar-slim-mode .nav li:not(.nav-quick-actions) > a > :not(.lucide) {
+    display: none !important;
 }
 
 .sidebar.sidebar-slim-mode .nav span {
@@ -600,4 +733,138 @@ button.gameButton:hover {
 .sidebar.sidebar-slim-mode .nav li.nav-quick-actions .icon-btn .lucide {
     width: 12px;
     height: 12px;
+}
+
+/* App Theme Modal */
+.app-theme-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.app-theme-modal-overlay.hidden {
+    display: none !important;
+}
+
+.app-theme-modal-card {
+    width: min(560px, 92vw);
+    background: var(--sidebar-bg);
+    border: 1px solid var(--sidebar-border);
+    border-radius: 14px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+    color: var(--sidebar-text);
+    padding: 16px;
+}
+
+.app-theme-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.app-theme-modal-header h2 {
+    font-size: 1.1rem;
+    color: var(--sidebar-text-active);
+}
+
+.app-theme-modal-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--sidebar-text);
+    background: var(--sidebar-action-bg);
+    color: var(--sidebar-text);
+    cursor: pointer;
+}
+
+.app-theme-section {
+    margin-top: 12px;
+}
+
+.app-theme-section-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    color: var(--sidebar-text-active);
+}
+
+.app-theme-swatches {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.app-theme-swatch {
+    border: 1px solid var(--sidebar-text);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sidebar-text);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.app-theme-swatch .swatch-tones {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.app-theme-swatch .swatch-tone {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.app-theme-swatch .swatch-name {
+    font-size: 0.8rem;
+}
+
+.app-theme-swatch.active {
+    border-color: var(--sidebar-text-active);
+    box-shadow: inset 0 0 0 1px var(--sidebar-text-active);
+    color: var(--sidebar-text-active);
+}
+
+.app-font-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.app-font-btn {
+    border: 1px solid var(--sidebar-text);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sidebar-text);
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.app-font-btn .font-preview {
+    font-size: 1rem;
+}
+
+.app-font-btn .font-label {
+    font-size: 0.72rem;
+}
+
+.app-font-btn.active {
+    border-color: var(--sidebar-text-active);
+    box-shadow: inset 0 0 0 1px var(--sidebar-text-active);
+    color: var(--sidebar-text-active);
 }

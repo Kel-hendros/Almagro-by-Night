@@ -20,7 +20,7 @@
             </div>
             <nav class="nav">
                 <ul>
-                    <li id="menu-welcome"><a href="#welcome"><i data-lucide="log-in"></i>Bienvenido</a></li>
+                    <li id="menu-welcome"><a href="#welcome"><i data-lucide="log-in"></i><span>Bienvenido</span></a></li>
                     <li id="menu-user" class="hidden"><a href="#user"><i data-lucide="user-circle"></i><span
                                 id="user-name"></span></a></li>
                     <li id="menu-chronicles" class="hidden"><a href="#chronicles"><i
@@ -52,6 +52,88 @@
         <main class="content">
             <div id="content"></div>
         </main>
+    </div>
+
+    <div id="app-theme-modal" class="app-theme-modal-overlay hidden" aria-hidden="true">
+        <div class="app-theme-modal-card" role="dialog" aria-modal="true" aria-labelledby="app-theme-modal-title">
+            <div class="app-theme-modal-header">
+                <h2 id="app-theme-modal-title">Opciones</h2>
+                <button id="app-theme-modal-close" class="app-theme-modal-close" type="button"
+                    aria-label="Cerrar">×</button>
+            </div>
+
+            <div class="app-theme-section">
+                <h3 class="app-theme-section-label">Tema</h3>
+                <div class="app-theme-swatches" id="app-theme-swatches">
+                    <button class="app-theme-swatch" data-theme="dark" type="button" title="Dark">
+                        <span class="swatch-tones">
+                            <span class="swatch-tone" style="background:#242426;"></span>
+                            <span class="swatch-tone" style="background:#C62828;"></span>
+                            <span class="swatch-tone" style="background:#4A4A4C;"></span>
+                        </span>
+                        <span class="swatch-name">Dark</span>
+                    </button>
+                    <button class="app-theme-swatch" data-theme="light" type="button" title="Light">
+                        <span class="swatch-tones">
+                            <span class="swatch-tone" style="background:#ebe5da;"></span>
+                            <span class="swatch-tone" style="background:#7a3b2e;"></span>
+                            <span class="swatch-tone" style="background:#b0a090;"></span>
+                        </span>
+                        <span class="swatch-name">Light</span>
+                    </button>
+                    <button class="app-theme-swatch" data-theme="camarilla" type="button" title="Camarilla">
+                        <span class="swatch-tones">
+                            <span class="swatch-tone" style="background:#dce4d8;"></span>
+                            <span class="swatch-tone" style="background:#2d6b3f;"></span>
+                            <span class="swatch-tone" style="background:#8aaa92;"></span>
+                        </span>
+                        <span class="swatch-name">Camarilla</span>
+                    </button>
+                    <button class="app-theme-swatch" data-theme="sabbat" type="button" title="Sabbat">
+                        <span class="swatch-tones">
+                            <span class="swatch-tone" style="background:#150808;"></span>
+                            <span class="swatch-tone" style="background:#8b0000;"></span>
+                            <span class="swatch-tone" style="background:#6b4848;"></span>
+                        </span>
+                        <span class="swatch-name">Sabbat</span>
+                    </button>
+                    <button class="app-theme-swatch" data-theme="anarquista" type="button" title="Anarquista">
+                        <span class="swatch-tones">
+                            <span class="swatch-tone" style="background:#1a2128;"></span>
+                            <span class="swatch-tone" style="background:#4a7c8e;"></span>
+                            <span class="swatch-tone" style="background:#6b7c85;"></span>
+                        </span>
+                        <span class="swatch-name">Anarquista</span>
+                    </button>
+                    <button class="app-theme-swatch" data-theme="phantomas" type="button" title="Phantomas">
+                        <span class="swatch-tones">
+                            <span class="swatch-tone" style="background:#0f0f0f;"></span>
+                            <span class="swatch-tone" style="background:#01a329;"></span>
+                            <span class="swatch-tone" style="background:#1a5a2a;"></span>
+                        </span>
+                        <span class="swatch-name">Phantomas</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="app-theme-section">
+                <h3 class="app-theme-section-label">Fuente</h3>
+                <div class="app-font-options" id="app-font-options">
+                    <button class="app-font-btn" data-font="clasico" type="button">
+                        <span class="font-preview" style="font-family:'delavan',serif">Aa</span>
+                        <span class="font-label">Clásico</span>
+                    </button>
+                    <button class="app-font-btn" data-font="noir" type="button">
+                        <span class="font-preview" style="font-family:'Courier Prime',monospace">Aa</span>
+                        <span class="font-label">Noir</span>
+                    </button>
+                    <button class="app-font-btn" data-font="terminal" type="button">
+                        <span class="font-preview" style="font-family:'Share Tech Mono',monospace">Aa</span>
+                        <span class="font-label">Terminal</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
