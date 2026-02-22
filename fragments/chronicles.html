@@ -1,0 +1,42 @@
+<div class="main-container games">
+    <div class="chronicles-header">
+        <h1>Mis Crónicas</h1>
+        <div class="chronicles-actions">
+            <button class="gameButton primary" onclick="openCreateModal()">Crear Crónica</button>
+            <button class="gameButton secondary" onclick="openJoinModal()">Unirse con Código</button>
+        </div>
+    </div>
+
+    <div id="chronicles-grid" class="chronicles-grid">
+        <p class="muted">Cargando crónicas...</p>
+    </div>
+</div>
+
+<!-- Modal: Create Chronicle -->
+<div id="modal-create-chronicle" class="chronicle-modal-overlay">
+    <div class="chronicle-modal">
+        <h2>Nueva Crónica</h2>
+        <p id="create-chronicle-msg" class="msg"></p>
+        <label for="create-chronicle-name">Nombre</label>
+        <input type="text" id="create-chronicle-name" placeholder="Ej: Buenos Aires de Noche" maxlength="100">
+        <div class="chronicle-modal-actions">
+            <button class="gameButton secondary" onclick="closeCreateModal()">Cancelar</button>
+            <button class="gameButton primary" onclick="submitCreateChronicle()">Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Join Chronicle -->
+<div id="modal-join-chronicle" class="chronicle-modal-overlay">
+    <div class="chronicle-modal">
+        <h2>Unirse a una Crónica</h2>
+        <p id="join-chronicle-msg" class="msg"></p>
+        <label for="join-chronicle-code">Código de invitación</label>
+        <input type="text" id="join-chronicle-code" placeholder="Ej: ABN7K3XP" maxlength="8"
+            style="text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 1.2rem;">
+        <div class="chronicle-modal-actions">
+            <button class="gameButton secondary" onclick="closeJoinModal()">Cancelar</button>
+            <button class="gameButton primary" onclick="submitJoinChronicle()">Unirse</button>
+        </div>
+    </div>
+</div>

@@ -38,6 +38,23 @@
     state.user = session.user;
     state.isAdmin = await fetchIsAdmin(session.user.id);
 
+    // Chronicle breadcrumb
+    const chronicleId = localStorage.getItem("currentChronicleId");
+    if (chronicleId) {
+      const breadcrumb = document.getElementById("combat-breadcrumb");
+      if (breadcrumb) {
+        const { data: chron } = await supabase
+          .from("chronicles")
+          .select("name")
+          .eq("id", chronicleId)
+          .maybeSingle();
+        if (chron) {
+          breadcrumb.innerHTML = `<a href="#chronicle">${chron.name}</a> &rsaquo; Control de Combate`;
+          breadcrumb.style.display = "block";
+        }
+      }
+    }
+
     setupTabs();
     setupModalListeners();
     setupEncounterListeners();
@@ -446,6 +463,11 @@
       .neq("status", "archived")
       .order("created_at", { ascending: false });
 
+    const chronicleId = localStorage.getItem("currentChronicleId");
+    if (chronicleId) {
+      query = query.eq("chronicle_id", chronicleId);
+    }
+
     if (!state.isAdmin) {
       query = query.in("status", ["in_game", "active"]);
     }
@@ -595,6 +617,11 @@
         activeInstanceId: null,
       },
     };
+
+    const activeChronicle = localStorage.getItem("currentChronicleId");
+    if (activeChronicle) {
+      payload.chronicle_id = activeChronicle;
+    }
 
     const { error } = await supabase.from("encounters").insert(payload);
     if (error) alert(error.message);

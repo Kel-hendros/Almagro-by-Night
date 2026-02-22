@@ -1,4 +1,5 @@
 <div class="main-container tools">
+    <div id="sheets-breadcrumb" class="chronicle-breadcrumb" style="display: none;"></div>
     <h1>Hojas de Personaje</h1>
 
     <div id="sheets-grid" class="tools-grid"
@@ -11,6 +12,23 @@
 <script>
     (async function initCharacterSheets() {
         const grid = document.getElementById('sheets-grid');
+        const chronicleId = localStorage.getItem('currentChronicleId');
+
+        // Show breadcrumb if inside a chronicle
+        if (chronicleId) {
+            const breadcrumb = document.getElementById('sheets-breadcrumb');
+            if (breadcrumb) {
+                const { data: chron } = await supabase
+                    .from('chronicles')
+                    .select('name')
+                    .eq('id', chronicleId)
+                    .maybeSingle();
+                if (chron) {
+                    breadcrumb.innerHTML = `<a href="#chronicle">${chron.name}</a> &rsaquo; Hojas de Personaje`;
+                    breadcrumb.style.display = 'block';
+                }
+            }
+        }
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -59,11 +77,15 @@
                 isAdmin = true;
             }
 
-            // 2. Fetch ALL Sheets (everyone sees all cards)
+            // 2. Fetch Sheets (filtered by chronicle if active)
             let query = supabase
                 .from('character_sheets')
                 .select('id, name, updated_at, data, user_id, avatar_url')
                 .order('updated_at', { ascending: false });
+
+            if (chronicleId) {
+                query = query.eq('chronicle_id', chronicleId);
+            }
 
             // Always fetch player names for display
             // 2. Prepare Player Map (Fetch for everyone so we can show who owns what)
@@ -207,13 +229,20 @@
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
+        const payload = {
+            user_id: user.id,
+            name: name,
+            data: { nombre: name }
+        };
+
+        const activeChronicle = localStorage.getItem('currentChronicleId');
+        if (activeChronicle) {
+            payload.chronicle_id = activeChronicle;
+        }
+
         const { data, error } = await supabase
             .from('character_sheets')
-            .insert([{
-                user_id: user.id,
-                name: name,
-                data: { nombre: name }
-            }])
+            .insert([payload])
             .select()
             .single();
 
