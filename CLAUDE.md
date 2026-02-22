@@ -19,7 +19,7 @@ Vampire: The Masquerade tabletop RPG campaign management tool. Vanilla JS SPA wi
 
 - **Project URL**: `https://queitmvjucbjoeodsgqk.supabase.co`
 - **Client config**: `/js/supabase.js`
-- **Auth**: Supabase Auth (email/password login in `auth.js`)
+- **Auth**: Supabase Auth with email/password forms in `auth.js` (no credentials stored in code — users enter their own at runtime)
 
 ## Project Structure
 
