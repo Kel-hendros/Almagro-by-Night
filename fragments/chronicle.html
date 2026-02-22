@@ -1,8 +1,4 @@
-<div class="main-container games">
-    <div class="chronicle-breadcrumb">
-        <a href="#chronicles">Mis Crónicas</a> &rsaquo; <span id="chronicle-breadcrumb-name">...</span>
-    </div>
-
+<div class="main-container games chronicle-detail-fullscreen">
     <div class="chronicle-dashboard">
         <!-- Header Card -->
         <div class="chronicle-dashboard-header">
@@ -17,6 +13,7 @@
             <input type="file" id="banner-file-input" accept="image/png,image/jpeg,image/webp" class="hidden">
 
             <div class="chronicle-title-row">
+                <a href="#chronicles" class="chronicle-back-btn" title="Volver a Crónicas">&lsaquo;</a>
                 <h2 id="chronicle-name">Cargando...</h2>
                 <span id="chronicle-status-badge" class="chronicle-badge active">Activa</span>
             </div>
@@ -30,6 +27,7 @@
                     </button>
                 </div>
             </div>
+            <p id="chronicle-description" class="chronicle-description">Sin descripción</p>
         </div>
 
         <!-- Section Cards -->
@@ -108,7 +106,7 @@
         // Fetch chronicle
         const { data: chronicle, error: cErr } = await supabase
             .from("chronicles")
-            .select("id, name, status, invite_code, creator_id, created_at, banner_url")
+            .select("id, name, description, status, invite_code, creator_id, created_at, banner_url")
             .eq("id", chronicleId)
             .maybeSingle();
 
@@ -129,8 +127,17 @@
         const isNarrator = participation?.role === "narrator" || chronicle.creator_id === currentPlayer.id;
 
         // Populate header
-        document.getElementById("chronicle-name").textContent = chronicle.name;
-        document.getElementById("chronicle-breadcrumb-name").textContent = chronicle.name;
+        const nameEl = document.getElementById("chronicle-name");
+        const descEl = document.getElementById("chronicle-description");
+        nameEl.textContent = chronicle.name;
+
+        if (chronicle.description) {
+            descEl.textContent = chronicle.description;
+            descEl.classList.remove("empty");
+        } else {
+            descEl.textContent = "Sin descripción";
+            descEl.classList.add("empty");
+        }
 
         const statusBadge = document.getElementById("chronicle-status-badge");
         if (chronicle.status === "archived") {
@@ -161,6 +168,81 @@
                 } catch (err) {
                     alert("No se pudo copiar: " + (err?.message || err));
                 }
+            });
+
+            // Inline editing for name
+            nameEl.classList.add("chronicle-editable");
+            nameEl.addEventListener("click", () => {
+                const current = nameEl.textContent;
+                const input = document.createElement("input");
+                input.type = "text";
+                input.value = current;
+                input.className = "chronicle-edit-input title-input";
+                nameEl.replaceWith(input);
+                input.focus();
+                input.select();
+
+                const save = async () => {
+                    const val = input.value.trim();
+                    if (!val || val === current) {
+                        input.replaceWith(nameEl);
+                        return;
+                    }
+                    const { error } = await supabase.from("chronicles")
+                        .update({ name: val }).eq("id", chronicleId);
+                    if (error) {
+                        alert("Error: " + error.message);
+                        input.replaceWith(nameEl);
+                    } else {
+                        nameEl.textContent = val;
+                        input.replaceWith(nameEl);
+                    }
+                };
+                input.addEventListener("blur", save);
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") input.blur();
+                    if (e.key === "Escape") { input.value = current; input.blur(); }
+                });
+            });
+
+            // Inline editing for description
+            descEl.classList.add("chronicle-editable");
+            descEl.addEventListener("click", () => {
+                const current = chronicle.description || "";
+                const textarea = document.createElement("textarea");
+                textarea.value = current;
+                textarea.className = "chronicle-edit-input desc-input";
+                textarea.rows = 2;
+                descEl.replaceWith(textarea);
+                textarea.focus();
+
+                const save = async () => {
+                    const val = textarea.value.trim();
+                    if (val === current) {
+                        textarea.replaceWith(descEl);
+                        return;
+                    }
+                    const { error } = await supabase.from("chronicles")
+                        .update({ description: val || null }).eq("id", chronicleId);
+                    if (error) {
+                        alert("Error: " + error.message);
+                        textarea.replaceWith(descEl);
+                    } else {
+                        chronicle.description = val || null;
+                        if (val) {
+                            descEl.textContent = val;
+                            descEl.classList.remove("empty");
+                        } else {
+                            descEl.textContent = "Sin descripción";
+                            descEl.classList.add("empty");
+                        }
+                        textarea.replaceWith(descEl);
+                    }
+                };
+                textarea.addEventListener("blur", save);
+                textarea.addEventListener("keydown", (e) => {
+                    if (e.key === "Escape") { textarea.value = current; textarea.blur(); }
+                });
             });
         }
 

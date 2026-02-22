@@ -163,6 +163,17 @@
     color: #27ae60;
 }
 
+/* --- Chronicle Detail Fullscreen --- */
+.main-container.chronicle-detail-fullscreen {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 0;
+    min-height: 100%;
+    box-shadow: none;
+    padding: 1.5rem 1.5rem;
+}
+
 /* --- Chronicle Dashboard --- */
 .chronicle-dashboard {
     max-width: 900px;
@@ -186,8 +197,24 @@
     margin-bottom: 0.5rem;
 }
 
+.chronicle-back-btn {
+    color: var(--color-red-accent);
+    text-decoration: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    font-weight: bold;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.chronicle-back-btn:hover {
+    opacity: 0.7;
+}
+
 .chronicle-dashboard-header h2 {
     margin: 0;
+    flex: 1;
+    text-align: left;
 }
 
 .chronicle-meta-row {
@@ -201,6 +228,51 @@
 .chronicle-narrator {
     color: var(--color-cream-muted);
     font-size: 0.85rem;
+}
+
+p.chronicle-description {
+    color: var(--color-cream-muted);
+    font-style: italic;
+    font-size: 0.9rem;
+    margin: 0.75rem 0 0;
+    text-align: left;
+}
+
+.chronicle-description.empty {
+    opacity: 0.5;
+}
+
+/* Editable fields (narrator only) */
+.chronicle-editable {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.chronicle-editable:hover {
+    color: var(--color-red-accent);
+}
+
+.chronicle-edit-input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--color-red-accent);
+    border-radius: 6px;
+    color: var(--color-cream);
+    font-family: 'Special Elite', cursive;
+    padding: 0.4rem 0.6rem;
+    width: 100%;
+    outline: none;
+}
+
+.chronicle-edit-input.title-input {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.chronicle-edit-input.desc-input {
+    font-size: 0.9rem;
+    font-style: italic;
+    resize: vertical;
+    min-height: 2.5rem;
 }
 
 .chronicle-invite-row {
