@@ -1,78 +1,127 @@
-<div class="main-container games chronicle-detail-fullscreen">
-    <div class="chronicle-dashboard">
-        <!-- Header Card -->
-        <div class="chronicle-dashboard-header">
-            <!-- Banner area -->
-            <div id="chronicle-banner-area" class="chronicle-banner-area">
-                <img id="chronicle-banner-img" class="chronicle-banner-img hidden" alt="">
-                <button id="btn-upload-banner" class="chronicle-banner-upload-btn hidden" type="button"
-                    title="Cambiar banner">
-                    <i data-lucide="image-plus"></i>
-                </button>
-            </div>
-            <input type="file" id="banner-file-input" accept="image/png,image/jpeg,image/webp" class="hidden">
+<div class="chronicle-detail">
+    <!-- Banner -->
+    <div id="chronicle-banner-area" class="cd-banner">
+        <img id="chronicle-banner-img" class="cd-banner-img hidden" alt="">
+        <div id="chronicle-banner-actions" class="cd-banner-actions hidden">
+            <button id="btn-upload-banner" class="cd-banner-btn" type="button" title="Cambiar imagen">
+                <i data-lucide="image"></i>
+            </button>
+            <button id="btn-reposition-banner" class="cd-banner-btn" type="button" title="Reposicionar">
+                <i data-lucide="move-vertical"></i>
+            </button>
+        </div>
+        <input type="file" id="banner-file-input" accept="image/png,image/jpeg,image/webp" class="hidden">
+    </div>
 
-            <div class="chronicle-title-row">
-                <a href="#chronicles" class="chronicle-back-btn" title="Volver a Crónicas">&lsaquo;</a>
-                <h2 id="chronicle-name">Cargando...</h2>
-                <span id="chronicle-status-badge" class="chronicle-badge active">Activa</span>
+    <!-- Sticky: Header + Tabs -->
+    <div class="cd-sticky-header">
+        <div class="cd-header">
+            <div class="cd-title-row">
+                <div class="cd-title-group">
+                    <a href="#chronicles" class="cd-back-btn" title="Volver a Crónicas">&lsaquo;</a>
+                    <h2 id="chronicle-name">Cargando...</h2>
+                </div>
+                <span id="chronicle-status-badge" class="cd-badge cd-badge--active">Activa</span>
             </div>
-            <div class="chronicle-meta-row">
-                <span id="chronicle-narrator" class="chronicle-narrator">Narrador: —</span>
-                <div id="chronicle-invite-section" class="chronicle-invite-row hidden">
-                    <span>Código de invitación:</span>
-                    <code id="chronicle-invite-code">—</code>
-                    <button class="chronicle-copy-icon-btn" id="btn-copy-invite" title="Copiar código">
-                        <i data-lucide="copy"></i>
+            <div class="cd-meta-row">
+                <span id="chronicle-narrator" class="cd-narrator">Narrador: —</span>
+                <span id="chronicle-invite-code" class="cd-invite-code hidden"></span>
+            </div>
+            <p id="chronicle-description" class="cd-description">Sin descripción</p>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="cd-tabs" id="chronicle-tabs">
+            <button class="cd-tab active" data-tab="resumen">Resumen</button>
+            <button class="cd-tab" data-tab="jugadores">Jugadores</button>
+            <button class="cd-tab" data-tab="diario">Diario</button>
+            <button class="cd-tab" data-tab="mesa">Mesa Virtual</button>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="cd-content" id="chronicle-tab-content">
+        <!-- Placeholder: content per tab goes here -->
+        <div class="cd-tab-panel" data-panel="resumen">
+            <!-- Proxima Sesion -->
+            <div class="cd-section" id="cd-next-session">
+                <span class="cd-section-label">PROXIMA SESION</span>
+                <div class="cd-card cd-card--row cd-card--spaced" id="cd-next-session-card">
+                    <div class="cd-card--row-left">
+                        <span class="cd-card-icon"><i data-lucide="calendar"></i></span>
+                        <span id="cd-next-session-text" class="cd-card-text cd-card-muted">Sin fecha programada</span>
+                    </div>
+                    <button id="cd-next-session-edit" class="cd-banner-btn hidden" type="button" title="Editar fecha">
+                        <i data-lucide="pencil"></i>
                     </button>
                 </div>
             </div>
-            <p id="chronicle-description" class="chronicle-description">Sin descripción</p>
-        </div>
-
-        <!-- Section Cards -->
-        <div class="chronicle-sections">
-            <div class="chronicle-section-card" onclick="navigateToSection('character-sheets')">
-                <i data-lucide="scroll"></i>
-                <h3>Personajes</h3>
-                <div class="count" id="chronicle-sheets-count">—</div>
+            <!-- Ultima Sesion -->
+            <div class="cd-section" id="cd-last-session">
+                <span class="cd-section-label">ULTIMA SESION</span>
+                <div class="cd-card cd-card--col" id="cd-last-session-card">
+                    <span class="cd-card-muted">Sin sesiones registradas</span>
+                </div>
             </div>
-            <div class="chronicle-section-card" onclick="navigateToSection('combat-tracker')">
-                <i data-lucide="swords"></i>
-                <h3>Encuentros</h3>
-                <div class="count" id="chronicle-encounters-count">—</div>
-            </div>
-            <div class="chronicle-section-card hidden" id="section-game" onclick="navigateToSection('games')">
-                <i data-lucide="map"></i>
-                <h3>Almagro de Noche</h3>
-                <div class="count" id="chronicle-game-status">—</div>
+            <!-- Personaje -->
+            <div class="cd-section" id="cd-character">
+                <span class="cd-section-label">PERSONAJE</span>
+                <div class="cd-card cd-card--row" id="cd-character-card">
+                    <span class="cd-card-muted">Sin personaje asignado</span>
+                </div>
             </div>
         </div>
+        <div class="cd-tab-panel hidden" data-panel="jugadores">
+            <div id="cd-players-grid" class="cd-players-grid">
+                <span class="cd-card-muted">Cargando...</span>
+            </div>
+        </div>
+        <div class="cd-tab-panel hidden" data-panel="diario">
+            <!-- Sub-tabs (mobile only, hidden on desktop via CSS) -->
+            <div class="cd-diario-tabs">
+                <button class="cd-diario-tab active" data-dtab="sesiones">Sesiones</button>
+                <button class="cd-diario-tab" data-dtab="notas">Mis Notas</button>
+            </div>
 
-        <!-- Players & Characters List -->
-        <div class="chronicle-characters-list">
-            <div class="chronicle-characters-header">
-                <h3>Jugadores</h3>
-                <button id="btn-add-character" class="chronicle-add-char-btn hidden" onclick="openCharPicker()">
-                    <i data-lucide="plus"></i> Agregar Personaje
-                </button>
+            <div class="cd-diario-columns">
+                <!-- Sesiones column -->
+                <div class="cd-diario-col" data-dcol="sesiones">
+                    <span class="cd-diario-label">SESIONES</span>
+                    <button class="cd-add-list-btn hidden" id="cd-add-recap">+ Nuevo Recuento</button>
+                    <div id="cd-sesiones-list" class="cd-diario-list">
+                        <span class="cd-card-muted">Cargando...</span>
+                    </div>
+                    <button class="cd-load-more-btn hidden" id="cd-sesiones-more">Ver mas</button>
+                </div>
+
+                <!-- Mis Notas column -->
+                <div class="cd-diario-col" data-dcol="notas">
+                    <span class="cd-diario-label cd-diario-label--notas">MIS NOTAS</span>
+                    <button class="cd-add-list-btn" id="cd-add-note">+ Nueva Nota</button>
+                    <div id="cd-notas-list" class="cd-diario-list">
+                        <span class="cd-card-muted">Cargando...</span>
+                    </div>
+                    <button class="cd-load-more-btn hidden" id="cd-notas-more">Ver mas</button>
+                </div>
             </div>
-            <div id="chronicle-characters-container">
-                <p class="muted">Cargando...</p>
-            </div>
+        </div>
+        <div class="cd-tab-panel hidden" data-panel="mesa">
+            <p class="muted">Contenido de Mesa Virtual (próximamente)</p>
         </div>
     </div>
-</div>
 
-<!-- Modal: Character Picker -->
-<div id="modal-char-picker" class="chronicle-char-picker-overlay">
-    <div class="chronicle-char-picker">
-        <h2>Agregar Personaje</h2>
-        <div id="char-picker-list" class="chronicle-char-picker-list">
-            <p class="muted">Cargando...</p>
-        </div>
-        <div class="chronicle-char-picker-actions">
-            <button class="gameButton secondary" onclick="closeCharPicker()">Cerrar</button>
+    <!-- Modal: Character Picker -->
+    <div id="modal-char-picker" class="cd-modal-overlay">
+        <div class="cd-modal">
+            <div class="cd-modal-header">
+                <h3 class="cd-modal-title">Agregar Personaje</h3>
+                <button class="cd-banner-btn" onclick="closeCharPicker()" type="button" title="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div id="char-picker-list" class="cd-modal-list">
+                <span class="cd-card-muted">Cargando...</span>
+            </div>
         </div>
     </div>
 </div>
@@ -103,10 +152,10 @@
             return;
         }
 
-        // Fetch chronicle
+        // Fetch chronicle (include banner_config and next_session)
         const { data: chronicle, error: cErr } = await supabase
             .from("chronicles")
-            .select("id, name, description, status, invite_code, creator_id, created_at, banner_url")
+            .select("id, name, description, status, invite_code, creator_id, created_at, banner_url, banner_config, next_session")
             .eq("id", chronicleId)
             .maybeSingle();
 
@@ -126,7 +175,7 @@
 
         const isNarrator = participation?.role === "narrator" || chronicle.creator_id === currentPlayer.id;
 
-        // Populate header
+        // ── Populate header ──
         const nameEl = document.getElementById("chronicle-name");
         const descEl = document.getElementById("chronicle-description");
         nameEl.textContent = chronicle.name;
@@ -142,7 +191,7 @@
         const statusBadge = document.getElementById("chronicle-status-badge");
         if (chronicle.status === "archived") {
             statusBadge.textContent = "Archivada";
-            statusBadge.className = "chronicle-badge archived";
+            statusBadge.className = "cd-badge cd-badge--archived";
         }
 
         // Narrator info
@@ -157,27 +206,28 @@
 
         // Invite code (narrator only)
         if (isNarrator) {
-            const inviteSection = document.getElementById("chronicle-invite-section");
-            inviteSection.classList.remove("hidden");
-            document.getElementById("chronicle-invite-code").textContent = chronicle.invite_code;
-
-            document.getElementById("btn-copy-invite").addEventListener("click", async () => {
+            const codeEl = document.getElementById("chronicle-invite-code");
+            codeEl.textContent = chronicle.invite_code;
+            codeEl.classList.remove("hidden");
+            codeEl.addEventListener("click", async () => {
                 try {
                     await navigator.clipboard.writeText(chronicle.invite_code);
-                    alert("Código copiado al portapapeles.");
+                    const original = codeEl.textContent;
+                    codeEl.textContent = "¡Copiado!";
+                    setTimeout(() => { codeEl.textContent = original; }, 1500);
                 } catch (err) {
                     alert("No se pudo copiar: " + (err?.message || err));
                 }
             });
 
             // Inline editing for name
-            nameEl.classList.add("chronicle-editable");
+            nameEl.classList.add("cd-editable");
             nameEl.addEventListener("click", () => {
                 const current = nameEl.textContent;
                 const input = document.createElement("input");
                 input.type = "text";
                 input.value = current;
-                input.className = "chronicle-edit-input title-input";
+                input.className = "cd-edit-input cd-edit-input--title";
                 nameEl.replaceWith(input);
                 input.focus();
                 input.select();
@@ -206,12 +256,12 @@
             });
 
             // Inline editing for description
-            descEl.classList.add("chronicle-editable");
+            descEl.classList.add("cd-editable");
             descEl.addEventListener("click", () => {
                 const current = chronicle.description || "";
                 const textarea = document.createElement("textarea");
                 textarea.value = current;
-                textarea.className = "chronicle-edit-input desc-input";
+                textarea.className = "cd-edit-input cd-edit-input--desc";
                 textarea.rows = 2;
                 descEl.replaceWith(textarea);
                 textarea.focus();
@@ -246,20 +296,32 @@
             });
         }
 
-        // Banner display + upload
+        // ── Banner ──
         const bannerArea = document.getElementById("chronicle-banner-area");
         const bannerImg = document.getElementById("chronicle-banner-img");
-        const uploadBtn = document.getElementById("btn-upload-banner");
         const bannerFileInput = document.getElementById("banner-file-input");
+        const bannerConfig = chronicle.banner_config || { mobile: { y: 50 }, desktop: { y: 50 } };
+
+        // Determine position based on viewport
+        function applyBannerPosition() {
+            const isMobile = window.innerWidth < 768;
+            const yPos = isMobile ? bannerConfig.mobile.y : bannerConfig.desktop.y;
+            bannerImg.style.objectPosition = `center ${yPos}%`;
+        }
 
         if (chronicle.banner_url) {
             bannerImg.src = chronicle.banner_url;
             bannerImg.classList.remove("hidden");
             bannerArea.classList.add("has-banner");
+            applyBannerPosition();
+            window.addEventListener("resize", applyBannerPosition);
         }
 
         if (isNarrator) {
-            uploadBtn.classList.remove("hidden");
+            const bannerActions = document.getElementById("chronicle-banner-actions");
+            const uploadBtn = document.getElementById("btn-upload-banner");
+            const repositionBtn = document.getElementById("btn-reposition-banner");
+            bannerActions.classList.remove("hidden");
 
             uploadBtn.addEventListener("click", () => bannerFileInput.click());
 
@@ -282,7 +344,6 @@
                 uploadBtn.disabled = true;
 
                 try {
-                    // Delete old banner if exists
                     if (chronicle.banner_url) {
                         const parts = chronicle.banner_url.split("/chronicle-banners/");
                         if (parts.length > 1) {
@@ -290,7 +351,6 @@
                         }
                     }
 
-                    // Upload new banner
                     const ext = file.name.split(".").pop();
                     const fileName = `${chronicle.id}/${Date.now()}.${ext}`;
 
@@ -304,9 +364,11 @@
                         .from("chronicle-banners")
                         .getPublicUrl(fileName);
 
+                    // Reset banner position on new upload
+                    const freshConfig = { mobile: { y: 50 }, desktop: { y: 50 } };
                     const { error: dbError } = await supabase
                         .from("chronicles")
-                        .update({ banner_url: publicUrl })
+                        .update({ banner_url: publicUrl, banner_config: freshConfig })
                         .eq("id", chronicle.id);
 
                     if (dbError) throw dbError;
@@ -315,6 +377,8 @@
                     bannerImg.classList.remove("hidden");
                     bannerArea.classList.add("has-banner");
                     chronicle.banner_url = publicUrl;
+                    Object.assign(bannerConfig, freshConfig);
+                    applyBannerPosition();
                 } catch (err) {
                     console.error("Banner upload error:", err);
                     alert("Error al subir banner: " + err.message);
@@ -323,6 +387,107 @@
                     bannerFileInput.value = "";
                 }
             });
+
+            // Reposition banner — toggle drag mode
+            let isDragMode = false;
+            let isDragging = false;
+            let dragStartClientY = 0;
+            let dragStartPosY = 0;
+
+            async function exitDragMode() {
+                isDragMode = false;
+                isDragging = false;
+                bannerArea.classList.remove("repositioning");
+                repositionBtn.classList.remove("active");
+                // Save
+                await supabase.from("chronicles")
+                    .update({ banner_config: bannerConfig })
+                    .eq("id", chronicle.id);
+            }
+
+            repositionBtn.addEventListener("click", () => {
+                if (!chronicle.banner_url) return;
+                if (isDragMode) {
+                    exitDragMode();
+                } else {
+                    isDragMode = true;
+                    bannerArea.classList.add("repositioning");
+                    repositionBtn.classList.add("active");
+                }
+            });
+
+            // Drag start on banner image
+            const onDragStart = (e) => {
+                if (!isDragMode) return;
+                e.preventDefault();
+                isDragging = true;
+                dragStartClientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const isMobile = window.innerWidth < 768;
+                dragStartPosY = bannerConfig[isMobile ? "mobile" : "desktop"].y;
+            };
+
+            bannerImg.addEventListener("mousedown", onDragStart);
+            bannerImg.addEventListener("touchstart", onDragStart, { passive: false });
+
+            // Drag move — delta maps to position change
+            const onDragMove = (e) => {
+                if (!isDragging) return;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const deltaPixels = clientY - dragStartClientY;
+                // Sensitivity: full banner height = ~80% range
+                const bannerH = bannerArea.getBoundingClientRect().height;
+                const deltaPct = (deltaPixels / bannerH) * -80;
+                const newY = Math.max(0, Math.min(100, dragStartPosY + deltaPct));
+
+                const isMobile = window.innerWidth < 768;
+                const key = isMobile ? "mobile" : "desktop";
+                bannerConfig[key].y = Math.round(newY);
+                bannerImg.style.objectPosition = `center ${newY}%`;
+            };
+
+            document.addEventListener("mousemove", onDragMove);
+            document.addEventListener("touchmove", onDragMove, { passive: true });
+
+            // Drag end — stop dragging but stay in drag mode
+            const onDragEnd = () => {
+                isDragging = false;
+            };
+
+            document.addEventListener("mouseup", onDragEnd);
+            document.addEventListener("touchend", onDragEnd);
+
+            // Escape exits drag mode
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape" && isDragMode) exitDragMode();
+            });
+        }
+
+        // ── Tab switching ──
+        const tabButtons = document.querySelectorAll(".cd-tab");
+        const tabPanels = document.querySelectorAll(".cd-tab-panel");
+
+        const scrollContainer = document.querySelector(".content");
+
+        function switchTab(target) {
+            const scrollPos = scrollContainer.scrollTop;
+            tabButtons.forEach(b => {
+                b.classList.toggle("active", b.dataset.tab === target);
+            });
+            tabPanels.forEach(p => {
+                p.classList.toggle("hidden", p.dataset.panel !== target);
+            });
+            sessionStorage.setItem("chronicle-tab", target);
+            scrollContainer.scrollTop = scrollPos;
+        }
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+        });
+
+        // Restore last active tab
+        const savedTab = sessionStorage.getItem("chronicle-tab");
+        if (savedTab && document.querySelector(`.cd-tab[data-tab="${savedTab}"]`)) {
+            switchTab(savedTab);
         }
 
         // Clan mapping for sigils
@@ -338,7 +503,7 @@
         }
 
         // Fetch participants, characters, encounters, game
-        const [participantsResult, charsResult, encountersResult, gameResult] = await Promise.all([
+        const [participantsResult, charsResult, encountersResult, gameResult, recapResult] = await Promise.all([
             supabase.from("chronicle_participants")
                 .select("player_id, role, player:players(id, name, user_id)")
                 .eq("chronicle_id", chronicleId),
@@ -346,19 +511,21 @@
                 .select("character_sheet_id, character_sheet:character_sheets(id, name, data, avatar_url, user_id)")
                 .eq("chronicle_id", chronicleId),
             supabase.from("encounters").select("id", { count: "exact", head: true }).eq("chronicle_id", chronicleId),
-            supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1)
+            supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1),
+            supabase.from("session_recaps")
+                .select("session_number, title, summary, body, session_date")
+                .eq("chronicle_id", chronicleId)
+                .order("session_number", { ascending: false })
+                .limit(1)
+                .maybeSingle()
         ]);
 
         const participants = participantsResult.data || [];
         const characters = charsResult.data || [];
-        document.getElementById("chronicle-sheets-count").textContent = characters.length;
-        document.getElementById("chronicle-encounters-count").textContent = encountersResult.count ?? 0;
 
-        // Game section
+        // Game — store for later use
         const game = gameResult.data?.[0];
         if (game) {
-            document.getElementById("section-game").classList.remove("hidden");
-            document.getElementById("chronicle-game-status").textContent = game.name;
             localStorage.setItem("currentGameId", game.id);
         }
 
@@ -371,21 +538,25 @@
             charsByUserId[sheet.user_id].push(sheet);
         });
 
-        // Show add button for participants
-        document.getElementById("btn-add-character").classList.remove("hidden");
-
         // Store for picker and removal use
         const currentChronicleId = chronicleId;
         const currentUserId = session.user.id;
         const existingSheetIds = characters.map(c => c.character_sheet_id);
 
-        // Render grouped list
-        const charsContainer = document.getElementById("chronicle-characters-container");
+        // ── Render Jugadores tab (cd-players-grid) ──
+        const playersGrid = document.getElementById("cd-players-grid");
 
         if (!participants.length) {
-            charsContainer.innerHTML = '<p class="muted">No hay jugadores en esta crónica.</p>';
+            playersGrid.innerHTML = '<span class="cd-card-muted">No hay jugadores en esta cr\u00f3nica.</span>';
         } else {
-            charsContainer.innerHTML = "";
+            playersGrid.innerHTML = "";
+
+            // Current player always first
+            participants.sort((a, b) => {
+                const aIsSelf = a.player?.user_id === session.user.id ? -1 : 0;
+                const bIsSelf = b.player?.user_id === session.user.id ? -1 : 0;
+                return aIsSelf - bIsSelf;
+            });
 
             participants.forEach(p => {
                 const player = p.player;
@@ -393,93 +564,378 @@
 
                 const isOwnPlayer = player.user_id === session.user.id;
                 const isPlayerNarrator = p.role === "narrator";
-                // Narrator can remove any player except themselves; player can remove themselves (abandon)
                 const canRemovePlayer = (isNarrator && !isOwnPlayer) || (!isNarrator && isOwnPlayer);
                 const playerChars = charsByUserId[player.user_id] || [];
 
-                // Player group container
-                const group = document.createElement("div");
-                group.className = "chronicle-player-group";
+                const card = document.createElement("div");
+                card.className = "cd-player-card";
 
-                // Player row
-                const playerRow = document.createElement("div");
-                playerRow.className = "chronicle-player-row";
+                // ── Head: icon + name + badge + [delete btn] ──
+                const badgeClass = isPlayerNarrator ? "cd-role-badge--narrator" : "cd-role-badge--player";
+                const badgeText = isPlayerNarrator ? "Narrador" : "Jugador";
 
-                const removeBtnText = isOwnPlayer && !isNarrator ? "Abandonar crónica" : "Quitar jugador";
-                const playerRemoveBtn = canRemovePlayer
-                    ? `<div class="chronicle-character-actions">
-                        <button class="chronicle-character-remove-btn" onclick="event.stopPropagation(); removePlayerFromChronicle('${player.id}')" title="${removeBtnText}">
-                            <i data-lucide="x"></i>
-                        </button>
-                       </div>`
-                    : `<div class="chronicle-character-actions" style="visibility:hidden">
-                        <button class="chronicle-character-remove-btn" tabindex="-1">
-                            <i data-lucide="x"></i>
-                        </button>
-                       </div>`;
-
-                playerRow.innerHTML = `
-                    <div class="chronicle-player-icon"><i data-lucide="user"></i></div>
-                    <span class="chronicle-player-name">${player.name}</span>
-                    <span class="chronicle-role-badge ${isPlayerNarrator ? 'narrator' : 'player'}">${isPlayerNarrator ? 'Narrador' : 'Jugador'}</span>
-                    ${playerRemoveBtn}
-                `;
-                group.appendChild(playerRow);
-
-                // Character sub-rows
-                if (playerChars.length) {
-                    const charsDiv = document.createElement("div");
-                    charsDiv.className = "chronicle-player-characters";
-
-                    playerChars.forEach(sheet => {
-                        const clan = sheet.data?.clan || "Desconocido";
-                        const sigil = getClanSigil(clan);
-                        const isOwn = sheet.user_id === session.user.id;
-                        const canRemoveChar = isNarrator || isOwn;
-                        const canOpen = isNarrator || isOwn;
-
-                        const row = document.createElement("div");
-                        row.className = "chronicle-character-row";
-
-                        const avatarContent = sheet.avatar_url
-                            ? `<img src="${sheet.avatar_url}" alt="">`
-                            : `<span class="clan-sigil">${sigil}</span>`;
-
-                        const removeBtn = canRemoveChar
-                            ? `<div class="chronicle-character-actions">
-                                <button class="chronicle-character-remove-btn" onclick="event.stopPropagation(); removeCharFromChronicle('${sheet.id}')" title="Quitar personaje">
-                                    <i data-lucide="x"></i>
-                                </button>
-                               </div>`
-                            : "";
-
-                        const nameClass = canOpen ? "char-name clickable" : "char-name";
-
-                        row.innerHTML = `
-                            <div class="chronicle-character-avatar">${avatarContent}</div>
-                            <div class="chronicle-character-info">
-                                <span class="${nameClass}" data-sheet-id="${sheet.id}">${sheet.name}</span>
-                                <span class="char-separator">|</span>
-                                <span class="char-clan">${clan}</span>
-                            </div>
-                            ${removeBtn}
-                        `;
-
-                        if (canOpen) {
-                            row.querySelector(".char-name").addEventListener("click", () => {
-                                window.location.href = `characterSheets/index.html?id=${sheet.id}`;
-                            });
-                        }
-
-                        charsDiv.appendChild(row);
-                    });
-
-                    group.appendChild(charsDiv);
+                let deletePlayerHtml = "";
+                if (canRemovePlayer) {
+                    deletePlayerHtml = `<button class="cd-delete-btn" data-action="remove-player" data-player-id="${player.id}" title="${isOwnPlayer ? 'Abandonar cr\u00f3nica' : 'Quitar jugador'}"><i data-lucide="trash-2"></i></button>`;
                 }
 
-                charsContainer.appendChild(group);
+                card.innerHTML = `
+                    <div class="cd-player-head">
+                        <div class="cd-player-head-left">
+                            <span class="cd-player-icon"><i data-lucide="user"></i></span>
+                            <span class="cd-player-name">${player.name}</span>
+                            <span class="cd-role-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        ${deletePlayerHtml}
+                    </div>
+                    <div class="cd-player-divider"></div>
+                `;
+
+                // ── Character rows ──
+                playerChars.forEach(sheet => {
+                    const clan = sheet.data?.clan || "Desconocido";
+                    const isOwn = sheet.user_id === session.user.id;
+                    const canRemoveChar = isNarrator || isOwn;
+                    const canOpen = isNarrator || isOwn;
+                    const initials = (sheet.name || "?").charAt(0).toUpperCase();
+
+                    const avatarInner = sheet.avatar_url
+                        ? `<img src="${sheet.avatar_url}" alt="">`
+                        : `<span class="cd-player-char-initials">${initials}</span>`;
+
+                    let deleteCharHtml = "";
+                    if (canRemoveChar) {
+                        deleteCharHtml = `<button class="cd-delete-btn" data-action="remove-char" data-sheet-id="${sheet.id}" title="Quitar personaje"><i data-lucide="trash-2"></i></button>`;
+                    }
+
+                    const nameClass = canOpen ? "cd-player-char-name clickable" : "cd-player-char-name";
+
+                    const charRow = document.createElement("div");
+                    charRow.className = "cd-player-char";
+                    charRow.innerHTML = `
+                        <div class="cd-player-char-left">
+                            <div class="cd-player-char-avatar">${avatarInner}</div>
+                            <span class="${nameClass}" data-sheet-id="${sheet.id}">${sheet.name}</span>
+                            <span class="cd-player-char-sep">|</span>
+                            <span class="cd-player-char-clan">${clan}</span>
+                        </div>
+                        ${deleteCharHtml}
+                    `;
+
+                    if (canOpen) {
+                        charRow.querySelector(".cd-player-char-name").addEventListener("click", () => {
+                            window.location.hash = `active-character-sheet?id=${encodeURIComponent(sheet.id)}`;
+                        });
+                    }
+
+                    card.appendChild(charRow);
+                });
+
+                // ── Add character (own card) ──
+                if (isOwnPlayer) {
+                    const addRow = document.createElement("div");
+                    addRow.className = "cd-add-char";
+                    addRow.innerHTML = `<i data-lucide="plus"></i><span>Agregar Personaje</span>`;
+                    addRow.addEventListener("click", () => openCharPicker());
+                    card.appendChild(addRow);
+                }
+
+                playersGrid.appendChild(card);
+            });
+
+            // Delegate delete button clicks
+            playersGrid.addEventListener("click", (e) => {
+                const btn = e.target.closest(".cd-delete-btn");
+                if (!btn) return;
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                if (action === "remove-player") removePlayerFromChronicle(btn.dataset.playerId);
+                if (action === "remove-char") removeCharFromChronicle(btn.dataset.sheetId);
             });
         }
+
+        // ── Populate Resumen tab ──
+        // Next session
+        const nextSessionText = document.getElementById("cd-next-session-text");
+        const nextSessionCard = document.getElementById("cd-next-session-card");
+        const nextSessionEditBtn = document.getElementById("cd-next-session-edit");
+
+        function formatNextSession(dateStr) {
+            if (!dateStr) return null;
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return null;
+            const dayNames = ['Domingo', 'Lunes', 'Martes', 'Mi\u00e9rcoles', 'Jueves', 'Viernes', 'S\u00e1bado'];
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const dayName = dayNames[d.getDay()];
+            const num = d.getDate();
+            const month = monthNames[d.getMonth()];
+            const hours = d.getHours().toString().padStart(2, '0');
+            const mins = d.getMinutes().toString().padStart(2, '0');
+            return `${dayName} ${num} ${month}, ${hours}:${mins}hs`;
+        }
+
+        function updateNextSessionDisplay() {
+            const fmt = formatNextSession(chronicle.next_session);
+            nextSessionText.textContent = fmt || 'Sin fecha programada';
+            if (fmt) {
+                nextSessionText.classList.remove("cd-card-muted");
+            } else {
+                nextSessionText.classList.add("cd-card-muted");
+            }
+        }
+
+        updateNextSessionDisplay();
+
+        if (isNarrator) {
+            nextSessionEditBtn.classList.remove("hidden");
+            // Hidden datetime-local input for the native picker
+            const dateInput = document.createElement("input");
+            dateInput.type = "datetime-local";
+            dateInput.style.cssText = "position:absolute;opacity:0;pointer-events:none;";
+            nextSessionCard.appendChild(dateInput);
+
+            nextSessionEditBtn.addEventListener("click", () => {
+                // Pre-fill with current value
+                if (chronicle.next_session) {
+                    const d = new Date(chronicle.next_session);
+                    if (!isNaN(d.getTime())) {
+                        const pad = (n) => n.toString().padStart(2, '0');
+                        dateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                    }
+                }
+                dateInput.showPicker?.();
+            });
+
+            dateInput.addEventListener("change", async () => {
+                const val = dateInput.value;
+                const newDate = val ? new Date(val).toISOString() : null;
+                const { error } = await supabase
+                    .from("chronicles")
+                    .update({ next_session: newDate })
+                    .eq("id", chronicleId);
+                if (error) console.error("Error saving next_session:", error);
+                chronicle.next_session = newDate;
+                updateNextSessionDisplay();
+            });
+        }
+
+        // Last session recap
+        const latestRecap = recapResult.data;
+        if (latestRecap) {
+            const lastCard = document.getElementById("cd-last-session-card");
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            let dateStr = `Sesi\u00f3n ${latestRecap.session_number}`;
+            if (latestRecap.session_date) {
+                const d = new Date(latestRecap.session_date + 'T00:00:00');
+                dateStr += ` \u2014 ${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+            }
+            const bodyText = latestRecap.summary || latestRecap.body || '';
+            const truncated = bodyText.length > 160 ? bodyText.substring(0, 160) + '\u2026' : bodyText;
+            lastCard.innerHTML = `
+                <span class="cd-card-subtitle">${dateStr}</span>
+                <p class="cd-card-body">${truncated}</p>
+            `;
+        }
+
+        // Current player's character
+        const myChars = charsByUserId[session.user.id] || [];
+        if (myChars.length > 0) {
+            const myChar = myChars[0];
+            const myClan = myChar.data?.clan || 'Desconocido';
+            const charCard = document.getElementById("cd-character-card");
+            const initials = myChar.name
+                ? myChar.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
+                : '??';
+            const avatarContent = myChar.avatar_url
+                ? `<img src="${myChar.avatar_url}" alt="" class="cd-char-avatar-img">`
+                : `<span class="cd-char-initials">${initials}</span>`;
+            charCard.innerHTML = `
+                <div class="cd-char-avatar">${avatarContent}</div>
+                <div class="cd-char-info">
+                    <span class="cd-char-name">${myChar.name}</span>
+                    <span class="cd-char-clan">Clan: ${myClan}</span>
+                </div>
+            `;
+            charCard.classList.add('cd-card-clickable');
+            charCard.addEventListener('click', () => {
+                window.location.hash = `active-character-sheet?id=${encodeURIComponent(myChar.id)}`;
+            });
+        }
+
+        // ── Render Diario tab ──
+        const RECAP_PAGE = 5;
+        let recapOffset = 0;
+
+        const sesionesList = document.getElementById("cd-sesiones-list");
+        const sesionesMoreBtn = document.getElementById("cd-sesiones-more");
+        const addRecapBtn = document.getElementById("cd-add-recap");
+        const notasList = document.getElementById("cd-notas-list");
+        const notasMoreBtn = document.getElementById("cd-notas-more");
+        const addNoteBtn = document.getElementById("cd-add-note");
+
+        // Narrator can add recaps (mobile-only button)
+        if (isNarrator) {
+            addRecapBtn.classList.remove("hidden");
+        }
+
+        // Diario sub-tab switching (mobile only, desktop shows both columns)
+        const diarioTabs = document.querySelectorAll(".cd-diario-tab");
+        const diarioCols = document.querySelectorAll(".cd-diario-col");
+
+        diarioTabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                const target = tab.dataset.dtab;
+                diarioTabs.forEach(t => t.classList.toggle("active", t.dataset.dtab === target));
+                diarioCols.forEach(col => {
+                    if (col.dataset.dcol === target) {
+                        col.classList.add("active-dcol");
+                        col.classList.remove("hidden-dcol");
+                    } else {
+                        col.classList.remove("active-dcol");
+                        col.classList.add("hidden-dcol");
+                    }
+                });
+            });
+        });
+
+        // Render a session recap card
+        function renderRecapCard(recap) {
+            const mNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            let meta = `Sesión ${recap.session_number}`;
+            if (recap.session_date) {
+                const d = new Date(recap.session_date + 'T00:00:00');
+                meta += `  —  ${d.getDate()} ${mNames[d.getMonth()]} ${d.getFullYear()}`;
+            }
+            const bodyText = recap.summary || recap.body || '';
+            const truncated = bodyText.length > 200 ? bodyText.substring(0, 200) + '…' : bodyText;
+
+            const card = document.createElement("div");
+            card.className = "cd-recap-card";
+            card.dataset.recapId = recap.id;
+            card.innerHTML = `
+                <div class="cd-recap-bar"></div>
+                <div class="cd-recap-info">
+                    <span class="cd-recap-title">${recap.title}</span>
+                    <span class="cd-recap-meta">${meta}</span>
+                    ${truncated ? `<p class="cd-recap-body">${truncated}</p>` : ''}
+                </div>
+            `;
+            return card;
+        }
+
+        // Fetch and render recaps with pagination
+        async function loadRecaps(append) {
+            const { data: recaps, error } = await supabase
+                .from("session_recaps")
+                .select("id, session_number, title, summary, body, session_date")
+                .eq("chronicle_id", chronicleId)
+                .order("session_number", { ascending: false })
+                .range(recapOffset, recapOffset + RECAP_PAGE - 1);
+
+            if (error) {
+                console.error("Error loading recaps:", error);
+                if (!append) sesionesList.innerHTML = '<span class="cd-card-muted">Error al cargar sesiones.</span>';
+                return;
+            }
+
+            if (!append) sesionesList.innerHTML = "";
+
+            if (!recaps.length && !append) {
+                sesionesList.innerHTML = '<span class="cd-card-muted">No hay sesiones registradas.</span>';
+                sesionesMoreBtn.classList.add("hidden");
+                return;
+            }
+
+            recaps.forEach(r => sesionesList.appendChild(renderRecapCard(r)));
+            sesionesMoreBtn.classList.toggle("hidden", recaps.length < RECAP_PAGE);
+            recapOffset += recaps.length;
+        }
+
+        sesionesMoreBtn.addEventListener("click", () => loadRecaps(true));
+        await loadRecaps(false);
+
+        // ── Notes from player's characters in this chronicle ──
+        const NOTES_PAGE = 5;
+        let notesShown = 0;
+
+        // Collect all non-archived notes from current player's characters
+        const allNotes = [];
+        myChars.forEach(sheet => {
+            const notes = (sheet.data?.notes || []).filter(n => !n.archived);
+            notes.forEach(note => {
+                allNotes.push({
+                    ...note,
+                    characterName: sheet.name,
+                    sheetId: sheet.id
+                });
+            });
+        });
+
+        // Sort by createdAt descending
+        allNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        function stripMarkdown(text) {
+            return (text || '')
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/#{1,6}\s/g, '')
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                .replace(/`([^`]+)`/g, '$1');
+        }
+
+        function formatRelativeDate(isoStr) {
+            if (!isoStr) return '';
+            const d = new Date(isoStr);
+            const now = new Date();
+            const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+            if (diffDays === 0) return 'Editada hoy';
+            if (diffDays === 1) return 'Editada ayer';
+            if (diffDays < 30) return `Editada hace ${diffDays} días`;
+            const mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            return `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
+        function renderNoteCard(note) {
+            const plain = stripMarkdown(note.body);
+            const truncated = plain.length > 150 ? plain.substring(0, 150) + '…' : plain;
+            const card = document.createElement("div");
+            card.className = "cd-note-card";
+            card.innerHTML = `
+                <div class="cd-note-header">
+                    <span class="cd-note-title">${note.title}</span>
+                    <span class="cd-note-char-badge">${note.characterName}</span>
+                </div>
+                ${truncated ? `<p class="cd-note-body">${truncated}</p>` : ''}
+                <span class="cd-note-date">${formatRelativeDate(note.createdAt)}</span>
+            `;
+            return card;
+        }
+
+        function showNotes() {
+            const batch = allNotes.slice(notesShown, notesShown + NOTES_PAGE);
+            if (!notesShown) notasList.innerHTML = "";
+            batch.forEach(n => notasList.appendChild(renderNoteCard(n)));
+            notesShown += batch.length;
+            notasMoreBtn.classList.toggle("hidden", notesShown >= allNotes.length);
+        }
+
+        if (!allNotes.length) {
+            notasList.innerHTML = '<span class="cd-card-muted">No hay notas todavía.</span>';
+            notasMoreBtn.classList.add("hidden");
+        } else {
+            showNotes();
+        }
+
+        notasMoreBtn.addEventListener("click", showNotes);
+
+        // Add button placeholders (creation flows built later)
+        addRecapBtn.addEventListener("click", () => {
+            // TODO: recap creation
+        });
+
+        addNoteBtn.addEventListener("click", () => {
+            // TODO: note creation
+        });
 
         // Remove character from chronicle
         window.removeCharFromChronicle = async function(sheetId) {
@@ -540,45 +996,43 @@
         // Character picker
         window.openCharPicker = async function() {
             const pickerList = document.getElementById("char-picker-list");
-            pickerList.innerHTML = '<p class="muted">Cargando...</p>';
+            pickerList.innerHTML = '<span class="cd-card-muted">Cargando...</span>';
             document.getElementById("modal-char-picker").classList.add("visible");
 
-            // Fetch user's characters not already in this chronicle
             const { data: mySheets, error } = await supabase
                 .from("character_sheets")
                 .select("id, name, data, avatar_url")
                 .eq("user_id", currentUserId);
 
             if (error) {
-                pickerList.innerHTML = '<p class="muted">Error al cargar personajes.</p>';
+                pickerList.innerHTML = '<span class="cd-card-muted">Error al cargar personajes.</span>';
                 return;
             }
 
             const available = (mySheets || []).filter(s => !existingSheetIds.includes(s.id));
 
             if (!available.length) {
-                pickerList.innerHTML = '<p class="chronicle-char-picker-empty">No tenés personajes disponibles para agregar.</p>';
+                pickerList.innerHTML = '<span class="cd-card-muted">No ten\u00e9s personajes disponibles para agregar.</span>';
                 return;
             }
 
             pickerList.innerHTML = "";
             available.forEach(sheet => {
                 const clan = sheet.data?.clan || "Desconocido";
-                const sigil = getClanSigil(clan);
+                const initials = (sheet.name || "?").charAt(0).toUpperCase();
 
                 const item = document.createElement("div");
-                item.className = "chronicle-char-picker-item";
+                item.className = "cd-modal-item";
 
-                const avatarContent = sheet.avatar_url
+                const avatarInner = sheet.avatar_url
                     ? `<img src="${sheet.avatar_url}" alt="">`
-                    : `<span class="clan-sigil">${sigil}</span>`;
+                    : `<span class="cd-player-char-initials">${initials}</span>`;
 
                 item.innerHTML = `
-                    <div class="chronicle-character-avatar">${avatarContent}</div>
-                    <div class="chronicle-character-info">
-                        <div class="char-name">${sheet.name}</div>
-                        <div class="char-detail">${clan}</div>
-                    </div>
+                    <div class="cd-player-char-avatar">${avatarInner}</div>
+                    <span class="cd-player-char-name">${sheet.name}</span>
+                    <span class="cd-player-char-sep">|</span>
+                    <span class="cd-player-char-clan">${clan}</span>
                 `;
                 item.addEventListener("click", async () => {
                     const { error: addErr } = await supabase

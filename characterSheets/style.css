@@ -2,6 +2,7 @@
    VAMPIRO V20 - CHARACTER SHEET UNIFIED STYLES
    Beta Layout + 6-Theme System
    ================================================ */
+@import url('../css/theme-tokens.css');
 
 /* ================================================
    FONT DECLARATIONS
@@ -45,204 +46,36 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 /* ================================================
-   THEME VARIABLES
-   12 unified color variables per theme
+   THEME VARIABLES (mapped from shared tokens)
    ================================================ */
-
-/* Default / Dark Theme */
 :root,
-:root[data-theme="dark"],
-body[data-theme="dark"] {
-	--bg: #111111;
-	--bg-soft: #1a1a1a;
-	--card: rgba(22, 22, 22, 0.88);
-	--line: rgba(224, 184, 131, 0.28);
-	--text: #f2ece4;
-	--muted: #b39f89;
-	--accent: #c4a882;
-	--accent-strong: #e2d0ba;
-	--ok: #6bbf8f;
-	--shadow: #000000ca;
-	--fail: #497174;
-	--danger: #CF0A0A;
+:root[data-theme],
+body[data-theme] {
+	--bg: var(--theme-bg-primary);
+	--bg-soft: var(--theme-bg-surface);
+	--card: color-mix(in srgb, var(--theme-bg-surface) 88%, transparent);
+	--line: var(--theme-border-primary);
+	--text: var(--theme-text-primary);
+	--muted: var(--theme-text-secondary);
+	--accent: var(--theme-accent);
+	--accent-strong: color-mix(in srgb, var(--theme-accent) 70%, #ffffff);
+	--ok: var(--theme-success);
+	--shadow: var(--sidebar-shadow-outer);
+	--fail: var(--theme-text-tertiary);
+	--danger: var(--theme-accent);
 	--customPointer: url('images/pointer.png'), pointer;
-	--ui-border: rgba(255, 221, 177, 0.26);
-	--ui-border-strong: rgba(255, 221, 177, 0.4);
-	--ui-surface: rgba(255, 255, 255, 0.03);
-	--ui-surface-hover: rgba(255, 255, 255, 0.06);
-	--ui-overlay: rgba(14, 14, 14, 0.98);
-	--ui-input-bg: rgba(12, 12, 12, 0.66);
-	--ui-text: #ddccba;
-	--ui-text-warm: #e8dfd3;
-	--ui-focus: rgba(196, 168, 130, 0.5);
-	--ui-accent-subtle: rgba(196, 168, 130, 0.1);
-	--dot: #c4a882;
-	--dot-strong: #e2d0ba;
-	--blood-1: #d48b7a;
-	--blood-2: #c41e3a;
-	--blood-3: #7b5ea7;
-}
-
-/* Light Theme */
-:root[data-theme="light"],
-body[data-theme="light"] {
-	--bg: #f5f0e7;
-	--bg-soft: #ebe5da;
-	--card: rgba(255, 252, 245, 0.88);
-	--line: rgba(139, 69, 19, 0.22);
-	--text: #2a1f14;
-	--muted: #8c7a68;
-	--accent: #7a3b2e;
-	--accent-strong: #96493a;
-	--ok: #2cdb66;
-	--shadow: #00000018;
-	--fail: #83b7bb;
-	--danger: #c0392b;
-	--customPointer: url('images/pointer.png'), pointer;
-	--ui-border: rgba(139, 69, 19, 0.2);
-	--ui-border-strong: rgba(139, 69, 19, 0.35);
-	--ui-surface: rgba(0, 0, 0, 0.03);
-	--ui-surface-hover: rgba(0, 0, 0, 0.06);
-	--ui-overlay: rgba(255, 252, 245, 0.98);
-	--ui-input-bg: rgba(255, 255, 255, 0.66);
-	--ui-text: #5a4a3a;
-	--ui-text-warm: #3d2e1f;
-	--ui-focus: rgba(122, 59, 46, 0.4);
-	--ui-accent-subtle: rgba(122, 59, 46, 0.08);
-	--dot: #bf5a3d;
-	--dot-strong: #ee995f;
-	--blood-1: #d48b7a;
-	--blood-2: #c41e3a;
-	--blood-3: #7b5ea7;
-}
-
-/* Camarilla Theme — mármol verde clásico VtM */
-:root[data-theme="camarilla"],
-body[data-theme="camarilla"] {
-	--bg: #e8ede6;
-	--bg-soft: #dce4d8;
-	--card: rgba(235, 242, 232, 0.88);
-	--line: rgba(40, 80, 50, 0.18);
-	--text: #1a2e1f;
-	--muted: #5a7a62;
-	--accent: #2d6b3f;
-	--accent-strong: #3d8a52;
-	--ok: #2e7d46;
-	--shadow: #00000030;
-	--fail: #6b8e7d;
-	--danger: #b83030;
-	--customPointer: url('images/pointer.png'), pointer;
-	--ui-border: rgba(40, 80, 50, 0.18);
-	--ui-border-strong: rgba(40, 80, 50, 0.3);
-	--ui-surface: rgba(0, 0, 0, 0.03);
-	--ui-surface-hover: rgba(0, 0, 0, 0.05);
-	--ui-overlay: rgba(235, 242, 232, 0.98);
-	--ui-input-bg: rgba(255, 255, 255, 0.5);
-	--ui-text: #3a5c42;
-	--ui-text-warm: #2a4030;
-	--ui-focus: rgba(45, 107, 63, 0.4);
-	--ui-accent-subtle: rgba(45, 107, 63, 0.08);
-	--dot: #2d6b3f;
-	--dot-strong: #4a9960;
-	--blood-1: #d48b7a;
-	--blood-2: #c41e3a;
-	--blood-3: #7b5ea7;
-}
-
-/* Sabbat Theme */
-:root[data-theme="sabbat"],
-body[data-theme="sabbat"] {
-	--bg: #0f0505;
-	--bg-soft: #150808;
-	--card: rgba(15, 5, 5, 0.88);
-	--line: rgba(180, 50, 50, 0.28);
-	--text: #e0d0d0;
-	--muted: #8b5a5a;
-	--accent: #8b0000;
-	--accent-strong: #b22222;
-	--ok: #4E9F3D;
-	--shadow: #000000ee;
-	--fail: #6b4848;
-	--danger: #ff0000;
-	--customPointer: url('images/pointer.png'), pointer;
-	--ui-border: rgba(180, 50, 50, 0.25);
-	--ui-border-strong: rgba(180, 50, 50, 0.4);
-	--ui-surface: rgba(255, 255, 255, 0.03);
-	--ui-surface-hover: rgba(255, 255, 255, 0.06);
-	--ui-overlay: rgba(15, 5, 5, 0.98);
-	--ui-input-bg: rgba(10, 2, 2, 0.66);
-	--ui-text: #c0a8a8;
-	--ui-text-warm: #d4bcbc;
-	--ui-focus: rgba(139, 0, 0, 0.5);
-	--ui-accent-subtle: rgba(139, 0, 0, 0.12);
-	--dot: #8b0000;
-	--dot-strong: #b22222;
-	--blood-1: #d48b7a;
-	--blood-2: #c41e3a;
-	--blood-3: #7b5ea7;
-}
-
-/* Anarquista Theme */
-:root[data-theme="anarquista"],
-body[data-theme="anarquista"] {
-	--bg: #141a1f;
-	--bg-soft: #1a2128;
-	--card: rgba(20, 26, 31, 0.88);
-	--line: rgba(106, 149, 168, 0.28);
-	--text: #d4dfe5;
-	--muted: #7a8f9c;
-	--accent: #4a7c8e;
-	--accent-strong: #6b95a8;
-	--ok: #5ba3c1;
-	--shadow: #000000ca;
-	--fail: #6b7c85;
-	--danger: #c15b5b;
-	--customPointer: url('images/pointer.png'), pointer;
-	--ui-border: rgba(106, 149, 168, 0.25);
-	--ui-border-strong: rgba(106, 149, 168, 0.4);
-	--ui-surface: rgba(255, 255, 255, 0.03);
-	--ui-surface-hover: rgba(255, 255, 255, 0.06);
-	--ui-overlay: rgba(20, 26, 31, 0.98);
-	--ui-input-bg: rgba(12, 16, 20, 0.66);
-	--ui-text: #a0b4be;
-	--ui-text-warm: #bcccd4;
-	--ui-focus: rgba(74, 124, 142, 0.5);
-	--ui-accent-subtle: rgba(74, 124, 142, 0.12);
-	--dot: #4a7c8e;
-	--dot-strong: #6b95a8;
-	--blood-1: #d48b7a;
-	--blood-2: #c41e3a;
-	--blood-3: #7b5ea7;
-}
-
-/* Phantomas Theme */
-:root[data-theme="phantomas"],
-body[data-theme="phantomas"] {
-	--bg: #0a0a0a;
-	--bg-soft: #0f0f0f;
-	--card: rgba(10, 10, 10, 0.88);
-	--line: rgba(0, 255, 65, 0.2);
-	--text: #33ff66;
-	--muted: #2d8a45;
-	--accent: #00ff41;
-	--accent-strong: #33ff66;
-	--ok: #00ff41;
-	--shadow: #00ff4133;
-	--fail: #668866;
-	--danger: #ff0033;
-	--customPointer: url('images/pointer.png'), pointer;
-	--ui-border: rgba(0, 255, 65, 0.22);
-	--ui-border-strong: rgba(0, 255, 65, 0.35);
-	--ui-surface: rgba(0, 255, 65, 0.04);
-	--ui-surface-hover: rgba(0, 255, 65, 0.08);
-	--ui-overlay: rgba(5, 5, 5, 0.98);
-	--ui-input-bg: rgba(0, 0, 0, 0.66);
-	--ui-text: #30b050;
-	--ui-text-warm: #33ff66;
-	--ui-focus: rgba(0, 255, 65, 0.4);
-	--ui-accent-subtle: rgba(0, 255, 65, 0.1);
-	--dot: #00ff41;
-	--dot-strong: #33ff66;
+	--ui-border: var(--theme-border-primary);
+	--ui-border-strong: color-mix(in srgb, var(--theme-border-primary) 75%, #ffffff);
+	--ui-surface: color-mix(in srgb, var(--theme-bg-elevated) 20%, transparent);
+	--ui-surface-hover: color-mix(in srgb, var(--theme-bg-elevated) 36%, transparent);
+	--ui-overlay: color-mix(in srgb, var(--theme-bg-primary) 98%, #000000);
+	--ui-input-bg: color-mix(in srgb, var(--theme-bg-primary) 66%, transparent);
+	--ui-text: var(--theme-text-tertiary);
+	--ui-text-warm: var(--theme-text-primary);
+	--ui-focus: color-mix(in srgb, var(--theme-accent) 44%, transparent);
+	--ui-accent-subtle: var(--theme-accent-soft);
+	--dot: var(--theme-accent);
+	--dot-strong: color-mix(in srgb, var(--theme-accent) 68%, #ffffff);
 	--blood-1: #d48b7a;
 	--blood-2: #c41e3a;
 	--blood-3: #7b5ea7;
@@ -269,6 +102,8 @@ body[data-font="noir"] {
 	font-size: .95em;
 }
 
+:root[data-font="terminal"],
+body[data-font="terminal"],
 :root[data-font="phantomas"],
 body[data-font="phantomas"] {
 	--fontHeading: 'Share Tech Mono', monospace;
@@ -332,48 +167,8 @@ textarea::placeholder {
 .beta-bg {
 	position: fixed;
 	inset: 0;
-	background:
-		radial-gradient(60% 50% at 15% 10%, rgba(191, 90, 61, 0.18), transparent 60%),
-		radial-gradient(45% 35% at 90% 75%, rgba(120, 30, 30, 0.22), transparent 60%),
-		linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%);
+	background: var(--content-theme-bg-gradient);
 	z-index: -1;
-}
-
-/* Theme-aware beta-bg */
-body[data-theme="light"] .beta-bg {
-	background:
-		radial-gradient(60% 50% at 15% 10%, rgba(122, 59, 46, 0.08), transparent 60%),
-		radial-gradient(45% 35% at 90% 75%, rgba(123, 75, 55, 0.1), transparent 60%),
-		linear-gradient(135deg, #f5f0e7 0%, #fffaf1 35%, #f0ebe2 100%);
-}
-
-body[data-theme="camarilla"] .beta-bg {
-	background:
-		radial-gradient(70% 55% at 10% 15%, rgba(45, 107, 63, 0.12), transparent 60%),
-		radial-gradient(50% 40% at 85% 80%, rgba(30, 90, 50, 0.1), transparent 55%),
-		radial-gradient(40% 30% at 50% 50%, rgba(60, 120, 70, 0.06), transparent 50%),
-		linear-gradient(160deg, #e2ebe0 0%, #e8ede6 30%, #dfe8dc 60%, #e5ece3 100%);
-}
-
-body[data-theme="sabbat"] .beta-bg {
-	background:
-		radial-gradient(60% 50% at 15% 10%, rgba(139, 0, 0, 0.22), transparent 60%),
-		radial-gradient(45% 35% at 90% 75%, rgba(80, 10, 10, 0.25), transparent 60%),
-		linear-gradient(135deg, #0a0303 0%, #0f0505 35%, #0a0404 100%);
-}
-
-body[data-theme="anarquista"] .beta-bg {
-	background:
-		radial-gradient(60% 50% at 15% 10%, rgba(74, 124, 142, 0.15), transparent 60%),
-		radial-gradient(45% 35% at 90% 75%, rgba(50, 80, 100, 0.18), transparent 60%),
-		linear-gradient(135deg, #10161b 0%, #141a1f 35%, #111820 100%);
-}
-
-body[data-theme="phantomas"] .beta-bg {
-	background:
-		radial-gradient(60% 50% at 15% 10%, rgba(0, 255, 65, 0.06), transparent 60%),
-		radial-gradient(45% 35% at 90% 75%, rgba(0, 200, 50, 0.08), transparent 60%),
-		linear-gradient(135deg, #050505 0%, #0a0a0a 35%, #060606 100%);
 }
 
 .beta-shell {
@@ -394,14 +189,6 @@ body[data-theme="phantomas"] .beta-bg {
 	margin-bottom: 18px;
 	padding-bottom: 14px;
 	border-bottom: 1px solid var(--ui-border);
-}
-
-body[data-theme="light"] .beta-header {
-	border-bottom-color: rgba(139, 69, 19, 0.2);
-}
-
-body[data-theme="camarilla"] .beta-header {
-	border-bottom-color: rgba(40, 80, 50, 0.2);
 }
 
 .profile-back-link {
@@ -624,48 +411,6 @@ h3 {
 	background-color: var(--card);
 }
 
-body[data-theme="light"] .card {
-	border-color: rgba(139, 69, 19, 0.12);
-	background-color: rgba(255, 252, 245, 0.7);
-	box-shadow: 0 1px 4px rgba(100, 60, 20, 0.06);
-}
-
-body[data-theme="light"] .card-soft {
-	border-color: rgba(139, 69, 19, 0.1);
-	background-color: rgba(245, 240, 231, 0.55);
-}
-
-body[data-theme="light"] .sheet-panel {
-	background: transparent;
-	border-color: transparent;
-	box-shadow: none;
-}
-
-body[data-theme="light"] .sheet-panel+.sheet-panel {
-	border-top-color: rgba(139, 69, 19, 0.1);
-}
-
-body[data-theme="camarilla"] .card {
-	border-color: rgba(40, 80, 50, 0.12);
-	background-color: rgba(235, 242, 232, 0.7);
-	box-shadow: 0 1px 4px rgba(30, 60, 30, 0.06);
-}
-
-body[data-theme="camarilla"] .card-soft {
-	border-color: rgba(40, 80, 50, 0.1);
-	background-color: rgba(225, 235, 222, 0.55);
-}
-
-body[data-theme="camarilla"] .sheet-panel {
-	background: transparent;
-	border-color: transparent;
-	box-shadow: none;
-}
-
-body[data-theme="camarilla"] .sheet-panel+.sheet-panel {
-	border-top-color: rgba(40, 80, 50, 0.1);
-}
-
 /* ================================================
    VITALS (CORE COLUMN)
    ================================================ */
@@ -862,11 +607,6 @@ body[data-theme="camarilla"] .sheet-panel+.sheet-panel {
 	background-position: center;
 	background-repeat: no-repeat;
 	background-blend-mode: screen;
-}
-
-body[data-theme="light"] .health-container,
-body[data-theme="camarilla"] .health-container {
-	background-image: none !important;
 }
 
 .health-container.lesionado {

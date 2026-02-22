@@ -4,6 +4,16 @@ let sessionReady = false;
 let currentSession = null;
 const SIDEBAR_MODE_KEY = "abn_sidebar_mode";
 const APP_THEME_KEY = "abn_theme";
+const APP_FONT_KEY = "abn_font";
+const THEME_ORDER = [
+  "dark",
+  "light",
+  "camarilla",
+  "sabbat",
+  "anarquista",
+  "phantomas",
+];
+const FONT_ORDER = ["clasico", "noir", "terminal"];
 
 // Route/render guards
 let __currentRoute = null;
@@ -11,17 +21,32 @@ let __lastRenderedPath = null;
 let __lastUserId = null;
 
 function applyStoredTheme() {
-  const stored = localStorage.getItem(APP_THEME_KEY) || "dark";
+  const raw = (localStorage.getItem(APP_THEME_KEY) || "dark").toLowerCase();
+  const stored = THEME_ORDER.includes(raw) ? raw : "dark";
   document.documentElement.setAttribute("data-app-theme", stored);
+  localStorage.setItem(APP_THEME_KEY, stored);
+}
+
+function applyStoredFont() {
+  const raw = (localStorage.getItem("abn_font") || "clasico").toLowerCase();
+  const stored = FONT_ORDER.includes(raw) ? raw : "clasico";
+  document.documentElement.setAttribute("data-app-font", stored);
+  localStorage.setItem("abn_font", stored);
 }
 
 function updateSidebarToggleIcon(sidebar) {
-  const toggleIcon = document.querySelector("#sidebar-toggle i");
-  if (!toggleIcon || !sidebar) return;
+  const toggleBtn = document.getElementById("sidebar-toggle");
+  if (!toggleBtn || !sidebar) return;
   const isSlim = sidebar.classList.contains("sidebar-slim-mode");
-  toggleIcon.setAttribute(
-    "data-lucide",
-    isSlim ? "panel-left-open" : "panel-left-close",
+  const nextIcon = isSlim ? "panel-left-open" : "panel-left-close";
+  toggleBtn.innerHTML = `<i data-lucide="${nextIcon}"></i>`;
+  toggleBtn.setAttribute(
+    "title",
+    isSlim ? "Expandir barra lateral" : "Colapsar barra lateral",
+  );
+  toggleBtn.setAttribute(
+    "aria-label",
+    isSlim ? "Expandir barra lateral" : "Colapsar barra lateral",
   );
   if (window.lucide?.createIcons) lucide.createIcons();
 }
@@ -34,6 +59,7 @@ function setActiveSidebarItem(baseHash) {
     chronicles: "menu-chronicles",
     chronicle: "menu-chronicles",
     "character-sheets": "menu-chars",
+    "active-character-sheet": "menu-chars",
     games: "menu-games",
     game: "menu-games",
     tools: "menu-tools",
@@ -60,6 +86,88 @@ function updateContentBackgroundMode(baseHash) {
   contentShell.classList.toggle("content-theme-bg-only", useFlatThemeBackground);
 }
 
+function initAppThemeModal() {
+  const openBtn = document.getElementById("theme-toggle");
+  const modal = document.getElementById("app-theme-modal");
+  const closeBtn = document.getElementById("app-theme-modal-close");
+  const swatches = document.querySelectorAll(".app-theme-swatch");
+  const fontBtns = document.querySelectorAll(".app-font-btn");
+
+  if (!openBtn || !modal || !closeBtn) return;
+  if (modal._init) return;
+
+  function emitThemeFontChange() {
+    window.dispatchEvent(
+      new CustomEvent("abn-theme-font-changed", {
+        detail: {
+          theme: (document.documentElement.getAttribute("data-app-theme") || "dark").toLowerCase(),
+          font: (document.documentElement.getAttribute("data-app-font") || "clasico").toLowerCase(),
+        },
+      }),
+    );
+  }
+
+  function syncActive() {
+    const currentTheme =
+      (document.documentElement.getAttribute("data-app-theme") || "dark").toLowerCase();
+    const currentFont =
+      (document.documentElement.getAttribute("data-app-font") || "clasico").toLowerCase();
+    swatches.forEach((s) =>
+      s.classList.toggle("active", s.dataset.theme === currentTheme),
+    );
+    fontBtns.forEach((b) =>
+      b.classList.toggle("active", b.dataset.font === currentFont),
+    );
+  }
+
+  function openModal() {
+    syncActive();
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  openBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openModal();
+  });
+  closeBtn.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+  });
+
+  swatches.forEach((swatch) => {
+    swatch.addEventListener("click", () => {
+      const theme = (swatch.dataset.theme || "").toLowerCase();
+      if (!THEME_ORDER.includes(theme)) return;
+      document.documentElement.setAttribute("data-app-theme", theme);
+      localStorage.setItem(APP_THEME_KEY, theme);
+      syncActive();
+      emitThemeFontChange();
+    });
+  });
+
+  fontBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const font = (btn.dataset.font || "").toLowerCase();
+      if (!FONT_ORDER.includes(font)) return;
+      document.documentElement.setAttribute("data-app-font", font);
+      localStorage.setItem(APP_FONT_KEY, font);
+      syncActive();
+      emitThemeFontChange();
+    });
+  });
+
+  modal._init = true;
+}
+
 // Helper: Update Sidebar based on width OR route
 function updateSidebarResponsiveState() {
   const sidebar = document.querySelector(".sidebar");
@@ -68,13 +176,19 @@ function updateSidebarResponsiveState() {
   const isSmallScreen = window.matchMedia("(max-width: 1400px)").matches;
   // Use current hash or global __currentRoute
   const hash = window.location.hash.slice(1);
-  const isForcedMode = hash.startsWith("active-encounter");
+  const isForcedMode =
+    hash.startsWith("active-encounter") ||
+    hash.startsWith("active-character-sheet");
   const storedMode = localStorage.getItem(SIDEBAR_MODE_KEY);
 
-  if (isSmallScreen || isForcedMode) {
+  if (isForcedMode) {
     sidebar.classList.add("sidebar-slim-mode");
   } else {
     if (storedMode === "collapsed") {
+      sidebar.classList.add("sidebar-slim-mode");
+    } else if (storedMode === "expanded") {
+      sidebar.classList.remove("sidebar-slim-mode");
+    } else if (isSmallScreen) {
       sidebar.classList.add("sidebar-slim-mode");
     } else {
       sidebar.classList.remove("sidebar-slim-mode");
@@ -144,6 +258,7 @@ const routes = {
   "portrait-generator": "fragments/portrait-generator.html",
   "card-creator": "fragments/card-creator.html",
   "character-sheets": "fragments/character-sheets.html",
+  "active-character-sheet": "fragments/active-character-sheet.html",
   "combat-tracker": "fragments/combat-tracker.html",
   "active-encounter": "fragments/active-encounter.html",
   "temporal-codex": "fragments/temporal-codex.html",
@@ -170,7 +285,8 @@ async function loadRoute(force = false) {
       baseHash === "game" ||
       baseHash === "chronicles" ||
       baseHash === "chronicle" ||
-      baseHash === "settings")
+      baseHash === "settings" ||
+      baseHash === "active-character-sheet")
   ) {
     targetHash = "welcome";
   }
@@ -265,6 +381,7 @@ async function loadRoute(force = false) {
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Router: DOMContentLoaded");
   applyStoredTheme();
+  applyStoredFont();
 
   // Initial Sidebar Check
   updateSidebarResponsiveState();
@@ -290,10 +407,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (sidebarToggle && !sidebarToggle._init) {
     sidebarToggle.addEventListener("click", (e) => {
       e.preventDefault();
-      const isSmallScreen = window.matchMedia("(max-width: 1400px)").matches;
-      if (isSmallScreen) return;
       const sidebar = document.querySelector(".sidebar");
       if (!sidebar) return;
+      const hash = window.location.hash.slice(1);
+      if (hash.startsWith("active-encounter")) return;
       const isCollapsed = sidebar.classList.toggle("sidebar-slim-mode");
       localStorage.setItem(
         SIDEBAR_MODE_KEY,
@@ -304,19 +421,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     sidebarToggle._init = true;
   }
 
-  // Theme control (Dark default)
-  const themeToggle = document.getElementById("theme-toggle");
-  if (themeToggle && !themeToggle._init) {
-    themeToggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      const currentTheme =
-        document.documentElement.getAttribute("data-app-theme") || "dark";
-      const nextTheme = currentTheme === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-app-theme", nextTheme);
-      localStorage.setItem(APP_THEME_KEY, nextTheme);
-    });
-    themeToggle._init = true;
-  }
+  // Theme and font modal
+  initAppThemeModal();
 
   // Logout link handler
   const logoutLink = document.getElementById("logout-link");

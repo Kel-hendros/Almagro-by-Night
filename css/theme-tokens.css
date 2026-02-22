@@ -1,0 +1,233 @@
+:root {
+    --sidebar-width-expanded: 180px;
+    --sidebar-width-collapsed: 76px;
+    --sidebar-bg: #242426;
+    --sidebar-text: #4A4A4C;
+    --sidebar-text-active: #C62828;
+    --sidebar-border: #2A2A2C;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.22);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.35);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.2);
+    --sidebar-logo-shadow: drop-shadow(0px 4px 2px rgba(191, 174, 174, 0.23)) drop-shadow(0px -8px 3px rgba(0, 0, 0, 0.69));
+    --sidebar-sigil-color: #4A4A4C;
+    --sidebar-sigil-shadow: drop-shadow(0px 2px 2px rgba(198, 40, 40, 0.28)) drop-shadow(0px -2px 2px rgba(0, 0, 0, 0.55));
+    --content-theme-bg: #1A1A1C;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(191, 90, 61, 0.18), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(120, 30, 30, 0.22), transparent 60%),
+        linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%);
+
+    --theme-bg-primary: #1A1A1C;
+    --theme-bg-surface: #242426;
+    --theme-bg-elevated: #2A2A2C;
+    --theme-border-divider: #2A2A2C;
+    --theme-border-primary: #3A3A3C;
+    --theme-text-primary: #F5F5F0;
+    --theme-text-secondary: #6E6E70;
+    --theme-text-tertiary: #4A4A4C;
+    --theme-accent: #C62828;
+    --theme-accent-soft: #8B1C1C;
+    --theme-success: #6E9E6E;
+    --theme-success-soft: rgba(30, 60, 30, 0.6);
+    --theme-warning: #D4A14A;
+
+    --app-font-body: 'Special Elite', cursive;
+    --app-font-heading: 'Special Elite', cursive;
+}
+
+:root[data-app-theme="light"],
+:root[data-theme="light"],
+body[data-app-theme="light"],
+body[data-theme="light"] {
+    --sidebar-bg: #ebe5da;
+    --sidebar-text: #b0a090;
+    --sidebar-text-active: #7a3b2e;
+    --sidebar-border: #ddd5c8;
+    --sidebar-action-bg: rgba(255, 255, 255, 0.65);
+    --sidebar-shadow-outer: rgba(96, 86, 68, 0.12);
+    --sidebar-shadow-inner: rgba(255, 255, 255, 0.4);
+    --sidebar-sigil-color: #b0a090;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 1px rgba(122, 59, 46, 0.22)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.08));
+    --content-theme-bg: #f5f0e7;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(122, 59, 46, 0.08), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(123, 75, 55, 0.1), transparent 60%),
+        linear-gradient(135deg, #f5f0e7 0%, #fffaf1 35%, #f0ebe2 100%);
+
+    --theme-bg-primary: #f5f0e7;
+    --theme-bg-surface: #ebe5da;
+    --theme-bg-elevated: #ddd5c8;
+    --theme-border-divider: #ddd5c8;
+    --theme-border-primary: rgba(122, 59, 46, 0.2);
+    --theme-text-primary: #2a1f14;
+    --theme-text-secondary: #6e6456;
+    --theme-text-tertiary: #b0a090;
+    --theme-accent: #7a3b2e;
+    --theme-accent-soft: rgba(122, 59, 46, 0.2);
+    --theme-success: #2e7d32;
+    --theme-success-soft: rgba(46, 125, 50, 0.16);
+    --theme-warning: #7b5d29;
+}
+
+:root[data-app-theme="camarilla"],
+:root[data-theme="camarilla"],
+body[data-app-theme="camarilla"],
+body[data-theme="camarilla"] {
+    --sidebar-bg: #dce4d8;
+    --sidebar-text: #8aaa92;
+    --sidebar-text-active: #2d6b3f;
+    --sidebar-border: #c5d4be;
+    --sidebar-action-bg: rgba(255, 255, 255, 0.55);
+    --sidebar-shadow-outer: rgba(40, 80, 50, 0.15);
+    --sidebar-shadow-inner: rgba(255, 255, 255, 0.35);
+    --sidebar-sigil-color: #8aaa92;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 1px rgba(45, 107, 63, 0.24)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.1));
+    --content-theme-bg: #e8ede6;
+    --content-theme-bg-gradient:
+        radial-gradient(70% 55% at 10% 15%, rgba(45, 107, 63, 0.12), transparent 60%),
+        radial-gradient(50% 40% at 85% 80%, rgba(30, 90, 50, 0.1), transparent 55%),
+        radial-gradient(40% 30% at 50% 50%, rgba(60, 120, 70, 0.06), transparent 50%),
+        linear-gradient(160deg, #e2ebe0 0%, #e8ede6 30%, #dfe8dc 60%, #e5ece3 100%);
+
+    --theme-bg-primary: #e8ede6;
+    --theme-bg-surface: #dce4d8;
+    --theme-bg-elevated: #d0daca;
+    --theme-border-divider: #c5d4be;
+    --theme-border-primary: rgba(40, 80, 50, 0.18);
+    --theme-text-primary: #1a2e1f;
+    --theme-text-secondary: #5a7a62;
+    --theme-text-tertiary: #8aaa92;
+    --theme-accent: #2d6b3f;
+    --theme-accent-soft: #3d8a52;
+    --theme-success: #23b850;
+    --theme-success-soft: rgba(30, 74, 42, 0.18);
+    --theme-warning: #c4a882;
+}
+
+:root[data-app-theme="sabbat"],
+:root[data-theme="sabbat"],
+body[data-app-theme="sabbat"],
+body[data-theme="sabbat"] {
+    --sidebar-bg: #150808;
+    --sidebar-text: #6b4848;
+    --sidebar-text-active: #8b0000;
+    --sidebar-border: #1a0808;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.35);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.45);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.4);
+    --sidebar-sigil-color: #6b4848;
+    --sidebar-sigil-shadow: drop-shadow(0px 2px 2px rgba(139, 0, 0, 0.28)) drop-shadow(0px -2px 2px rgba(0, 0, 0, 0.45));
+    --content-theme-bg: #0f0505;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(139, 0, 0, 0.22), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(80, 10, 10, 0.25), transparent 60%),
+        linear-gradient(135deg, #0a0303 0%, #0f0505 35%, #0a0404 100%);
+
+    --theme-bg-primary: #0f0505;
+    --theme-bg-surface: #150808;
+    --theme-bg-elevated: #1f0b0b;
+    --theme-border-divider: #1f0b0b;
+    --theme-border-primary: rgba(139, 0, 0, 0.28);
+    --theme-text-primary: #e0d0d0;
+    --theme-text-secondary: #8b5a5a;
+    --theme-text-tertiary: #6b4848;
+    --theme-accent: #8b0000;
+    --theme-accent-soft: rgba(139, 0, 0, 0.25);
+    --theme-success: #4E9F3D;
+    --theme-success-soft: rgba(78, 159, 61, 0.18);
+    --theme-warning: #bfa06a;
+}
+
+:root[data-app-theme="anarquista"],
+:root[data-theme="anarquista"],
+body[data-app-theme="anarquista"],
+body[data-theme="anarquista"] {
+    --sidebar-bg: #1a2128;
+    --sidebar-text: #6b7c85;
+    --sidebar-text-active: #4a7c8e;
+    --sidebar-border: #1e2830;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.28);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.35);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.22);
+    --sidebar-sigil-color: #6b7c85;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 1px rgba(74, 124, 142, 0.28)) drop-shadow(0px -1px 1px rgba(0, 0, 0, 0.22));
+    --content-theme-bg: #141a1f;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(74, 124, 142, 0.15), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(50, 80, 100, 0.18), transparent 60%),
+        linear-gradient(135deg, #10161b 0%, #141a1f 35%, #111820 100%);
+
+    --theme-bg-primary: #141a1f;
+    --theme-bg-surface: #1a2128;
+    --theme-bg-elevated: #1e2830;
+    --theme-border-divider: #1e2830;
+    --theme-border-primary: rgba(74, 124, 142, 0.28);
+    --theme-text-primary: #d4dfe5;
+    --theme-text-secondary: #7a8f9c;
+    --theme-text-tertiary: #6b7c85;
+    --theme-accent: #4a7c8e;
+    --theme-accent-soft: rgba(74, 124, 142, 0.24);
+    --theme-success: #5ba3c1;
+    --theme-success-soft: rgba(91, 163, 193, 0.18);
+    --theme-warning: #b3a379;
+}
+
+:root[data-app-theme="phantomas"],
+:root[data-theme="phantomas"],
+body[data-app-theme="phantomas"],
+body[data-theme="phantomas"] {
+    --sidebar-bg: #0f0f0f;
+    --sidebar-text: #1a5a2a;
+    --sidebar-text-active: #01a329;
+    --sidebar-border: #111111;
+    --sidebar-action-bg: rgba(0, 0, 0, 0.32);
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.55);
+    --sidebar-shadow-inner: rgba(0, 0, 0, 0.35);
+    --sidebar-sigil-color: #1a5a2a;
+    --sidebar-sigil-shadow: drop-shadow(0px 1px 2px rgba(1, 163, 41, 0.35)) drop-shadow(0px -1px 2px rgba(0, 0, 0, 0.5));
+    --content-theme-bg: #0a0a0a;
+    --content-theme-bg-gradient:
+        radial-gradient(60% 50% at 15% 10%, rgba(0, 255, 65, 0.06), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(0, 200, 50, 0.08), transparent 60%),
+        linear-gradient(135deg, #050505 0%, #0a0a0a 35%, #060606 100%);
+
+    --theme-bg-primary: #0a0a0a;
+    --theme-bg-surface: #0f0f0f;
+    --theme-bg-elevated: #111111;
+    --theme-border-divider: #111111;
+    --theme-border-primary: rgba(1, 163, 41, 0.3);
+    --theme-text-primary: #8fffaf;
+    --theme-text-secondary: #3d8a53;
+    --theme-text-tertiary: #1a5a2a;
+    --theme-accent: #01a329;
+    --theme-accent-soft: rgba(1, 163, 41, 0.22);
+    --theme-success: #2dcb63;
+    --theme-success-soft: rgba(45, 203, 99, 0.16);
+    --theme-warning: #7cae64;
+}
+
+:root[data-app-font="clasico"],
+:root[data-font="clasico"],
+body[data-app-font="clasico"],
+body[data-font="clasico"] {
+    --app-font-body: 'Cormorant Garamond', serif;
+    --app-font-heading: 'delavan', serif;
+}
+
+:root[data-app-font="noir"],
+:root[data-font="noir"],
+body[data-app-font="noir"],
+body[data-font="noir"] {
+    --app-font-body: 'Courier Prime', monospace;
+    --app-font-heading: 'Special Elite', cursive;
+}
+
+:root[data-app-font="terminal"],
+:root[data-font="terminal"],
+:root[data-font="phantomas"],
+body[data-app-font="terminal"],
+body[data-font="terminal"],
+body[data-font="phantomas"] {
+    --app-font-body: 'Space Mono', monospace;
+    --app-font-heading: 'Share Tech Mono', monospace;
+}

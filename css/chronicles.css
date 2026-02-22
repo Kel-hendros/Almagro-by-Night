@@ -576,8 +576,8 @@ p.chronicle-description {
     padding-left: 1.5rem;
 }
 
-/* --- Character Picker Modal --- */
-.chronicle-char-picker-overlay {
+/* --- Modal (cd- themed) --- */
+.cd-modal-overlay {
     display: none;
     position: fixed;
     z-index: 1000;
@@ -585,62 +585,61 @@ p.chronicle-description {
     top: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.7);
     align-items: center;
     justify-content: center;
 }
 
-.chronicle-char-picker-overlay.visible {
+.cd-modal-overlay.visible {
     display: flex;
 }
 
-.chronicle-char-picker {
-    background: #1a1a1a;
-    border: 1px solid var(--color-red-muted);
-    border-radius: 16px;
-    padding: 1.5rem;
+.cd-modal {
+    background: var(--cd-bg-surface);
+    border: 1px solid var(--cd-border-primary);
+    border-radius: var(--cd-radius-card);
+    padding: 20px;
     max-width: 420px;
     width: 90%;
     max-height: 70vh;
     display: flex;
     flex-direction: column;
+    gap: 16px;
 }
 
-.chronicle-char-picker h2 {
-    margin: 0 0 1rem;
-    font-size: 1.2rem;
-}
-
-.chronicle-char-picker-list {
-    overflow-y: auto;
-    flex: 1;
-}
-
-.chronicle-char-picker-item {
+.cd-modal-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.6rem 0.5rem;
+    justify-content: space-between;
+}
+
+.cd-modal-title {
+    font-family: var(--cd-font-display);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+    margin: 0;
+}
+
+.cd-modal-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cd-modal-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s;
 }
 
-.chronicle-char-picker-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.chronicle-char-picker-empty {
-    color: var(--color-cream-muted);
-    font-size: 0.9rem;
-    text-align: center;
-    padding: 1.5rem 0;
-}
-
-.chronicle-char-picker-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 1rem;
+.cd-modal-item:hover {
+    background: var(--cd-bg-elevated);
 }
 
 /* Breadcrumb */
@@ -674,56 +673,915 @@ p.chronicle-description {
     display: block;
 }
 
-/* --- Chronicle Banner (Detail View) --- */
-.chronicle-banner-area {
+
+/* ============================================================= */
+/* Chronicle Detail — Redesign (cd- prefix)                      */
+/* ============================================================= */
+
+/* --- Theme Variables (Dark default) --- */
+.chronicle-detail {
+    --cd-bg-primary: var(--theme-bg-primary);
+    --cd-bg-surface: var(--theme-bg-surface);
+    --cd-bg-elevated: var(--theme-bg-elevated);
+    --cd-border-divider: var(--theme-border-divider);
+    --cd-border-primary: var(--theme-border-primary);
+    --cd-text-primary: var(--theme-text-primary);
+    --cd-text-secondary: var(--theme-text-secondary);
+    --cd-text-tertiary: var(--theme-text-tertiary);
+    --cd-accent: var(--theme-accent);
+    --cd-accent-soft: var(--theme-accent-soft);
+    --cd-status-success: var(--theme-success);
+    --cd-status-success-bg: var(--theme-success-soft);
+    --cd-status-warning: var(--theme-warning);
+    --cd-font-primary: var(--app-font-body);
+    --cd-font-display: var(--app-font-heading);
+    --cd-radius-card: 16px;
+    --cd-radius-pill: 24px;
+
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    background: var(--cd-bg-primary);
+}
+
+/* --- Sticky Header (header + tabs stick below banner) --- */
+.cd-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--cd-bg-primary);
+}
+
+/* --- Banner --- */
+.cd-banner {
     position: relative;
-    margin: -1.5rem -1.5rem 1rem -1.5rem;
-    height: 80px;
+    width: 100%;
+    height: 120px;
     overflow: hidden;
-    border-radius: 16px 16px 0 0;
-    background: rgba(0, 0, 0, 0.3);
-    transition: height 0.3s ease;
+    background: linear-gradient(135deg, var(--cd-bg-elevated) 0%, var(--cd-bg-primary) 100%);
 }
 
-.chronicle-banner-area.has-banner {
-    height: 200px;
+.cd-banner.has-banner {
+    height: 160px;
 }
 
-.chronicle-banner-img {
+.cd-banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 50%;
+    display: block;
+}
+
+.cd-banner-actions {
+    position: absolute;
+    bottom: 12px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+.cd-banner-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--cd-bg-elevated) 86%, transparent);
+    border: 1px solid var(--cd-text-tertiary);
+    color: var(--cd-text-tertiary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.cd-banner-btn .lucide {
+    width: 12px;
+    height: 12px;
+}
+
+.cd-banner-btn:hover {
+    border-color: var(--cd-text-secondary);
+    color: var(--cd-text-secondary);
+}
+
+.cd-banner-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.cd-banner.repositioning {
+    cursor: ns-resize;
+    outline: 2px solid var(--cd-accent);
+    outline-offset: -2px;
+}
+
+.cd-banner.repositioning .cd-banner-img {
+    cursor: grab;
+}
+
+.cd-banner.repositioning .cd-banner-img:active {
+    cursor: grabbing;
+}
+
+.cd-banner-btn.active {
+    border-color: var(--cd-accent);
+    color: var(--cd-accent);
+}
+
+/* --- Header --- */
+.cd-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 24px;
+}
+
+.cd-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cd-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.cd-back-btn {
+    color: var(--cd-accent);
+    text-decoration: none;
+    font-family: var(--cd-font-primary);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+}
+
+.cd-back-btn:hover {
+    opacity: 0.7;
+}
+
+.cd-header h2 {
+    margin: 0;
+    font-family: var(--cd-font-display);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cd-badge {
+    font-family: var(--cd-font-primary);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--cd-radius-pill);
+    flex-shrink: 0;
+}
+
+.cd-badge--active {
+    background: var(--cd-status-success-bg);
+    color: var(--cd-status-success);
+}
+
+.cd-badge--archived {
+    background: rgba(104, 100, 92, 0.2);
+    color: var(--cd-text-secondary);
+}
+
+.cd-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cd-narrator {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-invite-code {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--cd-text-tertiary);
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.cd-invite-code:hover {
+    color: var(--cd-text-secondary);
+}
+
+.cd-description {
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-style: italic;
+    color: var(--cd-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.cd-description.empty {
+    opacity: 0.5;
+}
+
+/* --- Editable (narrator) --- */
+.cd-editable {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.cd-editable:hover {
+    color: var(--cd-accent);
+}
+
+.cd-edit-input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--cd-accent);
+    border-radius: 6px;
+    color: var(--cd-text-primary);
+    padding: 0.4rem 0.6rem;
+    width: 100%;
+    outline: none;
+}
+
+.cd-edit-input--title {
+    font-family: var(--cd-font-display);
+    font-size: 22px;
+    font-weight: 500;
+}
+
+.cd-edit-input--desc {
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-style: italic;
+    resize: vertical;
+    min-height: 2.5rem;
+}
+
+/* --- Tab Bar --- */
+.cd-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--cd-border-divider);
+}
+
+.cd-tab {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--cd-text-tertiary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.cd-tab:hover {
+    color: var(--cd-text-secondary);
+}
+
+.cd-tab.active {
+    color: var(--cd-text-primary);
+    border-bottom-color: var(--cd-accent);
+}
+
+/* --- Tab Content --- */
+.cd-content {
+    padding: 20px 24px;
+}
+
+.cd-tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.cd-tab-panel.hidden {
+    display: none;
+}
+
+/* --- Resumen Tab Components --- */
+.cd-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cd-section-label {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cd-accent);
+}
+
+.cd-card {
+    background: var(--cd-bg-surface);
+    border-radius: var(--cd-radius-card);
+    padding: 16px;
+}
+
+.cd-card--row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cd-card--spaced {
+    justify-content: space-between;
+}
+
+.cd-card--row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cd-card--col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cd-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--cd-accent);
+}
+
+.cd-card-icon .lucide {
+    width: 20px;
+    height: 20px;
+}
+
+.cd-card-text {
+    font-family: var(--cd-font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+}
+
+.cd-card-subtitle {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-card-body {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.cd-card-muted {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-tertiary);
+    font-style: italic;
+}
+
+.cd-card-clickable {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cd-card-clickable:hover {
+    background: var(--cd-bg-elevated);
+}
+
+/* Character card */
+.cd-char-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--cd-bg-elevated);
+    border: 1px solid var(--cd-border-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.cd-char-avatar-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
 
-.chronicle-banner-upload-btn {
-    position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid var(--color-cream-muted);
-    color: var(--color-cream);
+.cd-char-initials {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-char-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cd-char-name {
+    font-family: var(--cd-font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+}
+
+.cd-char-clan {
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    color: var(--cd-text-secondary);
+}
+
+/* --- Players Tab (Jugadores) --- */
+.cd-players-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cd-player-card {
+    background: var(--cd-bg-surface);
+    border-radius: var(--cd-radius-card);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cd-player-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+
+.cd-player-head-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.cd-player-icon {
+    color: var(--cd-text-secondary);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.cd-player-icon .lucide {
+    width: 20px;
+    height: 20px;
+}
+
+.cd-player-name {
+    font-family: var(--cd-font-primary);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cd-role-badge {
+    font-family: var(--cd-font-primary);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--cd-accent);
+    padding: 3px 8px;
+    border-radius: var(--cd-radius-pill);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.cd-role-badge--narrator {
+    background: var(--cd-accent-soft);
+}
+
+.cd-role-badge--player {
+    background: var(--cd-bg-elevated);
+}
+
+.cd-player-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--cd-bg-elevated);
+}
+
+.cd-player-char {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+
+.cd-player-char-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.cd-player-char-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: var(--cd-bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.cd-player-char-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cd-player-char-initials {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-player-char-name {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cd-player-char-name.clickable {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.cd-player-char-name.clickable:hover {
+    color: var(--cd-accent);
+}
+
+.cd-player-char-sep {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-tertiary);
+    flex-shrink: 0;
+}
+
+.cd-player-char-clan {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-secondary);
+    white-space: nowrap;
+}
+
+/* Delete buttons (accent bg, same size as banner btns) */
+.cd-delete-btn {
+    width: 24px;
+    height: 24px;
     border-radius: 8px;
-    padding: 0.4rem 0.6rem;
+    background: var(--cd-accent);
+    border: none;
+    color: var(--cd-text-primary);
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 0.3rem;
-    font-family: 'Special Elite', cursive;
-    font-size: 0.8rem;
-    transition: background-color 0.2s, border-color 0.3s;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
 }
 
-.chronicle-banner-upload-btn:hover {
-    background: rgba(0, 0, 0, 0.9);
-    border-color: var(--color-red-accent);
+.cd-delete-btn .lucide {
+    width: 12px;
+    height: 12px;
 }
 
-.chronicle-banner-upload-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.cd-delete-btn {
+    opacity: 0;
+    transition: opacity 0.2s;
 }
 
+.cd-player-card:hover .cd-delete-btn {
+    opacity: 1;
+}
+
+.cd-delete-btn:hover {
+    opacity: 0.8;
+}
+
+/* Add character row */
+.cd-add-char {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 0;
+    cursor: pointer;
+    transition: color 0.2s;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-add-char:hover {
+    color: var(--cd-text-secondary);
+}
+
+.cd-add-char .lucide {
+    width: 14px;
+    height: 14px;
+}
+
+.cd-add-char span {
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+}
+
+/* --- Diario Tab --- */
+
+/* Sub-tabs (Sesiones / Mis Notas — mobile only) */
+.cd-diario-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--cd-border-divider);
+}
+
+.cd-diario-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 3px solid var(--cd-border-divider);
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--cd-text-tertiary);
+    padding: 0 8px;
+    height: 40px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.cd-diario-tab:hover {
+    color: var(--cd-text-secondary);
+}
+
+.cd-diario-tab.active {
+    font-weight: 600;
+    color: var(--cd-text-primary);
+    border-bottom-color: var(--cd-accent);
+}
+
+/* Columns container */
+.cd-diario-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Each column */
+.cd-diario-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Mobile: only show active sub-tab column */
+.cd-diario-col[data-dcol="notas"] {
+    display: none;
+}
+
+.cd-diario-col[data-dcol="notas"].active-dcol {
+    display: flex;
+}
+
+.cd-diario-col[data-dcol="sesiones"].hidden-dcol {
+    display: none;
+}
+
+/* Section labels (desktop only, hidden on mobile) */
+.cd-diario-label {
+    display: none;
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cd-accent);
+}
+
+.cd-diario-label--notas {
+    color: var(--cd-status-warning);
+}
+
+/* Session list */
+.cd-diario-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Session recap card */
+.cd-recap-card {
+    display: flex;
+    gap: 12px;
+    background: var(--cd-bg-surface);
+    border-radius: var(--cd-radius-card);
+    padding: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cd-recap-card:hover {
+    background: var(--cd-bg-elevated);
+}
+
+.cd-recap-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--cd-text-tertiary);
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.cd-recap-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+.cd-recap-title {
+    font-family: var(--cd-font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+}
+
+.cd-recap-meta {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-recap-body {
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    color: var(--cd-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Note card */
+.cd-note-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--cd-bg-surface);
+    border-radius: var(--cd-radius-card);
+    padding: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cd-note-card:hover {
+    background: var(--cd-bg-elevated);
+}
+
+.cd-note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cd-note-title {
+    font-family: var(--cd-font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.cd-note-char-badge {
+    font-family: var(--cd-font-primary);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--cd-status-warning);
+    background: var(--cd-bg-elevated);
+    padding: 3px 8px;
+    border-radius: var(--cd-radius-pill);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.cd-note-body {
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    color: var(--cd-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.cd-note-date {
+    font-family: var(--cd-font-primary);
+    font-size: 10px;
+    color: var(--cd-text-tertiary);
+}
+
+/* Add list item button (+ Nuevo Recuento / + Nueva Nota) */
+.cd-add-list-btn {
+    width: 100%;
+    height: 52px;
+    background: transparent;
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: var(--cd-radius-card);
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--cd-text-tertiary);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.cd-add-list-btn:hover {
+    border-color: var(--cd-text-secondary);
+    color: var(--cd-text-secondary);
+}
+
+/* Load more button */
+.cd-load-more-btn {
+    width: 100%;
+    height: 44px;
+    background: var(--cd-bg-elevated);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: 12px;
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cd-text-primary);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.cd-load-more-btn:hover {
+    background: var(--cd-bg-surface);
+}
+
+/* Hide add-recap on mobile for players (controlled by JS adding .hidden) */
+/* On desktop, add-recap is hidden entirely (narrator adds via different flow) */
+
+/* --- Responsive: small screens --- */
 @media (max-width: 600px) {
     .chronicles-header {
         flex-direction: column;
@@ -734,15 +1592,117 @@ p.chronicle-description {
         grid-template-columns: 1fr;
     }
 
-    .chronicle-sections {
-        grid-template-columns: 1fr;
+    .cd-banner.has-banner {
+        height: 120px;
     }
 
-    .chronicle-banner-area.has-banner {
-        height: 140px;
+    .cd-header {
+        padding: 12px 16px;
+    }
+
+    .cd-header h2 {
+        font-size: 18px;
+    }
+
+    .cd-tabs {
+        padding: 0 16px;
+        overflow-x: auto;
+    }
+
+    .cd-tab {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .cd-content {
+        padding: 16px;
     }
 
     .chronicle-card-banner {
         height: 90px;
+    }
+}
+
+/* --- Responsive: desktop --- */
+@media (min-width: 768px) {
+    .cd-banner {
+        height: 180px;
+    }
+
+    .cd-banner.has-banner {
+        height: 220px;
+    }
+
+    .cd-tabs {
+        padding: 0 40px;
+    }
+
+    .cd-tab {
+        font-size: 14px;
+        padding: 12px 16px;
+    }
+
+    .cd-content {
+        padding: 28px 40px;
+    }
+
+    .cd-tab-panel {
+        gap: 28px;
+    }
+
+    .cd-players-grid {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: row;
+        gap: 20px;
+    }
+
+    .cd-player-card {
+        width: 430px;
+    }
+
+    /* Diario: desktop layout */
+    .cd-diario-tabs {
+        display: none;
+    }
+
+    .cd-diario-columns {
+        flex-direction: row;
+        gap: 28px;
+    }
+
+    .cd-diario-col {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* Both columns always visible on desktop */
+    .cd-diario-col[data-dcol="notas"],
+    .cd-diario-col[data-dcol="notas"].active-dcol {
+        display: flex;
+    }
+
+    .cd-diario-col[data-dcol="sesiones"],
+    .cd-diario-col[data-dcol="sesiones"].hidden-dcol {
+        display: flex;
+    }
+
+    .cd-diario-label {
+        display: block;
+    }
+
+    /* Desktop card spacing adjustments */
+    .cd-recap-card {
+        padding: 18px;
+        gap: 14px;
+    }
+
+    .cd-recap-info {
+        gap: 6px;
+    }
+
+    .cd-note-card {
+        padding: 18px;
+        gap: 10px;
     }
 }

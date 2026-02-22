@@ -262,7 +262,7 @@
     }
 
     window.openSheet = function (id) {
-        window.location.href = `characterSheets/index.html?id=${id}`;
+        window.location.hash = `active-character-sheet?id=${encodeURIComponent(id)}`;
     }
 
     window.goToChronicle = function (chronicleId) {

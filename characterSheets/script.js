@@ -76,12 +76,23 @@ function updateHTMLTitle() {
 }
 
 // //////// Theme & Font System //////// //
+const APP_THEME_KEY = "abn_theme";
+const APP_FONT_KEY = "abn_font";
+
+function mapAppFontToSheet(font) {
+  if (font === "terminal") return "phantomas";
+  return font;
+}
+
+function mapSheetFontToApp(font) {
+  if (font === "phantomas") return "terminal";
+  return font;
+}
+
 function initThemeModal() {
   const openBtn = document.getElementById("modeToggle");
   const modal = document.getElementById("theme-modal");
   const closeBtn = document.getElementById("theme-modal-close");
-  const swatches = document.querySelectorAll(".theme-swatch");
-  const fontBtns = document.querySelectorAll(".theme-font-btn");
   const exportPdfBtn = document.getElementById("export-character-pdf-btn");
   const body = document.body;
 
@@ -93,15 +104,8 @@ function initThemeModal() {
     modal.setAttribute("aria-hidden", "true");
   }
   function openModal() {
-    syncActive();
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
-  }
-  function syncActive() {
-    const currentTheme = body.getAttribute("data-theme") || "dark";
-    const currentFont = body.getAttribute("data-font") || "clasico";
-    swatches.forEach(s => s.classList.toggle("active", s.dataset.theme === currentTheme));
-    fontBtns.forEach(b => b.classList.toggle("active", b.dataset.font === currentFont));
   }
 
   // --- open / close ---
@@ -112,41 +116,23 @@ function initThemeModal() {
     if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
   });
 
-  // --- theme selection ---
-  swatches.forEach(swatch => {
-    swatch.addEventListener("click", () => {
-      const theme = swatch.dataset.theme;
-      body.setAttribute("data-theme", theme);
-      localStorage.setItem("theme", theme);
-      syncActive();
-    });
-  });
-
-  // --- font selection ---
-  fontBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const font = btn.dataset.font;
-      document.documentElement.setAttribute("data-font", font);
-      body.setAttribute("data-font", font);
-      localStorage.setItem("font", font);
-      syncActive();
-    });
-  });
-
   exportPdfBtn?.addEventListener("click", () => {
     downloadCharacterPdf();
   });
 
   // --- initialize on load ---
-  const savedTheme = localStorage.getItem("theme");
+  const savedTheme = localStorage.getItem(APP_THEME_KEY);
   const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  body.setAttribute("data-theme", savedTheme || (systemPrefersDark ? "dark" : "light"));
+  const resolvedTheme = savedTheme || (systemPrefersDark ? "dark" : "light");
+  body.setAttribute("data-theme", resolvedTheme);
+  document.documentElement.setAttribute("data-app-theme", resolvedTheme);
 
-  const savedFont = localStorage.getItem("font") || "clasico";
-  document.documentElement.setAttribute("data-font", savedFont);
-  body.setAttribute("data-font", savedFont);
-
-  syncActive();
+  const savedAppFont = localStorage.getItem(APP_FONT_KEY) || "clasico";
+  const savedSheetFont = mapAppFontToSheet(savedAppFont);
+  document.documentElement.setAttribute("data-font", savedSheetFont);
+  document.documentElement.setAttribute("data-app-font", mapSheetFontToApp(savedSheetFont));
+  body.setAttribute("data-font", savedSheetFont);
+  localStorage.setItem(APP_FONT_KEY, mapSheetFontToApp(savedSheetFont));
 }
 initThemeModal();
 
