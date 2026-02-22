@@ -1,0 +1,179 @@
+<style>
+    .settings-page {
+        padding: 24px;
+    }
+
+    .settings-title {
+        margin: 0;
+        font-family: "Cormorant Garamond", serif;
+        font-size: 2.15rem;
+        line-height: 1.1;
+        color: var(--color-cream);
+        font-weight: 600;
+    }
+
+    .settings-subtitle {
+        margin-top: 0.25rem;
+        margin-bottom: 1rem;
+        color: var(--color-cream-muted);
+        font-size: 0.75rem;
+    }
+
+    .settings-card {
+        width: 100%;
+        max-width: 860px;
+        border: 1px solid var(--color-red-muted);
+        border-radius: 12px;
+        background: rgba(18, 17, 20, 0.78);
+        padding: 14px 16px;
+    }
+
+    .settings-row {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 10px;
+    }
+
+    .settings-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .settings-label {
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--color-red-accent);
+    }
+
+    .settings-value {
+        color: var(--color-cream);
+        font-size: 0.82rem;
+    }
+
+    .settings-name-value {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .settings-edit-inline {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 1px solid var(--color-cream-muted);
+        background: rgba(0, 0, 0, 0.18);
+        color: var(--color-cream-muted);
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .settings-edit-inline:hover {
+        color: var(--color-cream);
+        border-color: var(--color-cream);
+    }
+
+    .settings-edit-inline .lucide {
+        width: 11px;
+        height: 11px;
+    }
+
+    .settings-password-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 6px;
+    }
+
+    .settings-reset-btn {
+        min-width: 190px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid var(--color-cream-muted);
+        background: rgba(0, 0, 0, 0.2);
+        color: var(--color-cream);
+        font-size: 0.68rem;
+        font-family: "Special Elite", cursive;
+        cursor: pointer;
+    }
+
+    .settings-reset-btn:hover {
+        border-color: var(--color-red-accent);
+        color: var(--color-red-accent);
+    }
+</style>
+
+<div class="settings-page">
+    <h1 class="settings-title">Configuración de Cuenta</h1>
+    <p class="settings-subtitle">Datos de registro de tu usuario</p>
+
+    <div class="settings-card">
+        <div class="settings-row">
+            <span class="settings-label">Nombre</span>
+            <div class="settings-name-value">
+                <span id="settings-user-name" class="settings-value">-</span>
+                <button type="button" class="settings-edit-inline" title="Editar nombre">
+                    <i data-lucide="pencil"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <span class="settings-label">Email</span>
+            <span id="settings-user-email" class="settings-value">-</span>
+        </div>
+
+        <div class="settings-password-row">
+            <div class="settings-row" style="margin-bottom:0;">
+                <span class="settings-label">Contraseña</span>
+                <span class="settings-value">••••••••••</span>
+            </div>
+            <button id="settings-reset-password-btn" class="settings-reset-btn" type="button">Resetear contraseña</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (async function initSettingsView() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userName = session?.user?.user_metadata?.full_name || session?.user?.email || "-";
+            const userEmail = session?.user?.email || "-";
+            const nameEl = document.getElementById("settings-user-name");
+            const emailEl = document.getElementById("settings-user-email");
+            if (nameEl) nameEl.textContent = userName;
+            if (emailEl) emailEl.textContent = userEmail;
+        } catch (err) {
+            console.error("Settings init error:", err);
+        }
+
+        const resetBtn = document.getElementById("settings-reset-password-btn");
+        if (resetBtn) {
+            resetBtn.addEventListener("click", async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                const email = session?.user?.email;
+                if (!email) {
+                    alert("No se pudo determinar el email del usuario.");
+                    return;
+                }
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}${window.location.pathname}#welcome`,
+                });
+                if (error) {
+                    alert(`Error al enviar el email de reseteo: ${error.message}`);
+                    return;
+                }
+                alert("Te enviamos un email para resetear la contraseña.");
+            });
+        }
+
+        if (window.lucide?.createIcons) {
+            lucide.createIcons();
+        }
+    })();
+</script>

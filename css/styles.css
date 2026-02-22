@@ -42,6 +42,34 @@
 
     /* Selection Colors */
     --color-selected-token: #ff9800;
+
+    /* Sidebar (Dark default) */
+    --sidebar-width-expanded: 180px;
+    --sidebar-width-collapsed: 76px;
+    --sidebar-bg: var(--color-red-muted);
+    --sidebar-text: var(--color-cream-muted);
+    --sidebar-text-active: var(--color-red-accent);
+    --sidebar-border: var(--color-red);
+    --sidebar-action-bg: rgba(0, 0, 0, 0.22);
+    --sidebar-shadow-outer: rgba(24, 5, 5, 0.5);
+    --sidebar-shadow-inner: rgba(7, 1, 1, 0.33);
+    --sidebar-logo-shadow: drop-shadow(0px 4px 2px rgba(191, 174, 174, 0.23)) drop-shadow(0px -8px 3px rgba(0, 0, 0, 0.69));
+    --sidebar-sigil-color: var(--color-red-muted);
+    --sidebar-sigil-shadow: drop-shadow(0px 2px 2px rgba(148, 84, 84, 0.49)) drop-shadow(0px -2px 2px rgba(21, 1, 1, 0.94));
+    --content-theme-bg: var(--color-dark);
+}
+
+:root[data-app-theme="light"] {
+    --sidebar-bg: #ece8de;
+    --sidebar-text: #6e6456;
+    --sidebar-text-active: #8c1c1c;
+    --sidebar-border: #c8bba7;
+    --sidebar-action-bg: rgba(255, 255, 255, 0.65);
+    --sidebar-shadow-outer: rgba(96, 86, 68, 0.18);
+    --sidebar-shadow-inner: rgba(255, 255, 255, 0.4);
+    --sidebar-sigil-color: #b7ab99;
+    --sidebar-sigil-shadow: none;
+    --content-theme-bg: #f3ede2;
 }
 
 html,
@@ -70,19 +98,18 @@ button,
 
 /* Sidebar */
 .sidebar {
-    width: 200px;
-    background-color: var(--color-red-muted);
+    width: var(--sidebar-width-expanded);
+    background-color: var(--sidebar-bg);
     background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png");
     background-repeat: repeat;
     background-size: 500px;
     background-position: center;
     background-blend-mode: multiply;
-    border-right: 1px solid var(--color-red);
-    color: var(--color-cream);
+    border-right: 1px solid var(--sidebar-border);
+    color: var(--sidebar-text);
     display: flex;
     flex-direction: column;
-    border-right: 1px solid #2f2f41;
-    box-shadow: 5px 0px 30px 5px rgba(24, 5, 5, 0.501), inset -50px 0px 50px 10px rgba(7, 1, 1, 0.326);
+    box-shadow: 5px 0px 30px 5px var(--sidebar-shadow-outer), inset -50px 0px 50px 10px var(--sidebar-shadow-inner);
     position: relative;
 }
 
@@ -91,11 +118,9 @@ button,
 .logo-container {
     display: flex;
     flex-direction: row;
-    padding: 15px;
+    padding: 12px 10px;
     text-align: center;
     justify-content: center;
-
-
 }
 
 /* Utilities */
@@ -123,35 +148,39 @@ button,
 
 .icono {
     display: none;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 .icono-grande {
     display: block;
     width: 100%;
+    max-width: 120px;
     height: auto;
-    filter: drop-shadow(0px 4px 2px rgba(191, 174, 174, 0.233)) drop-shadow(0px -8px 3px rgba(0, 0, 0, 0.694));
+    filter: var(--sidebar-logo-shadow);
 }
 
-.nav {
+.sidebar .nav {
     flex: 1;
     overflow-y: auto;
 }
 
-.nav ul {
+.sidebar .nav ul {
     list-style: none;
-    padding: 10px 0;
+    padding: 8px 0 10px;
     display: flex;
     flex-direction: column;
     min-height: 100%;
 }
 
-.nav ul li {
-    margin-bottom: 20px;
+.sidebar .nav ul li {
+    margin-bottom: 11px;
 }
 
-.nav li a {
+.sidebar .nav li:not(.nav-quick-actions) > a {
     margin: 0;
-    padding-left: 15px;
+    padding: 0 4px;
     display: flex;
     flex-direction: row;
     justify-content: flex-start;
@@ -159,41 +188,81 @@ button,
     cursor: pointer;
     text-decoration: none;
     color: inherit;
-    font-size: 1rem;
+    font-size: 0.82rem;
+    line-height: 1.25;
     transition: background-color 0.2s;
-    gap: 10px;
+    gap: 8px;
+    min-height: 40px;
+}
+
+.sidebar .nav li:not(.nav-quick-actions) > a .lucide {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
 }
 
 
-.nav li:hover,
-.nav li.active {
-    /* background-color: var(--color-cream); */
-    color: var(--color-red-accent);
+.sidebar .nav li:hover,
+.sidebar .nav li.active {
+    color: var(--sidebar-text-active);
 }
 
 /* Override link hover to defer styling to list item */
-.nav a:hover {
+.sidebar .nav li:not(.nav-quick-actions) > a:hover {
     background-color: transparent !important;
     color: inherit !important;
 }
 
-.nav li.grabado {
+.sidebar .nav li.grabado {
     /* avoid select text */
     user-select: none;
-    align-self: center;
-    justify-self: center;
+    align-self: flex-start;
+    padding-left: 4px;
     margin-top: auto;
     font-family: 'Sigils';
-    font-size: 15rem;
-    color: var(--color-red-muted);
-    filter: drop-shadow(0px 2px 2px rgba(148, 84, 84, 0.494)) drop-shadow(0px -2px 2px rgba(21, 1, 1, 0.936));
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--sidebar-sigil-color);
+    filter: var(--sidebar-sigil-shadow);
     cursor: default;
+    opacity: 0.9;
 }
 
-.nav li.grabado:hover,
-.nav li.grabado.active {
+.sidebar .nav li.grabado:hover,
+.sidebar .nav li.grabado.active {
     background-color: transparent;
-    color: var(--color-red);
+    color: var(--sidebar-sigil-color);
+}
+
+.sidebar .nav li.nav-quick-actions {
+    margin-bottom: 11px;
+    display: flex;
+    gap: 8px;
+    padding: 0 4px;
+}
+
+.sidebar .nav li.nav-quick-actions .icon-btn {
+    flex: 1;
+    min-width: 0;
+    height: 24px;
+    border-radius: 8px;
+    border: 1px solid var(--sidebar-text);
+    background: var(--sidebar-action-bg);
+    color: var(--sidebar-text);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+}
+
+.sidebar .nav li.nav-quick-actions .icon-btn:hover {
+    color: var(--sidebar-text-active);
+    border-color: var(--sidebar-text-active);
+}
+
+.sidebar .nav li.nav-quick-actions .icon-btn .lucide {
+    width: 12px;
+    height: 12px;
 }
 
 
@@ -206,9 +275,15 @@ button,
     /* background-color: rgba(140, 86, 28, 0.4); */
     background-blend-mode: multiply;
     flex: 1;
-    padding: none;
+    padding: 0;
     overflow-y: auto;
+    outline: none;
+}
 
+.content.content-theme-bg-only {
+    background: var(--content-theme-bg);
+    background-image: none;
+    background-blend-mode: normal;
 }
 
 
@@ -458,7 +533,7 @@ button.gameButton:hover {
 
 /* Sidebar Slim Mode (Responsive + Forced) */
 .sidebar.sidebar-slim-mode {
-    width: 70px;
+    width: var(--sidebar-width-collapsed);
     align-items: center;
 }
 
@@ -467,13 +542,18 @@ button.gameButton:hover {
 }
 
 .sidebar.sidebar-slim-mode .nav li.grabado {
-    display: none;
+    font-size: 0;
+    line-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    pointer-events: none;
 }
 
 .sidebar.sidebar-slim-mode .icono {
     display: block;
-    width: 100%;
-    height: auto;
+    width: 32px;
+    height: 32px;
 }
 
 .sidebar.sidebar-slim-mode .nav {
@@ -481,13 +561,14 @@ button.gameButton:hover {
 }
 
 .sidebar.sidebar-slim-mode .nav li {
-    margin-bottom: 20px;
+    margin-bottom: 8px;
     align-items: center;
     padding-left: 0;
 }
 
-.sidebar.sidebar-slim-mode .nav li a {
-    padding-left: 0px;
+.sidebar.sidebar-slim-mode .nav li:not(.nav-quick-actions) > a {
+    padding: 0;
+    min-height: 40px;
     justify-content: center;
 }
 
@@ -495,10 +576,28 @@ button.gameButton:hover {
     display: none;
 }
 
-.sidebar.sidebar-slim-mode .nav a .lucide,
+.sidebar.sidebar-slim-mode .nav li:not(.nav-quick-actions) > a .lucide,
 .sidebar.sidebar-slim-mode .nav span .lucide {
     display: block;
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     flex: 0 0 auto;
+}
+
+.sidebar.sidebar-slim-mode .nav li.nav-quick-actions {
+    flex-direction: column;
+    padding: 0;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar.sidebar-slim-mode .nav li.nav-quick-actions .icon-btn {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+}
+
+.sidebar.sidebar-slim-mode .nav li.nav-quick-actions .icon-btn .lucide {
+    width: 12px;
+    height: 12px;
 }
