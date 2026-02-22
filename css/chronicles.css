@@ -1,0 +1,319 @@
+/* === Chronicles === */
+
+.chronicles-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.chronicles-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.chronicles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+}
+
+.chronicle-card {
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    padding: 1.5rem;
+    background: rgba(18, 17, 20, 0.8);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.3s;
+}
+
+.chronicle-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-red-accent);
+}
+
+.chronicle-card h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.chronicle-card-meta {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.chronicle-badge {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+
+.chronicle-badge.narrator {
+    background: var(--color-red);
+    color: var(--color-cream);
+}
+
+.chronicle-badge.player {
+    background: transparent;
+    border: 1px solid var(--color-cream-muted);
+    color: var(--color-cream-muted);
+}
+
+.chronicle-badge.active {
+    background: rgba(39, 174, 96, 0.2);
+    border: 1px solid #27ae60;
+    color: #27ae60;
+}
+
+.chronicle-badge.archived {
+    background: rgba(104, 100, 92, 0.2);
+    border: 1px solid var(--color-cream-muted);
+    color: var(--color-cream-muted);
+}
+
+.chronicle-card-stats {
+    font-size: 0.9rem;
+    color: var(--color-cream-muted);
+}
+
+.chronicle-card-stats span {
+    display: block;
+}
+
+/* --- Modal --- */
+.chronicle-modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+}
+
+.chronicle-modal-overlay.visible {
+    display: flex;
+}
+
+.chronicle-modal {
+    background: #1a1a1a;
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 420px;
+    width: 90%;
+}
+
+.chronicle-modal h2 {
+    margin: 0 0 1rem;
+    font-size: 1.3rem;
+}
+
+.chronicle-modal label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--color-cream-muted);
+}
+
+.chronicle-modal input[type="text"] {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--color-cream-muted);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--color-cream);
+    font-family: 'Special Elite', cursive;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.chronicle-modal input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-red-accent);
+}
+
+.chronicle-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.chronicle-modal .msg {
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    min-height: 1.2em;
+}
+
+.chronicle-modal .msg.error {
+    color: #e74c3c;
+}
+
+.chronicle-modal .msg.success {
+    color: #27ae60;
+}
+
+/* --- Chronicle Dashboard --- */
+.chronicle-dashboard {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.chronicle-dashboard-header {
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    padding: 1.5rem;
+    background: rgba(18, 17, 20, 0.8);
+    margin-bottom: 1.5rem;
+}
+
+.chronicle-dashboard-header h2 {
+    margin: 0 0 0.5rem;
+}
+
+.chronicle-dashboard-meta {
+    color: var(--color-cream-muted);
+    font-size: 0.95rem;
+}
+
+.chronicle-dashboard-meta span {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.chronicle-invite-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.chronicle-invite-row code {
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+}
+
+.chronicle-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.chronicle-section-card {
+    border: 1px solid var(--color-red-muted);
+    border-radius: 12px;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.35);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.3s;
+}
+
+.chronicle-section-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-red-accent);
+}
+
+.chronicle-section-card h3 {
+    margin: 0.5rem 0 0.25rem;
+    font-size: 1rem;
+}
+
+.chronicle-section-card .count {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--color-red-accent);
+}
+
+.chronicle-players-list {
+    border: 1px solid var(--color-red-muted);
+    border-radius: 16px;
+    padding: 1.5rem;
+    background: rgba(14, 12, 16, 0.9);
+}
+
+.chronicle-players-list h3 {
+    margin: 0 0 1rem;
+}
+
+.chronicle-player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chronicle-player-row:last-child {
+    border-bottom: none;
+}
+
+.chronicle-player-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-red-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.chronicle-player-info {
+    flex: 1;
+}
+
+.chronicle-player-info .name {
+    font-size: 0.95rem;
+}
+
+.chronicle-player-info .role {
+    font-size: 0.8rem;
+    color: var(--color-cream-muted);
+}
+
+/* Breadcrumb */
+.chronicle-breadcrumb {
+    font-size: 0.85rem;
+    color: var(--color-cream-muted);
+    margin-bottom: 0.75rem;
+}
+
+.chronicle-breadcrumb a {
+    color: var(--color-red-accent);
+    text-decoration: none;
+}
+
+.chronicle-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .chronicles-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .chronicles-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chronicle-sections {
+        grid-template-columns: 1fr;
+    }
+}

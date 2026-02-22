@@ -119,7 +119,7 @@ async function initAuthForms() {
       // Ensure a player record exists (handles both signup and login paths)
       await ensurePlayer({ displayName: name, characterName });
       alert("¡Registrado!");
-      window.location.hash = "games";
+      window.location.hash = "chronicles";
     });
     suForm._init = true;
   }
@@ -144,9 +144,9 @@ async function initAuthForms() {
         return;
       }
 
-      console.log("Login exitoso, cambiando hash a #games");
+      console.log("Login exitoso, cambiando hash a #chronicles");
       await ensurePlayer(); // Asegura que el jugador exista
-      window.location.hash = "games";
+      window.location.hash = "chronicles";
     });
     liForm._init = true;
   }

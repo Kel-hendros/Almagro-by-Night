@@ -1,0 +1,200 @@
+<div class="main-container games">
+    <div class="chronicle-breadcrumb">
+        <a href="#chronicles">Mis Crónicas</a> &rsaquo; <span id="chronicle-breadcrumb-name">...</span>
+    </div>
+
+    <div class="chronicle-dashboard">
+        <!-- Header Card -->
+        <div class="chronicle-dashboard-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                <h2 id="chronicle-name">Cargando...</h2>
+                <span id="chronicle-status-badge" class="chronicle-badge active">Activa</span>
+            </div>
+            <div class="chronicle-dashboard-meta">
+                <span id="chronicle-narrator">Narrador: —</span>
+                <div id="chronicle-invite-section" class="chronicle-invite-row" style="display: none;">
+                    <span>Código de invitación:</span>
+                    <code id="chronicle-invite-code">—</code>
+                    <button class="gameButton secondary" id="btn-copy-invite"
+                        style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Copiar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Cards -->
+        <div class="chronicle-sections">
+            <div class="chronicle-section-card" onclick="navigateToSection('character-sheets')">
+                <i data-lucide="scroll" style="width: 28px; height: 28px; color: var(--color-cream-muted);"></i>
+                <h3>Personajes</h3>
+                <div class="count" id="chronicle-sheets-count">—</div>
+            </div>
+            <div class="chronicle-section-card" onclick="navigateToSection('combat-tracker')">
+                <i data-lucide="swords" style="width: 28px; height: 28px; color: var(--color-cream-muted);"></i>
+                <h3>Encuentros</h3>
+                <div class="count" id="chronicle-encounters-count">—</div>
+            </div>
+            <div class="chronicle-section-card" id="section-game" onclick="navigateToSection('games')" style="display: none;">
+                <i data-lucide="map" style="width: 28px; height: 28px; color: var(--color-cream-muted);"></i>
+                <h3>Almagro de Noche</h3>
+                <div class="count" id="chronicle-game-status">—</div>
+            </div>
+        </div>
+
+        <!-- Players List -->
+        <div class="chronicle-players-list">
+            <h3>Jugadores</h3>
+            <div id="chronicle-players-container">
+                <p class="muted">Cargando...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (async function initChronicle() {
+        const chronicleId = localStorage.getItem("currentChronicleId");
+        if (!chronicleId) {
+            window.location.hash = "chronicles";
+            return;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            window.location.hash = "welcome";
+            return;
+        }
+
+        // Get current player
+        const { data: currentPlayer } = await supabase
+            .from("players")
+            .select("id, name, is_admin")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+        if (!currentPlayer) {
+            window.location.hash = "chronicles";
+            return;
+        }
+
+        // Fetch chronicle
+        const { data: chronicle, error: cErr } = await supabase
+            .from("chronicles")
+            .select("id, name, status, invite_code, creator_id, created_at")
+            .eq("id", chronicleId)
+            .maybeSingle();
+
+        if (cErr || !chronicle) {
+            console.error("Error loading chronicle:", cErr);
+            document.getElementById("chronicle-name").textContent = "Crónica no encontrada";
+            return;
+        }
+
+        // Check participation
+        const { data: participation } = await supabase
+            .from("chronicle_participants")
+            .select("role")
+            .eq("chronicle_id", chronicleId)
+            .eq("player_id", currentPlayer.id)
+            .maybeSingle();
+
+        const isNarrator = participation?.role === "narrator" || chronicle.creator_id === currentPlayer.id;
+
+        // Populate header
+        document.getElementById("chronicle-name").textContent = chronicle.name;
+        document.getElementById("chronicle-breadcrumb-name").textContent = chronicle.name;
+
+        const statusBadge = document.getElementById("chronicle-status-badge");
+        if (chronicle.status === "archived") {
+            statusBadge.textContent = "Archivada";
+            statusBadge.className = "chronicle-badge archived";
+        }
+
+        // Narrator info
+        const { data: narratorPlayer } = await supabase
+            .from("players")
+            .select("name")
+            .eq("id", chronicle.creator_id)
+            .maybeSingle();
+
+        document.getElementById("chronicle-narrator").textContent =
+            `Narrador: ${narratorPlayer?.name || "—"}`;
+
+        // Invite code (narrator only)
+        if (isNarrator) {
+            const inviteSection = document.getElementById("chronicle-invite-section");
+            inviteSection.style.display = "flex";
+            document.getElementById("chronicle-invite-code").textContent = chronicle.invite_code;
+
+            document.getElementById("btn-copy-invite").addEventListener("click", async () => {
+                try {
+                    await navigator.clipboard.writeText(chronicle.invite_code);
+                    alert("Código copiado al portapapeles.");
+                } catch (err) {
+                    alert("No se pudo copiar: " + (err?.message || err));
+                }
+            });
+        }
+
+        // Fetch counts
+        const [sheetsResult, encountersResult, gameResult, participantsResult] = await Promise.all([
+            supabase.from("character_sheets").select("id", { count: "exact", head: true }).eq("chronicle_id", chronicleId),
+            supabase.from("encounters").select("id", { count: "exact", head: true }).eq("chronicle_id", chronicleId),
+            supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1),
+            supabase.from("chronicle_participants")
+                .select("player_id, role, player:players(id, name)")
+                .eq("chronicle_id", chronicleId)
+        ]);
+
+        document.getElementById("chronicle-sheets-count").textContent = sheetsResult.count ?? 0;
+        document.getElementById("chronicle-encounters-count").textContent = encountersResult.count ?? 0;
+
+        // Game section
+        const game = gameResult.data?.[0];
+        if (game) {
+            document.getElementById("section-game").style.display = "block";
+            document.getElementById("chronicle-game-status").textContent = game.name;
+            localStorage.setItem("currentGameId", game.id);
+        }
+
+        // Players list
+        const playersContainer = document.getElementById("chronicle-players-container");
+        const participants = participantsResult.data || [];
+
+        if (!participants.length) {
+            playersContainer.innerHTML = '<p class="muted">No hay jugadores.</p>';
+        } else {
+            playersContainer.innerHTML = "";
+            // Narrator first
+            const sorted = [...participants].sort((a, b) => {
+                if (a.role === "narrator") return -1;
+                if (b.role === "narrator") return 1;
+                return 0;
+            });
+
+            sorted.forEach(p => {
+                const name = p.player?.name || "Sin nombre";
+                const initial = name.charAt(0).toUpperCase();
+                const roleLabel = p.role === "narrator" ? "Narrador" : "Jugador";
+
+                const row = document.createElement("div");
+                row.className = "chronicle-player-row";
+                row.innerHTML = `
+                    <div class="chronicle-player-avatar">${initial}</div>
+                    <div class="chronicle-player-info">
+                        <div class="name">${name}</div>
+                        <div class="role">${roleLabel}</div>
+                    </div>
+                `;
+                playersContainer.appendChild(row);
+            });
+        }
+
+        // Refresh lucide icons
+        if (window.lucide) lucide.createIcons();
+
+        // Navigation helper
+        window.navigateToSection = function(hash) {
+            window.location.hash = hash;
+        };
+    })();
+</script>

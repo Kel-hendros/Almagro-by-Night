@@ -53,6 +53,10 @@ async function updateSidebar() {
     if (liChars) {
       liChars.classList.remove("hidden");
     }
+    const liChronicles = document.getElementById("menu-chronicles");
+    if (liChronicles) {
+      liChronicles.classList.remove("hidden");
+    }
   } else {
     liWelcome?.classList.remove("hidden");
     liUser?.classList.add("hidden");
@@ -60,12 +64,15 @@ async function updateSidebar() {
     liLogout?.classList.add("hidden");
     document.getElementById("menu-tools")?.classList.add("hidden");
     document.getElementById("menu-chars")?.classList.add("hidden");
+    document.getElementById("menu-chronicles")?.classList.add("hidden");
   }
 }
 
 // 2) Define routes mapping hashes to fragment URLs
 const routes = {
   welcome: "fragments/login.html",
+  chronicles: "fragments/chronicles.html",
+  chronicle: "fragments/chronicle.html",
   games: "fragments/games.html",
   game: "fragments/game.html",
   tools: "fragments/tools.html",
@@ -92,7 +99,13 @@ async function loadRoute(force = false) {
 
   // Previously redirected authenticated users from 'welcome' to 'games'.
   // Now we want them to see the home screen on 'welcome'.
-  if (!session && (baseHash === "games" || baseHash === "game")) {
+  if (
+    !session &&
+    (baseHash === "games" ||
+      baseHash === "game" ||
+      baseHash === "chronicles" ||
+      baseHash === "chronicle")
+  ) {
     targetHash = "welcome";
   }
 
@@ -149,6 +162,9 @@ async function loadRoute(force = false) {
       console.log("Router: Calling initAuthForms for hash", targetHash);
       initAuthForms();
     }
+  }
+  if (targetHash === "chronicles") {
+    if (typeof window.loadChronicles === "function") window.loadChronicles();
   }
   if (targetHash === "games") {
     if (typeof window.loadGames === "function") window.loadGames();

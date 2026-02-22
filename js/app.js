@@ -12,11 +12,18 @@ const SINGLE_GAME_SELECT = `
 `;
 
 async function querySingleGame() {
-  const { data, error } = await supabase
+  let query = supabase
     .from("games")
     .select(SINGLE_GAME_SELECT)
     .order("created_at", { ascending: true })
     .limit(1);
+
+  const chronicleId = localStorage.getItem("currentChronicleId");
+  if (chronicleId) {
+    query = query.eq("chronicle_id", chronicleId);
+  }
+
+  const { data, error } = await query;
   if (error) {
     console.error("Error loading single game:", error);
     return null;
@@ -378,6 +385,26 @@ async function loadGames() {
   const card = document.getElementById("single-game-card");
   if (!card) return;
   updateStatus("Cargando información...");
+
+  // Chronicle breadcrumb
+  const chronicleId = localStorage.getItem("currentChronicleId");
+  if (chronicleId) {
+    const breadcrumb = document.getElementById("games-breadcrumb");
+    if (breadcrumb) {
+      const { data: chron } = await supabase
+        .from("chronicles")
+        .select("name")
+        .eq("id", chronicleId)
+        .maybeSingle();
+      if (chron) {
+        breadcrumb.innerHTML = `<a href="#chronicle">${chron.name}</a> &rsaquo; Almagro de Noche`;
+        breadcrumb.style.display = "block";
+      }
+    }
+  }
+
+  // Invalidate cache so chronicle filter takes effect
+  window.SingleGameStore.invalidate();
 
   const {
     data: { session },
