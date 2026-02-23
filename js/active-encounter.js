@@ -99,7 +99,7 @@
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await window.abnGetSession();
     if (session) {
       state.user = session.user;
       state.isAdmin = await fetchIsAdmin(session.user.id);

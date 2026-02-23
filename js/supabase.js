@@ -4,6 +4,41 @@ const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1ZWl0bXZqdWNiam9lb2RzZ3FrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4Mzc2MjksImV4cCI6MjA2NzQxMzYyOX0.j_bBFPDCdyjEUNXRfFQPTbJoAPsrp9hOu5MW0PR3VRg";
 window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Session helper with short retry window to avoid auth hydration races on first route load.
+ * Returns the same shape as `supabase.auth.getSession()`.
+ */
+window.abnGetSession = async function abnGetSession(options = {}) {
+  const retries = Number.isFinite(options.retries) ? options.retries : 2;
+  const delayMs = Number.isFinite(options.delayMs) ? options.delayMs : 120;
+
+  let lastResponse = { data: { session: null }, error: null };
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const response = await supabase.auth.getSession();
+    lastResponse = response || lastResponse;
+    if (response?.data?.session) return response;
+    if (attempt < retries) await sleep(delayMs);
+  }
+  return lastResponse;
+};
+
+window.abnGetCurrentUser = async function abnGetCurrentUser(options = {}) {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (user || error) return { user: user || null, error: error || null };
+
+  const {
+    data: { session },
+  } = await window.abnGetSession(options);
+  return { user: session?.user || null, error: null };
+};
+
 /**
  * Escape HTML special characters to prevent XSS when inserting into innerHTML.
  * @param {*} str — any value (coerced to string)

@@ -29,7 +29,7 @@
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await window.abnGetSession();
     if (!session) {
       document.querySelector(".main-container").innerHTML =
         "<p>Debes iniciar sesión.</p>";

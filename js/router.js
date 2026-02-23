@@ -301,7 +301,7 @@ async function updateSidebar() {
 
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
   if (session) {
     liWelcome?.classList.add("hidden");
     liUser?.classList.remove("hidden");
@@ -507,7 +507,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
   console.log(
     "Router: Initial session check ->",
     session ? "LOGGED IN" : "NO SESSION",

@@ -408,7 +408,7 @@ async function loadGames() {
 
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
   const userId = session?.user?.id || null;
   const playerId = await fetchCurrentPlayerId(userId);
 

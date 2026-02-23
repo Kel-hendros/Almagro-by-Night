@@ -43,7 +43,7 @@ async function initAuthForms() {
   // View Toggling based on Session
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
 
   console.log(
     "initAuthForms: Session check ->",
@@ -162,7 +162,7 @@ async function initAuthForms() {
 async function ensurePlayer(options = {}) {
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
   if (!session) throw new Error("No hay sesión");
   const userId = session.user.id;
   const metadata = session.user.user_metadata || {};
@@ -217,7 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const {
     data: { session },
     error: sessionErr,
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
   console.log("getSession →", { session, sessionErr });
   // Removed legacy redirect to #games. We now support a Home screen on #welcome.
 

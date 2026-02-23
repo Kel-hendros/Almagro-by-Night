@@ -4,7 +4,7 @@
   async function getSession() {
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await window.abnGetSession();
     return session || null;
   }
 

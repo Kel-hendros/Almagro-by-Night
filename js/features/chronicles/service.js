@@ -4,7 +4,7 @@
   async function fetchCurrentPlayer() {
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await window.abnGetSession();
     if (!session) return null;
 
     const { data, error } = await supabase

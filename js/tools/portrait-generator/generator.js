@@ -471,7 +471,7 @@ async function saveImageToCloud(id) {
     // 4. Insert DB Record
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await window.abnGetSession();
     if (!session) throw new Error("No hay sesión activa");
 
     const { error: dbError } = await supabase.from("generated_images").insert({
@@ -509,7 +509,7 @@ async function fetchCloudGallery() {
   // Check session first to ensure RLS doesn't block us
   const {
     data: { session },
-  } = await supabase.auth.getSession();
+  } = await window.abnGetSession();
   if (!session) {
     console.log("fetchCloudGallery: No active session, waiting...");
     // Simple retry since auth might be restoring
