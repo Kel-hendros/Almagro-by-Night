@@ -1,2 +1,14 @@
-Por si a caso/Database scheme
+# macOS / editor noise
+.DS_Store
+**/.DS_Store
+
+# Local scratch / backups
+Por si a caso/
+backups/
+
+# Local tooling config
+.mcp.json
+.claude/settings.local.json
+
+# Project-local experimental file
 js/actions-ui.js
