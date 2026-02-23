@@ -210,7 +210,6 @@ async function ensurePlayer(options = {}) {
   }
 }
 
-// Al cargar la app por primera vez
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("DOMContentLoaded fired");
 
@@ -222,10 +221,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("getSession →", { session, sessionErr });
   // Removed legacy redirect to #games. We now support a Home screen on #welcome.
 
-  // 2) Si estamos en login/register, inicializamos pestañas y forms
-  // DEPRECATED: Router handles this now to avoid race conditions.
+  // Router handles navigation/renders; this keeps session logging only.
 });
 
-// Cada vez que cambie el hash (carga de un nuevo fragmento) reiniciamos tabs y forms
-// DEPRECATED: Router handles this now.
+// Hashchange handling is centralized in the router.
 // window.addEventListener("hashchange", () => { ... });
