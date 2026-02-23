@@ -39,7 +39,39 @@
     };
   }
 
+  function buildSkeletonRows(count = 3) {
+    return Array.from({ length: count })
+      .map(
+        () => `
+          <div class="cd-skeleton-card" aria-hidden="true">
+            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+            <span class="cd-skeleton-line"></span>
+            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+          </div>
+        `,
+      )
+      .join("");
+  }
+
+  function renderLoadingState() {
+    const ids = [
+      "cd-last-session-card",
+      "cd-character-card",
+      "cd-players-grid",
+      "cd-sesiones-list",
+      "cd-notas-list",
+    ];
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const count = id === "cd-players-grid" ? 2 : 3;
+      el.innerHTML = buildSkeletonRows(count);
+    });
+  }
+
   async function initPage() {
+    renderLoadingState();
+
     const chronicleId = localStorage.getItem("currentChronicleId");
     if (!chronicleId) {
         window.location.hash = "chronicles";
