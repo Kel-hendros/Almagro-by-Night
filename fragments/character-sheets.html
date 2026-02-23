@@ -1,525 +1,80 @@
-<div class="main-container tools">
-    <h1>Personajes</h1>
+<div class="main-container games cs-page">
+    <div class="chronicles-header">
+        <div class="chronicles-title-wrap">
+            <h1>Personajes</h1>
+            <p class="chronicles-subtitle">Gestiona todas tus hojas de personaje en un solo lugar.</p>
+        </div>
+        <div class="chronicles-actions">
+            <button class="btn btn--primary chronicles-action-btn" id="cs-add-btn" data-character-action="create" type="button">+ Nuevo Personaje</button>
+        </div>
+    </div>
 
-    <div id="sheets-grid" class="tools-grid"
-        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
-        <!-- Loading state -->
-        <p class="muted">Cargando personajes...</p>
+    <div id="sheets-grid" class="cs-grid">
+        <article class="cs-card cs-card--skeleton" aria-hidden="true">
+            <div class="cs-card-banner">
+                <div class="cs-skeleton cs-skeleton--banner"></div>
+            </div>
+            <div class="cs-card-body">
+                <div class="cs-skeleton cs-skeleton--title"></div>
+                <div class="cs-skeleton cs-skeleton--line"></div>
+                <div class="cs-skeleton cs-skeleton--line cs-skeleton--line-short"></div>
+            </div>
+        </article>
+        <article class="cs-card cs-card--skeleton" aria-hidden="true">
+            <div class="cs-card-banner">
+                <div class="cs-skeleton cs-skeleton--banner"></div>
+            </div>
+            <div class="cs-card-body">
+                <div class="cs-skeleton cs-skeleton--title"></div>
+                <div class="cs-skeleton cs-skeleton--line"></div>
+                <div class="cs-skeleton cs-skeleton--line cs-skeleton--line-short"></div>
+            </div>
+        </article>
+        <article class="cs-card cs-card--skeleton" aria-hidden="true">
+            <div class="cs-card-banner">
+                <div class="cs-skeleton cs-skeleton--banner"></div>
+            </div>
+            <div class="cs-card-body">
+                <div class="cs-skeleton cs-skeleton--title"></div>
+                <div class="cs-skeleton cs-skeleton--line"></div>
+                <div class="cs-skeleton cs-skeleton--line cs-skeleton--line-short"></div>
+            </div>
+        </article>
+        <article class="cs-card cs-card--skeleton" aria-hidden="true">
+            <div class="cs-card-banner">
+                <div class="cs-skeleton cs-skeleton--banner"></div>
+            </div>
+            <div class="cs-card-body">
+                <div class="cs-skeleton cs-skeleton--title"></div>
+                <div class="cs-skeleton cs-skeleton--line"></div>
+                <div class="cs-skeleton cs-skeleton--line cs-skeleton--line-short"></div>
+            </div>
+        </article>
     </div>
 </div>
 
-<script>
-    (async function initCharacterSheets() {
-        const grid = document.getElementById('sheets-grid');
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            grid.innerHTML = '<p class="error">Debes iniciar sesión.</p>';
-            return;
-        }
-
-        const clanMapping = {
-            "Brujah": "1",
-            "Gangrel": "2",
-            "Malkavian": "3",
-            "Nosferatu": "4",
-            "Toreador": "5",
-            "Tremere": "6",
-            "Ventrue": "7",
-            "Lasombra": "R",
-            "Tzimisce": "E",
-            "Assamita": "9",
-            "Giovanni": "e",
-            "Ravnos": "0",
-            "Seguidores de Set": "=",
-            "Ahriman": "É",
-            "Baali": "ã",
-            "Hijas de la Cacofonia": "q",
-            "Salubri": "-",
-            "Samedi": "t"
-        };
-
-        function getClanSigil(clanName) {
-            // Default to a generic symbol if not found, or maybe just "1" (Brujah) or similar
-            return clanMapping[clanName] || "L"; // "L" seems to be a generic Ankh or similar in some fonts, but let's stick to valid defaults or placeholders
-        }
-
-        try {
-            let isAdmin = false;
-            let playerMap = {};
-
-            // 1. Check Admin Status
-            const { data: playerData } = await supabase
-                .from('players')
-                .select('is_admin')
-                .eq('user_id', user.id)
-                .single();
-
-            if (playerData && playerData.is_admin) {
-                isAdmin = true;
-            }
-
-            // 2. Fetch Sheets (admin sees all, others see only own)
-            let query = supabase
-                .from('character_sheets')
-                .select('id, name, updated_at, data, user_id, avatar_url')
-                .order('updated_at', { ascending: false });
-
-            if (!isAdmin) {
-                query = query.eq('user_id', user.id);
-            }
-
-            // Always fetch player names for display
-            // 2. Prepare Player Map (Fetch for everyone so we can show who owns what)
-            const { data: allPlayers } = await supabase
-                .from('players')
-                .select('user_id, name');
-            if (allPlayers) {
-                allPlayers.forEach(p => {
-                    playerMap[p.user_id] = p.name;
-                });
-            }
-
-            const { data: sheets, error } = await query;
-
-            if (error) throw error;
-
-            // Fetch chronicle associations for each sheet
-            const sheetIds = (sheets || []).map(s => s.id);
-            let chronicleMap = {};
-            if (sheetIds.length) {
-                const { data: charChronicles } = await supabase
-                    .from('chronicle_characters')
-                    .select('character_sheet_id, chronicle:chronicles(id, name)')
-                    .in('character_sheet_id', sheetIds);
-
-                (charChronicles || []).forEach(cc => {
-                    if (cc.chronicle && !chronicleMap[cc.character_sheet_id]) {
-                        chronicleMap[cc.character_sheet_id] = cc.chronicle;
-                    }
-                });
-            }
-
-            grid.innerHTML = '';
-
-            // 1. "Create New" Card (Always visible, creates for self)
-            const createCard = document.createElement('div');
-            createCard.className = 'tool-card';
-            createCard.onclick = window.createNewSheet;
-            createCard.style.cssText = `
-                background: rgba(0,0,0,0.6);
-                border: 2px dashed rgba(255, 255, 255, 0.3);
-                border-radius: 12px;
-                overflow: hidden;
-                cursor: pointer;
-                transition: transform 0.2s;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                min-height: 250px;
-            `;
-            createCard.innerHTML = `
-                <div style="font-size: 3rem; color: var(--color-gold); margin-bottom: 15px;">+</div>
-                <h3 style="color: #e0e0e0; font-family: 'Special Elite', cursive;">Crear Nuevo</h3>
-            `;
-            grid.appendChild(createCard);
-
-            // 2. Existing Sheets
-            sheets.forEach(sheet => {
-                const isOwner = sheet.user_id === user.id;
-                const canAccess = isAdmin || isOwner;
-
-                const card = document.createElement('div');
-                card.className = 'tool-card';
-                card.style.cssText = `
-                    background: rgba(0,0,0,0.6);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 12px;
-                    overflow: hidden;
-                    cursor: ${canAccess ? 'pointer' : 'default'};
-                    transition: transform 0.2s, box-shadow 0.2s;
-                    position: relative;
-                `;
-                if (canAccess) {
-                    card.onclick = () => window.openSheet(sheet.id);
-                }
-
-                const clan = sheet.data?.clan || 'Desconocido';
-                const sigil = getClanSigil(clan);
-                const gen = sheet.data?.generacion || '?';
-                const lastEdit = new Date(sheet.updated_at).toLocaleDateString();
-                const avatarUrl = sheet.avatar_url;
-
-                // Owner check
-                const canEdit = isAdmin || isOwner;
-
-                // Camera button for avatar upload (owner or admin only)
-                const cameraButtonHTML = canEdit ? `
-                    <button onclick="openAvatarUpload(event, '${sheet.id}')" style="position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); border: 1px solid var(--color-gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-gold); font-size: 0.8rem;" title="Cambiar avatar">
-                        <i data-lucide="camera" style="width:16px;height:16px;"></i>
-                    </button>
-                ` : '';
-
-                // Delete button (owner or admin only)
-                const deleteButtonHTML = canEdit ? `
-                    <button onclick="event.stopPropagation(); deleteSheet('${sheet.id}')" style="background: none; border: 1px solid #ff4444; color: #ff4444; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.7rem;" title="Eliminar personaje">
-                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                    </button>
-                ` : '';
-
-                // Admin Info or Public Owner Info
-                let playerInfoHTML = '';
-                // Always try to show a name if we have it in the map, otherwise maybe fetch it? 
-                // For now, let's just show it if we have it (admins load it). 
-                // Optimally we should load player names for everyone, but let's stick to current pattern:
-                if (playerMap[sheet.user_id]) {
-                    const pName = playerMap[sheet.user_id];
-                    playerInfoHTML = `<div style="font-size: 0.85rem; color: var(--color-gold); margin-bottom: 5px; font-weight: bold;">Jugador: ${pName}</div>`;
-                } else if (!isOwner) {
-                    // If not owner and no map (non-admin view), maybe show generic?
-                    // Or just leave it blank.
-                }
-
-                // Chronicle link
-                const chronicleInfo = chronicleMap[sheet.id];
-                const chronicleLinkHTML = chronicleInfo
-                    ? `<div style="font-size: 0.8rem; color: var(--color-red-accent); margin-bottom: 5px;">
-                         <a href="#" onclick="event.stopPropagation(); goToChronicle('${chronicleInfo.id}'); return false;"
-                            style="color: var(--color-red-accent); text-decoration: none;">
-                            ${chronicleInfo.name}
-                         </a>
-                       </div>`
-                    : '';
-
-                // Decide what to show: Avatar or Sigil
-                let visualContent;
-                if (avatarUrl) {
-                    visualContent = `<img src="${avatarUrl}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-gold); box-shadow: 0 0 10px rgba(0,0,0,0.5);">`;
-                } else {
-                    visualContent = `<span style="font-family: 'vampire-sigils'; font-size: 5rem; color: #fff; text-shadow: 0 0 10px rgba(255,0,0,0.5);">${sigil}</span>`;
-                }
-
-
-                card.innerHTML = `
-                    <div style="height: 140px; background: linear-gradient(to bottom right, ${canAccess ? '#2a0a0a' : '#4a4a4a'}, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center; position: relative;">
-                        ${visualContent}
-                        ${cameraButtonHTML}
-                    </div>
-                    <div style="padding: 24px;">
-                        <h3 style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
-                            ${sheet.name}
-                        </h3>
-                        ${playerInfoHTML}
-                        ${chronicleLinkHTML}
-                        <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5">
-                            Clan: ${clan} <br>
-                            Gen: ${gen}ª
-                        </p>
-                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.7rem; color: #666;">Editado: ${lastEdit}</span>
-                            ${deleteButtonHTML}
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-
-            // Re-init lucide icons for the new content
-            if (window.lucide) lucide.createIcons();
-
-        } catch (err) {
-            console.error(err);
-            grid.innerHTML = '<p class="error">Error al cargar personajes.</p>';
-        }
-    })();
-
-    window.createNewSheet = async function () {
-        const name = prompt("Nombre del Personaje:", "Nuevo Vampiro");
-        if (!name) return;
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const payload = {
-            user_id: user.id,
-            name: name,
-            data: { nombre: name }
-        };
-
-        const { data, error } = await supabase
-            .from('character_sheets')
-            .insert([payload])
-            .select()
-            .single();
-
-        if (error) {
-            alert("Error al crear: " + error.message);
-            return;
-        }
-
-        window.openSheet(data.id);
-    }
-
-    window.openSheet = function (id) {
-        window.location.hash = `active-character-sheet?id=${encodeURIComponent(id)}`;
-    }
-
-    window.goToChronicle = function (chronicleId) {
-        localStorage.setItem('currentChronicleId', chronicleId);
-        window.location.hash = 'chronicle';
-    }
-
-    window.deleteSheet = async function (id) {
-        if (!confirm("¿Estás seguro de borrar este personaje permanentemente?")) return;
-
-        const { error } = await supabase
-            .from('character_sheets')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            alert("Error al borrar: " + error.message);
-        } else {
-            // Reload the view (simple way: re-click the menu or just reload the logic.
-            // Re-navigating to hash refreshes it.)
-            loadRoute(true);
-        }
-    }
-</script>
-
-<script>
-        // --- Avatar Upload & Cropping Logic ---
-        (function () {
-            let currentSheetIdForUpload = null;
-            let cropperImage = new Image();
-            let cropperState = { x: 0, y: 0, scale: 1, isDragging: false, lastX: 0, lastY: 0 };
-            const canvas = document.getElementById('crop-canvas');
-            const ctx = canvas.getContext('2d');
-            const avatarModal = document.getElementById('avatar-modal');
-            const zoomSlider = document.getElementById('zoom-slider');
-
-            // Trigger File Input
-            window.openAvatarUpload = function (event, sheetId) {
-                event.stopPropagation();
-                currentSheetIdForUpload = sheetId;
-                document.getElementById('avatar-input').click();
-            }
-
-            // Handle File Selection
-            document.getElementById('avatar-input').addEventListener('change', function (e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    cropperImage.src = event.target.result;
-                    cropperImage.onload = () => {
-                        // Reset state
-                        cropperState = { x: 0, y: 0, scale: 1, isDragging: false, lastX: 0, lastY: 0 };
-                        zoomSlider.value = 1;
-                        avatarModal.style.display = 'flex';
-                        drawCropper();
-                    }
-                }
-                reader.readAsDataURL(file);
-                // Clear value to allow re-selecting same file
-                e.target.value = '';
-            });
-
-            function drawCropper() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-
-                ctx.save();
-                ctx.translate(centerX + cropperState.x, centerY + cropperState.y);
-                ctx.scale(cropperState.scale, cropperState.scale);
-                // Draw centered
-                ctx.drawImage(cropperImage, -cropperImage.width / 2, -cropperImage.height / 2);
-                ctx.restore();
-            }
-
-            // Interaction Events for Canvas
-            canvas.addEventListener('mousedown', e => {
-                cropperState.isDragging = true;
-                cropperState.lastX = e.clientX;
-                cropperState.lastY = e.clientY;
-            });
-
-            window.addEventListener('mouseup', () => {
-                cropperState.isDragging = false;
-            });
-
-            window.addEventListener('mousemove', e => {
-                if (!cropperState.isDragging) return;
-                const dx = e.clientX - cropperState.lastX;
-                const dy = e.clientY - cropperState.lastY;
-                cropperState.x += dx;
-                cropperState.y += dy;
-                cropperState.lastX = e.clientX;
-                cropperState.lastY = e.clientY;
-                drawCropper();
-            });
-
-            zoomSlider.addEventListener('input', e => {
-                cropperState.scale = parseFloat(e.target.value);
-                drawCropper();
-            });
-
-            window.closeAvatarModal = function () {
-                avatarModal.style.display = 'none';
-                currentSheetIdForUpload = null;
-            }
-
-            window.saveAvatar = async function () {
-                if (!currentSheetIdForUpload) return;
-
-                // Convert canvas to blob
-                canvas.toBlob(async (blob) => {
-                    if (!blob) {
-                        alert("Error al procesar imagen.");
-                        return;
-                    }
-
-                    // Upload to Supabase
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user) return;
-
-                    const filePath = `${user.id}/${currentSheetIdForUpload}_${Date.now()}.png`;
-
-                    // Simple UI loading feedback
-                    const saveBtn = document.querySelector('.btn-save');
-                    const originalText = saveBtn.innerText;
-                    saveBtn.innerText = "Subiendo...";
-                    saveBtn.disabled = true;
-
-                    try {
-                        // 1. Upload
-                        const { error: uploadError } = await supabase.storage
-                            .from('character-avatars')
-                            .upload(filePath, blob);
-
-                        if (uploadError) throw uploadError;
-
-                        // 2. Get Public URL
-                        const { data: { publicUrl } } = supabase.storage
-                            .from('character-avatars')
-                            .getPublicUrl(filePath);
-
-                        // 3. Update DB
-                        const { error: dbError } = await supabase
-                            .from('character_sheets')
-                            .update({ avatar_url: publicUrl })
-                            .eq('id', currentSheetIdForUpload);
-
-                        if (dbError) throw dbError;
-
-                        // Success
-                        closeAvatarModal();
-                        loadRoute(true); // Refresh grid
-                    } catch (err) {
-                        console.error(err);
-                        alert("Error al subir imagen: " + err.message);
-                    } finally {
-                        saveBtn.innerText = originalText;
-                        saveBtn.disabled = false;
-                    }
-
-                }, 'image/png');
-            }
-        })();
-</script>
-
-<style>
-    @font-face {
-        font-family: 'vampire-sigils';
-        src: url("characterSheets/fonts/vampiresigils.woff2") format("woff2");
-    }
-
-    .tool-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--color-gold) !important;
-    }
-
-    /* Avatar Modal */
-    #avatar-modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.8);
-        align-items: center;
-        justify-content: center;
-    }
-
-    .avatar-content {
-        background-color: #1a1a1a;
-        padding: 20px;
-        border-radius: 12px;
-        border: 2px solid var(--color-gold);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 15px;
-        max-width: 90%;
-    }
-
-    canvas#crop-canvas {
-        border: 1px solid #333;
-        cursor: move;
-        background: #000;
-    }
-
-    .avatar-controls {
-        display: flex;
-        gap: 10px;
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .avatar-btn {
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-        border: none;
-    }
-
-    .btn-cancel {
-        background: #444;
-        color: #fff;
-    }
-
-    .btn-save {
-        background: var(--color-red);
-        color: #fff;
-    }
-</style>
-
-<!-- Hidden Input for File Selection -->
-<input type="file" id="avatar-input" accept="image/*" style="display: none;">
-
-<!-- Modal for Cropping -->
-<div id="avatar-modal">
-    <div class="avatar-content">
-        <h3 style="color: var(--color-gold); margin: 0;">Ajustar Foto</h3>
-        <p style="color: #aaa; font-size: 0.8rem; margin: 0;">Arrastra para mover. Usa el slider para zoom.</p>
-
-        <div
-            style="position: relative; width: 300px; height: 300px; overflow: hidden; border-radius: 50%; border: 2px solid var(--color-gold);">
-            <canvas id="crop-canvas" width="300" height="300"></canvas>
+<input type="file" id="avatar-input" accept="image/*" class="hidden">
+
+<div id="avatar-modal" class="cs-modal-overlay">
+    <div class="cs-modal" role="dialog" aria-modal="true" aria-labelledby="cs-avatar-modal-title">
+        <h3 id="cs-avatar-modal-title" class="cs-modal-title">Ajustar Posición</h3>
+        <p class="cs-modal-hint">Arrastra para mover. Usa el slider para zoom.</p>
+
+        <div class="cs-modal-canvas-wrap">
+            <canvas id="repos-canvas" width="300" height="300"></canvas>
         </div>
 
-        <input type="range" id="zoom-slider" min="0.5" max="3" step="0.1" value="1" style="width: 100%;">
+        <input type="range" id="zoom-slider" min="1" max="3" step="0.05" value="1" class="cs-modal-slider">
 
-        <div class="avatar-controls">
-            <button class="avatar-btn btn-cancel" onclick="closeAvatarModal()">Cancelar</button>
-            <button class="avatar-btn btn-save" onclick="saveAvatar()">Guardar</button>
+        <div class="cs-modal-actions">
+            <button id="cs-avatar-cancel" class="btn btn--ghost cs-modal-btn" type="button">Cancelar</button>
+            <button id="cs-avatar-save" class="btn btn--primary cs-modal-btn" type="button">Guardar</button>
         </div>
     </div>
 </div>
+
+<script src="js/features/characters/service.js"></script>
+<script src="js/features/characters/view.js"></script>
+<script src="js/features/characters/avatar.js"></script>
+<script src="js/features/characters/controller.js"></script>
+<script src="js/features/characters/index.js"></script>

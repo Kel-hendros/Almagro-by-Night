@@ -2,7 +2,7 @@
 :root {
     --ghoul-idle: url('../images/igor-idle.png');
     --ghoul-hover: url('../images/igor-hover.png');
-    --customPointer: url('../characterSheets/images/pointer.png'), pointer;
+    --customPointer: url('../images/pointer.png'), pointer;
 }
 
 #ghoul-fab {
@@ -163,6 +163,17 @@
     color: #fff;
     font-family: 'Special Elite', cursive;
     text-shadow: 1px 1px 2px #000;
+}
+
+.ghoul-change-btn {
+    color: #fff;
+    cursor: pointer;
+}
+
+.ghoul-selection-title {
+    margin: 0;
+    color: #ff0000;
+    font-family: 'Special Elite', cursive;
 }
 
 .ghoul-body {

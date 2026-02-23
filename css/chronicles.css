@@ -18,7 +18,7 @@
 .chronicles-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: 1rem 1.25rem;
     margin-bottom: 1.25rem;
@@ -65,43 +65,7 @@
     height: 44px;
     padding: 0 16px;
     border-radius: 12px;
-    border: 1px solid var(--theme-text-tertiary);
-    background: var(--theme-bg-elevated);
-    color: var(--theme-text-primary);
-    font-family: var(--app-font-body);
     font-size: 0.84rem;
-    font-weight: 500;
-    letter-spacing: 0.2px;
-    text-transform: none;
-    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-}
-
-.chronicles-actions .chronicles-action-btn:hover {
-    border-color: var(--theme-accent);
-    color: var(--theme-text-primary);
-}
-
-.chronicles-actions .chronicles-action-btn--primary {
-    background: transparent;
-    border-color: var(--theme-text-tertiary);
-    color: var(--theme-text-tertiary);
-}
-
-.chronicles-actions .chronicles-action-btn--primary:hover {
-    border-color: var(--theme-accent);
-    color: var(--theme-accent);
-}
-
-.chronicles-actions .chronicles-action-btn--secondary {
-    background: var(--theme-bg-elevated);
-    border-color: var(--theme-border-divider);
-    color: var(--theme-text-secondary);
-}
-
-.chronicles-actions .chronicles-action-btn--secondary:hover {
-    background: var(--theme-accent-soft);
-    border-color: var(--theme-accent);
-    color: var(--theme-text-primary);
 }
 
 .chronicles-grid {
@@ -351,46 +315,8 @@
     justify-content: flex-end;
 }
 
-.chronicle-modal .gameButton {
-    height: 40px;
+.chronicle-modal .btn {
     min-width: 110px;
-    padding: 0 14px;
-    border-radius: 10px;
-    border: 1px solid var(--theme-text-tertiary);
-    background: var(--theme-bg-elevated);
-    color: var(--theme-text-primary);
-    font-family: var(--app-font-body);
-    font-size: 0.84rem;
-    font-weight: 500;
-    letter-spacing: 0.2px;
-    text-transform: none;
-}
-
-.chronicle-modal .gameButton:hover {
-    border-color: var(--theme-accent);
-}
-
-.chronicle-modal .gameButton.primary {
-    background: transparent;
-    border-color: var(--theme-accent);
-    color: var(--theme-accent);
-}
-
-.chronicle-modal .gameButton.primary:hover {
-    background: var(--theme-accent-soft);
-    color: var(--theme-text-primary);
-}
-
-.chronicle-modal .gameButton.secondary {
-    background: var(--theme-bg-elevated);
-    border-color: var(--theme-border-divider);
-    color: var(--theme-text-secondary);
-}
-
-.chronicle-modal .gameButton.secondary:hover {
-    background: var(--theme-accent-soft);
-    border-color: var(--theme-accent);
-    color: var(--theme-text-primary);
 }
 
 .chronicle-modal .msg {
@@ -960,7 +886,7 @@ p.chronicle-description {
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background: var(--cd-bg-primary);
+    background: transparent;
 }
 
 /* --- Sticky Header (header + tabs stick below banner) --- */
@@ -968,7 +894,9 @@ p.chronicle-description {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--cd-bg-primary);
+    background: color-mix(in srgb, var(--cd-bg-primary) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 /* --- Banner --- */
@@ -998,37 +926,6 @@ p.chronicle-description {
     right: 16px;
     display: flex;
     gap: 8px;
-}
-
-.cd-banner-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--cd-bg-elevated) 86%, transparent);
-    border: 1px solid var(--cd-text-tertiary);
-    color: var(--cd-text-tertiary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-
-.cd-banner-btn .lucide {
-    width: 12px;
-    height: 12px;
-}
-
-.cd-banner-btn:hover {
-    border-color: var(--cd-text-secondary);
-    color: var(--cd-text-secondary);
-    background: color-mix(in srgb, var(--cd-bg-elevated) 100%, transparent);
-}
-
-.cd-banner-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
 }
 
 .cd-banner.repositioning {
@@ -1845,21 +1742,11 @@ p.chronicle-description {
 
 /* Notes archive toggle */
 .cd-notes-archive-btn {
-    display: flex;
-    align-items: center;
     gap: 5px;
     height: 42px;
     padding: 0 12px;
-    background: transparent;
-    border: 1px solid var(--cd-text-tertiary);
-    border-radius: var(--cd-radius-card);
-    font-family: var(--cd-font-primary);
     font-size: 12px;
-    font-weight: 500;
-    color: var(--cd-text-tertiary);
-    cursor: pointer;
     white-space: nowrap;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 
 .cd-notes-archive-icon {
@@ -1969,15 +1856,7 @@ p.chronicle-description {
 .cd-add-list-btn {
     width: 100%;
     height: 52px;
-    background: transparent;
-    border: 1px solid var(--cd-text-tertiary);
-    border-radius: var(--cd-radius-card);
-    font-family: var(--cd-font-primary);
     font-size: 13px;
-    font-weight: 500;
-    color: var(--cd-text-tertiary);
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
 }
 
 .cd-add-list-btn--compact {
@@ -1987,24 +1866,12 @@ p.chronicle-description {
     white-space: nowrap;
 }
 
-.cd-add-list-btn:hover {
-    border-color: var(--cd-text-secondary);
-    color: var(--cd-text-secondary);
-}
-
 /* Load more button */
 .cd-load-more-btn {
     width: 100%;
     height: 44px;
-    background: var(--cd-bg-elevated);
-    border: 1px solid var(--cd-text-tertiary);
-    border-radius: 12px;
-    font-family: var(--cd-font-primary);
     font-size: 12px;
-    font-weight: 500;
-    color: var(--cd-text-primary);
-    cursor: pointer;
-    transition: background 0.2s;
+    border-radius: 12px;
 }
 
 .cd-load-more-btn:hover {
@@ -2157,7 +2024,7 @@ p.chronicle-description {
 .cd-recap-reader {
     width: 100%;
     height: 100%;
-    background: var(--cd-bg-primary);
+    background: var(--content-theme-bg-gradient);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -2183,20 +2050,11 @@ p.chronicle-description {
 }
 
 .cd-recap-back-btn {
-    display: inline-flex;
-    align-items: center;
     gap: 8px;
-    background: var(--cd-bg-elevated);
-    border: 1px solid var(--cd-text-tertiary);
-    border-radius: 10px;
+    height: auto;
     padding: 7px 10px;
-    color: var(--cd-text-primary);
-    font-family: var(--cd-font-primary);
     font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
     align-self: flex-start;
-    transition: background 0.2s;
 }
 
 .cd-recap-back-btn:hover {
@@ -2377,19 +2235,11 @@ p.chronicle-description {
     flex: 1;
     height: 48px;
     border-radius: 12px;
-    font-family: var(--cd-font-primary);
     font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
-    background: var(--cd-bg-elevated);
-    border: 1px solid var(--cd-text-tertiary);
-    color: var(--cd-text-primary);
 }
 
 .cd-recap-nav-btn:hover:not(:disabled) {
     background: var(--cd-bg-surface);
-    border-color: var(--cd-text-secondary);
 }
 
 .cd-recap-nav-btn:disabled {
@@ -2398,20 +2248,15 @@ p.chronicle-description {
 }
 
 .cd-recap-nav-btn--ghost {
-    background: transparent;
-    border: 1px solid var(--cd-text-tertiary);
     color: var(--cd-text-secondary);
 }
 
 .cd-recap-nav-btn--primary {
-    background: var(--cd-accent);
-    border: 1px solid var(--cd-accent);
     color: #fff;
 }
 
 .cd-recap-nav-btn--primary:hover:not(:disabled) {
     opacity: 0.9;
-    background: var(--cd-accent);
 }
 
 /* ================================================================
@@ -2420,7 +2265,7 @@ p.chronicle-description {
 .cd-recap-form {
     width: 100%;
     height: 100%;
-    background: var(--cd-bg-primary);
+    background: var(--content-theme-bg-gradient);
     display: flex;
     flex-direction: column;
     overflow: hidden;

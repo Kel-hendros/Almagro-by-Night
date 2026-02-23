@@ -4,9 +4,11 @@
             <h1>Crónicas</h1>
             <p class="chronicles-subtitle">Selecciona una crónica para continuar la noche.</p>
         </div>
-        <div class="chronicles-actions">
-            <button class="gameButton primary chronicles-action-btn chronicles-action-btn--primary" onclick="openCreateModal()">+ Nueva Crónica</button>
-            <button class="gameButton secondary chronicles-action-btn chronicles-action-btn--secondary" onclick="openJoinModal()">Unirse con Código</button>
+        <div class="chronicles-actions btn-row">
+            <button class="btn btn--primary chronicles-action-btn" type="button"
+                data-chronicles-action="open-create">+ Nueva Crónica</button>
+            <button class="btn btn--secondary chronicles-action-btn" type="button"
+                data-chronicles-action="open-join">Unirse con Código</button>
         </div>
     </div>
 
@@ -16,29 +18,29 @@
 </div>
 
 <!-- Modal: Create Chronicle -->
-<div id="modal-create-chronicle" class="chronicle-modal-overlay">
-    <div class="chronicle-modal">
+<div id="modal-create-chronicle" class="chronicle-modal-overlay app-modal-overlay">
+    <div class="chronicle-modal app-modal">
         <h2>Nueva Crónica</h2>
         <p id="create-chronicle-msg" class="msg"></p>
         <label for="create-chronicle-name">Nombre</label>
         <input type="text" id="create-chronicle-name" placeholder="Ej: Buenos Aires de Noche" maxlength="100">
-        <div class="chronicle-modal-actions">
-            <button class="gameButton secondary" onclick="closeCreateModal()">Cancelar</button>
-            <button class="gameButton primary" onclick="submitCreateChronicle()">Crear</button>
+        <div class="chronicle-modal-actions app-modal-actions btn-row">
+            <button class="btn btn--ghost" type="button" data-chronicles-action="close-create">Cancelar</button>
+            <button class="btn btn--primary" type="button" data-chronicles-action="submit-create">Crear</button>
         </div>
     </div>
 </div>
 
 <!-- Modal: Join Chronicle -->
-<div id="modal-join-chronicle" class="chronicle-modal-overlay">
-    <div class="chronicle-modal">
+<div id="modal-join-chronicle" class="chronicle-modal-overlay app-modal-overlay">
+    <div class="chronicle-modal app-modal">
         <h2>Unirse a una Crónica</h2>
         <p id="join-chronicle-msg" class="msg"></p>
         <label for="join-chronicle-code">Código de invitación</label>
         <input type="text" id="join-chronicle-code" class="chronicle-invite-code-input" placeholder="Ej: ABN7K3XP" maxlength="8">
-        <div class="chronicle-modal-actions">
-            <button class="gameButton secondary" onclick="closeJoinModal()">Cancelar</button>
-            <button class="gameButton primary" onclick="submitJoinChronicle()">Unirse</button>
+        <div class="chronicle-modal-actions app-modal-actions btn-row">
+            <button class="btn btn--ghost" type="button" data-chronicles-action="close-join">Cancelar</button>
+            <button class="btn btn--primary" type="button" data-chronicles-action="submit-join">Unirse</button>
         </div>
     </div>
 </div>

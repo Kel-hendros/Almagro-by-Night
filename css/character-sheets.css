@@ -1,0 +1,339 @@
+/* ================================================================
+   Character Sheets — Grid listing page (cs- prefix)
+   ================================================================ */
+
+@font-face {
+    font-family: 'vampire-sigils';
+    src: url("../fonts/vampiresigils.woff2") format("woff2");
+}
+
+/* --- Page container --- */
+.cs-page {
+    font-size-adjust: var(--app-font-size-adjust, none);
+}
+
+.cs-loading,
+.cs-empty {
+    font-family: var(--app-font-body);
+    font-size: 0.9rem;
+    color: var(--theme-text-tertiary);
+    font-style: italic;
+}
+
+/* --- Grid --- */
+.cs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+/* --- Card (shared) --- */
+.cs-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--theme-bg-surface);
+    border: 1px solid var(--theme-border-divider);
+    max-width: 360px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.cs-card--skeleton {
+    pointer-events: none;
+}
+
+.cs-card--skeleton:hover {
+    transform: none;
+    border-color: var(--theme-border-divider);
+}
+
+.cs-skeleton {
+    position: relative;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--theme-bg-elevated) 72%, var(--theme-text-tertiary) 28%);
+    overflow: hidden;
+}
+
+.cs-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--theme-text-primary) 22%, transparent) 50%,
+        transparent 100%
+    );
+    animation: cs-skeleton-shimmer 1.25s infinite;
+}
+
+.cs-skeleton--banner {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+}
+
+.cs-skeleton--title {
+    height: 22px;
+    width: 72%;
+}
+
+.cs-skeleton--line {
+    height: 12px;
+    width: 100%;
+}
+
+.cs-skeleton--line-short {
+    width: 54%;
+}
+
+@keyframes cs-skeleton-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.cs-card--clickable {
+    cursor: pointer;
+}
+
+.cs-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--theme-accent);
+}
+
+/* --- Card Banner --- */
+.cs-card-banner {
+    position: relative;
+    height: 188px;
+    background: linear-gradient(135deg, var(--theme-bg-elevated) 0%, var(--theme-bg-primary) 100%);
+    border-bottom: 1px solid var(--theme-border-divider);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 8px;
+    overflow: hidden;
+}
+
+.cs-banner-visual {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cs-banner-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+}
+
+.cs-clan-sigil {
+    font-family: 'vampire-sigils';
+    font-size: 10rem;
+    color: var(--theme-text-tertiary);
+    line-height: 1;
+    opacity: 0.6;
+}
+
+/* Banner actions */
+.cs-banner-actions {
+    position: absolute;
+    bottom: 8px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.cs-card:hover .cs-banner-actions {
+    opacity: 1;
+}
+
+/* --- Card Body --- */
+.cs-card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cs-card-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cs-card-name {
+    margin: 0;
+    font-family: var(--app-font-heading);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--theme-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    line-height: 1.2;
+    border: 0;
+}
+
+.cs-card-name::before,
+.cs-card-name::after {
+    content: none !important;
+}
+
+/* Chronicle link */
+.cs-chronicle-link {
+    font-family: var(--app-font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--theme-accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.cs-chronicle-link:hover {
+    opacity: 0.7;
+}
+
+/* Player name (admin view) */
+.cs-player-name {
+    font-family: var(--app-font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--theme-text-secondary);
+}
+
+/* Meta (clan/gen) */
+.cs-card-meta {
+    font-family: var(--app-font-body);
+    font-size: 13px;
+    color: var(--theme-text-secondary);
+}
+
+/* Footer */
+.cs-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cs-card-edited {
+    font-family: var(--app-font-body);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--theme-text-tertiary);
+}
+
+/* Delete button */
+.cs-delete-btn {
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.cs-card:hover .cs-delete-btn {
+    opacity: 1;
+}
+
+/* ================================================================
+   Avatar Reposition Modal
+   ================================================================ */
+.cs-modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+}
+
+.cs-modal-overlay.visible {
+    display: flex;
+}
+
+.cs-modal {
+    background: var(--theme-bg-surface);
+    border: 1px solid var(--theme-border-divider);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    max-width: 90%;
+}
+
+.cs-modal-title {
+    font-family: var(--app-font-heading);
+    font-size: 1.1rem;
+    color: var(--theme-text-primary);
+    margin: 0;
+}
+
+.cs-modal-hint {
+    font-family: var(--app-font-body);
+    font-size: 0.8rem;
+    color: var(--theme-text-tertiary);
+    margin: 0;
+}
+
+.cs-modal-canvas-wrap {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    overflow: hidden;
+    border-radius: 16px;
+    border: 2px solid var(--theme-accent);
+}
+
+.cs-modal-canvas-wrap canvas {
+    cursor: move;
+    background: #000;
+}
+
+.cs-modal-slider {
+    width: 100%;
+}
+
+.cs-modal-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.cs-modal-btn {
+    flex: 1;
+}
+
+/* ================================================================
+   Responsive
+   ================================================================ */
+@media (max-width: 600px) {
+    .cs-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cs-card-banner {
+        height: 140px;
+    }
+
+    .cs-banner-actions {
+        opacity: 1;
+    }
+
+    .cs-delete-btn {
+        opacity: 1;
+    }
+}

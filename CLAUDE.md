@@ -40,11 +40,11 @@ js/
   ghoul.js              ← Ghoul management (356 lines)
   temporal-codex.js     ← Temporal records (177 lines)
   shared-picker.js      ← Reusable picker component (91 lines)
-  active-character-sheet.js  ← Character display (45 lines)
+  features/active-character-sheet/ ← Embedded character sheet host feature
   template-definitions.js    ← Template utils (43 lines)
 fragments/              ← 14 HTML view templates loaded by router
 css/                    ← 10 CSS files (styles.css has global vars)
-characterSheets/        ← Standalone character sheet app (script.js = 230KB)
+legacy/character-sheets/ ← Standalone legacy sheet app (script.js = 230KB)
 knowledge_base/         ← VtM disciplines & rules docs
 docs/
   PROJECT_RULES.md      ← Code style guidelines

@@ -21,6 +21,68 @@ let __currentRoute = null;
 let __lastRenderedPath = null;
 let __lastUserId = null;
 
+function extractSupabaseHashPayload(rawHashValue) {
+  const raw = String(rawHashValue || "");
+  if (!raw) return null;
+
+  const decoded = decodeURIComponent(raw);
+  if (decoded.startsWith("access_token=") || decoded.startsWith("error=")) {
+    return decoded;
+  }
+
+  const markerAccess = "#access_token=";
+  const markerError = "#error=";
+  const idxAccess = decoded.indexOf(markerAccess);
+  const idxError = decoded.indexOf(markerError);
+  const idx =
+    idxAccess === -1
+      ? idxError
+      : idxError === -1
+        ? idxAccess
+        : Math.min(idxAccess, idxError);
+
+  if (idx === -1) return null;
+  return decoded.slice(idx + 1);
+}
+
+async function bootstrapRecoverySessionFromHash() {
+  const rawHash = window.location.hash.slice(1);
+  const payload = extractSupabaseHashPayload(rawHash);
+  if (!payload) return false;
+
+  // Keep URL hash canonical so Supabase/auth flows and router checks are stable.
+  if (payload !== rawHash) {
+    history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}#${payload}`,
+    );
+  }
+
+  const params = new URLSearchParams(payload);
+  const type = params.get("type");
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+
+  if (type !== "recovery" || !accessToken || !refreshToken) return false;
+
+  try {
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) {
+      console.warn("Router: recovery setSession failed:", error.message);
+      return false;
+    }
+    __pendingPasswordRecovery = true;
+    return true;
+  } catch (err) {
+    console.warn("Router: recovery bootstrap exception:", err);
+    return false;
+  }
+}
+
 function applyStoredTheme() {
   const raw = (localStorage.getItem(APP_THEME_KEY) || "dark").toLowerCase();
   const stored = THEME_ORDER.includes(raw) ? raw : "dark";
@@ -84,8 +146,36 @@ function updateContentBackgroundMode(baseHash) {
   const contentShell = document.querySelector("main.content");
   if (!contentShell) return;
   const useFlatThemeBackground =
-    baseHash === "settings" || baseHash === "chronicles";
+    baseHash === "settings" || baseHash === "chronicles" || baseHash === "chronicle" || baseHash === "character-sheets";
   contentShell.classList.toggle("content-theme-bg-only", useFlatThemeBackground);
+}
+
+function bindFragmentActions(contentEl) {
+  if (!contentEl) return;
+
+  contentEl.querySelectorAll("[data-nav-hash]").forEach((el) => {
+    const targetHash = (el.getAttribute("data-nav-hash") || "").trim();
+    if (!targetHash || el.dataset.navBound === "1") return;
+
+    const navigate = () => {
+      window.location.hash = targetHash;
+    };
+
+    el.addEventListener("click", navigate);
+    el.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        navigate();
+      }
+    });
+    el.dataset.navBound = "1";
+  });
+
+  contentEl.querySelectorAll("[data-history-back]").forEach((el) => {
+    if (el.dataset.historyBackBound === "1") return;
+    el.addEventListener("click", () => window.history.back());
+    el.dataset.historyBackBound = "1";
+  });
 }
 
 function initAppThemeModal() {
@@ -351,6 +441,7 @@ async function loadRoute(force = false) {
     });
 
     if (window.lucide?.createIcons) lucide.createIcons();
+    bindFragmentActions(contentEl);
   } catch (e) {
     console.error("Router Error:", e);
     contentEl.innerHTML = "<p>Error al cargar la sección.</p>";
@@ -406,6 +497,7 @@ async function loadRoute(force = false) {
 // 4) Initialize app on DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Router: DOMContentLoaded");
+  await bootstrapRecoverySessionFromHash();
   applyStoredTheme();
   applyStoredFont();
 

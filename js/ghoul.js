@@ -14,9 +14,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // 6. Dynamic Base Path for multiple pages
   // 6. Dynamic Base Path for multiple pages
   function getBasePath() {
-    // If we are in /characterSheets/, we need to go up one level
-    if (window.location.pathname.toLowerCase().includes("/charactersheets/")) {
-      return "../";
+    // If we are inside character sheet routes, go back to project root.
+    const path = window.location.pathname.toLowerCase();
+    if (
+      path.includes("/charactersheets/") ||
+      path.includes("/features/character-sheets/")
+    ) {
+      return "../../";
     }
     return "";
   }

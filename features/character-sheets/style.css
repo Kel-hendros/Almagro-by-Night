@@ -2,7 +2,7 @@
    VAMPIRO V20 - CHARACTER SHEET UNIFIED STYLES
    Beta Layout + 6-Theme System
    ================================================ */
-@import url('../css/theme-tokens.css');
+@import url('../../css/theme-tokens.css');
 
 /* ================================================
    FONT DECLARATIONS
@@ -51,18 +51,18 @@ input[type="number"]::-webkit-outer-spin-button {
 :root,
 :root[data-theme],
 body[data-theme] {
-	--bg: var(--theme-bg-primary);
-	--bg-soft: var(--theme-bg-surface);
-	--card: color-mix(in srgb, var(--theme-bg-surface) 88%, transparent);
-	--line: var(--theme-border-primary);
-	--text: var(--theme-text-primary);
-	--muted: var(--theme-text-secondary);
-	--accent: var(--theme-accent);
-	--accent-strong: color-mix(in srgb, var(--theme-accent) 70%, #ffffff);
-	--ok: var(--theme-success);
-	--shadow: var(--sidebar-shadow-outer);
-	--fail: var(--theme-text-tertiary);
-	--danger: var(--theme-accent);
+	--bg: var(--theme-bg-primary, #1a1a1c);
+	--bg-soft: var(--theme-bg-surface, #242426);
+	--card: color-mix(in srgb, var(--theme-bg-surface, #242426) 88%, transparent);
+	--line: var(--theme-border-primary, #44444a);
+	--text: var(--theme-text-primary, #f5f5f0);
+	--muted: var(--theme-text-secondary, #9a9aa0);
+	--accent: var(--theme-accent, #c62828);
+	--accent-strong: color-mix(in srgb, var(--theme-accent, #c62828) 70%, #ffffff);
+	--ok: var(--theme-success, #6e9e6e);
+	--shadow: var(--sidebar-shadow-outer, rgba(0, 0, 0, 0.35));
+	--fail: var(--theme-text-tertiary, #6e6e76);
+	--danger: var(--theme-accent, #c62828);
 	--customPointer: url('images/pointer.png'), pointer;
 	--ui-border: var(--theme-border-primary);
 	--ui-border-strong: color-mix(in srgb, var(--theme-border-primary) 75%, #ffffff);
@@ -167,7 +167,7 @@ textarea::placeholder {
 .beta-bg {
 	position: fixed;
 	inset: 0;
-	background: var(--content-theme-bg-gradient);
+	background: var(--content-theme-bg-gradient, linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%));
 	z-index: -1;
 }
 
@@ -4397,6 +4397,45 @@ ul li.active {
 	border-color: var(--accent);
 	background: var(--ui-accent-subtle);
 	transform: translateY(-1px);
+}
+
+/* Shared button primitives bridge (legacy sheet -> global ui-components) */
+.discipline-power-save-btn.btn,
+.background-save-btn.btn,
+.form-cancel-btn.btn,
+.specialty-add-action.btn,
+.theme-export-btn.btn,
+.discord-webhook-save.btn,
+.discord-webhook-cancel.btn {
+	min-height: 34px;
+	height: 34px;
+	padding: 7px 10px;
+	font-family: var(--fontBody);
+	font-size: 0.8rem;
+	line-height: 1.1;
+	letter-spacing: 0.02em;
+}
+
+.discipline-power-save-btn.btn,
+.background-save-btn.btn,
+.form-cancel-btn.btn {
+	width: 100%;
+	justify-content: center;
+	text-align: center;
+}
+
+.specialty-add-action.btn,
+.theme-export-btn.btn {
+	width: 100%;
+	justify-content: center;
+	text-align: center;
+	border-style: solid;
+}
+
+.discord-webhook-save.btn,
+.discord-webhook-cancel.btn {
+	min-width: 112px;
+	border-radius: 999px;
 }
 
 .font-preview {
