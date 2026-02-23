@@ -17,6 +17,57 @@ async function fetchCurrentPlayer() {
   return data;
 }
 
+function initialsFromName(name) {
+  const clean = (name || "").trim();
+  if (!clean) return "?";
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+}
+
+function buildAvatarsMarkup(participants) {
+  const items = Array.isArray(participants) ? participants : [];
+  const visibleLimit = 6;
+  const plusThreshold = 7;
+  const showPlus = items.length > plusThreshold;
+  const visible = showPlus ? items.slice(0, visibleLimit) : items.slice(0, plusThreshold);
+  const remaining = showPlus ? Math.max(0, items.length - visibleLimit) : 0;
+
+  const avatarNodes = visible
+    .map((participant) => {
+      const avatarUrl = participant?.character?.avatar_url || "";
+      if (avatarUrl) {
+        return `<span class="chronicle-card-avatar"><img src="${escapeHtml(
+          avatarUrl
+        )}" alt="" loading="lazy"></span>`;
+      }
+      const fallbackName =
+        participant?.character?.name || participant?.player?.name || "";
+      const label = initialsFromName(fallbackName);
+      return `<span class="chronicle-card-avatar">${escapeHtml(label)}</span>`;
+    })
+    .join("");
+
+  const moreNode =
+    remaining > 0
+      ? `<span class="chronicle-card-avatar more">+${remaining}</span>`
+      : "";
+
+  return `<div class="chronicle-card-avatars">${avatarNodes}${moreNode}</div>`;
+}
+
+function statusLabel(status) {
+  return status === "active" ? "Activa" : "Pausada";
+}
+
+function statusClass(status) {
+  return status === "active" ? "active" : "archived";
+}
+
+function roleLabel(role) {
+  return role === "narrator" ? "Narrador" : "Jugador";
+}
+
 async function loadChronicles() {
   const grid = document.getElementById("chronicles-grid");
   if (!grid) return;
@@ -33,7 +84,7 @@ async function loadChronicles() {
   const { data: participations, error: pErr } = await supabase
     .from("chronicle_participants")
     .select(
-      "role, chronicle:chronicles(id, name, status, creator_id, created_at, banner_url)"
+      "role, chronicle:chronicles(id, name, description, status, creator_id, created_at, banner_url, creator:players!chronicles_creator_id_fkey(name))"
     )
     .eq("player_id", player.id);
 
@@ -46,7 +97,7 @@ async function loadChronicles() {
   // Also find chronicles where the player is creator but might not be in participants yet
   const { data: ownedChronicles } = await supabase
     .from("chronicles")
-    .select("id, name, status, creator_id, created_at, banner_url")
+    .select("id, name, description, status, creator_id, created_at, banner_url, creator:players!chronicles_creator_id_fkey(name)")
     .eq("creator_id", player.id);
 
   // Merge and deduplicate
@@ -87,13 +138,38 @@ async function loadChronicles() {
   const chronicleIds = chronicles.map((c) => c.id);
   const { data: allParticipants } = await supabase
     .from("chronicle_participants")
-    .select("chronicle_id, player_id")
+    .select("chronicle_id, player_id, role, player:players(id, name)")
     .in("chronicle_id", chronicleIds);
 
-  const countMap = {};
+  // Character avatars per chronicle (used by chronicle cards)
+  const { data: chronicleCharacters } = await supabase
+    .from("chronicle_characters")
+    .select(
+      "chronicle_id, character:character_sheets(id, name, avatar_url, updated_at)"
+    )
+    .in("chronicle_id", chronicleIds);
+
+  const participantMap = {};
   if (allParticipants) {
     allParticipants.forEach((p) => {
-      countMap[p.chronicle_id] = (countMap[p.chronicle_id] || 0) + 1;
+      if (!participantMap[p.chronicle_id]) participantMap[p.chronicle_id] = [];
+      participantMap[p.chronicle_id].push(p);
+    });
+  }
+
+  const characterMap = {};
+  if (chronicleCharacters) {
+    chronicleCharacters.forEach((row) => {
+      if (!row?.chronicle_id || !row?.character) return;
+      if (!characterMap[row.chronicle_id]) characterMap[row.chronicle_id] = [];
+      characterMap[row.chronicle_id].push(row);
+    });
+    Object.keys(characterMap).forEach((chronicleId) => {
+      characterMap[chronicleId].sort((a, b) => {
+        const da = new Date(a.character.updated_at || 0).getTime();
+        const db = new Date(b.character.updated_at || 0).getTime();
+        return db - da;
+      });
     });
   }
 
@@ -105,31 +181,45 @@ async function loadChronicles() {
       window.location.hash = "chronicle";
     };
 
-    const roleBadge =
-      chronicle.role === "narrator"
-        ? '<span class="chronicle-badge narrator">Narrador</span>'
-        : '<span class="chronicle-badge player">Jugador</span>';
-
-    const statusBadge =
-      chronicle.status === "active"
-        ? '<span class="chronicle-badge active">Activa</span>'
-        : '<span class="chronicle-badge archived">Archivada</span>';
-
-    const playerCount = countMap[chronicle.id] || 1;
-
-    const bannerHtml = chronicle.banner_url
-      ? `<div class="chronicle-card-banner"><img src="${escapeHtml(chronicle.banner_url)}" alt="" loading="lazy"></div>`
+    const participants = participantMap[chronicle.id] || [];
+    participants.sort((a, b) => {
+      const rank = (role) => (role === "narrator" ? 0 : 1);
+      return rank(a.role) - rank(b.role);
+    });
+    const characterAvatars = characterMap[chronicle.id] || [];
+    const avatarsHtml = characterAvatars.length
+      ? buildAvatarsMarkup(characterAvatars)
       : "";
+    const safeDescription = chronicle.description
+      ? escapeHtml(chronicle.description)
+      : "Sin descripción aún.";
+    const descClass = chronicle.description
+      ? "chronicle-card-description"
+      : "chronicle-card-description empty";
+
+    const narratorName = chronicle.creator?.name || "—";
 
     card.innerHTML = `
-      ${bannerHtml}
-      <h3>${escapeHtml(chronicle.name)}</h3>
-      <div class="chronicle-card-meta">
-        ${roleBadge}
-        ${statusBadge}
+      <div class="chronicle-card-banner">
+        ${
+          chronicle.banner_url
+            ? `<img src="${escapeHtml(chronicle.banner_url)}" alt="" loading="lazy">`
+            : ""
+        }
+        <div class="chronicle-card-banner-overlay">
+          ${avatarsHtml}
+        </div>
       </div>
-      <div class="chronicle-card-stats">
-        <span>${playerCount} jugador${playerCount !== 1 ? "es" : ""}</span>
+      <div class="chronicle-card-content">
+        <h3 class="chronicle-card-title">${escapeHtml(chronicle.name)}</h3>
+        <div class="chronicle-card-meta">
+          <span class="chronicle-card-narrator">Narrador: ${escapeHtml(narratorName)}</span>
+          <div class="chronicle-card-badges">
+            <span class="chronicle-badge ${chronicle.role === "narrator" ? "narrator" : "player"}">${roleLabel(chronicle.role)}</span>
+            <span class="chronicle-badge ${statusClass(chronicle.status)}">${statusLabel(chronicle.status)}</span>
+          </div>
+        </div>
+        <p class="${descClass}">${safeDescription}</p>
       </div>
     `;
 

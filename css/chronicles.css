@@ -1,90 +1,288 @@
 /* === Chronicles === */
 
+.main-container.games {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    color: var(--theme-text-primary);
+    text-align: left;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    border-radius: 0;
+    padding: 28px 40px;
+}
+
 .chronicles-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    border: 0;
+}
+
+.chronicles-title-wrap h1 {
+    margin: 0;
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-heading);
+    font-size: 2.4rem;
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: 0;
+    border: 0;
+}
+
+.chronicles-title-wrap h1::before {
+    content: none !important;
+}
+
+.chronicles-title-wrap h1::after {
+    content: none !important;
+}
+
+.chronicles-subtitle {
+    margin: 0.35rem 0 0;
+    color: var(--theme-text-secondary) !important;
+    font-style: italic;
+    font-size: 0.92rem !important;
+    font-family: var(--app-font-body) !important;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.4;
 }
 
 .chronicles-actions {
     display: flex;
     gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.chronicles-actions .chronicles-action-btn {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
+    border: 1px solid var(--theme-text-tertiary);
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-body);
+    font-size: 0.84rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.chronicles-actions .chronicles-action-btn:hover {
+    border-color: var(--theme-accent);
+    color: var(--theme-text-primary);
+}
+
+.chronicles-actions .chronicles-action-btn--primary {
+    background: transparent;
+    border-color: var(--theme-text-tertiary);
+    color: var(--theme-text-tertiary);
+}
+
+.chronicles-actions .chronicles-action-btn--primary:hover {
+    border-color: var(--theme-accent);
+    color: var(--theme-accent);
+}
+
+.chronicles-actions .chronicles-action-btn--secondary {
+    background: var(--theme-bg-elevated);
+    border-color: var(--theme-border-divider);
+    color: var(--theme-text-secondary);
+}
+
+.chronicles-actions .chronicles-action-btn--secondary:hover {
+    background: var(--theme-accent-soft);
+    border-color: var(--theme-accent);
+    color: var(--theme-text-primary);
 }
 
 .chronicles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.25rem;
 }
 
 .chronicle-card {
-    border: 1px solid var(--color-red-muted);
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--theme-border-divider);
     border-radius: 16px;
-    padding: 1.5rem;
-    background: rgba(18, 17, 20, 0.8);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    background: var(--theme-bg-surface);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     cursor: pointer;
-    transition: transform 0.2s, border-color 0.3s;
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .chronicle-card:hover {
     transform: translateY(-2px);
-    border-color: var(--color-red-accent);
+    border-color: var(--theme-accent);
 }
 
-.chronicle-card h3 {
-    margin: 0 0 0.5rem;
-    font-size: 1.2rem;
+.chronicle-card-banner {
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+    height: 125px;
+    border-bottom: 0;
+    background: linear-gradient(135deg, var(--theme-bg-elevated), var(--theme-bg-primary));
+}
+
+.chronicle-card-banner img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 16px 16px 0 0;
+}
+
+.chronicle-card-banner-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -24px;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 20px;
+    pointer-events: none;
+    z-index: 999 !important;
+}
+
+.chronicle-card-avatars {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    z-index: 1000 !important;
+}
+
+.chronicle-card-avatar {
+    width: 48px;
+    height: 48px;
+    margin-left: -12px;
+    border-radius: 999px;
+    border: 1px solid var(--theme-text-tertiary);
+    background: var(--theme-bg-primary);
+    color: var(--theme-text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    line-height: 1;
+}
+
+.chronicle-card-avatar:first-child {
+    margin-left: 0;
+}
+
+.chronicle-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.chronicle-card-avatar.more {
+    border-color: var(--theme-accent);
+    background: var(--theme-accent);
+    color: var(--theme-text-primary);
+    font-family: "Inter", "Lato", "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    line-height: 1 !important;
+}
+
+.chronicle-card-content {
+    position: relative;
+    z-index: 0;
+    padding: 1rem 1.15rem 1rem;
+}
+
+.chronicle-card-title {
+    margin: 0;
+    color: var(--theme-text-primary);
+    font-size: 1.55rem;
+    line-height: 1.05;
+    font-family: var(--app-font-heading);
 }
 
 .chronicle-card-meta {
+    margin-top: 0.55rem;
     display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.chronicle-card-narrator {
+    color: var(--theme-text-tertiary);
+    font-size: 0.76rem;
+    font-family: var(--app-font-body);
+}
+
+.chronicle-card-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .chronicle-badge {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 0.15rem 0.5rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.35px;
+    padding: 0.15rem 0.45rem;
     border-radius: 999px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    line-height: 1.2;
+    font-family: var(--app-font-body);
 }
 
 .chronicle-badge.narrator {
-    background: var(--color-red);
-    color: var(--color-cream);
+    background: var(--theme-accent);
+    color: var(--theme-text-primary);
 }
 
 .chronicle-badge.player {
-    background: transparent;
-    border: 1px solid var(--color-cream-muted);
-    color: var(--color-cream-muted);
+    background: var(--theme-bg-elevated);
+    border-color: transparent;
+    color: var(--theme-text-tertiary);
 }
 
 .chronicle-badge.active {
-    background: rgba(39, 174, 96, 0.2);
-    border: 1px solid #27ae60;
-    color: #27ae60;
+    background: var(--theme-success-soft);
+    border-color: transparent;
+    color: var(--theme-text-primary);
 }
 
 .chronicle-badge.archived {
-    background: rgba(104, 100, 92, 0.2);
-    border: 1px solid var(--color-cream-muted);
-    color: var(--color-cream-muted);
+    background: var(--theme-bg-elevated);
+    border-color: var(--theme-border-divider);
+    color: var(--theme-text-tertiary);
 }
 
-.chronicle-card-stats {
-    font-size: 0.9rem;
-    color: var(--color-cream-muted);
+.main-container.games .chronicle-card-description {
+    margin-top: 0.6rem;
+    color: var(--theme-text-tertiary);
+    font-size: 0.86rem;
+    line-height: 1.45;
+    font-style: italic;
+    font-family: var(--app-font-body);
+    margin-bottom: 0;
 }
 
-.chronicle-card-stats span {
-    display: block;
+.main-container.games .chronicle-card-description.empty {
+    opacity: 0.6;
 }
 
 /* --- Modal --- */
@@ -106,47 +304,93 @@
 }
 
 .chronicle-modal {
-    background: #1a1a1a;
-    border: 1px solid var(--color-red-muted);
+    background: var(--theme-bg-surface);
+    border: 1px solid var(--theme-border-divider);
     border-radius: 16px;
     padding: 2rem;
     max-width: 420px;
     width: 90%;
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-body);
 }
 
 .chronicle-modal h2 {
     margin: 0 0 1rem;
     font-size: 1.3rem;
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-heading);
 }
 
 .chronicle-modal label {
     display: block;
     margin-bottom: 0.35rem;
     font-size: 0.9rem;
-    color: var(--color-cream-muted);
+    color: var(--theme-text-tertiary);
 }
 
 .chronicle-modal input[type="text"] {
     width: 100%;
     padding: 0.6rem 0.8rem;
-    border: 1px solid var(--color-cream-muted);
+    border: 1px solid var(--theme-border-divider);
     border-radius: 8px;
-    background: rgba(0, 0, 0, 0.5);
-    color: var(--color-cream);
-    font-family: 'Special Elite', cursive;
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-body);
     font-size: 1rem;
     margin-bottom: 1rem;
 }
 
 .chronicle-modal input[type="text"]:focus {
     outline: none;
-    border-color: var(--color-red-accent);
+    border-color: var(--theme-accent);
 }
 
 .chronicle-modal-actions {
     display: flex;
     gap: 0.75rem;
     justify-content: flex-end;
+}
+
+.chronicle-modal .gameButton {
+    height: 40px;
+    min-width: 110px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--theme-text-tertiary);
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-body);
+    font-size: 0.84rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    text-transform: none;
+}
+
+.chronicle-modal .gameButton:hover {
+    border-color: var(--theme-accent);
+}
+
+.chronicle-modal .gameButton.primary {
+    background: transparent;
+    border-color: var(--theme-accent);
+    color: var(--theme-accent);
+}
+
+.chronicle-modal .gameButton.primary:hover {
+    background: var(--theme-accent-soft);
+    color: var(--theme-text-primary);
+}
+
+.chronicle-modal .gameButton.secondary {
+    background: var(--theme-bg-elevated);
+    border-color: var(--theme-border-divider);
+    color: var(--theme-text-secondary);
+}
+
+.chronicle-modal .gameButton.secondary:hover {
+    background: var(--theme-accent-soft);
+    border-color: var(--theme-accent);
+    color: var(--theme-text-primary);
 }
 
 .chronicle-modal .msg {
@@ -156,11 +400,21 @@
 }
 
 .chronicle-modal .msg.error {
-    color: #e74c3c;
+    color: var(--theme-accent);
 }
 
 .chronicle-modal .msg.success {
-    color: #27ae60;
+    color: var(--theme-success);
+}
+
+@media (max-width: 900px) {
+    .main-container.games {
+        padding: 20px 24px;
+    }
+
+    .chronicles-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* --- Chronicle Detail Fullscreen --- */
@@ -658,15 +912,15 @@ p.chronicle-description {
     text-decoration: underline;
 }
 
-/* --- Chronicle Banner (Card View) --- */
-.chronicle-card-banner {
+/* --- Chronicle Banner (Legacy Card View) --- */
+.chronicle-dashboard .chronicle-card-banner {
     margin: -1.5rem -1.5rem 1rem -1.5rem;
     height: 120px;
     overflow: hidden;
     border-radius: 16px 16px 0 0;
 }
 
-.chronicle-card-banner img {
+.chronicle-dashboard .chronicle-card-banner img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -1619,7 +1873,7 @@ p.chronicle-description {
         padding: 16px;
     }
 
-    .chronicle-card-banner {
+    .chronicle-dashboard .chronicle-card-banner {
         height: 90px;
     }
 }

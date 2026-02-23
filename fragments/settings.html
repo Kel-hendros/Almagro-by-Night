@@ -59,6 +59,7 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        flex-wrap: wrap;
     }
 
     .settings-edit-inline {
@@ -83,6 +84,66 @@
     .settings-edit-inline .lucide {
         width: 11px;
         height: 11px;
+    }
+
+    .settings-name-editor {
+        display: none;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .settings-name-editor.visible {
+        display: inline-flex;
+    }
+
+    .settings-name-input {
+        height: 28px;
+        min-width: 220px;
+        border-radius: 8px;
+        border: 1px solid var(--sidebar-border);
+        background: var(--sidebar-action-bg);
+        color: var(--sidebar-text);
+        font-family: var(--app-font-body);
+        font-size: 0.8rem;
+        padding: 0 10px;
+        outline: none;
+    }
+
+    .settings-name-input:focus {
+        border-color: var(--sidebar-text-active);
+    }
+
+    .settings-inline-btn {
+        height: 28px;
+        min-width: 62px;
+        border-radius: 8px;
+        border: 1px solid var(--sidebar-text);
+        background: var(--sidebar-action-bg);
+        color: var(--sidebar-text);
+        font-size: 0.72rem;
+        font-family: var(--app-font-body);
+        cursor: pointer;
+        padding: 0 10px;
+    }
+
+    .settings-inline-btn:hover {
+        border-color: var(--sidebar-text-active);
+        color: var(--sidebar-text-active);
+    }
+
+    .settings-name-msg {
+        margin-top: 6px;
+        font-size: 0.72rem;
+        min-height: 1em;
+        color: var(--sidebar-text);
+    }
+
+    .settings-name-msg.error {
+        color: var(--theme-accent);
+    }
+
+    .settings-name-msg.success {
+        color: var(--theme-success);
     }
 
     .settings-password-row {
@@ -137,10 +198,16 @@
             <span class="settings-label">Nombre</span>
             <div class="settings-name-value">
                 <span id="settings-user-name" class="settings-value">-</span>
-                <button type="button" class="settings-edit-inline" title="Editar nombre">
+                <button id="settings-edit-name-btn" type="button" class="settings-edit-inline" title="Editar nombre">
                     <i data-lucide="pencil"></i>
                 </button>
+                <div id="settings-name-editor" class="settings-name-editor">
+                    <input id="settings-name-input" class="settings-name-input" type="text" maxlength="80" />
+                    <button id="settings-name-save" class="settings-inline-btn" type="button">Guardar</button>
+                    <button id="settings-name-cancel" class="settings-inline-btn" type="button">Cancelar</button>
+                </div>
             </div>
+            <p id="settings-name-msg" class="settings-name-msg"></p>
         </div>
 
         <div class="settings-row">
@@ -160,16 +227,130 @@
 
 <script>
     (async function initSettingsView() {
+        let currentSession = null;
+        let currentDisplayName = "-";
+
+        const nameEl = document.getElementById("settings-user-name");
+        const emailEl = document.getElementById("settings-user-email");
+        const editBtn = document.getElementById("settings-edit-name-btn");
+        const editor = document.getElementById("settings-name-editor");
+        const nameInput = document.getElementById("settings-name-input");
+        const saveBtn = document.getElementById("settings-name-save");
+        const cancelBtn = document.getElementById("settings-name-cancel");
+        const nameMsg = document.getElementById("settings-name-msg");
+
+        function setNameMessage(text, type = "") {
+            if (!nameMsg) return;
+            nameMsg.textContent = text || "";
+            nameMsg.className = `settings-name-msg${type ? ` ${type}` : ""}`;
+        }
+
+        function toggleNameEdit(editing) {
+            if (!editor || !editBtn || !nameEl) return;
+            editor.classList.toggle("visible", editing);
+            editBtn.style.display = editing ? "none" : "inline-flex";
+            nameEl.style.display = editing ? "none" : "inline";
+            if (editing && nameInput) {
+                nameInput.value = currentDisplayName || "";
+                nameInput.focus();
+                nameInput.select();
+            }
+        }
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            const userName = session?.user?.user_metadata?.full_name || session?.user?.email || "-";
+            currentSession = session || null;
+            const userId = currentSession?.user?.id;
             const userEmail = session?.user?.email || "-";
-            const nameEl = document.getElementById("settings-user-name");
-            const emailEl = document.getElementById("settings-user-email");
-            if (nameEl) nameEl.textContent = userName;
+            if (userId) {
+                const { data: playerRow } = await supabase
+                    .from("players")
+                    .select("name")
+                    .eq("user_id", userId)
+                    .maybeSingle();
+                currentDisplayName = playerRow?.name || session?.user?.user_metadata?.full_name || session?.user?.email || "-";
+            } else {
+                currentDisplayName = "-";
+            }
+            if (nameEl) nameEl.textContent = currentDisplayName;
             if (emailEl) emailEl.textContent = userEmail;
         } catch (err) {
             console.error("Settings init error:", err);
+            setNameMessage("No se pudieron cargar los datos de cuenta.", "error");
+        }
+
+        if (editBtn && saveBtn && cancelBtn && nameInput) {
+            editBtn.addEventListener("click", () => {
+                setNameMessage("");
+                toggleNameEdit(true);
+            });
+
+            cancelBtn.addEventListener("click", () => {
+                setNameMessage("");
+                toggleNameEdit(false);
+            });
+
+            nameInput.addEventListener("keydown", (ev) => {
+                if (ev.key === "Escape") {
+                    ev.preventDefault();
+                    setNameMessage("");
+                    toggleNameEdit(false);
+                }
+                if (ev.key === "Enter") {
+                    ev.preventDefault();
+                    saveBtn.click();
+                }
+            });
+
+            saveBtn.addEventListener("click", async () => {
+                const session = currentSession;
+                const userId = session?.user?.id;
+                const newName = (nameInput.value || "").trim();
+
+                if (!userId) {
+                    setNameMessage("No hay sesión activa.", "error");
+                    return;
+                }
+                if (newName.length < 2) {
+                    setNameMessage("El nombre debe tener al menos 2 caracteres.", "error");
+                    return;
+                }
+
+                saveBtn.disabled = true;
+                cancelBtn.disabled = true;
+                setNameMessage("Guardando...");
+
+                try {
+                    const { error: updateErr } = await supabase
+                        .from("players")
+                        .update({ name: newName })
+                        .eq("user_id", userId);
+
+                    if (updateErr) {
+                        throw updateErr;
+                    }
+
+                    const { error: metaErr } = await supabase.auth.updateUser({
+                        data: { full_name: newName },
+                    });
+                    if (metaErr) {
+                        console.warn("Could not update auth metadata:", metaErr);
+                    }
+
+                    currentDisplayName = newName;
+                    if (nameEl) nameEl.textContent = currentDisplayName;
+                    const sidebarName = document.getElementById("user-name");
+                    if (sidebarName) sidebarName.textContent = currentDisplayName;
+                    setNameMessage("Nombre actualizado.", "success");
+                    toggleNameEdit(false);
+                } catch (err) {
+                    console.error("Settings name update error:", err);
+                    setNameMessage(`No se pudo guardar el nombre: ${err.message || "Error desconocido"}`, "error");
+                } finally {
+                    saveBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }
+            });
         }
 
         const resetBtn = document.getElementById("settings-reset-password-btn");

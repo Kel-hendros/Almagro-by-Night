@@ -82,7 +82,8 @@ function setActiveSidebarItem(baseHash) {
 function updateContentBackgroundMode(baseHash) {
   const contentShell = document.querySelector("main.content");
   if (!contentShell) return;
-  const useFlatThemeBackground = baseHash === "settings";
+  const useFlatThemeBackground =
+    baseHash === "settings" || baseHash === "chronicles";
   contentShell.classList.toggle("content-theme-bg-only", useFlatThemeBackground);
 }
 
