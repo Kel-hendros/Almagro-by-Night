@@ -34,6 +34,7 @@
       isNarrator,
       latestRecap,
       myChars,
+      onRequestAddCharacter,
     } = config;
 
     const nextSessionText = document.getElementById("cd-next-session-text");
@@ -91,7 +92,18 @@
     }
 
     function renderCurrentCharacterCard() {
-      if (!charCard || !myChars?.length) return;
+      if (!charCard) return;
+      if (!myChars?.length) {
+        charCard.innerHTML = `
+          <span class="cd-card-icon"><i data-lucide="user-plus"></i></span>
+          <span class="cd-card-text">Agregar personaje a la Crónica</span>
+        `;
+        charCard.classList.add("cd-card-clickable");
+        charCard.onclick = () => {
+          if (typeof onRequestAddCharacter === "function") onRequestAddCharacter();
+        };
+        return;
+      }
       const myChar = myChars[0];
       const myClan = myChar.data?.clan || "Desconocido";
       const initials = myChar.name
@@ -114,9 +126,9 @@
         </div>
       `;
       charCard.classList.add("cd-card-clickable");
-      charCard.addEventListener("click", () => {
+      charCard.onclick = () => {
         window.location.hash = `active-character-sheet?id=${encodeURIComponent(myChar.id)}`;
-      });
+      };
     }
 
     async function refreshLastSessionCard() {

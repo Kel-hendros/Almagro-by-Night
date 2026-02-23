@@ -221,6 +221,10 @@
         isNarrator,
         latestRecap,
         myChars,
+        onRequestAddCharacter: () => {
+            switchTab("jugadores");
+            participantsApi.openCharPicker?.();
+        },
     })) || {};
 
     // ── Diario sub-tabs (mobile only, desktop shows both columns) ──
