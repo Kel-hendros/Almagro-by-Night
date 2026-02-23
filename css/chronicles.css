@@ -835,14 +835,15 @@ p.chronicle-description {
     display: none;
     position: fixed;
     z-index: 1000;
-    left: 0;
+    left: var(--sidebar-current-width, var(--sidebar-width-expanded));
     top: 0;
-    width: 100%;
+    width: calc(100% - var(--sidebar-current-width, var(--sidebar-width-expanded)));
     height: 100%;
     background: rgba(0, 0, 0, 0.7);
     align-items: center;
     justify-content: center;
 }
+
 
 .cd-modal-overlay.visible {
     display: flex;
@@ -947,8 +948,10 @@ p.chronicle-description {
     --cd-status-success: var(--theme-success);
     --cd-status-success-bg: var(--theme-success-soft);
     --cd-status-warning: var(--theme-warning);
+    --cd-danger: #C62828;
     --cd-font-primary: var(--app-font-body);
     --cd-font-display: var(--app-font-heading);
+    font-size-adjust: var(--app-font-size-adjust, none);
     --cd-radius-card: 16px;
     --cd-radius-pill: 24px;
 
@@ -1530,14 +1533,14 @@ p.chronicle-description {
     white-space: nowrap;
 }
 
-/* Delete buttons (accent bg, same size as banner btns) */
+/* Delete buttons (always red, same size as banner btns) */
 .cd-delete-btn {
     width: 24px;
     height: 24px;
     border-radius: 8px;
-    background: var(--cd-accent);
+    background: var(--cd-danger);
     border: none;
-    color: var(--cd-text-primary);
+    color: #fff;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1774,6 +1777,7 @@ p.chronicle-description {
     border-radius: var(--cd-radius-pill);
     white-space: nowrap;
     flex-shrink: 0;
+    align-self: flex-start;
 }
 
 .cd-note-body {
@@ -1794,6 +1798,173 @@ p.chronicle-description {
     color: var(--cd-text-tertiary);
 }
 
+/* Notes toolbar (search + add button) */
+.cd-notes-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.cd-notes-search-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cd-notes-search-icon {
+    position: absolute;
+    left: 12px;
+    width: 14px;
+    height: 14px;
+    color: var(--cd-text-tertiary);
+    pointer-events: none;
+}
+
+.cd-notes-search {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px 0 34px;
+    background: var(--cd-bg-surface);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: var(--cd-radius-card);
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.cd-notes-search::placeholder {
+    color: var(--cd-text-tertiary);
+}
+
+.cd-notes-search:focus {
+    border-color: var(--cd-status-warning);
+}
+
+/* Notes archive toggle */
+.cd-notes-archive-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 42px;
+    padding: 0 12px;
+    background: transparent;
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: var(--cd-radius-card);
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cd-text-tertiary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.cd-notes-archive-icon {
+    width: 13px;
+    height: 13px;
+}
+
+.cd-notes-archive-btn:hover {
+    border-color: var(--cd-text-secondary);
+    color: var(--cd-text-secondary);
+}
+
+.cd-notes-archive-btn.active {
+    border-color: var(--cd-status-warning);
+    color: var(--cd-status-warning);
+    background: color-mix(in srgb, var(--cd-status-warning) 8%, transparent);
+}
+
+/* Archive toggle in note form */
+.cd-note-archive-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+/* Switch / toggle */
+.cd-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    cursor: pointer;
+}
+
+.cd-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.cd-switch-track {
+    position: absolute;
+    inset: 0;
+    background: var(--cd-bg-elevated);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: 11px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.cd-switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--cd-text-tertiary);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.cd-switch input:checked + .cd-switch-track {
+    background: color-mix(in srgb, var(--cd-status-warning) 20%, var(--cd-bg-elevated));
+    border-color: var(--cd-status-warning);
+}
+
+.cd-switch input:checked + .cd-switch-track::after {
+    transform: translateX(18px);
+    background: var(--cd-status-warning);
+}
+
+/* Small switch variant */
+.cd-switch--sm {
+    width: 32px;
+    height: 18px;
+}
+
+.cd-switch--sm .cd-switch-track {
+    border-radius: 9px;
+}
+
+.cd-switch--sm .cd-switch-track::after {
+    width: 12px;
+    height: 12px;
+}
+
+.cd-switch--sm input:checked + .cd-switch-track::after {
+    transform: translateX(14px);
+}
+
+/* Archive toggle in note reader toolbar */
+.cd-note-reader-archive-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.cd-note-reader-archive-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--cd-text-tertiary);
+}
+
 /* Add list item button (+ Nuevo Recuento / + Nueva Nota) */
 .cd-add-list-btn {
     width: 100%;
@@ -1807,6 +1978,13 @@ p.chronicle-description {
     color: var(--cd-text-tertiary);
     cursor: pointer;
     transition: border-color 0.2s, color 0.2s;
+}
+
+.cd-add-list-btn--compact {
+    width: auto;
+    height: 42px;
+    padding: 0 14px;
+    white-space: nowrap;
 }
 
 .cd-add-list-btn:hover {
@@ -1991,10 +2169,11 @@ p.chronicle-description {
     gap: 10px;
     padding: 16px 20px 0 20px;
     flex-shrink: 0;
-    max-width: 720px;
+    max-width: 760px;
     width: 100%;
     margin: 0 auto;
     position: relative;
+    box-sizing: border-box;
 }
 
 .cd-recap-reader-toolbar {
@@ -2057,14 +2236,14 @@ p.chronicle-description {
 }
 
 .cd-btn-danger {
-    color: var(--cd-accent) !important;
-    border-color: var(--cd-accent) !important;
+    color: var(--cd-danger) !important;
+    border-color: var(--cd-danger) !important;
 }
 
 .cd-btn-danger:hover {
-    color: var(--cd-text-primary) !important;
-    background: var(--cd-accent) !important;
-    border-color: var(--cd-accent) !important;
+    color: #fff !important;
+    background: var(--cd-danger) !important;
+    border-color: var(--cd-danger) !important;
 }
 
 .cd-recap-reader-body {
@@ -2187,9 +2366,10 @@ p.chronicle-description {
     gap: 10px;
     padding: 0 20px 20px 20px;
     flex-shrink: 0;
-    max-width: 720px;
+    max-width: 760px;
     width: 100%;
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 /* Nav buttons */
@@ -2371,6 +2551,78 @@ p.chronicle-description {
 .cd-form-textarea--grow {
     flex: 1;
     min-height: 120px;
+}
+
+/* ================================================================
+   Note Form — Character Chip & Tags
+   ================================================================ */
+
+/* Character chip row in note form */
+.cd-note-char-chip-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Character selector chip */
+.cd-note-char-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--cd-bg-elevated);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: var(--cd-radius-pill);
+    padding: 6px 12px;
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--cd-status-warning);
+    cursor: default;
+    transition: border-color 0.2s, background 0.2s;
+    align-self: flex-start;
+}
+
+.cd-note-char-chip .cd-note-char-chevron {
+    display: none;
+    width: 12px;
+    height: 12px;
+}
+
+.cd-note-char-chip.clickable {
+    cursor: pointer;
+}
+
+.cd-note-char-chip.clickable .cd-note-char-chevron {
+    display: inline-block;
+}
+
+.cd-note-char-chip.clickable:hover {
+    border-color: var(--cd-status-warning);
+    background: color-mix(in srgb, var(--cd-status-warning) 10%, var(--cd-bg-elevated));
+}
+
+/* Tags row in note reader */
+.cd-note-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.cd-note-tags-row:empty {
+    display: none;
+}
+
+/* Individual tag pill */
+.cd-note-tag {
+    font-family: var(--cd-font-primary);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--cd-text-secondary);
+    background: var(--cd-bg-elevated);
+    padding: 3px 8px;
+    border-radius: var(--cd-radius-pill);
 }
 
 /* ================================================================

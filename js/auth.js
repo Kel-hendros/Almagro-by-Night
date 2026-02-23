@@ -105,6 +105,13 @@ async function initAuthForms() {
       const password = document.getElementById("su-password").value;
       console.log("Signup submit →", { name, email, characterName });
 
+      // Front-end password validation (must have letters + digits, min 6 chars)
+      const pwCheck = window.validatePassword(password);
+      if (!pwCheck.ok) {
+        suMsg.textContent = pwCheck.msg;
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

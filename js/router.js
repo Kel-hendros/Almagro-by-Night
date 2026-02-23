@@ -2,6 +2,7 @@
 
 let sessionReady = false;
 let currentSession = null;
+let __pendingPasswordRecovery = false;
 const SIDEBAR_MODE_KEY = "abn_sidebar_mode";
 const APP_THEME_KEY = "abn_theme";
 const APP_FONT_KEY = "abn_font";
@@ -270,6 +271,30 @@ async function loadRoute(force = false) {
   if (!sessionReady) return; // wait until session is initialized
 
   const rawHash = window.location.hash.slice(1) || "welcome";
+
+  // Intercept Supabase error hashes (e.g. #error=access_denied&error_code=otp_expired&...)
+  // These happen when a recovery/magic-link fails (expired, already used, etc.)
+  if (rawHash.startsWith("error=")) {
+    const params = new URLSearchParams(rawHash);
+    const errorCode = params.get("error_code");
+    const errorDesc = (params.get("error_description") || "").replace(/\+/g, " ");
+
+    const friendlyMessages = {
+      otp_expired: "El enlace ha expirado. Por favor, solicitá uno nuevo desde Configuración.",
+      access_denied: "Acceso denegado. El enlace puede haber sido usado o es inválido.",
+    };
+    const message = friendlyMessages[errorCode] || errorDesc || "Error de autenticación.";
+    console.warn("Router: Supabase auth error in hash →", errorCode, errorDesc);
+
+    // Clean the hash and redirect to a sensible route
+    const fallback = currentSession ? "welcome" : "welcome";
+    window.location.hash = fallback;
+
+    // Show error after a small delay so the page renders first
+    setTimeout(() => alert(message), 300);
+    return;
+  }
+
   // Split query params if present
   const [baseHash, queryString] = rawHash.split("?");
 
@@ -425,6 +450,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Theme and font modal
   initAppThemeModal();
 
+  // Password reset modal (for email recovery links)
+  initPasswordResetModal();
+
+  // If PASSWORD_RECOVERY fired before DOMContentLoaded finished, show the modal now
+  if (__pendingPasswordRecovery) {
+    __pendingPasswordRecovery = false;
+    if (window.__showPasswordResetModal) window.__showPasswordResetModal();
+  }
+
   // Logout link handler
   const logoutLink = document.getElementById("logout-link");
   if (logoutLink && !logoutLink._init) {
@@ -461,10 +495,115 @@ window.addEventListener("hashchange", async () => {
   await loadRoute(false);
 });
 
-// 6) React to auth state changes in other tabs
+// 6) Password Reset Modal logic
+function initPasswordResetModal() {
+  const modal = document.getElementById("password-reset-modal");
+  const inputPw = document.getElementById("pw-reset-input");
+  const inputConfirm = document.getElementById("pw-reset-confirm");
+  const msg = document.getElementById("pw-reset-msg");
+  const saveBtn = document.getElementById("pw-reset-save");
+  const cancelBtn = document.getElementById("pw-reset-cancel");
+
+  if (!modal || !inputPw || !inputConfirm || !msg || !saveBtn || !cancelBtn) return;
+
+  function showModal() {
+    inputPw.value = "";
+    inputConfirm.value = "";
+    msg.textContent = "";
+    msg.style.color = "var(--theme-accent, #C62828)";
+    modal.style.display = "flex";
+    inputPw.focus();
+  }
+
+  function hideModal() {
+    modal.style.display = "none";
+    inputPw.value = "";
+    inputConfirm.value = "";
+    msg.textContent = "";
+  }
+
+  cancelBtn.addEventListener("click", hideModal);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) hideModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.style.display !== "none") hideModal();
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    const pw = inputPw.value;
+    const confirm = inputConfirm.value;
+
+    // Validate password strength
+    const validation = window.validatePassword(pw);
+    if (!validation.ok) {
+      msg.style.color = "var(--theme-accent, #C62828)";
+      msg.textContent = validation.msg;
+      return;
+    }
+
+    // Check passwords match
+    if (pw !== confirm) {
+      msg.style.color = "var(--theme-accent, #C62828)";
+      msg.textContent = "Las contraseñas no coinciden.";
+      return;
+    }
+
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    msg.style.color = "var(--theme-text-secondary, #6E6E70)";
+    msg.textContent = "Guardando...";
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pw });
+      if (error) throw error;
+
+      msg.style.color = "var(--theme-success, #6E9E6E)";
+      msg.textContent = "¡Contraseña actualizada!";
+      setTimeout(hideModal, 1500);
+    } catch (err) {
+      msg.style.color = "var(--theme-accent, #C62828)";
+      msg.textContent = err.message || "Error al actualizar la contraseña.";
+    } finally {
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+    }
+  });
+
+  // Allow Enter key to submit
+  inputConfirm.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); saveBtn.click(); }
+  });
+  inputPw.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); inputConfirm.focus(); }
+  });
+
+  // Expose show function globally for the auth state change handler
+  window.__showPasswordResetModal = showModal;
+}
+
+// 7) React to auth state changes in other tabs
 supabase.auth.onAuthStateChange((event, session) => {
   currentSession = session;
+
+  // Handle password recovery flow — must run even before sessionReady,
+  // because Supabase fires PASSWORD_RECOVERY early when processing the URL token.
+  if (event === "PASSWORD_RECOVERY") {
+    console.log("Router: PASSWORD_RECOVERY detected, showing reset modal");
+    if (window.__showPasswordResetModal) {
+      window.__showPasswordResetModal();
+    } else {
+      // Modal not initialized yet (DOMContentLoaded hasn't finished), queue it
+      console.log("Router: Modal not ready, queuing PASSWORD_RECOVERY");
+      __pendingPasswordRecovery = true;
+    }
+    return; // Don't reroute during password recovery
+  }
+
   if (!sessionReady) return;
+
   const newUid = session?.user?.id || null;
   // Only force reroute when the authenticated user changes (login/logout),
   // not on background token refreshes

@@ -80,6 +80,7 @@ body {
 .app {
     display: flex;
     height: 100%;
+    --sidebar-current-width: var(--sidebar-width-expanded);
 }
 
 h1,
@@ -107,6 +108,7 @@ button,
     flex-direction: column;
     box-shadow: 5px 0px 30px 5px var(--sidebar-shadow-outer), inset -50px 0px 50px 10px var(--sidebar-shadow-inner);
     position: relative;
+    z-index: 1200;
 }
 
 
@@ -550,6 +552,10 @@ button.gameButton.secondary:hover {
 
 
 /* Sidebar Slim Mode (Responsive + Forced) */
+.app:has(.sidebar-slim-mode) {
+    --sidebar-current-width: var(--sidebar-width-collapsed);
+}
+
 .sidebar.sidebar-slim-mode {
     width: var(--sidebar-width-collapsed);
     align-items: center;

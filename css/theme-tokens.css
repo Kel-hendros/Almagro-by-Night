@@ -212,6 +212,7 @@ body[data-app-font="clasico"],
 body[data-font="clasico"] {
     --app-font-body: 'Cormorant Garamond', serif;
     --app-font-heading: 'delavan', serif;
+    --app-font-size-adjust: 0.52;
 }
 
 :root[data-app-font="noir"],

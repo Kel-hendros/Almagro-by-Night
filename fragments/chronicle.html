@@ -97,7 +97,17 @@
                 <!-- Mis Notas column -->
                 <div class="cd-diario-col" data-dcol="notas">
                     <span class="cd-diario-label cd-diario-label--notas">MIS NOTAS</span>
-                    <button class="cd-add-list-btn" id="cd-add-note">+ Nueva Nota</button>
+                    <div class="cd-notes-toolbar">
+                        <div class="cd-notes-search-wrap">
+                            <i data-lucide="search" class="cd-notes-search-icon"></i>
+                            <input type="text" id="cd-notes-search" class="cd-notes-search" placeholder="Buscar notas...">
+                        </div>
+                        <button class="cd-notes-archive-btn" id="cd-notes-archive-toggle" type="button">
+                            <i data-lucide="archive" class="cd-notes-archive-icon"></i>
+                            <span>Archivo</span>
+                        </button>
+                        <button class="cd-add-list-btn cd-add-list-btn--compact" id="cd-add-note">+ Nueva</button>
+                    </div>
                     <div id="cd-notas-list" class="cd-diario-list">
                         <span class="cd-card-muted">Cargando...</span>
                     </div>
@@ -132,7 +142,7 @@
                 <div class="cd-recap-reader-toolbar">
                     <button class="cd-recap-back-btn" id="recap-reader-close" type="button">
                         <i data-lucide="arrow-left"></i>
-                        <span>Volver a Diario</span>
+                        <span>Volver</span>
                     </button>
                     <div id="recap-reader-actions" class="cd-recap-reader-actions hidden">
                         <button id="recap-reader-edit" class="cd-banner-btn" type="button" title="Editar">
@@ -192,6 +202,93 @@
             <div class="cd-recap-form-footer">
                 <button id="recap-form-cancel" class="cd-recap-nav-btn cd-recap-nav-btn--ghost" type="button">Cancelar</button>
                 <button id="recap-form-save" class="cd-recap-nav-btn cd-recap-nav-btn--primary" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Note Reader -->
+    <div id="modal-note-reader" class="cd-modal-overlay cd-recap-overlay">
+        <div class="cd-recap-reader">
+            <div class="cd-recap-reader-header">
+                <div class="cd-recap-reader-toolbar">
+                    <button class="cd-recap-back-btn" id="note-reader-close" type="button">
+                        <i data-lucide="arrow-left"></i>
+                        <span>Volver</span>
+                    </button>
+                    <div id="note-reader-actions" class="cd-recap-reader-actions">
+                        <label class="cd-note-reader-archive-toggle" title="Archivada">
+                            <i data-lucide="archive" class="cd-note-reader-archive-icon"></i>
+                            <label class="cd-switch cd-switch--sm">
+                                <input type="checkbox" id="note-reader-archived">
+                                <span class="cd-switch-track"></span>
+                            </label>
+                        </label>
+                        <button id="note-reader-edit" class="cd-banner-btn" type="button" title="Editar">
+                            <i data-lucide="pencil"></i>
+                        </button>
+                        <button id="note-reader-delete" class="cd-banner-btn cd-btn-danger" type="button" title="Eliminar">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="cd-recap-reader-title-wrap">
+                    <h2 id="note-reader-title" class="cd-recap-reader-title"></h2>
+                    <span id="note-reader-char" class="cd-note-char-badge"></span>
+                    <div id="note-reader-tags" class="cd-note-tags-row"></div>
+                </div>
+            </div>
+            <div class="cd-recap-reader-body">
+                <div class="cd-recap-reader-card">
+                    <div id="note-reader-text" class="cd-recap-reader-text"></div>
+                </div>
+            </div>
+            <div class="cd-recap-reader-nav">
+                <button id="note-reader-prev" class="cd-recap-nav-btn" type="button">Anterior</button>
+                <button id="note-reader-next" class="cd-recap-nav-btn" type="button">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Note Form (Create/Edit) -->
+    <div id="modal-note-form" class="cd-modal-overlay cd-recap-overlay">
+        <div class="cd-recap-form">
+            <div class="cd-recap-form-header">
+                <h3 id="note-form-heading" class="cd-modal-title">Nueva Nota</h3>
+                <button class="cd-banner-btn" id="note-form-close" type="button" title="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="cd-recap-form-body">
+                <div class="cd-note-char-chip-row">
+                    <label class="cd-form-label">Personaje</label>
+                    <button type="button" id="note-form-char-chip" class="cd-note-char-chip">
+                        <span id="note-form-char-name"></span>
+                        <i data-lucide="chevrons-up-down" class="cd-note-char-chevron"></i>
+                    </button>
+                </div>
+                <div class="cd-form-group">
+                    <label class="cd-form-label" for="note-form-title">Titulo</label>
+                    <input type="text" id="note-form-title" class="cd-form-input" placeholder="Ej: Pistas sobre el Sabbat">
+                </div>
+                <div class="cd-form-group">
+                    <label class="cd-form-label" for="note-form-tags">Etiquetas <span class="cd-form-hint">(separadas por coma)</span></label>
+                    <input type="text" id="note-form-tags" class="cd-form-input" placeholder="Ej: pistas, sabbat, barrio norte">
+                </div>
+                <div class="cd-note-archive-row hidden" id="note-form-archive-row">
+                    <label class="cd-form-label" for="note-form-archived">Archivada</label>
+                    <label class="cd-switch">
+                        <input type="checkbox" id="note-form-archived">
+                        <span class="cd-switch-track"></span>
+                    </label>
+                </div>
+                <div class="cd-form-group cd-form-group--grow">
+                    <label class="cd-form-label" for="note-form-body">Contenido <span class="cd-form-hint">(soporta Markdown)</span></label>
+                    <textarea id="note-form-body" class="cd-form-textarea cd-form-textarea--grow" placeholder="Escribe tu nota..."></textarea>
+                </div>
+            </div>
+            <div class="cd-recap-form-footer">
+                <button id="note-form-cancel" class="cd-recap-nav-btn cd-recap-nav-btn--ghost" type="button">Cancelar</button>
+                <button id="note-form-save" class="cd-recap-nav-btn cd-recap-nav-btn--primary" type="button">Guardar</button>
             </div>
         </div>
     </div>
@@ -843,6 +940,9 @@
         const notasList = document.getElementById("cd-notas-list");
         const notasMoreBtn = document.getElementById("cd-notas-more");
         const addNoteBtn = document.getElementById("cd-add-note");
+        const notesSearchInput = document.getElementById("cd-notes-search");
+        const notesArchiveToggle = document.getElementById("cd-notes-archive-toggle");
+        let showingArchived = false;
 
         // Narrator can add recaps
         if (isNarrator) {
@@ -889,7 +989,6 @@
             card.className = "cd-recap-card";
             card.dataset.recapId = recap.id;
             card.innerHTML = `
-                <div class="cd-recap-bar"></div>
                 <div class="cd-recap-info">
                     <span class="cd-recap-title">${escapeHtml(recap.title)}</span>
                     <span class="cd-recap-meta">${meta}</span>
@@ -973,9 +1072,9 @@
 
         function updateReaderNav() {
             const idx = allLoadedRecaps.findIndex(r => r.id === currentReaderRecapId);
-            // Recaps sorted desc, so "previous" = higher session number = lower index
-            readerPrev.disabled = idx <= 0;
-            readerNext.disabled = idx >= allLoadedRecaps.length - 1;
+            // Recaps sorted desc (0 = newest). Prev = older (higher idx), Next = newer (lower idx)
+            readerPrev.disabled = idx >= allLoadedRecaps.length - 1;
+            readerNext.disabled = idx <= 0;
         }
 
         function closeRecapReader() {
@@ -990,12 +1089,12 @@
 
         readerPrev.addEventListener("click", () => {
             const idx = allLoadedRecaps.findIndex(r => r.id === currentReaderRecapId);
-            if (idx > 0) openRecapReader(allLoadedRecaps[idx - 1].id);
+            if (idx < allLoadedRecaps.length - 1) openRecapReader(allLoadedRecaps[idx + 1].id);
         });
 
         readerNext.addEventListener("click", () => {
             const idx = allLoadedRecaps.findIndex(r => r.id === currentReaderRecapId);
-            if (idx < allLoadedRecaps.length - 1) openRecapReader(allLoadedRecaps[idx + 1].id);
+            if (idx > 0) openRecapReader(allLoadedRecaps[idx - 1].id);
         });
 
         // Edit from reader
@@ -1150,22 +1249,7 @@
         // ── Notes from player's characters in this chronicle ──
         const NOTES_PAGE = 5;
         let notesShown = 0;
-
-        // Collect all non-archived notes from current player's characters
-        const allNotes = [];
-        myChars.forEach(sheet => {
-            const notes = (sheet.data?.notes || []).filter(n => !n.archived);
-            notes.forEach(note => {
-                allNotes.push({
-                    ...note,
-                    characterName: sheet.name,
-                    sheetId: sheet.id
-                });
-            });
-        });
-
-        // Sort by createdAt descending
-        allNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        let allNotes = [];
 
         function stripMarkdown(text) {
             return (text || '')
@@ -1195,41 +1279,438 @@
             return `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
         }
 
+        // Build allNotes from myChars
+        function collectNotes() {
+            allNotes = [];
+            myChars.forEach(sheet => {
+                const notes = (sheet.data?.notes || []).filter(n =>
+                    showingArchived ? !!n.archived : !n.archived
+                );
+                notes.forEach(note => {
+                    allNotes.push({
+                        ...note,
+                        characterName: sheet.name,
+                        sheetId: sheet.id
+                    });
+                });
+            });
+            allNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
+        collectNotes();
+
         function renderNoteCard(note) {
             const plain = stripMarkdown(note.body);
             const truncated = plain.length > 150 ? plain.substring(0, 150) + '…' : plain;
             const card = document.createElement("div");
             card.className = "cd-note-card";
+            card.dataset.noteId = note.id;
+            card.dataset.sheetId = note.sheetId;
+            const tagsHtml = (note.tags && note.tags.length)
+                ? `<div class="cd-note-tags-row">${note.tags.map(t => `<span class="cd-note-tag">${escapeHtml(t)}</span>`).join('')}</div>`
+                : '';
+
             card.innerHTML = `
                 <div class="cd-note-header">
                     <span class="cd-note-title">${escapeHtml(note.title)}</span>
                     <span class="cd-note-char-badge">${escapeHtml(note.characterName)}</span>
                 </div>
+                ${tagsHtml}
                 ${truncated ? `<p class="cd-note-body">${escapeHtml(truncated)}</p>` : ''}
-                <span class="cd-note-date">${formatRelativeDate(note.createdAt)}</span>
+                <span class="cd-note-date">${formatRelativeDate(note.updatedAt || note.createdAt)}</span>
             `;
+            card.addEventListener("click", () => openNoteReader(note.id));
             return card;
         }
 
+        let filteredNotes = [];
+        let notesQuery = "";
+
+        function filterNotes() {
+            if (!notesQuery) {
+                filteredNotes = allNotes;
+                return;
+            }
+            const q = notesQuery.toLowerCase();
+            filteredNotes = allNotes.filter(n =>
+                (n.title && n.title.toLowerCase().includes(q)) ||
+                (n.body && n.body.toLowerCase().includes(q)) ||
+                (n.characterName && n.characterName.toLowerCase().includes(q)) ||
+                (n.tags && n.tags.some(t => t.toLowerCase().includes(q)))
+            );
+        }
+
         function showNotes() {
-            const batch = allNotes.slice(notesShown, notesShown + NOTES_PAGE);
+            const batch = filteredNotes.slice(notesShown, notesShown + NOTES_PAGE);
             if (!notesShown) notasList.innerHTML = "";
             batch.forEach(n => notasList.appendChild(renderNoteCard(n)));
             notesShown += batch.length;
-            notasMoreBtn.classList.toggle("hidden", notesShown >= allNotes.length);
+            notasMoreBtn.classList.toggle("hidden", notesShown >= filteredNotes.length);
         }
 
-        if (!allNotes.length) {
-            notasList.innerHTML = '<span class="cd-card-muted">No hay notas todavía.</span>';
-            notasMoreBtn.classList.add("hidden");
-        } else {
-            showNotes();
+        function renderNotesList() {
+            notesShown = 0;
+            filterNotes();
+            if (!filteredNotes.length) {
+                const emptyMsg = notesQuery
+                    ? 'Sin resultados.'
+                    : showingArchived
+                        ? 'No hay notas archivadas.'
+                        : 'No hay notas todavía.';
+                notasList.innerHTML = `<span class="cd-card-muted">${emptyMsg}</span>`;
+                notasMoreBtn.classList.add("hidden");
+            } else {
+                showNotes();
+            }
         }
 
+        notesSearchInput.addEventListener("input", () => {
+            notesQuery = notesSearchInput.value.trim();
+            renderNotesList();
+        });
+
+        notesArchiveToggle.addEventListener("click", () => {
+            showingArchived = !showingArchived;
+            notesArchiveToggle.classList.toggle("active", showingArchived);
+            collectNotes();
+            renderNotesList();
+        });
+
+        renderNotesList();
         notasMoreBtn.addEventListener("click", showNotes);
 
+        // Refresh notes after CRUD — re-fetch character sheets from Supabase
+        async function refreshNotes() {
+            const { data: freshChars } = await supabase
+                .from("chronicle_characters")
+                .select("character_sheet_id, character_sheet:character_sheets(id, name, data, avatar_url, user_id)")
+                .eq("chronicle_id", chronicleId);
+
+            // Update myChars in place
+            myChars.length = 0;
+            (freshChars || []).forEach(c => {
+                const sheet = c.character_sheet;
+                if (sheet && sheet.user_id === session.user.id) {
+                    myChars.push(sheet);
+                }
+            });
+
+            collectNotes();
+            renderNotesList();
+        }
+
+        // ── Note Reader ──
+        const noteReaderOverlay = document.getElementById("modal-note-reader");
+        const noteReaderTitle = document.getElementById("note-reader-title");
+        const noteReaderChar = document.getElementById("note-reader-char");
+        const noteReaderTags = document.getElementById("note-reader-tags");
+        const noteReaderText = document.getElementById("note-reader-text");
+        const noteReaderPrev = document.getElementById("note-reader-prev");
+        const noteReaderNext = document.getElementById("note-reader-next");
+        const noteReaderArchived = document.getElementById("note-reader-archived");
+        let currentReaderNoteId = null;
+
+        function openNoteReader(noteId) {
+            const note = allNotes.find(n => n.id === noteId);
+            if (!note) return;
+            currentReaderNoteId = noteId;
+
+            noteReaderTitle.textContent = note.title;
+            noteReaderChar.textContent = note.characterName;
+            noteReaderArchived.checked = !!note.archived;
+
+            // Tags
+            noteReaderTags.innerHTML = "";
+            if (note.tags && note.tags.length) {
+                note.tags.forEach(tag => {
+                    const pill = document.createElement("span");
+                    pill.className = "cd-note-tag";
+                    pill.textContent = tag;
+                    noteReaderTags.appendChild(pill);
+                });
+            }
+
+            // Body
+            const raw = note.body || '';
+            noteReaderText.innerHTML = renderMarkdown(raw);
+
+            updateNoteReaderNav();
+            noteReaderOverlay.classList.add("visible");
+            if (window.lucide) lucide.createIcons({ nodes: [noteReaderOverlay] });
+        }
+
+        function updateNoteReaderNav() {
+            const idx = allNotes.findIndex(n => n.id === currentReaderNoteId);
+            noteReaderPrev.disabled = idx >= allNotes.length - 1;
+            noteReaderNext.disabled = idx <= 0;
+        }
+
+        function closeNoteReader() {
+            noteReaderOverlay.classList.remove("visible");
+            currentReaderNoteId = null;
+        }
+
+        document.getElementById("note-reader-close").addEventListener("click", closeNoteReader);
+        noteReaderOverlay.addEventListener("click", (e) => {
+            if (e.target === noteReaderOverlay) closeNoteReader();
+        });
+
+        noteReaderPrev.addEventListener("click", () => {
+            const idx = allNotes.findIndex(n => n.id === currentReaderNoteId);
+            if (idx < allNotes.length - 1) openNoteReader(allNotes[idx + 1].id);
+        });
+
+        noteReaderNext.addEventListener("click", () => {
+            const idx = allNotes.findIndex(n => n.id === currentReaderNoteId);
+            if (idx > 0) openNoteReader(allNotes[idx - 1].id);
+        });
+
+        // Edit from reader
+        document.getElementById("note-reader-edit").addEventListener("click", () => {
+            const note = allNotes.find(n => n.id === currentReaderNoteId);
+            if (note) {
+                closeNoteReader();
+                openNoteForm(note);
+            }
+        });
+
+        // Toggle archived from reader
+        noteReaderArchived.addEventListener("change", async () => {
+            const note = allNotes.find(n => n.id === currentReaderNoteId);
+            if (!note) return;
+
+            const newVal = noteReaderArchived.checked;
+            noteReaderArchived.disabled = true;
+
+            const { data: sheet, error: readErr } = await supabase
+                .from("character_sheets")
+                .select("data")
+                .eq("id", note.sheetId)
+                .maybeSingle();
+
+            if (readErr || !sheet) {
+                noteReaderArchived.checked = !newVal;
+                noteReaderArchived.disabled = false;
+                return;
+            }
+
+            const sheetData = sheet.data || {};
+            const notes = sheetData.notes || [];
+            const target = notes.find(n => n.id === note.id);
+            if (target) target.archived = newVal;
+
+            const { error: writeErr } = await supabase
+                .from("character_sheets")
+                .update({ data: { ...sheetData, notes } })
+                .eq("id", note.sheetId);
+
+            noteReaderArchived.disabled = false;
+
+            if (writeErr) {
+                noteReaderArchived.checked = !newVal;
+                return;
+            }
+
+            // Update local state and close — note moved between lists
+            closeNoteReader();
+            await refreshNotes();
+        });
+
+        // Delete from reader (soft-delete: archived = true)
+        document.getElementById("note-reader-delete").addEventListener("click", async () => {
+            if (!confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.")) return;
+
+            const note = allNotes.find(n => n.id === currentReaderNoteId);
+            if (!note) return;
+
+            // Fresh-read sheet to avoid race conditions
+            const { data: sheet, error: readErr } = await supabase
+                .from("character_sheets")
+                .select("data")
+                .eq("id", note.sheetId)
+                .maybeSingle();
+
+            if (readErr || !sheet) {
+                alert("Error al leer el personaje: " + (readErr?.message || "no encontrado"));
+                return;
+            }
+
+            const sheetData = sheet.data || {};
+            const notes = sheetData.notes || [];
+            const target = notes.find(n => n.id === note.id);
+            if (target) {
+                target.archived = true;
+            }
+
+            const { error: writeErr } = await supabase
+                .from("character_sheets")
+                .update({ data: { ...sheetData, notes } })
+                .eq("id", note.sheetId);
+
+            if (writeErr) {
+                alert("Error al eliminar: " + writeErr.message);
+                return;
+            }
+
+            closeNoteReader();
+            await refreshNotes();
+        });
+
+        // ── Note Form (Create / Edit) ──
+        const noteFormOverlay = document.getElementById("modal-note-form");
+        const noteFormHeading = document.getElementById("note-form-heading");
+        const noteFormTitle = document.getElementById("note-form-title");
+        const noteFormTags = document.getElementById("note-form-tags");
+        const noteFormBody = document.getElementById("note-form-body");
+        const noteFormSave = document.getElementById("note-form-save");
+        const noteFormCharChip = document.getElementById("note-form-char-chip");
+        const noteFormCharName = document.getElementById("note-form-char-name");
+        const noteFormArchiveRow = document.getElementById("note-form-archive-row");
+        const noteFormArchived = document.getElementById("note-form-archived");
+        let editingNoteId = null;
+        let editingNoteSheetId = null;
+        let noteFormCharIdx = 0;
+
+        function updateCharChip() {
+            if (!myChars.length) return;
+            const sheet = myChars[noteFormCharIdx];
+            noteFormCharName.textContent = sheet.name;
+            editingNoteSheetId = sheet.id;
+
+            if (myChars.length > 1) {
+                noteFormCharChip.classList.add("clickable");
+            } else {
+                noteFormCharChip.classList.remove("clickable");
+            }
+        }
+
+        // Cycle character on chip click
+        noteFormCharChip.addEventListener("click", () => {
+            if (myChars.length <= 1) return;
+            noteFormCharIdx = (noteFormCharIdx + 1) % myChars.length;
+            updateCharChip();
+        });
+
+        function openNoteForm(note) {
+            if (note) {
+                // Edit mode
+                editingNoteId = note.id;
+                editingNoteSheetId = note.sheetId;
+                noteFormHeading.textContent = "Editar Nota";
+                noteFormTitle.value = note.title || '';
+                noteFormTags.value = (note.tags || []).join(', ');
+                noteFormBody.value = note.body || '';
+                noteFormArchived.checked = !!note.archived;
+                noteFormArchiveRow.classList.remove("hidden");
+
+                // Set character chip to the note's character
+                const charIdx = myChars.findIndex(c => c.id === note.sheetId);
+                noteFormCharIdx = charIdx >= 0 ? charIdx : 0;
+            } else {
+                // Create mode
+                editingNoteId = null;
+                noteFormHeading.textContent = "Nueva Nota";
+                noteFormTitle.value = '';
+                noteFormTags.value = '';
+                noteFormBody.value = '';
+                noteFormArchived.checked = false;
+                noteFormArchiveRow.classList.add("hidden");
+                noteFormCharIdx = 0;
+            }
+
+            updateCharChip();
+            noteFormOverlay.classList.add("visible");
+            noteFormTitle.focus();
+            if (window.lucide) lucide.createIcons({ nodes: [noteFormOverlay] });
+        }
+
+        function closeNoteForm() {
+            noteFormOverlay.classList.remove("visible");
+            editingNoteId = null;
+            editingNoteSheetId = null;
+        }
+
+        document.getElementById("note-form-close").addEventListener("click", closeNoteForm);
+        document.getElementById("note-form-cancel").addEventListener("click", closeNoteForm);
+        noteFormOverlay.addEventListener("click", (e) => {
+            if (e.target === noteFormOverlay) closeNoteForm();
+        });
+
+        noteFormSave.addEventListener("click", async () => {
+            const title = noteFormTitle.value.trim();
+            if (!title) { alert("El título es obligatorio."); return; }
+            if (!editingNoteSheetId) { alert("No hay personaje seleccionado."); return; }
+
+            const tagsRaw = noteFormTags.value.trim();
+            const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+            const body = noteFormBody.value.trim() || '';
+
+            noteFormSave.disabled = true;
+            noteFormSave.textContent = "Guardando...";
+
+            // Fresh-read sheet to avoid race conditions
+            const { data: sheet, error: readErr } = await supabase
+                .from("character_sheets")
+                .select("data")
+                .eq("id", editingNoteSheetId)
+                .maybeSingle();
+
+            if (readErr || !sheet) {
+                alert("Error al leer el personaje: " + (readErr?.message || "no encontrado"));
+                noteFormSave.disabled = false;
+                noteFormSave.textContent = "Guardar";
+                return;
+            }
+
+            const sheetData = sheet.data || {};
+            const notes = sheetData.notes || [];
+
+            if (editingNoteId) {
+                // Edit existing note
+                const target = notes.find(n => n.id === editingNoteId);
+                if (target) {
+                    target.title = title;
+                    target.body = body;
+                    target.tags = tags;
+                    target.archived = noteFormArchived.checked;
+                    target.updatedAt = new Date().toISOString();
+                }
+            } else {
+                // Create new note
+                notes.push({
+                    id: Date.now(),
+                    title,
+                    body,
+                    tags,
+                    createdAt: new Date().toISOString(),
+                    archived: false
+                });
+            }
+
+            const { error: writeErr } = await supabase
+                .from("character_sheets")
+                .update({ data: { ...sheetData, notes } })
+                .eq("id", editingNoteSheetId);
+
+            noteFormSave.disabled = false;
+            noteFormSave.textContent = "Guardar";
+
+            if (writeErr) {
+                alert("Error al guardar: " + writeErr.message);
+                return;
+            }
+
+            closeNoteForm();
+            await refreshNotes();
+        });
+
+        // "+ Nueva Nota" button
         addNoteBtn.addEventListener("click", () => {
-            // TODO: note creation
+            if (!myChars.length) {
+                alert("Necesitás tener un personaje en esta crónica para crear notas.");
+                return;
+            }
+            openNoteForm(null);
         });
 
         // Remove character from chronicle

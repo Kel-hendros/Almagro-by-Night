@@ -26,6 +26,24 @@ window.escapeHtml = function escapeHtml(str) {
  * @param {object} [opts] — options passed to marked.parse
  * @returns {string} sanitized HTML
  */
+/**
+ * Validate a password meets Supabase requirements: min 6 chars, letters + digits.
+ * @param {string} pw — password to validate
+ * @returns {{ ok: boolean, msg: string }}
+ */
+window.validatePassword = function validatePassword(pw) {
+  if (!pw || pw.length < 6) {
+    return { ok: false, msg: "La contraseña debe tener al menos 6 caracteres." };
+  }
+  if (!/[a-zA-Z]/.test(pw)) {
+    return { ok: false, msg: "La contraseña debe incluir al menos una letra." };
+  }
+  if (!/\d/.test(pw)) {
+    return { ok: false, msg: "La contraseña debe incluir al menos un número." };
+  }
+  return { ok: true, msg: "" };
+};
+
 window.renderMarkdown = function renderMarkdown(raw, opts) {
   const text = raw || "";
   if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
