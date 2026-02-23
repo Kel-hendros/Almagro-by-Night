@@ -69,14 +69,28 @@
     });
   }
 
+  function getChronicleContextFromHash() {
+    const rawHash = (window.location.hash || "").replace(/^#/, "");
+    const query = rawHash.includes("?") ? rawHash.split("?")[1] : "";
+    const params = new URLSearchParams(query);
+    const chronicleIdFromQuery = params.get("id");
+    const recapIdFromQuery = params.get("recap");
+    return {
+      chronicleIdFromQuery: chronicleIdFromQuery || null,
+      recapIdFromQuery: recapIdFromQuery || null,
+    };
+  }
+
   async function initPage() {
     renderLoadingState();
 
-    const chronicleId = localStorage.getItem("currentChronicleId");
+    const { chronicleIdFromQuery, recapIdFromQuery } = getChronicleContextFromHash();
+    const chronicleId = chronicleIdFromQuery || localStorage.getItem("currentChronicleId");
     if (!chronicleId) {
         window.location.hash = "chronicles";
         return;
     }
+    localStorage.setItem("currentChronicleId", chronicleId);
 
     const session = await service().getSession();
     if (!session) {
@@ -230,6 +244,7 @@
         chronicleId,
         currentPlayerId: currentPlayer.id,
         isNarrator,
+        initialRecapId: recapIdFromQuery,
         previewLines: summaryApi.previewLines || ns.summary?.previewLines,
         recapReaderModal,
         recapFormModal,

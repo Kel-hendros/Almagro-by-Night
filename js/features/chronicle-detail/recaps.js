@@ -20,6 +20,7 @@
       chronicleId,
       currentPlayerId,
       isNarrator,
+      initialRecapId,
       previewLines,
       recapReaderModal,
       recapFormModal,
@@ -41,6 +42,7 @@
     const readerMeta = document.getElementById("recap-reader-meta");
     const readerText = document.getElementById("recap-reader-text");
     const readerActions = document.getElementById("recap-reader-actions");
+    const readerShare = document.getElementById("recap-reader-share");
     const readerPrev = document.getElementById("recap-reader-prev");
     const readerNext = document.getElementById("recap-reader-next");
 
@@ -120,8 +122,39 @@
       if (readerNext) readerNext.disabled = idx <= 0;
     }
 
-    function openRecapReader(recapId) {
-      const recap = allLoadedRecaps.find((r) => r.id === recapId);
+    function getRecapShareUrl(recapId) {
+      const hash = `chronicle?id=${encodeURIComponent(chronicleId)}&recap=${encodeURIComponent(recapId)}`;
+      return `${window.location.origin}${window.location.pathname}#${hash}`;
+    }
+
+    async function shareRecap(recapId) {
+      if (!recapId) return;
+      const shareUrl = getRecapShareUrl(recapId);
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(shareUrl);
+          alert("Link copiado al portapapeles.");
+          return;
+        }
+      } catch (error) {
+        console.warn("Recaps: clipboard write failed", error);
+      }
+      window.prompt("Copiá este link:", shareUrl);
+    }
+
+    async function openRecapReader(recapId) {
+      let recap = allLoadedRecaps.find((r) => r.id === recapId);
+      if (!recap) {
+        const { data, error } = await supabase
+          .from("session_recaps")
+          .select("id, session_number, title, body, session_date")
+          .eq("chronicle_id", chronicleId)
+          .eq("id", recapId)
+          .maybeSingle();
+        if (error || !data) return;
+        recap = data;
+        allLoadedRecaps.unshift(recap);
+      }
       if (!recap) return;
 
       currentReaderRecapId = recapId;
@@ -241,15 +274,20 @@
     readerPrev?.addEventListener("click", () => {
       const idx = allLoadedRecaps.findIndex((r) => r.id === currentReaderRecapId);
       if (idx < allLoadedRecaps.length - 1) {
-        openRecapReader(allLoadedRecaps[idx + 1].id);
+        void openRecapReader(allLoadedRecaps[idx + 1].id);
       }
     });
 
     readerNext?.addEventListener("click", () => {
       const idx = allLoadedRecaps.findIndex((r) => r.id === currentReaderRecapId);
       if (idx > 0) {
-        openRecapReader(allLoadedRecaps[idx - 1].id);
+        void openRecapReader(allLoadedRecaps[idx - 1].id);
       }
+    });
+
+    readerShare?.addEventListener("click", () => {
+      if (!currentReaderRecapId) return;
+      void shareRecap(currentReaderRecapId);
     });
 
     const editBtn = document.getElementById("recap-reader-edit");
@@ -287,6 +325,9 @@
     formSave?.addEventListener("click", persistRecapForm);
 
     await loadRecaps(false);
+    if (initialRecapId) {
+      await openRecapReader(initialRecapId);
+    }
 
     return {
       refreshLastSessionCard,
