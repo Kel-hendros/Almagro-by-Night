@@ -356,6 +356,33 @@ const routes = {
   "temporal-codex": "fragments/temporal-codex.html",
 };
 
+async function executeFragmentScriptsSequentially(contentEl) {
+  const scripts = Array.from(contentEl.querySelectorAll("script"));
+  for (const oldScript of scripts) {
+    const newScript = document.createElement("script");
+    Array.from(oldScript.attributes).forEach((attr) =>
+      newScript.setAttribute(attr.name, attr.value),
+    );
+
+    if (oldScript.src) {
+      newScript.async = false;
+      const waitForLoad = new Promise((resolve, reject) => {
+        newScript.onload = resolve;
+        newScript.onerror = reject;
+      });
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+      try {
+        await waitForLoad;
+      } catch (error) {
+        console.error("Router: script load error", oldScript.src, error);
+      }
+    } else {
+      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    }
+  }
+}
+
 // 3) Core routing function
 async function loadRoute(force = false) {
   if (!sessionReady) return; // wait until session is initialized
@@ -429,16 +456,8 @@ async function loadRoute(force = false) {
     const html = await res.text();
     contentEl.innerHTML = html;
 
-    // Execute scripts found in the fragment
-    const scripts = contentEl.querySelectorAll("script");
-    scripts.forEach((oldScript) => {
-      const newScript = document.createElement("script");
-      Array.from(oldScript.attributes).forEach((attr) =>
-        newScript.setAttribute(attr.name, attr.value),
-      );
-      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-      oldScript.parentNode.replaceChild(newScript, oldScript);
-    });
+    // Execute scripts in deterministic order to avoid feature bootstrap races.
+    await executeFragmentScriptsSequentially(contentEl);
 
     if (window.lucide?.createIcons) lucide.createIcons();
     bindFragmentActions(contentEl);
@@ -452,24 +471,24 @@ async function loadRoute(force = false) {
 
   // View-specific initialization
   if (
-    targetHash === "welcome" ||
-    targetHash === "login" ||
-    targetHash === "register" ||
-    targetHash === "user"
+    baseHash === "welcome" ||
+    baseHash === "login" ||
+    baseHash === "register" ||
+    baseHash === "user"
   ) {
     if (typeof initAuthTabs === "function") initAuthTabs();
     if (typeof initAuthForms === "function") {
-      console.log("Router: Calling initAuthForms for hash", targetHash);
+      console.log("Router: Calling initAuthForms for hash", baseHash);
       initAuthForms();
     }
   }
-  if (targetHash === "chronicles") {
+  if (baseHash === "chronicles") {
     if (typeof window.loadChronicles === "function") window.loadChronicles();
   }
-  if (targetHash === "games") {
+  if (baseHash === "games") {
     if (typeof window.loadGames === "function") window.loadGames();
   }
-  if (targetHash === "game") {
+  if (baseHash === "game") {
     console.log("Router: game route detected, initializing game view");
     if (typeof window.initGame === "function") {
       window.initGame();
@@ -478,7 +497,7 @@ async function loadRoute(force = false) {
     }
   }
 
-  if (targetHash === "combat-tracker") {
+  if (baseHash === "combat-tracker") {
     if (typeof window.initCombatTracker === "function") {
       window.initCombatTracker();
     }
