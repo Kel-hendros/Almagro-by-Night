@@ -15,9 +15,19 @@
         onBeforeLoad();
       }
 
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
+      let user = null;
+      if (typeof global.abnGetCurrentUser === "function") {
+        const { user: resolvedUser } = await global.abnGetCurrentUser({
+          retries: 2,
+          delayMs: 120,
+        });
+        user = resolvedUser || null;
+      } else {
+        const {
+          data: { user: directUser },
+        } = await supabaseClient.auth.getUser();
+        user = directUser || null;
+      }
 
       if (!user) {
         if (typeof onUserMissing === "function") onUserMissing();

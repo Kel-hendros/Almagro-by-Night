@@ -1,78 +1,28 @@
 const ratings = document.querySelectorAll(".rating");
-let editMode = true;
 let currentSheetId = null;
-let saveTimeout = null;
-
-function debounce(func, wait) {
-  return function (...args) {
-    const context = this;
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => func.apply(context, args), wait);
-  };
-}
+let currentAvatarUrl = null;
+const ratingDotsModule = window.ABNSheetRatingDots;
+const uiRefreshModule = window.ABNSheetUIRefresh;
 
 //Funcion que actualiza todos lo que hay que actualizar al visualizar/cargar la pagina
 function updateAll() {
-  //update the HTML title based on the character name
+  if (uiRefreshModule) {
+    uiRefreshModule.updateAll();
+    return;
+  }
   updateHTMLTitle();
-
-  // Loop through each rating element and update the dots
-  // Exclude .discipline-rating and .background-rating (managed dynamically)
-  const ratings = document.querySelectorAll(".rating:not(.discipline-rating):not(.background-rating)");
-  ratings.forEach((rating) => {
-    updateRatingDots(rating);
-  });
-
-  //update health squares based on health status
-  updateHealthSquares();
-
-  //update blood per turn based on generation
-  updateBloodPerTurn();
-
-  //update el UI para visualizar los tipos de sangre
-  updateBloodUI();
-
-  //update damagePenalty
-  //en el tirador de dados basado en el daño actual
-  updateDamagePenalty();
-
-  //reset dice roller
-  resetAllDice();
-
-  //update image clan logo
-  //basado en la letra del clan seleccionado
-  updateHeaderLogo();
-  updateClanFieldSigil();
-
-  //update discpline buttons para mostrar
-  //los botones en las disciplinas no-vacias
-  updateDisciplineButtons();
-
-  //update block temporal Willpower
-  blockTemporalWillpower();
-
-  //update Virtues based on Humanity
-  blockVirtues();
-
-  //sync virtue labels from hidden input values
-  syncVirtueLabels();
-
-  //update specialty containers visibility
-  updateAllSpecialtyVisibility();
-
-  //sync boost badges from hidden inputs after load
-  syncBoostBadges();
 }
 
 //function to update the HTML title based on the character name
 function updateHTMLTitle() {
-  //only if the character name is not empty
-  if (document.querySelector("#nombre").value !== "") {
-    var charName = document.querySelector("#nombre").value;
-    document.title = charName + " - Vampiro v20 - Hoja de personaje";
-  } else {
-    document.title = "Vampiro v20 - Hoja de personaje";
+  if (uiRefreshModule) {
+    uiRefreshModule.updateHTMLTitle();
+    return;
   }
+  const nameValue = document.querySelector("#nombre")?.value || "";
+  document.title = nameValue
+    ? `${nameValue} - Vampiro v20 - Hoja de personaje`
+    : "Vampiro v20 - Hoja de personaje";
 }
 
 // //////// Theme & Font System //////// //
@@ -155,268 +105,52 @@ function createSheetModalController({ overlay, closeButtons = [], onOpen, onClos
   };
 }
 
-function mapAppFontToSheet(font) {
-  if (font === "terminal") return "phantomas";
-  return font;
-}
-
-function mapSheetFontToApp(font) {
-  if (font === "phantomas") return "terminal";
-  return font;
-}
-
-function initThemeModal() {
-  const openBtn = document.getElementById("modeToggle");
-  const modal = document.getElementById("theme-modal");
-  const closeBtn = document.getElementById("theme-modal-close");
-  const exportPdfBtn = document.getElementById("export-character-pdf-btn");
-  const body = document.body;
-
-  if (!openBtn || !modal || !closeBtn) return;
-
-  const modalController = createSheetModalController({
-    overlay: modal,
-    closeButtons: [closeBtn],
+const themeDiscordModule = window.ABNSheetThemeDiscord;
+if (themeDiscordModule) {
+  themeDiscordModule.configure({
+    createModalController: createSheetModalController,
+    onExportPdf: downloadCharacterPdf,
+    onSave: saveCharacterData,
+    appThemeKey: APP_THEME_KEY,
+    appFontKey: APP_FONT_KEY,
   });
-
-  openBtn.addEventListener("click", () => modalController.open());
-
-  exportPdfBtn?.addEventListener("click", () => {
-    downloadCharacterPdf();
-  });
-
-  // --- initialize on load ---
-  const savedTheme = localStorage.getItem(APP_THEME_KEY);
-  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const resolvedTheme = savedTheme || (systemPrefersDark ? "dark" : "light");
-  body.setAttribute("data-theme", resolvedTheme);
-  document.documentElement.setAttribute("data-app-theme", resolvedTheme);
-
-  const savedAppFont = localStorage.getItem(APP_FONT_KEY) || "clasico";
-  const savedSheetFont = mapAppFontToSheet(savedAppFont);
-  document.documentElement.setAttribute("data-font", savedSheetFont);
-  document.documentElement.setAttribute("data-app-font", mapSheetFontToApp(savedSheetFont));
-  body.setAttribute("data-font", savedSheetFont);
-  localStorage.setItem(APP_FONT_KEY, mapSheetFontToApp(savedSheetFont));
+  themeDiscordModule.init();
 }
-initThemeModal();
-
-// MODAL DISCORD WEBHOOK
-let discordWebhookUrl = "";
-let discordWebhookEnabled = true;
-
-function initDiscordWebhookModal() {
-  const openBtn = document.getElementById("discord-btn");
-  const modal = document.getElementById("discord-webhook-modal");
-  const closeBtn = document.getElementById("discord-webhook-close");
-  const cancelBtn = document.getElementById("discord-webhook-cancel");
-  const form = document.getElementById("discord-webhook-form");
-  const urlInput = document.getElementById("discord-webhook-url");
-  const enabledInput = document.getElementById("discord-webhook-enabled");
-
-  if (!openBtn || !modal || !closeBtn || !cancelBtn || !form || !urlInput || !enabledInput) return;
-
-  let snapshotUrl = "";
-  let snapshotEnabled = true;
-
-  function syncForm() {
-    urlInput.value = discordWebhookUrl;
-    enabledInput.checked = discordWebhookEnabled;
-  }
-
-  let keepChangesOnClose = false;
-  const modalController = createSheetModalController({
-    overlay: modal,
-    closeButtons: [closeBtn, cancelBtn],
-    onOpen: () => {
-      snapshotUrl = discordWebhookUrl;
-      snapshotEnabled = discordWebhookEnabled;
-      syncForm();
-      keepChangesOnClose = false;
-      urlInput.focus();
-    },
-    onClose: () => {
-      if (keepChangesOnClose) return;
-      discordWebhookUrl = snapshotUrl;
-      discordWebhookEnabled = snapshotEnabled;
-      syncForm();
-    },
-  });
-
-  function openModal() {
-    snapshotUrl = discordWebhookUrl;
-    snapshotEnabled = discordWebhookEnabled;
-    syncForm();
-    keepChangesOnClose = false;
-    urlInput.focus();
-    modalController.open();
-  }
-
-  openBtn.addEventListener("click", openModal);
-
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const nextUrl = urlInput.value.trim();
-    const nextEnabled = enabledInput.checked;
-
-    if (nextUrl && !/^https:\/\/discord\.com\/api\/webhooks\/.+/i.test(nextUrl)) {
-      urlInput.setCustomValidity("URL inválida de webhook de Discord.");
-      urlInput.reportValidity();
-      return;
-    }
-    urlInput.setCustomValidity("");
-
-    discordWebhookUrl = nextUrl;
-    discordWebhookEnabled = nextEnabled && Boolean(nextUrl);
-
-    keepChangesOnClose = true;
-    modalController.close();
-    saveCharacterData();
-  });
-}
-initDiscordWebhookModal();
 
 function loadDiscordWebhookFromJSON(characterData) {
-  // New format
-  if (characterData.discordWebhookUrl !== undefined) {
-    discordWebhookUrl = characterData.discordWebhookUrl || "";
-    discordWebhookEnabled = characterData.discordWebhookEnabled !== false;
-  }
-  // Backward compat: old format used DOM input IDs
-  else if (characterData["discord-modal-webhook-input"]) {
-    discordWebhookUrl = characterData["discord-modal-webhook-input"] || "";
-    discordWebhookEnabled = characterData["discord-toggle-input"] !== "false";
-  }
+  themeDiscordModule?.loadDiscordWebhookFromCharacterData(characterData);
 }
 
-// MODAL SELECCION DE CLAN
-const clanModal = document.getElementById("clan-modal");
-const inputField = document.getElementById("clan");
-const acceptBtn = document.getElementById("accept-btn");
-const closeBtn = document.getElementById("close-btn");
-const cancelBtn = document.getElementById("cancel-btn");
-const clanChips = document.querySelectorAll("#clan-modal .clan-chip");
-const headerLogoDisplay = document.querySelector("#header-logo-value");
-let clanSelected = "";
-let currentLogoDisplay;
+function getDiscordConfig() {
+  return themeDiscordModule
+    ? themeDiscordModule.getDiscordConfig()
+    : { webhookUrl: "", enabled: false };
+}
+
+const clanHeaderModule = window.ABNSheetClanHeader;
+if (clanHeaderModule) {
+  clanHeaderModule.configure({
+    createModalController: createSheetModalController,
+    onSave: saveCharacterData,
+    getCurrentAvatarUrl: () => currentAvatarUrl,
+  });
+  clanHeaderModule.init();
+}
 
 function openClanModal() {
-  clanModalController?.open();
+  clanHeaderModule?.openModal();
 }
 
 function closeClanModal() {
-  clanModalController?.close();
+  clanHeaderModule?.closeModal();
 }
 
-const clanModalController = createSheetModalController({
-  overlay: clanModal,
-  closeButtons: [closeBtn, cancelBtn],
-});
-
-inputField.addEventListener("focus", openClanModal);
-inputField.addEventListener("click", openClanModal);
-
-clanChips.forEach((chip) => {
-  chip.addEventListener("click", () => {
-    // Get clan name (textContent minus the sigil span)
-    clanSelected = chip.textContent.trim();
-    // Remove the sigil character from the start (it's the span content)
-    const sigil = chip.querySelector(".clan-sigil");
-    if (sigil) {
-      clanSelected = chip.textContent.replace(sigil.textContent, "").trim();
-    }
-
-    // Remove active class from all chips
-    clanChips.forEach((c) => c.classList.remove("clan-chip-active"));
-
-    // Add active class to clicked chip
-    chip.classList.add("clan-chip-active");
-
-    // Store the sigil for header logo
-    currentLogoDisplay = chip.dataset.clan;
-  });
-});
-
-// Update the clan sigil icon next to the clan input field
 function updateClanFieldSigil() {
-  const sigil = document.getElementById("clan-field-sigil");
-  const logoValue = document.querySelector("#header-logo-value");
-  if (!sigil || !logoValue) return;
-  const val = logoValue.value;
-  if (val && val !== "G") {
-    sigil.textContent = val;
-    sigil.classList.add("visible");
-  } else {
-    sigil.textContent = "";
-    sigil.classList.remove("visible");
-  }
+  clanHeaderModule?.updateClanFieldSigil();
 }
 
-acceptBtn.addEventListener("click", () => {
-  closeClanModal();
-  inputField.value = clanSelected;
-  headerLogoDisplay.value = currentLogoDisplay;
-  updateHeaderLogo();
-  updateClanFieldSigil();
-  saveCharacterData();
-});
-
-closeBtn.addEventListener("click", closeClanModal);
-if (cancelBtn) cancelBtn.addEventListener("click", closeClanModal);
-
-//Function to update the p #header-logo-display innerHTML with the value stored in
-//#header-logo-value input value
-let currentAvatarUrl = null;
-
-//Function to update the p #header-logo-display innerHTML with the value stored in
-//#header-logo-value input value
 function updateHeaderLogo() {
-  const container = document.querySelector(".profile-back-link");
-  const input = document.querySelector("#header-logo-value");
-  let displayP = document.querySelector("#header-logo-display");
-
-  // Safety check: if P is missing (due to previous bug), try to restore it or find it
-  if (!displayP) {
-    // If we are recovering from the bad state where P has wrong ID or was deleted
-    // The previous bad code created <p id="header-logo-value"> AND deleted the input.
-    // We rely on the page reload to fix the HTML structure, as this script runs on load.
-    // But if the user hasn't reloaded, this might be tricky.
-    // Assuming user reloads or we navigate, the HTML is fresh.
-
-    // However, let's be robust.
-    displayP = container.querySelector("p");
-  }
-
-  const headerLogoValue = input ? input.value : "G";
-
-  // Check for existing avatar IMG
-  let avatarImg = container.querySelector(".avatar-img");
-
-  // If we have an avatar URL
-  if (currentAvatarUrl) {
-    // Hide the text P
-    if (displayP) displayP.style.display = "none";
-
-    // Create IMG if not exists
-    if (!avatarImg) {
-      avatarImg = document.createElement("img");
-      avatarImg.className = "avatar-img";
-      avatarImg.alt = "Personaje";
-      avatarImg.style.cssText = "";
-      container.appendChild(avatarImg);
-    }
-
-    avatarImg.src = currentAvatarUrl;
-    avatarImg.style.display = "block";
-  } else {
-    // No avatar: Show clan sigil
-    if (avatarImg) avatarImg.style.display = "none";
-
-    if (displayP) {
-      displayP.style.display = "block";
-      displayP.innerHTML = headerLogoValue;
-    }
-  }
+  clanHeaderModule?.updateHeaderLogo();
 }
 
 //////////////////////////////////////////////
@@ -428,258 +162,126 @@ function updateHeaderLogo() {
 /// FUNCIONALIDAD DE LOS PUNTITOS AL HACER CLICK ///
 ////////////////////////////////////////////////////
 // Loop through each rating element
-if (editMode === true) {
-  ratings.forEach((rating) => {
-    // Get the hidden input — normally the immediate next sibling,
-    // but for physical attributes wrapped in .attr-rating-wrap the input is outside the wrap.
-    let input = rating.nextElementSibling;
-    if (!input || input.type !== "hidden") {
-      const wrap = rating.closest(".attr-rating-wrap");
-      if (wrap) input = wrap.nextElementSibling;
+ratings.forEach((rating) => {
+  // Get the hidden input — normally the immediate next sibling,
+  // but for physical attributes wrapped in .attr-rating-wrap the input is outside the wrap.
+  let input = rating.nextElementSibling;
+  if (!input || input.type !== "hidden") {
+    const wrap = rating.closest(".attr-rating-wrap");
+    if (wrap) input = wrap.nextElementSibling;
+  }
+  if (!input) return; // safety bail
+  const dots = rating.querySelectorAll(".dot");
+
+  // Add click event listener to each dot
+  dots.forEach((dot, index) => {
+    if (!dot.closest("#blood-track")) {
+      dot.addEventListener("click", () => {
+        const currentValue = parseInt(input.value) || 0;
+
+        // Click on the last active dot → toggle it off (decrease by 1)
+        if (index + 1 === currentValue) {
+          input.value = index;
+          dots.forEach((innerDot, innerIndex) => {
+            if (innerIndex < index) {
+              innerDot.classList.add("filled");
+            } else {
+              innerDot.classList.remove("filled");
+            }
+          });
+        } else {
+          // Set to clicked dot level
+          input.value = index + 1;
+          dots.forEach((innerDot, innerIndex) => {
+            if (innerIndex <= index) {
+              innerDot.classList.add("filled");
+            } else {
+              innerDot.classList.remove("filled");
+            }
+          });
+        }
+        blockTemporalWillpower();
+        blockVirtues();
+
+        // Update specialty icon visibility after changing dots
+        const attributeId = input.id.replace('-value', '');
+        updateSpecialtyIconVisibility(attributeId);
+
+        saveCharacterData();
+      });
     }
-    if (!input) return; // safety bail
-    const dots = rating.querySelectorAll(".dot");
-
-    // Add click event listener to each dot
-    dots.forEach((dot, index) => {
-      if (!dot.closest("#blood-track")) {
-        dot.addEventListener("click", () => {
-          const currentValue = parseInt(input.value) || 0;
-
-          // Click on the last active dot → toggle it off (decrease by 1)
-          if (index + 1 === currentValue) {
-            input.value = index;
-            dots.forEach((innerDot, innerIndex) => {
-              if (innerIndex < index) {
-                innerDot.classList.add("filled");
-              } else {
-                innerDot.classList.remove("filled");
-              }
-            });
-          } else {
-            // Set to clicked dot level
-            input.value = index + 1;
-            dots.forEach((innerDot, innerIndex) => {
-              if (innerIndex <= index) {
-                innerDot.classList.add("filled");
-              } else {
-                innerDot.classList.remove("filled");
-              }
-            });
-          }
-          blockTemporalWillpower();
-          blockVirtues();
-
-          // Update specialty icon visibility after changing dots
-          const attributeId = input.id.replace('-value', '');
-          updateSpecialtyIconVisibility(attributeId);
-
-          saveCharacterData();
-        });
-      }
-    });
   });
+});
+
+const attributeBoostModule = window.ABNSheetAttributeBoost;
+if (attributeBoostModule) {
+  attributeBoostModule.configure({
+    createModalController: createSheetModalController,
+    onSave: saveCharacterData,
+  });
+  attributeBoostModule.init();
 }
 
-// // // // // Attribute Boost System (temporal physical attributes via modal)
 function initAttributeBoost() {
-  const modal = document.getElementById("attr-boost-modal");
-  const closeBtn = document.getElementById("attr-boost-modal-close");
-  const triggers = document.querySelectorAll(".attr-boost-trigger");
-  const optionButtons = document.querySelectorAll(".attr-boost-option");
-  const clearBtn = document.querySelector(".attr-boost-clear");
-  if (!modal || !closeBtn || triggers.length === 0) return;
-
-  // Map attr key → hidden input ID
-  const attrKeyToInputId = { fuerza: "tempFuerza", destreza: "tempDestreza", resistencia: "tempResistencia" };
-  let activeAttrKey = null;
-
-  const modalController = createSheetModalController({
-    overlay: modal,
-    closeButtons: [closeBtn],
-    onClose: () => {
-      activeAttrKey = null;
-    },
-  });
-
-  function closeModal() {
-    modalController.close();
-  }
-
-  function openModal(attrKey) {
-    activeAttrKey = attrKey;
-    const titleEl = document.getElementById("attr-boost-modal-title");
-    // Capitalize first letter for display
-    const label = attrKey.charAt(0).toUpperCase() + attrKey.slice(1);
-    if (titleEl) titleEl.textContent = `Boost temporal: ${label}`;
-    modalController.open();
-  }
-
-  function applyBoost(value) {
-    if (!activeAttrKey) return;
-    const badge = document.querySelector(`[data-boost-for="${activeAttrKey}"]`);
-    const hiddenId = attrKeyToInputId[activeAttrKey];
-    const hiddenInput = hiddenId ? document.getElementById(hiddenId) : null;
-    if (badge) {
-      badge.textContent = value ? `+${value}` : "";
-      badge.classList.toggle("visible", Boolean(value));
-    }
-    if (hiddenInput) {
-      hiddenInput.value = String(value);
-    }
-    saveCharacterData();
-  }
-
-  triggers.forEach((trigger) => {
-    trigger.addEventListener("click", () => {
-      const row = trigger.closest(".physical-attr");
-      const attrKey = row?.getAttribute("data-attr-key");
-      if (attrKey) openModal(attrKey);
-    });
-  });
-
-  optionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const value = Number(button.getAttribute("data-boost-value") || 0);
-      applyBoost(value);
-      closeModal();
-    });
-  });
-
-  clearBtn?.addEventListener("click", () => {
-    applyBoost(0);
-    closeModal();
-  });
-
+  attributeBoostModule?.init();
 }
 
-// Sync boost badges from hidden inputs (on load)
 function syncBoostBadges() {
-  const map = { fuerza: "tempFuerza", destreza: "tempDestreza", resistencia: "tempResistencia" };
-  Object.entries(map).forEach(([key, inputId]) => {
-    const hiddenInput = document.getElementById(inputId);
-    const badge = document.querySelector(`[data-boost-for="${key}"]`);
-    if (!hiddenInput || !badge) return;
-    const val = parseInt(hiddenInput.value) || 0;
-    badge.textContent = val ? `+${val}` : "";
-    badge.classList.toggle("visible", Boolean(val));
-  });
+  attributeBoostModule?.syncBadges();
 }
 
 initAttributeBoost();
 syncBoostBadges();
 
-// // // // // Comportamiento de TABS
-const tabs = document.querySelectorAll(".tab-button");
-const contents = document.querySelectorAll(".tab-content");
-
-tabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    //remove active class from all tabs
-    tabs.forEach((tab) => tab.classList.remove("active"));
-    // Add active class to clicked tab
-    tab.classList.add("active");
-
-    //Hide All Contents
-    contents.forEach((content) => content.classList.remove("active"));
-    //Show content for clicked tab
-    const tabContentId = tab.dataset.tab;
-    document.getElementById(tabContentId).classList.add("active");
+if (uiRefreshModule) {
+  uiRefreshModule.configure({
+    updateRatingDots,
+    updateHealthSquares,
+    updateBloodPerTurn,
+    updateBloodUI,
+    updateDamagePenalty,
+    resetAllDice,
+    updateHeaderLogo,
+    updateClanFieldSigil,
+    updateDisciplineButtons,
+    blockTemporalWillpower,
+    blockVirtues,
+    syncVirtueLabels,
+    updateAllSpecialtyVisibility,
+    syncBoostBadges,
+    nameSelector: "#nombre",
   });
-});
+}
+
+const tabsModule = window.ABNSheetTabs;
+tabsModule?.init();
 
 // Define function to update dots (que es llamada al cargar el archivo)
 function updateRatingDots(rating) {
-  // Get the hidden input — normally the immediate next sibling,
-  // but for physical attributes the rating is inside .attr-rating-wrap
-  // and the hidden input is a sibling of the wrap, not the rating.
-  let input = rating.nextElementSibling;
-  if (!input || input.type !== "hidden") {
-    // Try parent's next sibling (for .attr-rating-wrap > .rating)
-    const wrap = rating.closest(".attr-rating-wrap");
-    if (wrap) input = wrap.nextElementSibling;
-  }
-  if (!input) return; // safety bail
-
-  const dots = rating.querySelectorAll(".dot");
-
-  // Get the value from the hidden input
-  const value = parseInt(input.value);
-
-  // Loop through each dot and update the filled class
-  dots.forEach((dot, index) => {
-    if (index < value) {
-      dot.classList.add("filled");
-    } else {
-      dot.classList.remove("filled");
-    }
-  });
+  ratingDotsModule?.updateDots(rating);
 }
 
-// GUARDAR EN SUPABASE
-// Save character data to Supabase (Debounced)
-const debouncedSave = debounce(async () => {
-  if (!currentSheetId) return; // Don't auto-save if we haven't created the sheet yet (or ask to create)
-
-  // UI Feedback (Simple)
-  const saveIcon = document.querySelector('ion-icon[name="save-sharp"]');
-  if (saveIcon) saveIcon.style.color = "yellow";
-
-  const characterJSON = getCharacterData();
-  const characterData = JSON.parse(characterJSON);
-  const name = document.getElementById("nombre").value || "Sin Nombre";
-
-  const { data, error } = await window.supabase
-    .from("character_sheets")
-    .update({
-      name: name,
-      data: characterData,
-      updated_at: new Date(),
-    })
-    .eq("id", currentSheetId);
-
-  if (error) {
-    console.error("Error saving:", error);
-    if (saveIcon) saveIcon.style.color = "red";
-  } else {
-    if (saveIcon) saveIcon.style.color = "lightgreen";
-    setTimeout(() => {
-      if (saveIcon) saveIcon.style.color = "";
-    }, 1000);
-  }
-}, 1000);
+const persistenceModule = window.ABNSheetPersistence;
 
 function saveCharacterData() {
-  // Also save to local storage as backup/latency compensation
-  const characterJSON = getCharacterData();
-  localStorage.setItem("characterData", characterJSON);
-
-  // Trigger cloud save
-  if (currentSheetId) {
-    debouncedSave();
-  }
+  persistenceModule?.saveCharacterData();
 }
 
-// Flush any pending debounced save immediately (e.g. before navigating away)
 function flushPendingSave() {
-  clearTimeout(saveTimeout);
-  if (!currentSheetId) return;
-
-  const characterJSON = getCharacterData();
-  const characterData = JSON.parse(characterJSON);
-  const name = document.getElementById("nombre").value || "Sin Nombre";
-
-  window.supabase
-    .from("character_sheets")
-    .update({ name, data: characterData, updated_at: new Date() })
-    .eq("id", currentSheetId);
+  persistenceModule?.flushPendingSave();
 }
 
-// Save when user switches tabs, minimises or navigates away
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") flushPendingSave();
-});
-window.addEventListener("beforeunload", flushPendingSave);
+if (persistenceModule) {
+  persistenceModule.configure({
+    getCurrentSheetId: () => currentSheetId,
+    getCharacterData,
+    getCharacterName: () => document.getElementById("nombre")?.value || "",
+    supabaseClient: window.supabase,
+    getSaveIcon: () => document.querySelector('ion-icon[name="save-sharp"]'),
+    localStorageKey: "characterData",
+  });
+  persistenceModule.initLifecycleHooks();
+}
 
 // Load character data from JSON object (DB)
 function loadCharacterFromJSON(characterData) {
@@ -753,32 +355,35 @@ function loadCharacterData() {
   // Left empty or used as fallback
 }
 
-// Call loadCharacterData when the page loads
-window.legacyCharacterSheetBootstrap.run({
-  supabaseClient: window.supabase,
-  onBeforeLoad: () => {
-    document.title = "Cargando...";
-  },
-  onUserMissing: () => {
-    window.location.href = "../../index.html";
-  },
-  onSheetIdMissing: () => {
-    window.location.href = "../../index.html#character-sheets";
-  },
-  onSheetLoaded: ({ id, sheet }) => {
-    currentSheetId = id;
-    currentAvatarUrl = sheet.avatar_url;
-    loadCharacterFromJSON(sheet.data);
-    updateAll();
-  },
-  onSheetNotFound: () => {
-    alert("No se encontró la hoja de personaje.");
-  },
-  onError: (error) => {
-    console.error(error);
-    alert("Error al cargar la hoja de personaje.");
-  },
-});
+const sheetLoaderModule = window.ABNSheetLoader;
+if (sheetLoaderModule) {
+  sheetLoaderModule.configure({
+    supabaseClient: window.supabase,
+    onBeforeLoad: () => {
+      document.title = "Cargando...";
+    },
+    onUserMissing: () => {
+      window.location.href = "../../index.html";
+    },
+    onSheetIdMissing: () => {
+      window.location.href = "../../index.html#character-sheets";
+    },
+    onSheetLoaded: ({ id, sheet }) => {
+      currentSheetId = id;
+      currentAvatarUrl = sheet.avatar_url;
+      loadCharacterFromJSON(sheet.data);
+      updateAll();
+    },
+    onSheetNotFound: () => {
+      alert("No se encontró la hoja de personaje.");
+    },
+    onError: (error) => {
+      console.error(error);
+      alert("Error al cargar la hoja de personaje.");
+    },
+  });
+  sheetLoaderModule.init();
+}
 // Call saveCharacterData when an input is changed
 const inputs = document.querySelectorAll("input" + ", select");
 inputs.forEach((input) => {
@@ -845,8 +450,9 @@ function getCharacterData() {
   characterData.savedRolls = getSavedRollsData();
 
   // Add discord webhook data
-  characterData.discordWebhookUrl = discordWebhookUrl;
-  characterData.discordWebhookEnabled = discordWebhookEnabled;
+  const discordConfig = getDiscordConfig();
+  characterData.discordWebhookUrl = discordConfig.webhookUrl;
+  characterData.discordWebhookEnabled = discordConfig.enabled;
 
   return JSON.stringify(characterData);
 }
@@ -1605,10 +1211,7 @@ if (diceSystemModule) {
       characterClan: document.querySelector("#clan")?.value || "",
       currentAvatarUrl,
     }),
-    getDiscordConfig: () => ({
-      webhookUrl: discordWebhookUrl,
-      enabled: discordWebhookEnabled,
-    }),
+    getDiscordConfig,
     flashBloodWarning,
     modifyBlood,
     renderWillpowerTrack,
@@ -2148,38 +1751,8 @@ function loadSavedRollsFromJSON(characterData) {
 initSavedRolls();
 renderSavedRolls();
 
-// ── Dock Pager ──
-let currentDockPage = 0;
-
-function switchDockPage(pageIndex) {
-  const pages = document.querySelectorAll('.dock-tab-page');
-  const dots = document.querySelectorAll('.dock-dot');
-  if (pageIndex < 0 || pageIndex >= pages.length) return;
-  currentDockPage = pageIndex;
-  pages.forEach(p => p.classList.remove('active'));
-  dots.forEach(d => d.classList.remove('active'));
-  pages[pageIndex].classList.add('active');
-  dots[pageIndex].classList.add('active');
-
-  // If the currently active panel belongs to the hidden page, activate
-  // the first real tab of the newly visible page.
-  const activePage = pages[pageIndex];
-  const activeTab = activePage.querySelector('.dock-tab.active');
-  if (!activeTab) {
-    const firstTab = activePage.querySelector('.dock-tab');
-    if (firstTab) firstTab.click();
-  }
-}
-
-document.getElementById('dock-prev')?.addEventListener('click', () => switchDockPage(currentDockPage - 1));
-document.getElementById('dock-next')?.addEventListener('click', () => switchDockPage(currentDockPage + 1));
-
-document.querySelectorAll('.dock-dot').forEach(dot => {
-  dot.addEventListener('click', () => {
-    const page = parseInt(dot.getAttribute('data-page'), 10);
-    switchDockPage(page);
-  });
-});
+const dockModule = window.ABNSheetDock;
+dockModule?.init();
 
 // ══════════════════════════════════════════════════════════════
 // ATTACKS SYSTEM
@@ -2229,16 +1802,3 @@ function closeAttackModal() {
 (function initAttackSystem() {
   attacksModule?.init();
 })();
-
-// ── Dock Tabs ──
-const dockTabs = document.querySelectorAll('.dock-tab');
-dockTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    const panelId = tab.getAttribute('data-panel');
-    dockTabs.forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.dock-panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    const panel = document.getElementById(panelId);
-    if (panel) panel.classList.add('active');
-  });
-});
