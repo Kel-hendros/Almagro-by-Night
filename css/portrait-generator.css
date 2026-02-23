@@ -518,19 +518,12 @@ select.vtm-select {
     border-bottom-color: var(--color-blood);
 }
 
+/* Positioning only — icon styles from .btn-modal-close */
 .close-lightbox {
     position: absolute;
     top: 20px;
     right: 30px;
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 2rem;
-    cursor: pointer;
-}
-
-.close-lightbox:hover {
-    color: white;
+    z-index: 10;
 }
 
 .hidden {

@@ -670,36 +670,16 @@ button.gameButton.secondary:hover {
     color: var(--sidebar-text-active);
 }
 
+/* Sidebar-context color overrides (layout from .btn-modal-close) */
 .app-theme-modal-close {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: 1px solid var(--sidebar-text);
+    border-color: var(--sidebar-text);
     background: var(--sidebar-action-bg);
     color: var(--sidebar-text);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    padding: 0;
-}
-
-.app-theme-modal-close .lucide {
-    width: 14px;
-    height: 14px;
-    stroke-width: 2.25;
 }
 
 .app-theme-modal-close:hover {
     border-color: var(--sidebar-text-active);
     color: var(--sidebar-text-active);
-    background: var(--sidebar-action-bg);
-}
-
-.app-theme-modal-close:focus-visible {
-    outline: 2px solid var(--sidebar-text-active);
-    outline-offset: 2px;
 }
 
 .app-theme-section {

@@ -619,19 +619,6 @@
     letter-spacing: 1px;
 }
 
-.ae-btn-close-drawer {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: color 0.15s;
-}
-
-.ae-btn-close-drawer:hover {
-    color: #fff;
-}
-
 .ae-drawer-content {
     flex-grow: 1;
     overflow-y: auto;
@@ -741,19 +728,6 @@
     margin: 0;
     color: var(--color-cream);
     font-size: 1rem;
-}
-
-.ae-btn-close {
-    background: none;
-    border: none;
-    color: #999;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: color 0.15s;
-}
-
-.ae-btn-close:hover {
-    color: #fff;
 }
 
 .ae-title-name {

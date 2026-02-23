@@ -14,8 +14,10 @@
     <script src="https://kit.fontawesome.com/8a611956c8.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
     <script src="../js/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml/dist/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="../css/modal-close.css">
     <link rel="stylesheet" href="../css/ghoul.css">
     <script src="../js/ghoul.js" defer></script>
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -45,7 +47,7 @@
         <div id="ghoul-modal-content">
             <div class="ghoul-modal-header">
                 <h2 id="ghoul-modal-title">Titulo</h2>
-                <button id="ghoul-modal-close" class="ghoul-modal-close">&times;</button>
+                <button id="ghoul-modal-close" class="btn-modal-close" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <div id="ghoul-markdown-body" class="ghoul-markdown-body"></div>
         </div>
@@ -56,7 +58,7 @@
         <div id="ghoul-selection-modal-content">
             <div class="ghoul-modal-header">
                 <h2 style="font-family: 'Special Elite'; color: #ff0000; margin: 0;">Elegir Ghoul</h2>
-                <button id="ghoul-selection-close" class="ghoul-modal-close">&times;</button>
+                <button id="ghoul-selection-close" class="btn-modal-close" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <div id="ghoul-selection-list" class="ghoul-selection-grid">
                 <!-- Javascript will populate this -->
@@ -855,7 +857,7 @@
             aria-labelledby="discord-webhook-title">
             <div class="specialty-modal-header">
                 <h2 id="discord-webhook-title">Discord webhook</h2>
-                <button id="discord-webhook-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="discord-webhook-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <p class="discord-webhook-copy">
                 Introduce la URL del webhook de Discord para enviar mensajes de tiradas.
@@ -887,7 +889,7 @@
         <div class="specialty-modal-card clan-selector-card" role="dialog" aria-modal="true">
             <div class="specialty-modal-header">
                 <h2>Elegir Clan</h2>
-                <button id="close-btn" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="close-btn" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
 
             <div class="clan-selector-layout">
@@ -960,7 +962,7 @@
         <div class="specialty-modal-card path-repo-card" role="dialog" aria-modal="true" aria-labelledby="path-repo-title">
             <div class="specialty-modal-header">
                 <h2 id="path-repo-title">Elegir Senda</h2>
-                <button id="path-repo-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="path-repo-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <p class="specialty-subtitle">Selecciona la senda principal del personaje.</p>
             <input id="path-repo-search" class="discipline-repo-search" type="text" placeholder="Buscar senda..." autocomplete="off">
@@ -974,7 +976,7 @@
         <div class="specialty-modal-card discipline-repo-card" role="dialog" aria-modal="true">
             <div class="specialty-modal-header">
                 <h2 id="discipline-repo-title">Repositorio de Disciplinas</h2>
-                <button id="discipline-repo-close" class="specialty-close" type="button">×</button>
+                <button id="discipline-repo-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <p class="specialty-subtitle">Selecciona disciplinas para agregarlas a la hoja.</p>
             <input id="discipline-repo-search" class="discipline-repo-search" type="text"
@@ -989,7 +991,7 @@
         <div class="specialty-modal-card discipline-repo-card" role="dialog" aria-modal="true">
             <div class="specialty-modal-header">
                 <h2 id="senda-repo-title">Sendas</h2>
-                <button id="senda-repo-close" class="specialty-close" type="button">&times;</button>
+                <button id="senda-repo-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <p class="specialty-subtitle">Selecciona sendas para esta disciplina.</p>
             <input id="senda-repo-search" class="discipline-repo-search" type="text"
@@ -1005,7 +1007,7 @@
             aria-labelledby="theme-modal-title">
             <div class="specialty-modal-header">
                 <h2 id="theme-modal-title">Opciones</h2>
-                <button id="theme-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="theme-modal-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
 
             <div class="theme-section-block">
@@ -1024,7 +1026,7 @@
         <div class="specialty-modal-card attr-boost-modal-card" role="dialog" aria-modal="true" aria-labelledby="attr-boost-modal-title">
             <div class="specialty-modal-header">
                 <h2 id="attr-boost-modal-title">Boost temporal</h2>
-                <button id="attr-boost-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="attr-boost-modal-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <p class="specialty-subtitle">Selecciona el bono temporal por Sangre.</p>
             <div class="attr-boost-options">
@@ -1043,7 +1045,7 @@
             aria-labelledby="dice-history-title">
             <div class="specialty-modal-header">
                 <h2 id="dice-history-title">Historial de Tiradas</h2>
-                <button id="dice-history-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="dice-history-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <div id="dice-history-list" class="dice-history-list"></div>
         </div>
@@ -1055,7 +1057,7 @@
             aria-labelledby="saved-roll-modal-title">
             <div class="specialty-modal-header">
                 <h2 id="saved-roll-modal-title">Nueva Tirada</h2>
-                <button id="saved-roll-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="saved-roll-modal-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <form id="saved-roll-form" class="saved-roll-form">
                 <div class="saved-roll-field">
@@ -1094,7 +1096,7 @@
             aria-labelledby="attack-modal-title">
             <div class="specialty-modal-header">
                 <h2 id="attack-modal-title">Nuevo Ataque</h2>
-                <button id="attack-modal-close" class="specialty-close" type="button" aria-label="Cerrar">×</button>
+                <button id="attack-modal-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <form id="attack-form" class="saved-roll-form">
                 <div class="saved-roll-field">
@@ -1173,6 +1175,7 @@
     <script src="pathRepository.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
+    <script>if (window.lucide) lucide.createIcons();</script>
 </body>
 
 </html>

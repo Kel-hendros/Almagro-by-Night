@@ -1,0 +1,30 @@
+/* ── Unified Modal Close Button ──
+   Single source of truth for all modal/drawer/lightbox close buttons.
+   Used in: index.html, characterSheets/index.html
+   ────────────────────────────────────────────────────────────────── */
+
+.btn-modal-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-modal-close .lucide {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.25;
+}
+
+.btn-modal-close:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.9);
+}
