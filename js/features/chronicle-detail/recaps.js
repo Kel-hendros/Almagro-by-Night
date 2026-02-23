@@ -56,6 +56,11 @@
 
     if (!sesionesList || !sesionesMoreBtn || !addRecapBtn) return;
 
+    const existingSummaryOpenHandler = ns.__summaryOpenRecapHandler;
+    if (existingSummaryOpenHandler) {
+      window.removeEventListener("abn:chronicle-open-recap", existingSummaryOpenHandler);
+    }
+
     if (isNarrator) {
       addRecapBtn.classList.remove("hidden");
     }
@@ -323,6 +328,15 @@
     }
 
     formSave?.addEventListener("click", persistRecapForm);
+
+    const onSummaryOpenRecap = (event) => {
+      const detail = event?.detail || {};
+      if (String(detail.chronicleId) !== String(chronicleId)) return;
+      if (!detail.recapId) return;
+      void openRecapReader(detail.recapId);
+    };
+    ns.__summaryOpenRecapHandler = onSummaryOpenRecap;
+    window.addEventListener("abn:chronicle-open-recap", onSummaryOpenRecap);
 
     await loadRecaps(false);
     if (initialRecapId) {

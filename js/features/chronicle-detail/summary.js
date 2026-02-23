@@ -66,6 +66,8 @@
     function renderLastSessionCard(recap) {
       if (!lastCard) return;
       if (!recap) {
+        lastCard.classList.remove("cd-card-clickable");
+        lastCard.onclick = null;
         lastCard.innerHTML = '<span class="cd-card-muted">Sin sesiones registradas</span>';
         return;
       }
@@ -75,6 +77,17 @@
         <span class="cd-card-subtitle">${dateStr}</span>
         <p class="cd-card-body">${truncated}</p>
       `;
+      lastCard.classList.add("cd-card-clickable");
+      lastCard.onclick = () => {
+        window.dispatchEvent(
+          new CustomEvent("abn:chronicle-open-recap", {
+            detail: {
+              chronicleId,
+              recapId: recap.id,
+            },
+          }),
+        );
+      };
     }
 
     function renderCurrentCharacterCard() {
@@ -109,7 +122,7 @@
     async function refreshLastSessionCard() {
       const { data: latest } = await supabase
         .from("session_recaps")
-        .select("session_number, title, body, session_date")
+        .select("id, session_number, title, body, session_date")
         .eq("chronicle_id", chronicleId)
         .order("session_number", { ascending: false })
         .limit(1)
