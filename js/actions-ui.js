@@ -145,7 +145,7 @@ window.ActionsUI = (function () {
     const header = document.createElement("div");
     header.className = "panel-header";
     const h2 = document.createElement("h2");
-    h2.innerHTML = `Realiza una acción en <span class="actions-target-name">${name}</span> el ${formatNightDate(
+    h2.innerHTML = `Realiza una acción en <span class="actions-target-name">${esc(name)}</span> el ${formatNightDate(
       window.currentNightDate
     )}`;
     const close = document.createElement("button");

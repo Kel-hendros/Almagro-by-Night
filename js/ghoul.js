@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "[$1]($2)"
       );
 
-      modalBody.innerHTML = marked.parse(markdownContent);
+      modalBody.innerHTML = renderMarkdown(markdownContent);
 
       // Add click handlers for internal links
       const links = modalBody.querySelectorAll("a");

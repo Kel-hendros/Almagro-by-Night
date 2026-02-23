@@ -49,7 +49,7 @@
           .eq("id", chronicleId)
           .maybeSingle();
         if (chron) {
-          breadcrumb.innerHTML = `<a href="#chronicle">${chron.name}</a> &rsaquo; Control de Combate`;
+          breadcrumb.innerHTML = `<a href="#chronicle">${escapeHtml(chron.name)}</a> &rsaquo; Control de Combate`;
           breadcrumb.style.display = "block";
         }
       }
@@ -160,12 +160,12 @@
 
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between;">
-          <h3>${tpl.name}</h3>
+          <h3>${escapeHtml(tpl.name)}</h3>
           <span style="font-size:0.8em; color:#aaa;">PNJ</span>
         </div>
         <p>Salud: ${tpl.data?.maxHealth || 7}</p>
         <p style="font-style:italic; border-top:1px solid #333; padding-top:4px; margin-top:4px; font-size:0.8em;">
-          ${summary}...
+          ${escapeHtml(summary)}...
         </p>
         <div style="margin-top:8px; display:flex; gap:8px;">
           <button class="ct-btn btn-edit-template" data-id="${tpl.id}">Editar</button>
@@ -370,7 +370,7 @@
     state.templateEdit.tags.forEach((tag, idx) => {
       const pill = document.createElement("span");
       pill.className = "ct-tag-pill";
-      pill.innerHTML = `${tag} <button type="button" data-idx="${idx}">&times;</button>`;
+      pill.innerHTML = `${escapeHtml(tag)} <button type="button" data-idx="${idx}">&times;</button>`;
       pill.querySelector("button").addEventListener("click", () => {
         state.templateEdit.tags.splice(idx, 1);
         renderTagsInput();
@@ -566,7 +566,7 @@
 
       card.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <h3 style="margin:0;">${enc.name}</h3>
+          <h3 style="margin:0;">${escapeHtml(enc.name)}</h3>
           <span class="ct-encounter-status ${status}">${statusLabel}</span>
         </div>
         <p>${dateStr} - ${instanceCount} participantes${roundInfo}</p>

@@ -36,14 +36,14 @@ function drawProgressBar({
     html += `
       <div class="progress-header">
         <div class="progress-label">
-          <strong>${name1}</strong>
+          <strong>${escapeHtml(name1)}</strong>
           <span>${pct1}%</span>
         </div>
         <div class="progress-label neutral">
           <strong>Neutral</strong>
         </div>
         <div class="progress-label right">
-          <strong>${name2}</strong>
+          <strong>${escapeHtml(name2)}</strong>
           <span>${pct2}%</span>
         </div>
       </div>
@@ -90,7 +90,7 @@ function cssVar(name) {
 }
 
 function escapeAttr(val) {
-  return String(val ?? "").replace(/"/g, "&quot;");
+  return escapeHtml(val);
 }
 
 function normalizeDateInput(value) {
@@ -347,15 +347,15 @@ async function loadActionLogForDate(dateValue, gameId) {
       return `
         <div class="log-card" style="border-color:${factionColor}66; background-color:${factionColor}33;">
           <div class="log-card-header">
-          <h3>${entry.action_name || "Acción"} en ${
-        entry.zone_name || "Zona desconocida"
+          <h3>${escapeHtml(entry.action_name || "Acción")} en ${
+        escapeHtml(entry.zone_name || "Zona desconocida")
       }</h3>
           </div>
           <div class="log-player-container">
-          <p class="log-player">${playerLabel}</p>
+          <p class="log-player">${escapeHtml(playerLabel)}</p>
           <span class="log-time">${time}</span>
           </div>
-          <p class="log-result">${entry.result_text || "Sin resultado"}</p>
+          <p class="log-result">${escapeHtml(entry.result_text || "Sin resultado")}</p>
           
         </div>
       `;
@@ -736,7 +736,7 @@ function buildBenefitsColumn(factionMeta, items) {
       strong.textContent = item.zoneName;
       text.appendChild(strong);
       const benefitCopy = document.createElement("div");
-      benefitCopy.innerHTML = item.benefit;
+      benefitCopy.textContent = item.benefit;
       text.appendChild(benefitCopy);
 
       const status = document.createElement("div");

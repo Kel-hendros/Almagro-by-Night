@@ -755,7 +755,7 @@ p.chronicle-description {
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: border-color 0.2s, color 0.2s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 
 .cd-banner-btn .lucide {
@@ -766,6 +766,7 @@ p.chronicle-description {
 .cd-banner-btn:hover {
     border-color: var(--cd-text-secondary);
     color: var(--cd-text-secondary);
+    background: color-mix(in srgb, var(--cd-bg-elevated) 100%, transparent);
 }
 
 .cd-banner-btn:disabled {
@@ -1704,5 +1705,452 @@ p.chronicle-description {
     .cd-note-card {
         padding: 18px;
         gap: 10px;
+    }
+}
+
+/* ================================================================
+   Recap Reader — Fullscreen reading experience
+   ================================================================ */
+.cd-recap-overlay {
+    z-index: 1100;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+.cd-recap-overlay.visible {
+    display: flex;
+}
+
+/* Reader container — always fullscreen */
+.cd-recap-reader {
+    width: 100%;
+    height: 100%;
+    background: var(--cd-bg-primary);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cd-recap-reader-header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 20px 0 20px;
+    flex-shrink: 0;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+}
+
+.cd-recap-reader-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cd-recap-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--cd-bg-elevated);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: 10px;
+    padding: 7px 10px;
+    color: var(--cd-text-primary);
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background 0.2s;
+}
+
+.cd-recap-back-btn:hover {
+    background: var(--cd-bg-surface);
+}
+
+.cd-recap-back-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.cd-recap-reader-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cd-recap-reader-title {
+    font-family: var(--cd-font-display);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--cd-text-primary);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.cd-recap-reader-meta {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: normal;
+    color: var(--cd-text-tertiary);
+}
+
+.cd-recap-reader-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.cd-btn-danger {
+    color: var(--cd-accent) !important;
+    border-color: var(--cd-accent) !important;
+}
+
+.cd-btn-danger:hover {
+    color: var(--cd-text-primary) !important;
+    background: var(--cd-accent) !important;
+    border-color: var(--cd-accent) !important;
+}
+
+.cd-recap-reader-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.cd-recap-reader-card {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    background: var(--cd-bg-surface);
+    border-radius: var(--cd-radius-card);
+    padding: 16px;
+    flex: 1;
+}
+
+.cd-recap-reader-text {
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    font-weight: normal;
+    color: var(--cd-text-secondary);
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+/* Markdown rendered content */
+.cd-recap-reader-text p {
+    margin: 0 0 0.75em;
+}
+
+.cd-recap-reader-text p:last-child {
+    margin-bottom: 0;
+}
+
+.cd-recap-reader-text h1,
+.cd-recap-reader-text h2,
+.cd-recap-reader-text h3,
+.cd-recap-reader-text h4 {
+    font-family: var(--cd-font-display);
+    color: var(--cd-text-primary);
+    margin: 1.2em 0 0.4em;
+    line-height: 1.3;
+}
+
+.cd-recap-reader-text h1:first-child,
+.cd-recap-reader-text h2:first-child,
+.cd-recap-reader-text h3:first-child {
+    margin-top: 0;
+}
+
+.cd-recap-reader-text h1 { font-size: 1.4em; }
+.cd-recap-reader-text h2 { font-size: 1.2em; }
+.cd-recap-reader-text h3 { font-size: 1.05em; }
+
+.cd-recap-reader-text strong {
+    color: var(--cd-accent);
+    font-weight: 600;
+}
+
+.cd-recap-reader-text em {
+    font-style: italic;
+}
+
+.cd-recap-reader-text blockquote {
+    border-left: 3px solid var(--cd-accent);
+    margin: 0.75em 0;
+    padding: 0.4em 0.8em;
+    color: var(--cd-text-tertiary);
+    font-style: italic;
+}
+
+.cd-recap-reader-text ul,
+.cd-recap-reader-text ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+}
+
+.cd-recap-reader-text li {
+    margin-bottom: 0.25em;
+}
+
+.cd-recap-reader-text code {
+    background: var(--cd-bg-elevated);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.cd-recap-reader-text pre {
+    background: var(--cd-bg-elevated);
+    padding: 0.8em 1em;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 0.75em 0;
+}
+
+.cd-recap-reader-text pre code {
+    background: none;
+    padding: 0;
+}
+
+.cd-recap-reader-text hr {
+    border: none;
+    border-top: 1px solid var(--cd-border-divider);
+    margin: 1em 0;
+}
+
+.cd-recap-reader-text a {
+    color: var(--cd-accent);
+    text-decoration: underline;
+}
+
+.cd-recap-reader-nav {
+    display: flex;
+    gap: 10px;
+    padding: 0 20px 20px 20px;
+    flex-shrink: 0;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Nav buttons */
+.cd-recap-nav-btn {
+    flex: 1;
+    height: 48px;
+    border-radius: 12px;
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+    background: var(--cd-bg-elevated);
+    border: 1px solid var(--cd-text-tertiary);
+    color: var(--cd-text-primary);
+}
+
+.cd-recap-nav-btn:hover:not(:disabled) {
+    background: var(--cd-bg-surface);
+    border-color: var(--cd-text-secondary);
+}
+
+.cd-recap-nav-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.cd-recap-nav-btn--ghost {
+    background: transparent;
+    border: 1px solid var(--cd-text-tertiary);
+    color: var(--cd-text-secondary);
+}
+
+.cd-recap-nav-btn--primary {
+    background: var(--cd-accent);
+    border: 1px solid var(--cd-accent);
+    color: #fff;
+}
+
+.cd-recap-nav-btn--primary:hover:not(:disabled) {
+    opacity: 0.9;
+    background: var(--cd-accent);
+}
+
+/* ================================================================
+   Recap Form — Fullscreen (like reader)
+   ================================================================ */
+.cd-recap-form {
+    width: 100%;
+    height: 100%;
+    background: var(--cd-bg-primary);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cd-recap-form-header {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.cd-recap-form-body {
+    flex: 1;
+    overflow-y: auto;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    box-sizing: border-box;
+}
+
+.cd-recap-form-footer {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    padding: 0 20px 20px 20px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+/* Form elements */
+.cd-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cd-form-group--half {
+    flex: 1;
+    min-width: 0;
+}
+
+.cd-form-group--grow {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.cd-form-row {
+    display: flex;
+    gap: 12px;
+}
+
+.cd-form-label {
+    font-family: var(--cd-font-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--cd-text-tertiary);
+    text-transform: uppercase;
+}
+
+.cd-form-hint {
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.cd-form-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+    background: var(--cd-bg-surface);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: 10px;
+    font-family: var(--cd-font-primary);
+    font-size: 14px;
+    color: var(--cd-text-primary);
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.cd-form-input:focus {
+    border-color: var(--cd-accent);
+}
+
+.cd-form-input::placeholder {
+    color: var(--cd-text-tertiary);
+}
+
+.cd-form-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--cd-bg-surface);
+    border: 1px solid var(--cd-text-tertiary);
+    border-radius: 10px;
+    font-family: var(--cd-font-primary);
+    font-size: 14px;
+    color: var(--cd-text-primary);
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    line-height: 1.5;
+}
+
+.cd-form-textarea:focus {
+    border-color: var(--cd-accent);
+}
+
+.cd-form-textarea::placeholder {
+    color: var(--cd-text-tertiary);
+}
+
+.cd-form-textarea--grow {
+    flex: 1;
+    min-height: 120px;
+}
+
+/* ================================================================
+   Desktop overrides (>=768px)
+   ================================================================ */
+@media (min-width: 768px) {
+    /* Reader: bigger text on desktop */
+    .cd-recap-reader-header {
+        padding: 32px 20px 0;
+    }
+
+    .cd-recap-reader-title {
+        font-size: 36px;
+    }
+
+    .cd-recap-reader-meta {
+        font-size: 12px;
+    }
+
+    .cd-recap-reader-text {
+        font-size: 15px;
+        line-height: 1.8;
+    }
+
+    .cd-recap-reader-card {
+        padding: 24px;
+    }
+
+    .cd-recap-reader-nav {
+        padding: 16px 20px 32px;
+    }
+
+    /* Form: bigger padding on desktop */
+    .cd-recap-form-header {
+        padding: 32px 20px 16px;
     }
 }

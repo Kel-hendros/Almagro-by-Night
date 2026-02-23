@@ -937,8 +937,8 @@
           <button class="ae-btn-delete" title="Eliminar">&times;</button>
           <div class="ae-card-header">
             <div class="ae-card-title">
-              <span class="ae-card-name" title="${inst.name}">${inst.name}</span>
-              <span class="ae-card-code">| ${inst.code}</span>
+              <span class="ae-card-name" title="${escapeHtml(inst.name)}">${escapeHtml(inst.name)}</span>
+              <span class="ae-card-code">| ${escapeHtml(inst.code)}</span>
             </div>
           </div>
 
@@ -1481,7 +1481,7 @@
         const pel = stats["Pelea"] || 0;
 
         const tags = (t.data?.tags || [])
-          .map((tag) => `<span class="ae-browser-card-tag">${tag}</span>`)
+          .map((tag) => `<span class="ae-browser-card-tag">${escapeHtml(tag)}</span>`)
           .join("");
 
         const initial = t.name[0].toUpperCase();
@@ -1491,7 +1491,7 @@
             <div class="ae-browser-card-top">
               <div class="ae-browser-card-avatar">${initial}</div>
               <div class="ae-browser-card-info">
-                <div class="ae-browser-card-name">${t.name}</div>
+                <div class="ae-browser-card-name">${escapeHtml(t.name)}</div>
                 <div class="ae-browser-card-meta">
                   <span>HP ${hp}</span>
                   <span>F${fue} D${des} P${pel}</span>
@@ -1557,17 +1557,17 @@
         const isAdded = existingPCIds.includes(s.id);
         const initial = name[0].toUpperCase();
         const avatarHTML = s.avatar_url
-          ? `<img src="${s.avatar_url}" alt="${name}">`
-          : initial;
+          ? `<img src="${escapeHtml(s.avatar_url)}" alt="${escapeHtml(name)}">`
+          : escapeHtml(initial);
 
         return `
           <div class="ae-browser-card${isAdded ? " disabled" : ""}" data-sheet-id="${s.id}">
             <div class="ae-browser-card-top">
               <div class="ae-browser-card-avatar">${avatarHTML}</div>
               <div class="ae-browser-card-info">
-                <div class="ae-browser-card-name">${name}</div>
+                <div class="ae-browser-card-name">${escapeHtml(name)}</div>
                 <div class="ae-browser-card-meta">
-                  ${clan ? `<span>${clan}</span>` : ""}
+                  ${clan ? `<span>${escapeHtml(clan)}</span>` : ""}
                 </div>
               </div>
             </div>
@@ -1793,8 +1793,8 @@
     }
 
     const charData = sheet.data || {};
-    const clanName = charData.clan ? `, del Clan ${charData.clan}` : "";
-    els.modalTitle.innerHTML = `<span class="ae-title-name">${inst.name}${clanName}</span> <span class="ae-pc-badge">PJ</span>`;
+    const clanName = charData.clan ? `, del Clan ${escapeHtml(charData.clan)}` : "";
+    els.modalTitle.innerHTML = `<span class="ae-title-name">${escapeHtml(inst.name)}${clanName}</span> <span class="ae-pc-badge">PJ</span>`;
 
     // Hide NPC health controls, we'll draw our own
     const healthControls = els.modal.querySelector(".ae-health-section");

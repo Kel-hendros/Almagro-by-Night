@@ -124,6 +124,77 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal: Recap Reader -->
+    <div id="modal-recap-reader" class="cd-modal-overlay cd-recap-overlay">
+        <div class="cd-recap-reader">
+            <div class="cd-recap-reader-header">
+                <div class="cd-recap-reader-toolbar">
+                    <button class="cd-recap-back-btn" id="recap-reader-close" type="button">
+                        <i data-lucide="arrow-left"></i>
+                        <span>Volver a Diario</span>
+                    </button>
+                    <div id="recap-reader-actions" class="cd-recap-reader-actions hidden">
+                        <button id="recap-reader-edit" class="cd-banner-btn" type="button" title="Editar">
+                            <i data-lucide="pencil"></i>
+                        </button>
+                        <button id="recap-reader-delete" class="cd-banner-btn cd-btn-danger" type="button" title="Eliminar">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="cd-recap-reader-title-wrap">
+                    <h2 id="recap-reader-title" class="cd-recap-reader-title"></h2>
+                    <span id="recap-reader-meta" class="cd-recap-reader-meta"></span>
+                </div>
+            </div>
+            <div class="cd-recap-reader-body">
+                <div class="cd-recap-reader-card">
+                    <div id="recap-reader-text" class="cd-recap-reader-text"></div>
+                </div>
+            </div>
+            <div class="cd-recap-reader-nav">
+                <button id="recap-reader-prev" class="cd-recap-nav-btn" type="button">Anterior</button>
+                <button id="recap-reader-next" class="cd-recap-nav-btn" type="button">Siguiente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Recap Form (Create/Edit) -->
+    <div id="modal-recap-form" class="cd-modal-overlay cd-recap-overlay">
+        <div class="cd-recap-form">
+            <div class="cd-recap-form-header">
+                <h3 id="recap-form-heading" class="cd-modal-title">Nuevo Recuento</h3>
+                <button class="cd-banner-btn" id="recap-form-close" type="button" title="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="cd-recap-form-body">
+                <div class="cd-form-group">
+                    <label class="cd-form-label" for="recap-form-title">Título</label>
+                    <input type="text" id="recap-form-title" class="cd-form-input" placeholder="Ej: Encuentro en el Barolo">
+                </div>
+                <div class="cd-form-row">
+                    <div class="cd-form-group cd-form-group--half">
+                        <label class="cd-form-label" for="recap-form-number">Sesión Nº</label>
+                        <input type="number" id="recap-form-number" class="cd-form-input" min="1">
+                    </div>
+                    <div class="cd-form-group cd-form-group--half">
+                        <label class="cd-form-label" for="recap-form-date">Fecha</label>
+                        <input type="date" id="recap-form-date" class="cd-form-input">
+                    </div>
+                </div>
+                <div class="cd-form-group cd-form-group--grow">
+                    <label class="cd-form-label" for="recap-form-body">Crónica <span class="cd-form-hint">(soporta Markdown)</span></label>
+                    <textarea id="recap-form-body" class="cd-form-textarea cd-form-textarea--grow" placeholder="Relato de la sesión..."></textarea>
+                </div>
+            </div>
+            <div class="cd-recap-form-footer">
+                <button id="recap-form-cancel" class="cd-recap-nav-btn cd-recap-nav-btn--ghost" type="button">Cancelar</button>
+                <button id="recap-form-save" class="cd-recap-nav-btn cd-recap-nav-btn--primary" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -513,7 +584,7 @@
             supabase.from("encounters").select("id", { count: "exact", head: true }).eq("chronicle_id", chronicleId),
             supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1),
             supabase.from("session_recaps")
-                .select("session_number, title, summary, body, session_date")
+                .select("session_number, title, body, session_date")
                 .eq("chronicle_id", chronicleId)
                 .order("session_number", { ascending: false })
                 .limit(1)
@@ -583,7 +654,7 @@
                     <div class="cd-player-head">
                         <div class="cd-player-head-left">
                             <span class="cd-player-icon"><i data-lucide="user"></i></span>
-                            <span class="cd-player-name">${player.name}</span>
+                            <span class="cd-player-name">${escapeHtml(player.name)}</span>
                             <span class="cd-role-badge ${badgeClass}">${badgeText}</span>
                         </div>
                         ${deletePlayerHtml}
@@ -600,8 +671,8 @@
                     const initials = (sheet.name || "?").charAt(0).toUpperCase();
 
                     const avatarInner = sheet.avatar_url
-                        ? `<img src="${sheet.avatar_url}" alt="">`
-                        : `<span class="cd-player-char-initials">${initials}</span>`;
+                        ? `<img src="${escapeHtml(sheet.avatar_url)}" alt="">`
+                        : `<span class="cd-player-char-initials">${escapeHtml(initials)}</span>`;
 
                     let deleteCharHtml = "";
                     if (canRemoveChar) {
@@ -615,9 +686,9 @@
                     charRow.innerHTML = `
                         <div class="cd-player-char-left">
                             <div class="cd-player-char-avatar">${avatarInner}</div>
-                            <span class="${nameClass}" data-sheet-id="${sheet.id}">${sheet.name}</span>
+                            <span class="${nameClass}" data-sheet-id="${sheet.id}">${escapeHtml(sheet.name)}</span>
                             <span class="cd-player-char-sep">|</span>
-                            <span class="cd-player-char-clan">${clan}</span>
+                            <span class="cd-player-char-clan">${escapeHtml(clan)}</span>
                         </div>
                         ${deleteCharHtml}
                     `;
@@ -729,8 +800,7 @@
                 const d = new Date(latestRecap.session_date + 'T00:00:00');
                 dateStr += ` \u2014 ${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
             }
-            const bodyText = latestRecap.summary || latestRecap.body || '';
-            const truncated = bodyText.length > 160 ? bodyText.substring(0, 160) + '\u2026' : bodyText;
+            const truncated = escapeHtml(previewLines(latestRecap.body));
             lastCard.innerHTML = `
                 <span class="cd-card-subtitle">${dateStr}</span>
                 <p class="cd-card-body">${truncated}</p>
@@ -747,13 +817,13 @@
                 ? myChar.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
                 : '??';
             const avatarContent = myChar.avatar_url
-                ? `<img src="${myChar.avatar_url}" alt="" class="cd-char-avatar-img">`
-                : `<span class="cd-char-initials">${initials}</span>`;
+                ? `<img src="${escapeHtml(myChar.avatar_url)}" alt="" class="cd-char-avatar-img">`
+                : `<span class="cd-char-initials">${escapeHtml(initials)}</span>`;
             charCard.innerHTML = `
                 <div class="cd-char-avatar">${avatarContent}</div>
                 <div class="cd-char-info">
-                    <span class="cd-char-name">${myChar.name}</span>
-                    <span class="cd-char-clan">Clan: ${myClan}</span>
+                    <span class="cd-char-name">${escapeHtml(myChar.name)}</span>
+                    <span class="cd-char-clan">Clan: ${escapeHtml(myClan)}</span>
                 </div>
             `;
             charCard.classList.add('cd-card-clickable');
@@ -765,6 +835,7 @@
         // ── Render Diario tab ──
         const RECAP_PAGE = 5;
         let recapOffset = 0;
+        let allLoadedRecaps = []; // keep loaded recaps for reader navigation
 
         const sesionesList = document.getElementById("cd-sesiones-list");
         const sesionesMoreBtn = document.getElementById("cd-sesiones-more");
@@ -773,7 +844,7 @@
         const notasMoreBtn = document.getElementById("cd-notas-more");
         const addNoteBtn = document.getElementById("cd-add-note");
 
-        // Narrator can add recaps (mobile-only button)
+        // Narrator can add recaps
         if (isNarrator) {
             addRecapBtn.classList.remove("hidden");
         }
@@ -798,16 +869,21 @@
             });
         });
 
-        // Render a session recap card
-        function renderRecapCard(recap) {
-            const mNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const mNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+        function formatRecapMeta(recap) {
             let meta = `Sesión ${recap.session_number}`;
             if (recap.session_date) {
                 const d = new Date(recap.session_date + 'T00:00:00');
                 meta += `  —  ${d.getDate()} ${mNames[d.getMonth()]} ${d.getFullYear()}`;
             }
-            const bodyText = recap.summary || recap.body || '';
-            const truncated = bodyText.length > 200 ? bodyText.substring(0, 200) + '…' : bodyText;
+            return meta;
+        }
+
+        // Render a session recap card
+        function renderRecapCard(recap) {
+            const meta = formatRecapMeta(recap);
+            const truncated = previewLines(recap.body);
 
             const card = document.createElement("div");
             card.className = "cd-recap-card";
@@ -815,11 +891,12 @@
             card.innerHTML = `
                 <div class="cd-recap-bar"></div>
                 <div class="cd-recap-info">
-                    <span class="cd-recap-title">${recap.title}</span>
+                    <span class="cd-recap-title">${escapeHtml(recap.title)}</span>
                     <span class="cd-recap-meta">${meta}</span>
-                    ${truncated ? `<p class="cd-recap-body">${truncated}</p>` : ''}
+                    ${truncated ? `<p class="cd-recap-body">${escapeHtml(truncated)}</p>` : ''}
                 </div>
             `;
+            card.addEventListener("click", () => openRecapReader(recap.id));
             return card;
         }
 
@@ -827,7 +904,7 @@
         async function loadRecaps(append) {
             const { data: recaps, error } = await supabase
                 .from("session_recaps")
-                .select("id, session_number, title, summary, body, session_date")
+                .select("id, session_number, title, body, session_date")
                 .eq("chronicle_id", chronicleId)
                 .order("session_number", { ascending: false })
                 .range(recapOffset, recapOffset + RECAP_PAGE - 1);
@@ -838,7 +915,10 @@
                 return;
             }
 
-            if (!append) sesionesList.innerHTML = "";
+            if (!append) {
+                sesionesList.innerHTML = "";
+                allLoadedRecaps = [];
+            }
 
             if (!recaps.length && !append) {
                 sesionesList.innerHTML = '<span class="cd-card-muted">No hay sesiones registradas.</span>';
@@ -846,13 +926,226 @@
                 return;
             }
 
-            recaps.forEach(r => sesionesList.appendChild(renderRecapCard(r)));
+            recaps.forEach(r => {
+                allLoadedRecaps.push(r);
+                sesionesList.appendChild(renderRecapCard(r));
+            });
             sesionesMoreBtn.classList.toggle("hidden", recaps.length < RECAP_PAGE);
             recapOffset += recaps.length;
         }
 
         sesionesMoreBtn.addEventListener("click", () => loadRecaps(true));
         await loadRecaps(false);
+
+        // ── Recap Reader ──
+        const readerOverlay = document.getElementById("modal-recap-reader");
+        const readerTitle = document.getElementById("recap-reader-title");
+        const readerMeta = document.getElementById("recap-reader-meta");
+        const readerText = document.getElementById("recap-reader-text");
+        const readerActions = document.getElementById("recap-reader-actions");
+        const readerPrev = document.getElementById("recap-reader-prev");
+        const readerNext = document.getElementById("recap-reader-next");
+        let currentReaderRecapId = null;
+
+        function openRecapReader(recapId) {
+            const recap = allLoadedRecaps.find(r => r.id === recapId);
+            if (!recap) return;
+            currentReaderRecapId = recapId;
+
+            readerTitle.textContent = recap.title;
+            readerMeta.textContent = formatRecapMeta(recap);
+            const raw = recap.body || '';
+            readerText.innerHTML = renderMarkdown(raw);
+
+            // Show narrator actions
+            if (isNarrator) {
+                readerActions.classList.remove("hidden");
+            } else {
+                readerActions.classList.add("hidden");
+            }
+
+            // Prev/Next navigation
+            updateReaderNav();
+
+            readerOverlay.classList.add("visible");
+            if (window.lucide) lucide.createIcons({ nodes: [readerOverlay] });
+        }
+
+        function updateReaderNav() {
+            const idx = allLoadedRecaps.findIndex(r => r.id === currentReaderRecapId);
+            // Recaps sorted desc, so "previous" = higher session number = lower index
+            readerPrev.disabled = idx <= 0;
+            readerNext.disabled = idx >= allLoadedRecaps.length - 1;
+        }
+
+        function closeRecapReader() {
+            readerOverlay.classList.remove("visible");
+            currentReaderRecapId = null;
+        }
+
+        document.getElementById("recap-reader-close").addEventListener("click", closeRecapReader);
+        readerOverlay.addEventListener("click", (e) => {
+            if (e.target === readerOverlay) closeRecapReader();
+        });
+
+        readerPrev.addEventListener("click", () => {
+            const idx = allLoadedRecaps.findIndex(r => r.id === currentReaderRecapId);
+            if (idx > 0) openRecapReader(allLoadedRecaps[idx - 1].id);
+        });
+
+        readerNext.addEventListener("click", () => {
+            const idx = allLoadedRecaps.findIndex(r => r.id === currentReaderRecapId);
+            if (idx < allLoadedRecaps.length - 1) openRecapReader(allLoadedRecaps[idx + 1].id);
+        });
+
+        // Edit from reader
+        document.getElementById("recap-reader-edit").addEventListener("click", () => {
+            const recap = allLoadedRecaps.find(r => r.id === currentReaderRecapId);
+            if (recap) {
+                closeRecapReader();
+                openRecapForm(recap);
+            }
+        });
+
+        // Delete from reader
+        document.getElementById("recap-reader-delete").addEventListener("click", async () => {
+            if (!confirm("¿Eliminar este recuento de sesión? Esta acción no se puede deshacer.")) return;
+            const { error } = await supabase
+                .from("session_recaps")
+                .delete()
+                .eq("id", currentReaderRecapId);
+            if (error) {
+                alert("Error al eliminar: " + error.message);
+                return;
+            }
+            closeRecapReader();
+            recapOffset = 0;
+            await loadRecaps(false);
+            refreshLastSessionCard();
+        });
+
+        // ── Recap Form (Create / Edit) ──
+        const formOverlay = document.getElementById("modal-recap-form");
+        const formHeading = document.getElementById("recap-form-heading");
+        const formTitle = document.getElementById("recap-form-title");
+        const formNumber = document.getElementById("recap-form-number");
+        const formDate = document.getElementById("recap-form-date");
+        const formBody = document.getElementById("recap-form-body");
+        const formSave = document.getElementById("recap-form-save");
+        let editingRecapId = null;
+
+        function openRecapForm(recap) {
+            if (recap) {
+                // Edit mode
+                editingRecapId = recap.id;
+                formHeading.textContent = "Editar Recuento";
+                formTitle.value = recap.title || '';
+                formNumber.value = recap.session_number || '';
+                formDate.value = recap.session_date || '';
+                formBody.value = recap.body || '';
+            } else {
+                // Create mode — auto-calculate next session number
+                editingRecapId = null;
+                formHeading.textContent = "Nuevo Recuento";
+                const maxNum = allLoadedRecaps.length > 0
+                    ? Math.max(...allLoadedRecaps.map(r => r.session_number))
+                    : 0;
+                formTitle.value = '';
+                formNumber.value = maxNum + 1;
+                formDate.value = new Date().toISOString().split('T')[0];
+                formBody.value = '';
+            }
+            formOverlay.classList.add("visible");
+            formTitle.focus();
+            if (window.lucide) lucide.createIcons({ nodes: [formOverlay] });
+        }
+
+        function closeRecapForm() {
+            formOverlay.classList.remove("visible");
+            editingRecapId = null;
+        }
+
+        document.getElementById("recap-form-close").addEventListener("click", closeRecapForm);
+        document.getElementById("recap-form-cancel").addEventListener("click", closeRecapForm);
+        formOverlay.addEventListener("click", (e) => {
+            if (e.target === formOverlay) closeRecapForm();
+        });
+
+        formSave.addEventListener("click", async () => {
+            const title = formTitle.value.trim();
+            const sessionNum = parseInt(formNumber.value, 10);
+            if (!title) { alert("El título es obligatorio."); return; }
+            if (!sessionNum || sessionNum < 1) { alert("Número de sesión inválido."); return; }
+
+            const payload = {
+                chronicle_id: chronicleId,
+                session_number: sessionNum,
+                title: title,
+                body: formBody.value.trim() || null,
+                session_date: formDate.value || null,
+                created_by: currentPlayer.id
+            };
+
+            formSave.disabled = true;
+            formSave.textContent = "Guardando...";
+
+            let error;
+            if (editingRecapId) {
+                // Update — don't overwrite created_by
+                const { created_by, ...updatePayload } = payload;
+                ({ error } = await supabase
+                    .from("session_recaps")
+                    .update(updatePayload)
+                    .eq("id", editingRecapId));
+            } else {
+                ({ error } = await supabase
+                    .from("session_recaps")
+                    .insert(payload));
+            }
+
+            formSave.disabled = false;
+            formSave.textContent = "Guardar";
+
+            if (error) {
+                alert("Error al guardar: " + error.message);
+                return;
+            }
+
+            closeRecapForm();
+            recapOffset = 0;
+            await loadRecaps(false);
+            refreshLastSessionCard();
+        });
+
+        // "+ Nuevo Recuento" button
+        addRecapBtn.addEventListener("click", () => openRecapForm(null));
+
+        // Refresh the "Ultima Sesion" card in Resumen tab
+        async function refreshLastSessionCard() {
+            const { data: latest } = await supabase
+                .from("session_recaps")
+                .select("session_number, title, body, session_date")
+                .eq("chronicle_id", chronicleId)
+                .order("session_number", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            const lastCard = document.getElementById("cd-last-session-card");
+            if (latest) {
+                let dateStr = `Sesión ${latest.session_number}`;
+                if (latest.session_date) {
+                    const d = new Date(latest.session_date + 'T00:00:00');
+                    dateStr += ` — ${d.getDate()} ${mNames[d.getMonth()]} ${d.getFullYear()}`;
+                }
+                const truncated = escapeHtml(previewLines(latest.body));
+                lastCard.innerHTML = `
+                    <span class="cd-card-subtitle">${dateStr}</span>
+                    <p class="cd-card-body">${truncated}</p>
+                `;
+            } else {
+                lastCard.innerHTML = '<span class="cd-card-muted">Sin sesiones registradas</span>';
+            }
+        }
 
         // ── Notes from player's characters in this chronicle ──
         const NOTES_PAGE = 5;
@@ -883,6 +1176,13 @@
                 .replace(/`([^`]+)`/g, '$1');
         }
 
+        function previewLines(text, maxLines = 3) {
+            const plain = stripMarkdown(text || '');
+            const lines = plain.split('\n').filter(l => l.trim());
+            const preview = lines.slice(0, maxLines).join(' ');
+            return lines.length > maxLines ? preview + '…' : preview;
+        }
+
         function formatRelativeDate(isoStr) {
             if (!isoStr) return '';
             const d = new Date(isoStr);
@@ -902,10 +1202,10 @@
             card.className = "cd-note-card";
             card.innerHTML = `
                 <div class="cd-note-header">
-                    <span class="cd-note-title">${note.title}</span>
-                    <span class="cd-note-char-badge">${note.characterName}</span>
+                    <span class="cd-note-title">${escapeHtml(note.title)}</span>
+                    <span class="cd-note-char-badge">${escapeHtml(note.characterName)}</span>
                 </div>
-                ${truncated ? `<p class="cd-note-body">${truncated}</p>` : ''}
+                ${truncated ? `<p class="cd-note-body">${escapeHtml(truncated)}</p>` : ''}
                 <span class="cd-note-date">${formatRelativeDate(note.createdAt)}</span>
             `;
             return card;
@@ -927,11 +1227,6 @@
         }
 
         notasMoreBtn.addEventListener("click", showNotes);
-
-        // Add button placeholders (creation flows built later)
-        addRecapBtn.addEventListener("click", () => {
-            // TODO: recap creation
-        });
 
         addNoteBtn.addEventListener("click", () => {
             // TODO: note creation
@@ -1025,14 +1320,14 @@
                 item.className = "cd-modal-item";
 
                 const avatarInner = sheet.avatar_url
-                    ? `<img src="${sheet.avatar_url}" alt="">`
-                    : `<span class="cd-player-char-initials">${initials}</span>`;
+                    ? `<img src="${escapeHtml(sheet.avatar_url)}" alt="">`
+                    : `<span class="cd-player-char-initials">${escapeHtml(initials)}</span>`;
 
                 item.innerHTML = `
                     <div class="cd-player-char-avatar">${avatarInner}</div>
-                    <span class="cd-player-char-name">${sheet.name}</span>
+                    <span class="cd-player-char-name">${escapeHtml(sheet.name)}</span>
                     <span class="cd-player-char-sep">|</span>
-                    <span class="cd-player-char-clan">${clan}</span>
+                    <span class="cd-player-char-clan">${escapeHtml(clan)}</span>
                 `;
                 item.addEventListener("click", async () => {
                     const { error: addErr } = await supabase

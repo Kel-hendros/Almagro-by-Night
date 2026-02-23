@@ -118,12 +118,12 @@ async function loadChronicles() {
     const playerCount = countMap[chronicle.id] || 1;
 
     const bannerHtml = chronicle.banner_url
-      ? `<div class="chronicle-card-banner"><img src="${chronicle.banner_url}" alt="" loading="lazy"></div>`
+      ? `<div class="chronicle-card-banner"><img src="${escapeHtml(chronicle.banner_url)}" alt="" loading="lazy"></div>`
       : "";
 
     card.innerHTML = `
       ${bannerHtml}
-      <h3>${chronicle.name}</h3>
+      <h3>${escapeHtml(chronicle.name)}</h3>
       <div class="chronicle-card-meta">
         ${roleBadge}
         ${statusBadge}

@@ -35,7 +35,7 @@ function getCssVarValue(name) {
 }
 
 function escapeAttr(val) {
-  return String(val ?? "").replace(/"/g, "&quot;");
+  return escapeHtml(val);
 }
 
 function getFactionMeta(keyword, fallbackName, fallbackColor) {
@@ -166,7 +166,7 @@ function buildLieutenantCard(lt, options = {}) {
     card.innerHTML = `
       <div class="lieutenant-rich-header">
         <div class="lieutenant-rich-info">
-          <strong>${lt.name || "Teniente"}</strong>
+          <strong>${escapeHtml(lt.name || "Teniente")}</strong>
           <span class="lieutenant-mini-stats">💪 ${lt.phys_power || 0} · 🗣️ ${
       lt.soc_power || 0
     } · 🧠 ${lt.ment_power || 0}</span>
@@ -215,10 +215,10 @@ function buildLieutenantCard(lt, options = {}) {
   row.className = "lieutenant-minimal-row";
   row.innerHTML = `
     
-    <span>${lt.name || "Teniente"}</span>
+    <span>${escapeHtml(lt.name || "Teniente")}</span>
     <span class="lieutenant-mini-faction" style="color:${
       lt.faction_color || "#FF0000"
-    }">${lt.faction_name || "Facción"}</span>
+    }">${escapeHtml(lt.faction_name || "Facción")}</span>
     <span class="lieutenant-mini-stats">💪 ${lt.phys_power || 0} · 🗣️ ${
     lt.soc_power || 0
   } · 🧠 ${lt.ment_power || 0}</span>
@@ -404,7 +404,7 @@ function renderLieutenantPanelContent(dlg, zoneId, zoneName, payload) {
   dlg.innerHTML = "";
   const header = document.createElement("div");
   header.className = "panel-header";
-  header.innerHTML = `<h2>Desplegar Teniente en ${zoneName}</h2>`;
+  header.innerHTML = `<h2>Desplegar Teniente en ${escapeHtml(zoneName)}</h2>`;
   const close = document.createElement("button");
   close.className = "panel-close";
   close.textContent = "×";
@@ -450,7 +450,7 @@ function renderLieutenantPanelContent(dlg, zoneId, zoneName, payload) {
     Object.entries(grouped).forEach(([groupName, lieutenants]) => {
       const groupEl = document.createElement("div");
       groupEl.className = "lieutenant-group";
-      groupEl.innerHTML = `<h4>${groupName}</h4>`;
+      groupEl.innerHTML = `<h4>${escapeHtml(groupName)}</h4>`;
       const groupList = document.createElement("div");
       groupList.className = "lieutenant-list";
       lieutenants.forEach((lt) =>
@@ -597,7 +597,7 @@ window.DetailView.renderZone = async function (id) {
   const header = document.createElement("div");
   header.className = "detail-header";
   header.innerHTML = `
-      <h2 class="detail-title">${data.name}</h2>
+      <h2 class="detail-title">${escapeHtml(data.name)}</h2>
       <div id="detail-actions-slot"></div>
   `;
   wrapper.appendChild(header);
@@ -642,11 +642,11 @@ window.DetailView.renderZone = async function (id) {
   tabInfo.innerHTML = `
       <div class="detail-body">
         <div class="detail-info">
-          <p class="detail-desc">${description}</p>
+          <p class="detail-desc">${escapeHtml(description)}</p>
           <div class="detail-state" id="detail-state-block"></div>
         </div>
         <div class="detail-image-container portrait">
-          <img class="detail-img" src="${imageUrl}" alt="${data.name}" />
+          <img class="detail-img" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.name)}" />
         </div>
       </div>
   `;
@@ -689,7 +689,7 @@ window.DetailView.renderZone = async function (id) {
 
     tabBenefits.innerHTML = `
       <div class="benefit-card">
-        <div class="benefit-text">${data.benefits}</div>
+        <div class="benefit-text">${escapeHtml(data.benefits)}</div>
         <div class="benefit-status">
           <div class="benefit-checkbox" style="${checkStyle}" title="${
       isControlled ? "Beneficio activo" : "Beneficio inactivo"
@@ -813,7 +813,7 @@ window.DetailView.renderZone = async function (id) {
     locSection.innerHTML = `
       <h3>Lugares</h3>
       <ul>
-        ${locations.map((loc) => `<li>${loc.name}</li>`).join("")}
+        ${locations.map((loc) => `<li>${escapeHtml(loc.name)}</li>`).join("")}
       </ul>
     `;
     infoContainer.appendChild(locSection);
