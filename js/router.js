@@ -146,7 +146,14 @@ function updateContentBackgroundMode(baseHash) {
   const contentShell = document.querySelector("main.content");
   if (!contentShell) return;
   const useFlatThemeBackground =
-    baseHash === "settings" || baseHash === "chronicles" || baseHash === "chronicle" || baseHash === "character-sheets";
+    baseHash === "settings" ||
+    baseHash === "chronicles" ||
+    baseHash === "chronicle" ||
+    baseHash === "character-sheets" ||
+    baseHash === "welcome" ||
+    baseHash === "login" ||
+    baseHash === "register" ||
+    baseHash === "user";
   contentShell.classList.toggle("content-theme-bg-only", useFlatThemeBackground);
 }
 
@@ -309,8 +316,8 @@ async function updateSidebar() {
     liLogout?.classList.remove("hidden");
     liSettings?.classList.remove("hidden");
     liQuickActions?.classList.remove("hidden");
-    const name = session.user.user_metadata?.full_name || session.user.email;
-    if (spanName) spanName.textContent = name;
+    const displayName = session.user.user_metadata?.full_name || session.user.email;
+    if (spanName) spanName.textContent = displayName;
 
     // Check Admin for Tools Menu - NOW OPEN FOR ALL AUTHENTICATED USERS
     const liTools = document.getElementById("menu-tools");

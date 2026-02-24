@@ -2,7 +2,12 @@
     <link rel="stylesheet" href="css/combat-tracker.css">
 
     <div id="combat-breadcrumb" class="chronicle-breadcrumb" style="display: none;"></div>
-    <h1>Control de Combate</h1>
+    <div class="chronicles-header ct-header">
+        <div class="chronicles-title-wrap">
+            <h1>Control de Combate</h1>
+            <p class="chronicles-subtitle">Gestiona plantillas, encuentros y estados de combate.</p>
+        </div>
+    </div>
 
     <!-- Main Navigation Tabs -->
     <div class="ct-tabs">
@@ -12,25 +17,25 @@
 
     <!-- VIEW 1: TEMPLATES -->
     <div id="view-templates" class="ct-view active">
-        <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
-            <p>Define tipos de enemigos reutilizables. Tus plantillas se guardan en la base de datos.</p>
-            <button class="ct-btn primary" id="btn-create-template">+ Nueva Plantilla</button>
+        <div class="ct-view-header">
+            <p class="ct-view-subtitle">Define tipos de enemigos reutilizables. Tus plantillas se guardan en la base de datos.</p>
+            <button class="btn btn--primary ct-btn primary" id="btn-create-template">+ Nueva Plantilla</button>
         </div>
 
         <div id="templates-list" class="ct-grid">
-            <p style="color: #666;">Cargando plantillas...</p>
+            <p class="muted">Cargando plantillas...</p>
         </div>
     </div>
 
     <!-- VIEW 2: ENCOUNTERS -->
     <div id="view-encounters" class="ct-view">
-        <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
-            <p>Gestiona tus escenas de combate. Entra a un encuentro para iniciar la acción.</p>
-            <button class="ct-btn primary" id="btn-create-encounter">+ Nuevo Encuentro</button>
+        <div class="ct-view-header">
+            <p class="ct-view-subtitle">Gestiona tus escenas de combate. Entra a un encuentro para iniciar la acción.</p>
+            <button class="btn btn--primary ct-btn primary" id="btn-create-encounter">+ Nuevo Encuentro</button>
         </div>
 
         <div id="encounters-list" class="ct-grid">
-            <p style="color: #666;">Cargando encuentros...</p>
+            <p class="muted">Cargando encuentros...</p>
         </div>
     </div>
 </div>
@@ -38,35 +43,34 @@
 <!-- MODAL: CREATE/EDIT TEMPLATE -->
 <div id="modal-template" class="ct-modal-overlay hidden">
     <div class="ct-modal">
-        <h3 id="modal-template-title">Nueva Plantilla</h3>
+        <h3 id="modal-template-title" class="app-modal-title">Nueva Plantilla</h3>
         <form id="form-template">
             <input type="hidden" id="tpl-id">
 
             <div class="form-group ct-inline-field">
-                <label>Nombre</label>
-                <input type="text" id="tpl-name" placeholder="Ej: Matón Brujah">
+                <label class="app-label">Nombre</label>
+                <input class="app-input" type="text" id="tpl-name" placeholder="Ej: Matón Brujah">
             </div>
 
-            <div id="tpl-type-container" class="form-group ct-inline-field" style="margin-bottom: 20px;">
+            <div id="tpl-type-container" class="form-group ct-inline-field ct-type-field">
             </div>
 
             <div class="form-group ct-inline-field">
-                <label>Tags</label>
+                <label class="app-label">Tags</label>
                 <div id="tpl-tags-container" class="ct-tags-wrap"></div>
             </div>
 
-            <div id="tpl-stats-container"
-                style="max-height: 400px; overflow-y: auto; text-align: left; padding: 10px; border: 1px solid #444; background: #222; margin-bottom: 15px;">
+            <div id="tpl-stats-container" class="ct-stats-container">
             </div>
 
             <div class="ct-form-group">
-                <label>Notas</label>
-                <textarea id="tpl-notes" rows="3" placeholder="Información adicional..."></textarea>
+                <label class="app-label">Notas</label>
+                <textarea class="app-input" id="tpl-notes" rows="3" placeholder="Información adicional..."></textarea>
             </div>
 
             <div class="ct-actions">
-                <button type="button" class="ct-btn" id="btn-cancel-template">Cancelar</button>
-                <button type="submit" class="ct-btn primary">Guardar</button>
+                <button type="button" class="btn btn--ghost ct-btn" id="btn-cancel-template">Cancelar</button>
+                <button type="submit" class="btn btn--primary ct-btn primary">Guardar</button>
             </div>
         </form>
     </div>
@@ -74,16 +78,16 @@
 
 <!-- MODAL: CREATE ENCOUNTER -->
 <div id="modal-encounter" class="ct-modal-overlay hidden">
-    <div class="ct-modal" style="width: 400px;">
-        <h3>Nuevo Encuentro</h3>
+    <div class="ct-modal ct-modal--narrow">
+        <h3 class="app-modal-title">Nuevo Encuentro</h3>
         <form id="form-encounter">
             <div class="ct-form-group">
-                <label>Nombre del Encuentro</label>
-                <input type="text" id="enc-name" placeholder="Ej: Emboscada en el callejón">
+                <label class="app-label">Nombre del Encuentro</label>
+                <input class="app-input" type="text" id="enc-name" placeholder="Ej: Emboscada en el callejón">
             </div>
             <div class="ct-actions">
-                <button type="button" class="ct-btn" id="btn-cancel-encounter">Cancelar</button>
-                <button type="submit" class="ct-btn primary">Crear</button>
+                <button type="button" class="btn btn--ghost ct-btn" id="btn-cancel-encounter">Cancelar</button>
+                <button type="submit" class="btn btn--primary ct-btn primary">Crear</button>
             </div>
         </form>
     </div>

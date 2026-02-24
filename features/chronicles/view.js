@@ -20,23 +20,29 @@
     const remaining = showPlus ? Math.max(0, items.length - visibleLimit) : 0;
 
     const avatarNodes = visible
-      .map((participant) => {
-        const avatarUrl = participant?.character?.avatar_url || "";
+      .map((participant, index) => {
+        const zIndex = index + 1;
+        const avatarUrl =
+          participant?.character?.data?.avatarThumbUrl ||
+          participant?.character?.avatar_url ||
+          "";
         if (avatarUrl) {
-          return `<span class="chronicle-card-avatar"><img src="${escapeHtml(
+          return `<span class="chronicle-card-avatar" style="--avatar-z:${zIndex};"><img src="${escapeHtml(
             avatarUrl
           )}" alt="" loading="lazy"></span>`;
         }
         const fallbackName =
           participant?.character?.name || participant?.player?.name || "";
         const label = initialsFromName(fallbackName);
-        return `<span class="chronicle-card-avatar">${escapeHtml(label)}</span>`;
+        return `<span class="chronicle-card-avatar" style="--avatar-z:${zIndex};">${escapeHtml(
+          label
+        )}</span>`;
       })
       .join("");
 
     const moreNode =
       remaining > 0
-        ? `<span class="chronicle-card-avatar more">+${remaining}</span>`
+        ? `<span class="chronicle-card-avatar more" style="--avatar-z:${visible.length + 1};">+${remaining}</span>`
         : "";
 
     return `<div class="chronicle-card-avatars">${avatarNodes}${moreNode}</div>`;
@@ -52,6 +58,27 @@
 
   function roleLabel(role) {
     return role === "narrator" ? "Narrador" : "Jugador";
+  }
+
+  function formatNextSessionLabel(nextSession) {
+    if (!nextSession) return "";
+    const date = new Date(nextSession);
+    if (Number.isNaN(date.getTime())) return "";
+    const months = [
+      "Enero",
+      "Febrero",
+      "Marzo",
+      "Abril",
+      "Mayo",
+      "Junio",
+      "Julio",
+      "Agosto",
+      "Septiembre",
+      "Octubre",
+      "Noviembre",
+      "Diciembre",
+    ];
+    return `Próxima partida: ${date.getDate()} de ${months[date.getMonth()]}`;
   }
 
   function renderLoading(grid) {
@@ -98,9 +125,17 @@
         ? "chronicle-card-description"
         : "chronicle-card-description empty";
       const narratorName = chronicle.creator?.name || "—";
+      const nextSessionLabel = formatNextSessionLabel(chronicle.next_session);
 
       card.innerHTML = `
         <div class="chronicle-card-banner">
+          ${
+            nextSessionLabel
+              ? `<span class="chronicle-card-next-session">${escapeHtml(
+                  nextSessionLabel
+                )}</span>`
+              : ""
+          }
           ${
             chronicle.banner_url
               ? `<img src="${escapeHtml(chronicle.banner_url)}" alt="" loading="lazy">`
@@ -136,7 +171,7 @@
   function setMessage(element, text, type) {
     if (!element) return;
     element.textContent = text || "";
-    element.className = `msg ${type || ""}`.trim();
+    element.className = `app-msg ${type || ""}`.trim();
   }
 
   ns.view = {
@@ -148,4 +183,3 @@
     setMessage,
   };
 })(window);
-

@@ -82,8 +82,9 @@
         const canOpen = isNarrator || isOwn;
         const initials = (sheet.name || "?").charAt(0).toUpperCase();
 
-        const avatarInner = sheet.avatar_url
-          ? `<img src="${escapeHtml(sheet.avatar_url)}" alt="">`
+        const avatarUrl = sheet.data?.avatarThumbUrl || sheet.avatar_url;
+        const avatarInner = avatarUrl
+          ? `<img src="${escapeHtml(avatarUrl)}" alt="">`
           : `<span class="cd-player-char-initials">${escapeHtml(initials)}</span>`;
 
         let deleteCharHtml = "";
@@ -144,4 +145,3 @@
     renderPlayers,
   };
 })(window);
-

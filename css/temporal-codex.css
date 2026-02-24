@@ -1,29 +1,18 @@
 /* Temporal Codex Styles */
-@font-face {
-    font-family: 'delavan';
-    src: url('../fonts/delavan-webfont.woff2') format('woff2'),
-        url('../fonts/delavan-webfont.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-}
 
+.codex-page-header {
+    margin-bottom: 1rem;
+}
 
 .temporal-codex-container {
     max-width: 600px;
     margin: 0 auto;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 2.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    /* overflow: hidden; Removed to allow reset button to overlap if needed */
-    color: var(--color-cream-muted);
-    background-image: url("https://www.transparenttextures.com/patterns/buried.png");
-    background-size: 150px;
-    background-repeat: repeat;
-    background-position: center;
-    background-attachment: fixed;
-    background-blend-mode: screen;
-    background-color: var(--color-dark-alt);
-    font-size: 1.5rem;
+    border: 1px solid var(--theme-border-divider);
+    border-radius: 20px;
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
+    color: var(--theme-text-secondary);
+    background: color-mix(in srgb, var(--theme-bg-surface) 92%, transparent);
+    font-size: 1rem;
 }
 
 .codex-header {
@@ -40,22 +29,22 @@
 
 
 .codex-title h1 {
-    font-size: 2rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: -0.05em;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--theme-text-primary);
+    letter-spacing: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.25rem;
-    font-family: 'delavan', sans-serif;
+    font-family: var(--app-font-heading);
 }
 
 
 .codex-title p {
     font-size: 0.9rem;
-    color: var(--color-cream-muted);
-    font-weight: 700;
+    color: var(--theme-text-secondary);
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.2em;
 }
@@ -65,9 +54,9 @@
     top: -1rem;
     right: -1rem;
     padding: 0.75rem;
-    background-color: rgb(31, 27, 36);
-    color: var(--color-cream-muted);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: var(--theme-bg-elevated);
+    color: var(--theme-text-secondary);
+    border: 1px solid var(--theme-border-divider);
     border-radius: 1rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -78,17 +67,16 @@
 }
 
 .reset-btn:hover {
-    background-color: rgb(140, 28, 28);
-    color: var(--color-cream);
-    border-color: var(--color-red);
+    background-color: var(--theme-bg-surface);
+    color: var(--theme-text-primary);
+    border-color: var(--theme-accent);
 }
 
 .error-banner {
     margin: 0 2rem 1.5rem 2rem;
     padding: 0.75rem;
-    background-color: rgba(69, 10, 10, 0.2);
-    /* red-950/20 */
-    border: 1px solid rgba(127, 29, 29, 0.4);
+    background-color: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent);
     border-radius: 1rem;
     display: flex;
     gap: 0.75rem;
@@ -97,8 +85,7 @@
 
 .error-banner p {
     font-size: 0.7rem;
-    color: #fecaca;
-    /* red-200 */
+    color: var(--theme-text-primary);
     font-weight: 500;
     margin: 0;
 }
@@ -121,17 +108,16 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--color-cream-muted);
+    color: var(--theme-text-secondary);
     display: flex;
     align-items: flex-end;
     gap: 0.5rem;
 }
 
 .form-input {
-    background-color: var(--color-dark);
-    /* bg-zinc-900 */
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: var(--color-cream);
+    background-color: var(--theme-bg-elevated);
+    border: 1px solid var(--theme-border-divider);
+    color: var(--theme-text-primary);
     padding: 0.75rem;
     border-radius: 0.75rem;
     font-size: 1.125rem;
@@ -142,8 +128,8 @@
 }
 
 .form-input:focus {
-    border-color: var(--color-red);
-    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+    border-color: var(--theme-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 30%, transparent);
 }
 
 .grid-2 {
@@ -163,7 +149,7 @@
 .divider-line {
     flex-grow: 1;
     height: 1px;
-    background-color: var(--color-cream-muted);
+    background-color: var(--theme-border-divider);
 }
 
 .divider-text {
@@ -175,17 +161,20 @@
 
 /* Special styling for Total Existence */
 .input-total {
-    border-color: rgba(127, 29, 29, 0.5);
-    box-shadow: 0 0 15px rgba(220, 38, 38, 0.1);
+    border-color: color-mix(in srgb, var(--theme-accent) 45%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 16%, transparent);
+}
+
+.input-total-label {
+    color: var(--theme-accent);
 }
 
 .footer-info {
     margin-top: 1rem;
     padding: 1.5rem 2rem;
-    background-color: rgba(24, 24, 27, 0.5);
-    border-top: 1px solid rgba(24, 24, 27, 1);
-    border-radius: 0 0 2.5rem 2.5rem;
-    /* Match container border radius */
+    background-color: color-mix(in srgb, var(--theme-bg-elevated) 86%, transparent);
+    border-top: 1px solid var(--theme-border-divider);
+    border-radius: 0 0 20px 20px;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -193,32 +182,32 @@
 
 .info-icon {
     padding: 0.5rem;
-    background-color: var(--color-dark);
+    background-color: var(--theme-bg-base);
     border-radius: 0.5rem;
-    color: var(--color-cream-muted);
+    color: var(--theme-text-secondary);
     display: flex;
 }
 
 .info-text {
     font-size: 0.625rem;
-    color: var(--color-cream-muted);
+    color: var(--theme-text-secondary);
     line-height: 1.6;
     font-style: italic;
     margin: 0;
 }
 
 .info-text strong {
-    color: var(--color-cream);
+    color: var(--theme-text-primary);
     font-weight: 700;
 }
 
 /* Utilities for icons */
 .icon-red {
-    color: var(--color-red);
+    color: var(--theme-accent);
 }
 
 .icon-muted {
-    color: var(--color-cream-muted);
+    color: var(--theme-text-secondary);
 }
 
 .hidden {

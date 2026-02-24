@@ -1,6 +1,9 @@
 const ratings = document.querySelectorAll(".rating");
 let currentSheetId = null;
 let currentAvatarUrl = null;
+let currentAvatarPosition = { x: 50, y: 50, scale: 1 };
+let currentAvatarOriginalUrl = null;
+let currentAvatarThumbUrl = null;
 const ratingDotsModule = window.ABNSheetRatingDots;
 const uiRefreshModule = window.ABNSheetUIRefresh;
 const sheetModeModule = window.ABNSheetMode;
@@ -139,6 +142,8 @@ if (clanHeaderModule) {
     createModalController: createSheetModalController,
     onSave: saveCharacterData,
     getCurrentAvatarUrl: () => currentAvatarUrl,
+    getCurrentAvatarPosition: () => currentAvatarPosition,
+    hasAvatarThumb: () => !!currentAvatarThumbUrl,
   });
   clanHeaderModule.init();
 }
@@ -383,7 +388,10 @@ if (sheetLoaderModule) {
     },
     onSheetLoaded: ({ id, sheet }) => {
       currentSheetId = id;
-      currentAvatarUrl = sheet.avatar_url;
+      currentAvatarOriginalUrl = sheet?.data?.avatarOriginalUrl || sheet?.avatar_url || null;
+      currentAvatarThumbUrl = sheet?.data?.avatarThumbUrl || sheet?.avatar_url || null;
+      currentAvatarUrl = currentAvatarThumbUrl || currentAvatarOriginalUrl;
+      currentAvatarPosition = sheet?.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
       loadCharacterFromJSON(sheet.data);
       updateAll();
     },
@@ -461,6 +469,21 @@ function getCharacterData() {
 
   // Add saved rolls data
   characterData.savedRolls = getSavedRollsData();
+
+  // Keep avatar crop/position set in Characters view
+  characterData.avatarPosition = {
+    x: Number.isFinite(Number(currentAvatarPosition?.x))
+      ? Number(currentAvatarPosition.x)
+      : 50,
+    y: Number.isFinite(Number(currentAvatarPosition?.y))
+      ? Number(currentAvatarPosition.y)
+      : 50,
+    scale: Number.isFinite(Number(currentAvatarPosition?.scale))
+      ? Number(currentAvatarPosition.scale)
+      : 1,
+  };
+  if (currentAvatarOriginalUrl) characterData.avatarOriginalUrl = currentAvatarOriginalUrl;
+  if (currentAvatarThumbUrl) characterData.avatarThumbUrl = currentAvatarThumbUrl;
 
   // Add discord webhook data
   const discordConfig = getDiscordConfig();

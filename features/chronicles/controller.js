@@ -5,7 +5,7 @@
 
   const state = {
     player: null,
-    boundRoot: null,
+    boundScope: null,
     modals: {
       create: null,
       join: null,
@@ -142,7 +142,13 @@
 
   async function submitJoinChronicle() {
     const { joinCodeInput, joinMessage } = getElements();
-    const code = joinCodeInput?.value?.trim();
+    const submitBtn = document.querySelector(
+      '[data-chronicles-action="submit-join"]'
+    );
+    const code = (joinCodeInput?.value || "")
+      .trim()
+      .replace(/\s+/g, "")
+      .toUpperCase();
     if (!code) {
       view().setMessage(
         joinMessage,
@@ -151,6 +157,13 @@
       );
       return;
     }
+
+    if (joinCodeInput) joinCodeInput.value = code;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Uniendo...";
+    }
+    view().setMessage(joinMessage, "Verificando código...", "");
 
     try {
       const data = await service().joinChronicleByCode({ code });
@@ -173,8 +186,19 @@
         message = "Código de invitación no encontrado.";
       } else if (error?.message?.includes("not active")) {
         message = "Esta crónica está archivada.";
+      } else if (error?.message?.includes("Player record not found")) {
+        message = "Tu usuario no tiene perfil de jugador activo.";
+      } else if (error?.message?.includes("Not authenticated")) {
+        message = "Sesión expirada. Volvé a iniciar sesión.";
+      } else if (error?.message) {
+        message = `Error: ${error.message}`;
       }
       view().setMessage(joinMessage, message, "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Unirse";
+      }
     }
   }
 
@@ -211,9 +235,10 @@
 
   function bindEvents() {
     const { root } = getElements();
-    if (!root || state.boundRoot === root) return;
+    const scope = root?.parentElement || document;
+    if (!root || state.boundScope === scope) return;
 
-    root.addEventListener("click", (event) => {
+    scope.addEventListener("click", (event) => {
       const actionEl = event.target.closest("[data-chronicles-action]");
       if (actionEl) {
         const action = actionEl.getAttribute("data-chronicles-action");
@@ -234,7 +259,7 @@
 
     });
 
-    root.addEventListener("keydown", (event) => {
+    scope.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       const actionEl = event.target.closest("[data-chronicles-action]");
       if (!actionEl) return;
@@ -242,7 +267,7 @@
       actionEl.click();
     });
 
-    state.boundRoot = root;
+    state.boundScope = scope;
   }
 
   async function initPage() {

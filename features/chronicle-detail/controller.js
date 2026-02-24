@@ -155,6 +155,7 @@
         participants,
         characters,
         encountersCount: _encountersCount,
+        sessionsCount,
         game,
         latestRecap,
     } = await service().fetchDashboardData(chronicleId);
@@ -221,6 +222,9 @@
         isNarrator,
         latestRecap,
         myChars,
+        participantsCount: participants.length,
+        charactersCount: characters.length,
+        sessionsCount: sessionsCount || 0,
         onRequestAddCharacter: () => {
             switchTab("jugadores");
             participantsApi.openCharPicker?.();

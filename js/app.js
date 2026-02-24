@@ -190,6 +190,7 @@ function createPlayerCard(player, { badge = null, actions = [] } = {}) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.textContent = label;
+      btn.classList.add("btn");
       if (className) btn.classList.add(className);
       btn.addEventListener("click", handler);
       actionsEl.appendChild(btn);

@@ -10,6 +10,10 @@
     modalController: null,
   };
 
+  function getAvatarDisplayUrl(sheet) {
+    return sheet?.data?.avatarThumbUrl || sheet?.avatar_url || "";
+  }
+
   function elements() {
     const canvas = document.getElementById("repos-canvas");
     return {
@@ -64,6 +68,8 @@
         const updatedData = {
           ...(sheet?.data || {}),
           avatarPosition: { x: 50, y: 50, scale: 1 },
+          avatarOriginalUrl: publicUrl,
+          avatarThumbUrl: "",
         };
 
         await service().updateSheet(sheetId, {
@@ -91,6 +97,23 @@
 
       try {
         const sheet = await service().getSheetById(sheetId);
+        const originalUrl = sheet?.data?.avatarOriginalUrl || sheet?.avatar_url || "";
+        if (!originalUrl) throw new Error("No hay imagen de avatar para recortar.");
+
+        const { canvas } = elements();
+        if (!canvas) throw new Error("No se encontró el canvas de recorte.");
+        const thumbBlob = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo generar el recorte."))),
+            "image/jpeg",
+            0.9
+          );
+        });
+        const user = await service().getCurrentUser();
+        if (!user) throw new Error("Usuario no autenticado.");
+        const thumbPath = `${user.id}/${sheetId}_thumb_${Date.now()}.jpg`;
+        const thumbUrl = await service().uploadAvatar(thumbPath, thumbBlob);
+
         const updatedData = {
           ...(sheet?.data || {}),
           avatarPosition: {
@@ -98,9 +121,11 @@
             y: Math.round(state.reposState.y * 10) / 10,
             scale: state.reposState.scale,
           },
+          avatarOriginalUrl: originalUrl,
+          avatarThumbUrl: thumbUrl,
         };
 
-        await service().updateSheet(sheetId, { data: updatedData });
+        await service().updateSheet(sheetId, { avatar_url: thumbUrl, data: updatedData });
         closeModal();
         if (typeof onUpdated === "function") onUpdated();
       } catch (error) {
@@ -255,9 +280,11 @@
 
     try {
       const sheet = await service().getSheetById(sheetId);
-      if (!sheet?.avatar_url) return;
+      const displayUrl = getAvatarDisplayUrl(sheet);
+      if (!displayUrl) return;
       const pos = sheet.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
-      openReposModal(sheet.avatar_url, pos);
+      const sourceUrl = sheet?.data?.avatarOriginalUrl || displayUrl;
+      openReposModal(sourceUrl, pos);
     } catch (error) {
       console.error(error);
       alert("Error al cargar avatar: " + error.message);

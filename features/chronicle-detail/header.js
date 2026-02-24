@@ -29,24 +29,6 @@
 
     if (!isNarrator) return;
 
-    const codeEl = document.getElementById("chronicle-invite-code");
-    if (codeEl) {
-      codeEl.textContent = chronicle.invite_code;
-      codeEl.classList.remove("hidden");
-      codeEl.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(chronicle.invite_code);
-          const original = codeEl.textContent;
-          codeEl.textContent = "¡Copiado!";
-          setTimeout(() => {
-            codeEl.textContent = original;
-          }, 1500);
-        } catch (err) {
-          alert("No se pudo copiar: " + (err?.message || err));
-        }
-      });
-    }
-
     nameEl.classList.add("cd-editable");
     nameEl.addEventListener("click", () => {
       const current = nameEl.textContent;
@@ -134,4 +116,3 @@
     populate,
   };
 })(window);
-

@@ -1,5 +1,6 @@
 (function initChronicleDetailSummary(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
+  const service = () => ns.service;
 
   function stripMarkdown(text) {
     return (text || "")
@@ -34,6 +35,9 @@
       isNarrator,
       latestRecap,
       myChars,
+      participantsCount,
+      charactersCount,
+      sessionsCount,
       onRequestAddCharacter,
     } = config;
 
@@ -42,6 +46,19 @@
     const nextSessionEditBtn = document.getElementById("cd-next-session-edit");
     const lastCard = document.getElementById("cd-last-session-card");
     const charCard = document.getElementById("cd-character-card");
+    const countPlayers = document.getElementById("cd-count-players");
+    const countCharacters = document.getElementById("cd-count-characters");
+    const countSessions = document.getElementById("cd-count-sessions");
+    const inviteSection = document.getElementById("cd-invite-summary-section");
+    const inviteCopyBtn = document.getElementById("cd-summary-invite-copy");
+    const inviteCodeValue = document.getElementById("cd-summary-invite-code-value");
+    const inviteRegenBtn = document.getElementById("cd-summary-invite-regenerate");
+    const inviteModal = document.getElementById("cd-invite-regenerate-modal");
+    const inviteModalClose = document.getElementById("cd-invite-modal-close");
+    const inviteModalCancel = document.getElementById("cd-invite-modal-cancel");
+    const inviteModalConfirm = document.getElementById("cd-invite-modal-confirm");
+
+    let currentInviteCode = chronicle?.invite_code || "";
 
     function formatNextSession(dateStr) {
       if (!dateStr) return null;
@@ -114,8 +131,9 @@
             .substring(0, 2)
             .toUpperCase()
         : "??";
-      const avatarContent = myChar.avatar_url
-        ? `<img src="${escapeHtml(myChar.avatar_url)}" alt="" class="cd-char-avatar-img">`
+      const avatarUrl = myChar.data?.avatarThumbUrl || myChar.avatar_url;
+      const avatarContent = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" alt="" class="cd-char-avatar-img">`
         : `<span class="cd-char-initials">${escapeHtml(initials)}</span>`;
 
       charCard.innerHTML = `
@@ -145,6 +163,63 @@
     updateNextSessionDisplay();
     renderLastSessionCard(latestRecap || null);
     renderCurrentCharacterCard();
+    if (countPlayers) countPlayers.textContent = String(participantsCount || 0);
+    if (countCharacters) countCharacters.textContent = String(charactersCount || 0);
+    if (countSessions) countSessions.textContent = String(sessionsCount || 0);
+
+    if (inviteSection && inviteCopyBtn && inviteCodeValue && isNarrator && currentInviteCode) {
+      inviteSection.classList.remove("hidden");
+      inviteCodeValue.textContent = currentInviteCode;
+      inviteCopyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(currentInviteCode);
+          const original = inviteCodeValue.textContent;
+          inviteCodeValue.textContent = "¡Copiado!";
+          setTimeout(() => {
+            inviteCodeValue.textContent = original;
+          }, 1200);
+        } catch (err) {
+          alert("No se pudo copiar: " + (err?.message || err));
+        }
+      });
+
+      const closeInviteModal = () => {
+        inviteModal?.classList.remove("visible");
+      };
+      const openInviteModal = () => {
+        inviteModal?.classList.add("visible");
+      };
+
+      inviteRegenBtn?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openInviteModal();
+      });
+      inviteModal?.addEventListener("click", (event) => {
+        if (event.target === inviteModal) closeInviteModal();
+      });
+      inviteModalClose?.addEventListener("click", closeInviteModal);
+      inviteModalCancel?.addEventListener("click", closeInviteModal);
+      inviteModalConfirm?.addEventListener("click", async () => {
+        if (!inviteModalConfirm) return;
+        inviteModalConfirm.disabled = true;
+        const originalText = inviteModalConfirm.textContent;
+        inviteModalConfirm.textContent = "Generando...";
+        try {
+          const { inviteCode, error } = await service().regenerateInviteCode(chronicleId);
+          if (error || !inviteCode) {
+            alert("No se pudo generar un nuevo código.");
+            return;
+          }
+          currentInviteCode = inviteCode;
+          chronicle.invite_code = inviteCode;
+          inviteCodeValue.textContent = inviteCode;
+          closeInviteModal();
+        } finally {
+          inviteModalConfirm.disabled = false;
+          inviteModalConfirm.textContent = originalText;
+        }
+      });
+    }
 
     if (isNarrator && nextSessionEditBtn && nextSessionCard) {
       nextSessionEditBtn.classList.remove("hidden");

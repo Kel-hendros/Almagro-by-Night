@@ -25,7 +25,6 @@
             </div>
             <div class="cd-meta-row">
                 <span id="chronicle-narrator" class="cd-narrator">Narrador: —</span>
-                <span id="chronicle-invite-code" class="cd-invite-code hidden"></span>
             </div>
             <p id="chronicle-description" class="cd-description">Sin descripción</p>
         </div>
@@ -43,32 +42,72 @@
     <div class="cd-content" id="chronicle-tab-content">
         <!-- Placeholder: content per tab goes here -->
         <div class="cd-tab-panel" data-panel="resumen">
-            <!-- Proxima Sesion -->
-            <div class="cd-section" id="cd-next-session">
-                <span class="cd-section-label">PROXIMA SESION</span>
-                <div class="cd-card cd-card--row cd-card--spaced" id="cd-next-session-card">
-                    <div class="cd-card--row-left">
-                        <span class="cd-card-icon"><i data-lucide="calendar"></i></span>
-                        <span id="cd-next-session-text" class="cd-card-text cd-card-muted">Sin fecha programada</span>
+            <div class="cd-summary-grid">
+                <div class="cd-summary-main">
+                    <!-- Proxima Sesion -->
+                    <div class="cd-section" id="cd-next-session">
+                        <span class="cd-section-label">PROXIMA SESION</span>
+                        <div class="cd-card cd-card--row cd-card--spaced" id="cd-next-session-card">
+                            <div class="cd-card--row-left">
+                                <span class="cd-card-icon"><i data-lucide="calendar"></i></span>
+                                <span id="cd-next-session-text" class="cd-card-text cd-card-muted">Sin fecha programada</span>
+                            </div>
+                            <button id="cd-next-session-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha">
+                                <i data-lucide="pencil"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button id="cd-next-session-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha">
-                        <i data-lucide="pencil"></i>
-                    </button>
+
+                    <!-- Ultima Sesion -->
+                    <div class="cd-section" id="cd-last-session">
+                        <span class="cd-section-label">ULTIMA SESION</span>
+                        <div class="cd-card cd-card--col" id="cd-last-session-card">
+                            <span class="cd-card-muted">Sin sesiones registradas</span>
+                        </div>
+                    </div>
+
+                    <!-- Personaje -->
+                    <div class="cd-section" id="cd-character">
+                        <span class="cd-section-label">PERSONAJE</span>
+                        <div class="cd-card cd-card--row" id="cd-character-card">
+                            <span class="cd-card-muted">Sin personaje asignado</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <!-- Ultima Sesion -->
-            <div class="cd-section" id="cd-last-session">
-                <span class="cd-section-label">ULTIMA SESION</span>
-                <div class="cd-card cd-card--col" id="cd-last-session-card">
-                    <span class="cd-card-muted">Sin sesiones registradas</span>
-                </div>
-            </div>
-            <!-- Personaje -->
-            <div class="cd-section" id="cd-character">
-                <span class="cd-section-label">PERSONAJE</span>
-                <div class="cd-card cd-card--row" id="cd-character-card">
-                    <span class="cd-card-muted">Sin personaje asignado</span>
-                </div>
+
+                <aside class="cd-summary-side">
+                    <div class="cd-section">
+                        <span class="cd-section-label">CONTADORES</span>
+                        <div class="cd-card cd-count-list">
+                            <div class="cd-count-item">
+                                <span class="cd-count-label">Jugadores</span>
+                                <span class="cd-count-value" id="cd-count-players">0</span>
+                            </div>
+                            <div class="cd-count-item">
+                                <span class="cd-count-label">Personajes</span>
+                                <span class="cd-count-value" id="cd-count-characters">0</span>
+                            </div>
+                            <div class="cd-count-item">
+                                <span class="cd-count-label">Partidas</span>
+                                <span class="cd-count-value" id="cd-count-sessions">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cd-section hidden" id="cd-invite-summary-section">
+                        <span class="cd-section-label">INVITAR JUGADORES</span>
+                        <div class="cd-card cd-invite-code-card">
+                            <button type="button" id="cd-summary-invite-copy" class="cd-invite-copy-btn" title="Copiar código">
+                                <span class="cd-invite-code-card-icon"><i data-lucide="user-plus"></i></span>
+                                <span class="cd-invite-code-card-text">Comparte este codigo:</span>
+                                <span class="cd-invite-code-card-value" id="cd-summary-invite-code-value">—</span>
+                            </button>
+                            <button type="button" id="cd-summary-invite-regenerate" class="btn-icon cd-invite-regenerate-btn" title="Generar nuevo código">
+                                <i data-lucide="refresh-cw"></i>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
         <div class="cd-tab-panel hidden" data-panel="jugadores">
@@ -135,6 +174,25 @@
         </div>
     </div>
 
+    <!-- Modal: Regenerate Invite Code -->
+    <div id="cd-invite-regenerate-modal" class="cd-modal-overlay">
+        <div class="cd-modal cd-invite-modal" role="dialog" aria-modal="true" aria-labelledby="cd-invite-modal-title">
+            <div class="cd-modal-header">
+                <h3 id="cd-invite-modal-title" class="cd-modal-title">Cambiar código de invitación</h3>
+                <button class="btn-icon cd-banner-btn" id="cd-invite-modal-close" type="button" title="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <p class="cd-invite-modal-text">
+                Si cambias el código, el anterior dejará de funcionar y los jugadores no podrán unirse con ese código viejo.
+            </p>
+            <div class="cd-invite-modal-actions">
+                <button id="cd-invite-modal-cancel" class="btn btn--ghost" type="button">Cancelar</button>
+                <button id="cd-invite-modal-confirm" class="btn btn--primary" type="button">Generar nuevo código</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Recap Reader -->
     <div id="modal-recap-reader" class="cd-modal-overlay cd-recap-overlay">
         <div class="cd-recap-reader">
@@ -144,16 +202,18 @@
                         <i data-lucide="arrow-left"></i>
                         <span>Volver</span>
                     </button>
-                    <button id="recap-reader-share" class="btn-icon cd-banner-btn" type="button" title="Compartir">
-                        <i data-lucide="share-2"></i>
-                    </button>
-                    <div id="recap-reader-actions" class="cd-recap-reader-actions hidden">
-                        <button id="recap-reader-edit" class="btn-icon cd-banner-btn" type="button" title="Editar">
-                            <i data-lucide="pencil"></i>
+                    <div class="cd-recap-reader-toolbar-right">
+                        <button id="recap-reader-share" class="btn-icon" type="button" title="Compartir">
+                            <i data-lucide="share-2"></i>
                         </button>
-                        <button id="recap-reader-delete" class="btn-icon btn-icon--danger cd-banner-btn cd-btn-danger" type="button" title="Eliminar">
-                            <i data-lucide="trash-2"></i>
-                        </button>
+                        <div id="recap-reader-actions" class="cd-recap-reader-actions hidden">
+                            <button id="recap-reader-edit" class="btn-icon" type="button" title="Editar">
+                                <i data-lucide="pencil"></i>
+                            </button>
+                            <button id="recap-reader-delete" class="btn-icon btn-icon--danger" type="button" title="Eliminar">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="cd-recap-reader-title-wrap">
@@ -226,10 +286,10 @@
                                 <span class="cd-switch-track"></span>
                             </label>
                         </label>
-                        <button id="note-reader-edit" class="btn-icon cd-banner-btn" type="button" title="Editar">
+                        <button id="note-reader-edit" class="btn-icon" type="button" title="Editar">
                             <i data-lucide="pencil"></i>
                         </button>
-                        <button id="note-reader-delete" class="btn-icon btn-icon--danger cd-banner-btn cd-btn-danger" type="button" title="Eliminar">
+                        <button id="note-reader-delete" class="btn-icon btn-icon--danger" type="button" title="Eliminar">
                             <i data-lucide="trash-2"></i>
                         </button>
                     </div>

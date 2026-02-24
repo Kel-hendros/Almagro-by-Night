@@ -1,53 +1,74 @@
-<div class="main-container user">
+<div class="main-container user auth-layout" id="welcome-layout">
+    <section id="home-container" class="auth-home hidden">
+        <div class="auth-home-title-wrap auth-home-title">
+            <h1>Bienvenidos a Buenos Aires by Night</h1>
+        </div>
+        <div class="auth-home-grid">
+            <div class="auth-home-sheet">
+                <div class="auth-home-sheet-content">
+                    <p class="auth-home-copy auth-home-description">
+                        Esta plataforma surgió para narrar una Crónica en Buenos Aires con amigos, jugando online durante
+                        la pandemia y tratando de hacernos la no-vida más fácil. Lo que comenzó como un conjunto de
+                        funcionalidades sueltas y experimentos de vibe coding, evolucionó gracias a subir un par de
+                        puntos en Tecnología hasta convertirse en una herramienta bastante más prolija. Quién sabe,
+                        quizás hasta útil para que la use algún otro grupo de Vástagos en sus andanzas nocturnas.
+                    </p>
+                    <p class="auth-home-copy auth-home-description auth-home-thanks">
+                        Un agradecimiento especial a <strong>Maurice</strong>, <strong>Fausto</strong>, <strong>El
+                            Tano</strong>, <strong>Martincito</strong>, <strong>Vlad</strong> y <strong>Julián</strong>
+                        por el testing viernes a viernes, el feedback y las ideas para mejoras; y a
+                        <strong>Phantomas</strong> (alias <strong>Claude</strong>) por sus habilidades codeando.
+                    </p>
+                    <p class="auth-home-copy auth-home-description">
+                        Disclaimer serio: no hay garantía que esto no explote y se pierdan cosas en el camino. Usar bajo
+                        su propio riesgo.
+                    </p>
+                    <p class="auth-home-signature">-Kelhendros</p>
+                </div>
+            </div>
+            <img class="auth-home-crew" src="images/cuadrilla.png" alt="La Cuadrilla">
+        </div>
+    </section>
 
-    <!-- Sección Home (Logueado) -->
-    <div id="home-container" class="hidden">
-        <h1>Bienvenido a Buenos Aires de Noche</h1>
-        <p>Partida de Vampiro la Mascarada en Buenos Aires del 2020.</p>
-        <img class="cuadrilla" src="images/cuadrilla.png" alt="La Cuadrilla">
-    </div>
+    <section id="auth-container" class="auth-card">
+        <header class="auth-card-header auth-card-title-wrap">
+            <h1>Buenos Aires by Night</h1>
+            <p class="auth-card-subtitle">Herramienta de administracion de Cronicas de Vampiro la Mascarada v20 y Hojas de Personaje con automatizaciones y otras cosas.</p>
+        </header>
 
-    <!-- Sección Auth (No Logueado) -->
-    <div id="auth-container">
-        <div class="auth-tabs">
-            <button id="tab-login" class="tab active">Ingresar</button>
-            <button id="tab-register" class="tab">Registrarse</button>
+        <div class="auth-tabs" role="tablist" aria-label="Acceso">
+            <button id="tab-login" class="auth-tab active" type="button" role="tab" aria-selected="true">Ingresar</button>
+            <button id="tab-register" class="auth-tab" type="button" role="tab" aria-selected="false">Registrarse</button>
         </div>
 
-        <!-- Formulario de login -->
         <form id="login-form" class="auth-form">
             <div class="form-group">
-                <label>Email:</label>
-                <input id="li-email" type="email" placeholder="Email" required>
+                <label for="li-email" class="app-label">Email</label>
+                <input id="li-email" class="app-input" type="email" placeholder="tu@email.com" required>
             </div>
             <div class="form-group">
-                <label>Contraseña:</label>
-                <input id="li-password" type="password" placeholder="Contraseña" required>
+                <label for="li-password" class="app-label">Contraseña</label>
+                <input id="li-password" class="app-input" type="password" placeholder="••••••••" required>
             </div>
-            <button type="submit">Ingresar</button>
-            <p id="li-msg" class="msg"></p>
+            <button type="submit" class="btn btn--primary auth-submit">Ingresar</button>
+            <p id="li-msg" class="app-msg"></p>
         </form>
 
-        <!-- Formulario de registro -->
         <form id="signup-form" class="auth-form hidden">
             <div class="form-group">
-                <label>Nombre:</label>
-                <input id="su-name" type="text" placeholder="Tu nombre" required>
+                <label for="su-name" class="app-label">Nombre visible para otros jugadores</label>
+                <input id="su-name" class="app-input" type="text" placeholder="Ej: Simon Maceta" required>
             </div>
             <div class="form-group">
-                <label>Nombre del personaje:</label>
-                <input id="su-character" type="text" placeholder="Personaje" required>
+                <label for="su-email" class="app-label">Email</label>
+                <input id="su-email" class="app-input" type="email" placeholder="tu@email.com" required>
             </div>
             <div class="form-group">
-                <label>Email:</label>
-                <input id="su-email" type="email" placeholder="Email" required>
+                <label for="su-password" class="app-label">Contraseña</label>
+                <input id="su-password" class="app-input" type="password" placeholder="Mínimo 6 caracteres" required>
             </div>
-            <div class="form-group">
-                <label>Contraseña:</label>
-                <input id="su-password" type="password" placeholder="Contraseña" required>
-            </div>
-            <button type="submit">Registrarse</button>
-            <p id="su-msg" class="msg"></p>
+            <button type="submit" class="btn btn--primary auth-submit">Crear cuenta</button>
+            <p id="su-msg" class="app-msg"></p>
         </form>
-    </div>
+    </section>
 </div>

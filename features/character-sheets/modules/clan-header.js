@@ -9,6 +9,8 @@
     createModalController: null,
     onSave: null,
     getCurrentAvatarUrl: null,
+    getCurrentAvatarPosition: null,
+    hasAvatarThumb: null,
   };
 
   function configure(nextDeps = {}) {
@@ -21,10 +23,31 @@
       typeof nextDeps.getCurrentAvatarUrl === "function"
         ? nextDeps.getCurrentAvatarUrl
         : null;
+    deps.getCurrentAvatarPosition =
+      typeof nextDeps.getCurrentAvatarPosition === "function"
+        ? nextDeps.getCurrentAvatarPosition
+        : null;
+    deps.hasAvatarThumb =
+      typeof nextDeps.hasAvatarThumb === "function" ? nextDeps.hasAvatarThumb : null;
   }
 
   function getCurrentAvatarUrl() {
     return deps.getCurrentAvatarUrl ? deps.getCurrentAvatarUrl() : null;
+  }
+
+  function getCurrentAvatarPosition() {
+    const fallback = { x: 50, y: 50, scale: 1 };
+    const pos = deps.getCurrentAvatarPosition ? deps.getCurrentAvatarPosition() : null;
+    if (!pos || typeof pos !== "object") return fallback;
+    return {
+      x: Number.isFinite(Number(pos.x)) ? Number(pos.x) : fallback.x,
+      y: Number.isFinite(Number(pos.y)) ? Number(pos.y) : fallback.y,
+      scale: Number.isFinite(Number(pos.scale)) ? Number(pos.scale) : fallback.scale,
+    };
+  }
+
+  function hasAvatarThumb() {
+    return deps.hasAvatarThumb ? !!deps.hasAvatarThumb() : false;
   }
 
   function updateClanFieldSigil() {
@@ -53,6 +76,8 @@
     const logoValue = input.value || "G";
     let avatarImg = container.querySelector(".avatar-img");
     const currentAvatarUrl = getCurrentAvatarUrl();
+    const avatarPos = getCurrentAvatarPosition();
+    const usePositionTransform = !hasAvatarThumb();
 
     if (currentAvatarUrl) {
       if (display) display.style.display = "none";
@@ -64,6 +89,13 @@
         container.appendChild(avatarImg);
       }
       avatarImg.src = currentAvatarUrl;
+      avatarImg.style.objectPosition = usePositionTransform
+        ? `${avatarPos.x}% ${avatarPos.y}%`
+        : "";
+      avatarImg.style.transform = usePositionTransform ? `scale(${avatarPos.scale})` : "";
+      avatarImg.style.transformOrigin = usePositionTransform
+        ? `${avatarPos.x}% ${avatarPos.y}%`
+        : "";
       avatarImg.style.display = "block";
       return;
     }

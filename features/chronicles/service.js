@@ -24,7 +24,7 @@
     const { data: participations, error: participationsError } = await supabase
       .from("chronicle_participants")
       .select(
-        "role, chronicle:chronicles(id, name, description, status, creator_id, created_at, banner_url, creator:players!chronicles_creator_id_fkey(name))"
+        "role, chronicle:chronicles(id, name, description, status, next_session, creator_id, created_at, banner_url, creator:players!chronicles_creator_id_fkey(name))"
       )
       .eq("player_id", playerId);
 
@@ -33,7 +33,7 @@
     const { data: ownedChronicles, error: ownedError } = await supabase
       .from("chronicles")
       .select(
-        "id, name, description, status, creator_id, created_at, banner_url, creator:players!chronicles_creator_id_fkey(name)"
+        "id, name, description, status, next_session, creator_id, created_at, banner_url, creator:players!chronicles_creator_id_fkey(name)"
       )
       .eq("creator_id", playerId);
 
@@ -81,7 +81,7 @@
     const { data, error } = await supabase
       .from("chronicle_characters")
       .select(
-        "chronicle_id, character:character_sheets(id, name, avatar_url, updated_at)"
+        "chronicle_id, character:character_sheets(id, name, data, avatar_url, updated_at)"
       )
       .in("chronicle_id", chronicleIds);
     if (error) throw error;
@@ -150,4 +150,3 @@
     joinChronicleByCode,
   };
 })(window);
-

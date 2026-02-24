@@ -1,0 +1,84 @@
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.tools-header {
+    margin-bottom: 1rem;
+}
+
+.tool-card {
+    border: 1px solid var(--theme-border-divider);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--theme-bg-surface) 90%, transparent);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tool-card:hover,
+.tool-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: var(--theme-accent);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    outline: none;
+}
+
+.tool-card-cover {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--theme-border-divider);
+}
+
+.tool-card-cover span {
+    font-size: 2.3rem;
+    line-height: 1;
+}
+
+.tool-card-cover--portrait {
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-accent) 35%, transparent), var(--theme-bg-base));
+}
+
+.tool-card-cover--cards {
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-success) 35%, transparent), var(--theme-bg-base));
+}
+
+.tool-card-cover--combat {
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-accent) 45%, transparent), color-mix(in srgb, var(--theme-bg-surface) 80%, var(--theme-bg-base)));
+}
+
+.tool-card-cover--codex {
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-text-secondary) 30%, transparent), var(--theme-bg-base));
+}
+
+.tool-card-content {
+    padding: 1rem;
+}
+
+.tool-card-content h3 {
+    margin: 0 0 0.4rem;
+    font-family: var(--app-font-heading);
+    color: var(--theme-text-primary);
+    font-size: 1.06rem;
+}
+
+.tool-card-content p {
+    margin: 0;
+    color: var(--theme-text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.tool-card-action {
+    margin-top: 0.9rem;
+    color: var(--theme-accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}

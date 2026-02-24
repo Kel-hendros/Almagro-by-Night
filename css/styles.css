@@ -186,7 +186,7 @@ button,
     cursor: pointer;
     text-decoration: none;
     color: inherit;
-    font-size: 0.82rem;
+    font-size: 1rem;
     line-height: 1;
     transition: background-color 0.2s;
     gap: 8px;
@@ -206,6 +206,14 @@ button,
     line-height: 1;
     position: relative;
     top: 2px;
+}
+
+#menu-welcome > a > span,
+#user-name {
+    font-size: 1rem;
+    font-family: inherit;
+    font-weight: inherit;
+    letter-spacing: 0.01em;
 }
 
 
@@ -343,139 +351,255 @@ button,
    All panels (#user, #games, #tools) now share identical container properties.
 */
 
-/* Standard typography within Main Containers */
-.main-container h1 {
-    font-family: 'Special Elite', cursive;
-    font-size: 2rem;
-    color: var(--color-red-accent);
-    margin-bottom: 30px;
-
-    /* Optional: border bottom like tools had? */
-    /* border-bottom: 1px solid var(--color-cream-muted);
-    padding-bottom: 15px; */
-}
-
-.main-container h1::before {
-    content: "3";
-    font-family: 'Dingbats';
-    font-size: 2rem;
-    color: var(--color-cream-muted);
-    display: inline-block;
-    margin-right: 0.4rem;
-
-}
-
-
-.main-container h1::after {
-    content: "4";
-    font-family: 'Dingbats';
-    font-size: 2rem;
-    color: var(--color-cream-muted);
-    display: inline-block;
-    margin-left: 0.4rem;
-
-}
-
-/* Allow h1 specific overrides (like tools gold color) via internal classes if needed, 
-   but stick to base for now */
-
-.main-container p {
-    color: var(--color-cream);
-    font-size: 1rem;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-}
-
-
-/* Login Registration */
-
-/* Auth tabs styling */
-.auth-tabs {
+/* Login / Register (Welcome) */
+.auth-layout {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    min-height: 100%;
     display: flex;
-    gap: 2px;
-    margin-bottom: 20px;
-    position: absolute;
-    top: -35px;
-    right: 10px;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 28px;
+    padding: 28px 40px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
 }
 
-.auth-tabs .tab {
-    font-size: 1.3rem;
-    width: 200px;
-    height: 35px;
-    flex: 1;
-    padding: 10px 0;
-    text-align: center;
-    cursor: pointer;
-    background-color: var(--color-dark-alt);
-    color: var(--color-cream-muted);
-    border: none;
-    border-radius: 4px 4px 0px 0px;
-    backdrop-filter: blur(4px);
-    transform-origin: bottom center;
-    transition: background-color 0.2s, color 0.2s, transform 0.2s;
-
+.auth-layout.auth-layout--home {
+    justify-content: flex-start;
 }
 
-.auth-tabs .tab:not(.active):hover {
-    background-color: rgba(140, 28, 28, 0.8);
-    backdrop-filter: blur(4px);
-    transform: scaleY(1.1);
-
-
+/* Force auth screen to use theme/system tokens instead of legacy main-container typography */
+.auth-layout h1,
+.auth-layout h2 {
+    font-family: var(--app-font-heading);
+    color: var(--theme-text-primary);
 }
 
-.auth-tabs .tab.active {
-    background-color: rgba(31, 27, 36, 0.8);
-    backdrop-filter: blur(4px);
-    color: var(--color-cream);
-    transform: scaleY(1.15);
+.auth-layout p,
+.auth-layout label,
+.auth-layout span {
+    font-family: var(--app-font-body);
+    color: var(--theme-text-secondary);
 }
 
-/* Align labels above fields and push submit to bottom */
-.auth-form {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+/* Auth headings/subtitles */
+.auth-layout .auth-home-title-wrap h1,
+.auth-layout .auth-card-title-wrap h1 {
+    margin: 0;
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-heading);
+    font-size: 2.4rem;
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: 0;
+    border: 0;
 }
 
-.auth-form .form-group {
+.auth-layout .auth-home-title-wrap h1::before,
+.auth-layout .auth-home-title-wrap h1::after,
+.auth-layout .auth-card-title-wrap h1::before,
+.auth-layout .auth-card-title-wrap h1::after {
+    content: none !important;
+}
+
+.auth-layout .auth-card-subtitle,
+.auth-layout .auth-home-copy,
+.auth-layout .auth-home-signature {
+    margin: 0.35rem 0 0;
+    color: var(--theme-text-secondary) !important;
+    font-style: italic;
+    font-size: 0.92rem !important;
+    font-family: var(--app-font-body) !important;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.4;
+}
+
+.auth-home {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    margin-bottom: 1rem;
+    justify-content: center;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: left;
+    margin: 0;
 }
 
-.auth-form .form-group label {
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem;
-    color: var(--color-cream);
+.auth-layout.auth-layout--home .auth-home {
+    max-width: none;
 }
 
-.auth-form .form-group input {
+.auth-home-grid {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--color-cream-muted);
-    border-radius: 4px;
-    background: var(--color-dark);
-    color: var(--color-cream);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    max-width: 1060px;
+    gap: 1.2rem;
+    align-items: stretch;
+    margin: 0 auto;
 }
 
-.auth-form button[type="submit"] {
-    font-size: 1.1rem;
-    margin-top: auto;
-    align-self: flex-start;
-    padding: 0.75rem 1.5rem;
-    background: var(--color-red);
-    color: var(--color-cream);
-    border: none;
-    border-radius: 4px;
+.auth-home-title {
+    width: 100%;
+    max-width: none;
+    margin: 0 0 0.7rem;
+    text-align: left;
+}
+
+.auth-home-title h1 {
+    margin-bottom: 0;
+}
+
+.auth-home-sheet {
+    min-height: 540px;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--theme-border-divider);
+    background: color-mix(in srgb, var(--theme-bg-surface) 92%, transparent);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+
+.auth-home-sheet-content {
+    height: 100%;
+    padding: 2.3rem 2rem;
+    color: var(--theme-text-primary);
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-home-description {
+    margin-top: 0 !important;
+}
+
+.auth-home-thanks {
+    margin-top: 1.4rem !important;
+}
+
+.auth-home-crew {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    min-height: 540px;
+    padding: 4px;
+    border-radius: 8px;
+    background: #000000;
+    object-fit: contain;
+    align-self: stretch;
+}
+
+.auth-layout .auth-home-copy {
+    max-width: 60ch;
+    font-size: 1.3rem !important;
+    line-height: 1.55;
+}
+
+.auth-layout .auth-home-signature {
+    margin-top: auto !important;
+    padding-top: 1rem;
+    font-weight: 600 !important;
+    font-size: 1.3rem !important;
+}
+
+.auth-layout .auth-card {
+    width: min(100%, 520px);
+    flex: 0 0 auto;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    text-align: left;
+    border-radius: 12px;
+    border: 1px solid var(--theme-border-divider);
+    background: color-mix(in srgb, var(--theme-bg-surface) 92%, transparent);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.auth-layout .auth-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.auth-layout .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.auth-layout .auth-tab {
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--theme-border-divider);
+    background: var(--theme-bg-surface);
+    color: var(--theme-text-tertiary);
+    font-size: 0.95rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 
-.auth-form button[type="submit"]:hover {
-    background: var(--color-red-accent);
+.auth-layout .auth-tab:hover {
+    border-color: var(--theme-accent);
+    color: var(--theme-text-secondary);
+}
+
+.auth-layout .auth-tab.active {
+    background: color-mix(in srgb, var(--theme-accent) 24%, var(--theme-bg-surface));
+    border-color: var(--theme-accent);
+    color: var(--theme-text-primary);
+}
+
+.auth-layout .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.auth-layout .auth-form .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-layout .auth-submit {
+    margin-top: 10px;
+    width: 100%;
+}
+
+@media (max-width: 980px) {
+    .auth-layout {
+        flex-direction: column;
+        min-height: 0;
+        padding: 16px;
+    }
+
+    .auth-home {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .auth-layout .auth-card {
+        width: 100%;
+    }
+
+    .auth-home-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-home-sheet {
+        min-height: 460px;
+    }
 }
 
 
@@ -495,19 +619,21 @@ button.gameButton {
     align-items: center;
     justify-content: center;
     gap: .5rem;
-    font-size: 1rem;
-    padding: 0.75rem 1rem;
-    background: var(--color-red);
-    color: var(--color-cream);
-    border: none;
-    border-radius: 4px;
+    font-size: 0.84rem;
+    padding: 0 14px;
+    height: 40px;
+    background: var(--theme-accent);
+    color: var(--theme-text-primary);
+    border: 1px solid var(--theme-accent);
+    border-radius: 10px;
+    font-family: var(--app-font-body);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
 
 }
 
 button.gameButton:hover {
-    background: var(--color-red-accent);
+    opacity: 0.88;
 }
 
 button.gameButton.secondary {
@@ -529,7 +655,7 @@ button.gameButton.secondary:hover {
 }
 
 .muted {
-    color: var(--color-cream-muted);
+    color: var(--theme-text-secondary);
     font-size: 0.95rem;
 }
 

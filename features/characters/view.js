@@ -77,7 +77,8 @@
       const lastEdit = sheet.updated_at
         ? new Date(sheet.updated_at).toLocaleDateString()
         : "-";
-      const avatarUrl = sheet.avatar_url;
+      const hasAvatarThumb = !!sheet.data?.avatarThumbUrl;
+      const avatarUrl = sheet.data?.avatarThumbUrl || sheet.avatar_url;
       const avatarPos = sheet.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
 
       const chronicleInfo = chronicleMap[sheet.id];
@@ -92,7 +93,11 @@
           <div class="cs-banner-visual">
             <img src="${escapeHtml(avatarUrl)}" class="cs-banner-avatar"
                  alt="${escapeHtml(sheet.name)}"
-                 style="object-position: ${avatarPos.x}% ${avatarPos.y}%; transform: scale(${avatarPos.scale}); transform-origin: ${avatarPos.x}% ${avatarPos.y}%;">
+                 ${
+                   hasAvatarThumb
+                     ? ""
+                     : `style="object-position: ${avatarPos.x}% ${avatarPos.y}%; transform: scale(${avatarPos.scale}); transform-origin: ${avatarPos.x}% ${avatarPos.y}%;"`
+                 }>
           </div>`
         : `
           <div class="cs-banner-visual">

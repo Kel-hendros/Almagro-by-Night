@@ -62,6 +62,28 @@
     return { error: error || null };
   }
 
+  async function regenerateInviteCode(chronicleId) {
+    const { data: newCode, error: codeError } = await supabase.rpc(
+      "generate_invite_code"
+    );
+    if (codeError) {
+      return { inviteCode: null, error: codeError };
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("chronicles")
+      .update({ invite_code: newCode })
+      .eq("id", chronicleId)
+      .select("invite_code")
+      .single();
+
+    if (updateError) {
+      return { inviteCode: null, error: updateError };
+    }
+
+    return { inviteCode: updated?.invite_code || newCode, error: null };
+  }
+
   async function removeBannerFileByUrl(publicUrl) {
     if (!publicUrl) return { error: null };
     const parts = publicUrl.split("/chronicle-banners/");
@@ -85,7 +107,14 @@
   }
 
   async function fetchDashboardData(chronicleId) {
-    const [participantsResult, charsResult, encountersResult, gameResult, recapResult] =
+    const [
+      participantsResult,
+      charsResult,
+      encountersResult,
+      gameResult,
+      recapResult,
+      recapCountResult,
+    ] =
       await Promise.all([
         supabase
           .from("chronicle_participants")
@@ -104,17 +133,22 @@
         supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1),
         supabase
           .from("session_recaps")
-          .select("session_number, title, body, session_date")
+          .select("id, session_number, title, body, session_date")
           .eq("chronicle_id", chronicleId)
           .order("session_number", { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from("session_recaps")
+          .select("id", { count: "exact", head: true })
+          .eq("chronicle_id", chronicleId),
       ]);
 
     return {
       participants: participantsResult.data || [],
       characters: charsResult.data || [],
       encountersCount: encountersResult.count || 0,
+      sessionsCount: recapCountResult.count || 0,
       game: gameResult.data?.[0] || null,
       latestRecap: recapResult.data || null,
     };
@@ -127,6 +161,7 @@
     getParticipation,
     getPlayerNameById,
     updateChronicle,
+    regenerateInviteCode,
     removeBannerFileByUrl,
     uploadBannerFile,
     fetchDashboardData,

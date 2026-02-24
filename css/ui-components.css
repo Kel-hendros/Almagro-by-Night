@@ -161,3 +161,50 @@
     justify-content: flex-end;
     gap: 0.65rem;
 }
+
+.app-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--theme-text-tertiary);
+    font-family: var(--app-font-body);
+}
+
+.app-input {
+    width: 100%;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--theme-border-divider);
+    border-radius: 8px;
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-primary);
+    font-family: var(--app-font-body);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.app-input:focus {
+    outline: none;
+    border-color: var(--theme-accent);
+}
+
+.app-input--code {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.app-msg {
+    font-size: 0.85rem;
+    margin: 0 0 0.75rem;
+    min-height: 1.2em;
+    font-family: var(--app-font-body);
+}
+
+.app-msg.error {
+    color: var(--theme-accent);
+}
+
+.app-msg.success {
+    color: var(--theme-success);
+}

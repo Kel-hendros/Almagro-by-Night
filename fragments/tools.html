@@ -1,105 +1,46 @@
 <div class="main-container tools">
-    <h1>
-        Herramientas de Narración
-    </h1>
-
-    <div class="tools-grid"
-        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-
-        <!-- Portrait Generator Card -->
-        <div class="tool-card" data-nav-hash="portrait-generator" role="button" tabindex="0"
-            style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;">
-            <div
-                style="height: 140px; background: linear-gradient(to bottom right, #1a0505, #000); display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 3.5rem;">🧛</span>
-            </div>
-            <div style="padding: 24px;">
-                <h3
-                    style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
-                    Generador de Retratos</h3>
-                <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5; font-family: 'Lato', sans-serif;">
-                    Crea imágenes fotorrealistas de PNJs y personajes utilizando IA Gemini 3.
-                </p>
-                <div style="margin-top: 20px; text-align: right;">
-                    <span
-                        style="color: var(--color-gold); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Abrir
-                        &rarr;</span>
-                </div>
-            </div>
+    <div class="chronicles-header tools-header">
+        <div class="chronicles-title-wrap">
+            <h1>Herramientas</h1>
+            <p class="chronicles-subtitle">Accesos rápidos para utilidades de narración y apoyo de mesa.</p>
         </div>
+    </div>
 
-        <!-- Card Creator Card -->
-        <div class="tool-card" data-nav-hash="card-creator" role="button" tabindex="0"
-            style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;">
-            <div
-                style="height: 140px; background: linear-gradient(to bottom right, #091a10, #000); display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 3.5rem;">🃏</span>
+    <div class="tools-grid">
+        <article class="tool-card" data-nav-hash="portrait-generator" role="button" tabindex="0">
+            <div class="tool-card-cover tool-card-cover--portrait"><span>🧛</span></div>
+            <div class="tool-card-content">
+                <h3>Generador de Retratos</h3>
+                <p>Crea imágenes fotorrealistas de PNJs y personajes utilizando IA Gemini 3.</p>
+                <div class="tool-card-action">Abrir &rarr;</div>
             </div>
-            <div style="padding: 24px;">
-                <h3
-                    style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
-                    Creador de Cartas</h3>
-                <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5; font-family: 'Lato', sans-serif;">
-                    Genera cartas de inventario, disciplinas y más para tus partidas de WoD.
-                </p>
-                <div style="margin-top: 20px; text-align: right;">
-                    <span
-                        style="color: var(--color-gold); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Abrir
-                        &rarr;</span>
-                </div>
-            </div>
-        </div>
+        </article>
 
-        <!-- Combat Tracker Card -->
-        <div class="tool-card" data-nav-hash="combat-tracker" role="button" tabindex="0"
-            style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;">
-            <div
-                style="height: 140px; background: linear-gradient(to bottom right, #2a0505, #500); display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 3.5rem;">⚔️</span>
+        <article class="tool-card" data-nav-hash="card-creator" role="button" tabindex="0">
+            <div class="tool-card-cover tool-card-cover--cards"><span>🃏</span></div>
+            <div class="tool-card-content">
+                <h3>Creador de Cartas</h3>
+                <p>Genera cartas de inventario, disciplinas y más para tus partidas de WoD.</p>
+                <div class="tool-card-action">Abrir &rarr;</div>
             </div>
-            <div style="padding: 24px;">
-                <h3
-                    style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
-                    Control de Combate</h3>
-                <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5; font-family: 'Lato', sans-serif;">
-                    Gestiona encuentros, iniciativa y daño de PNJs para V20.
-                </p>
-                <div style="margin-top: 20px; text-align: right;">
-                    <span
-                        style="color: var(--color-gold); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Abrir
-                        &rarr;</span>
-                </div>
-            </div>
-        </div>
+        </article>
 
-        <!-- Vampire: Temporal Codex Card -->
-        <div class="tool-card" data-nav-hash="temporal-codex" role="button" tabindex="0"
-            style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;">
-            <div
-                style="height: 140px; background: linear-gradient(to bottom right, #1a0505, #000); display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 3.5rem;">⌛</span>
+        <article class="tool-card" data-nav-hash="combat-tracker" role="button" tabindex="0">
+            <div class="tool-card-cover tool-card-cover--combat"><span>⚔️</span></div>
+            <div class="tool-card-content">
+                <h3>Control de Combate</h3>
+                <p>Gestiona encuentros, iniciativa y daño de PNJs para V20.</p>
+                <div class="tool-card-action">Abrir &rarr;</div>
             </div>
-            <div style="padding: 24px;">
-                <h3
-                    style="color: #e0e0e0; margin-bottom: 8px; font-weight: bold; font-family: 'Special Elite', cursive; letter-spacing: 1px;">
-                    Temporal Codex</h3>
-                <p style="color: #bbb; font-size: 0.9rem; line-height: 1.5; font-family: 'Lato', sans-serif;">
-                    Calculadora de edad con control de paradojas para Vástagos.
-                </p>
-                <div style="margin-top: 20px; text-align: right;">
-                    <span
-                        style="color: var(--color-gold); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Abrir
-                        &rarr;</span>
-                </div>
-            </div>
-        </div>
+        </article>
 
+        <article class="tool-card" data-nav-hash="temporal-codex" role="button" tabindex="0">
+            <div class="tool-card-cover tool-card-cover--codex"><span>⌛</span></div>
+            <div class="tool-card-content">
+                <h3>Temporal Codex</h3>
+                <p>Calculadora de edad con control de paradojas para Vástagos.</p>
+                <div class="tool-card-action">Abrir &rarr;</div>
+            </div>
+        </article>
     </div>
 </div>
-
-<style>
-    .tool-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--color-gold);
-    }
-</style>

@@ -159,17 +159,17 @@
       }
 
       card.innerHTML = `
-        <div style="display:flex; justify-content:space-between;">
+        <div class="ct-card-header">
           <h3>${escapeHtml(tpl.name)}</h3>
-          <span style="font-size:0.8em; color:#aaa;">PNJ</span>
+          <span class="ct-template-type">PNJ</span>
         </div>
         <p>Salud: ${tpl.data?.maxHealth || 7}</p>
-        <p style="font-style:italic; border-top:1px solid #333; padding-top:4px; margin-top:4px; font-size:0.8em;">
+        <p class="ct-card-summary">
           ${escapeHtml(summary)}...
         </p>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-          <button class="ct-btn btn-edit-template" data-id="${tpl.id}">Editar</button>
-          <button class="ct-btn btn-delete-template" data-id="${tpl.id}" style="color:#c0392b;">Eliminar</button>
+        <div class="ct-card-actions">
+          <button class="btn btn--ghost ct-btn btn-edit-template" data-id="${tpl.id}">Editar</button>
+          <button class="btn btn--danger ct-btn btn-delete-template" data-id="${tpl.id}">Eliminar</button>
         </div>
       `;
 
@@ -565,14 +565,14 @@
       }
 
       card.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <h3 style="margin:0;">${escapeHtml(enc.name)}</h3>
+        <div class="ct-card-header">
+          <h3>${escapeHtml(enc.name)}</h3>
           <span class="ct-encounter-status ${status}">${statusLabel}</span>
         </div>
-        <p>${dateStr} - ${instanceCount} participantes${roundInfo}</p>
+        <p class="ct-card-meta">${dateStr} - ${instanceCount} participantes${roundInfo}</p>
         ${statusActionsHtml}
-        <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
-          <button class="ct-btn primary btn-open-encounter" data-id="${enc.id}">Abrir</button>
+        <div class="ct-card-actions">
+          <button class="btn btn--primary ct-btn primary btn-open-encounter" data-id="${enc.id}">Abrir</button>
         </div>
       `;
 
