@@ -154,6 +154,51 @@
     };
   }
 
+  async function fetchEncountersForChronicle({ chronicleId, isNarrator }) {
+    let query = supabase
+      .from("encounters")
+      .select("id, name, status, created_at, data")
+      .eq("chronicle_id", chronicleId)
+      .neq("status", "archived")
+      .order("created_at", { ascending: false });
+
+    if (!isNarrator) {
+      query = query.in("status", ["in_game"]);
+    }
+
+    const { data, error } = await query;
+    return {
+      data: data || [],
+      error: error || null,
+    };
+  }
+
+  async function createEncounter({ chronicleId, userId, name }) {
+    const payload = {
+      chronicle_id: chronicleId,
+      user_id: userId,
+      name,
+      status: "wip",
+      data: {
+        instances: [],
+        tokens: [],
+        round: 1,
+        activeInstanceId: null,
+      },
+    };
+
+    const { data, error } = await supabase
+      .from("encounters")
+      .insert(payload)
+      .select("id, name, status, created_at, data")
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
   ns.service = {
     getSession,
     getCurrentPlayerByUserId,
@@ -165,5 +210,7 @@
     removeBannerFileByUrl,
     uploadBannerFile,
     fetchDashboardData,
+    fetchEncountersForChronicle,
+    createEncounter,
   };
 })(window);

@@ -155,7 +155,15 @@
             </div>
         </div>
         <div class="cd-tab-panel hidden" data-panel="mesa">
-            <p class="muted">Contenido de Mesa Virtual (próximamente)</p>
+            <div class="cd-mesa-head">
+                <span class="cd-section-label">ENCUENTROS</span>
+                <button id="cd-mesa-create-encounter" class="btn btn--secondary hidden" type="button">
+                    + Crear Encuentro
+                </button>
+            </div>
+            <div id="cd-mesa-encounters-list" class="cd-mesa-grid">
+                <span class="cd-card-muted">Cargando encuentros...</span>
+            </div>
         </div>
     </div>
 
@@ -365,5 +373,6 @@
 <script src="features/chronicle-detail/summary.js"></script>
 <script src="features/chronicle-detail/recaps.js"></script>
 <script src="features/chronicle-detail/notes.js"></script>
+<script src="features/chronicle-detail/mesa.js"></script>
 <script src="features/chronicle-detail/controller.js"></script>
 <script src="features/chronicle-detail/index.js"></script>

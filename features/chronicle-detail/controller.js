@@ -60,6 +60,7 @@
       "cd-players-grid",
       "cd-sesiones-list",
       "cd-notas-list",
+      "cd-mesa-encounters-list",
     ];
     ids.forEach((id) => {
       const el = document.getElementById(id);
@@ -265,6 +266,12 @@
         myChars,
         noteReaderModal,
         noteFormModal,
+    });
+
+    await ns.mesa?.init({
+        chronicleId,
+        isNarrator,
+        currentUserId: session.user.id,
     });
 
     // Refresh lucide icons
