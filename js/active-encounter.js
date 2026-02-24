@@ -209,6 +209,9 @@
   }
 
   function normalizeEncounterStatus(status) {
+    if (status === "active") {
+      return ENCOUNTER_STATUS.IN_GAME;
+    }
     if (
       status === ENCOUNTER_STATUS.WIP ||
       status === ENCOUNTER_STATUS.READY ||

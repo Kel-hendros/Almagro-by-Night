@@ -712,6 +712,9 @@
   }
 
   function normalizeEncounterStatus(status) {
+    if (status === "active") {
+      return "in_game";
+    }
     if (
       status === "wip" ||
       status === "ready" ||
