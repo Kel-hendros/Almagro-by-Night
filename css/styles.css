@@ -106,7 +106,7 @@ button,
     color: var(--sidebar-text);
     display: flex;
     flex-direction: column;
-    box-shadow: 5px 0px 30px 5px var(--sidebar-shadow-outer), inset -50px 0px 50px 10px var(--sidebar-shadow-inner);
+    box-shadow: 5px 0px 30px 5px var(--sidebar-shadow-outer);
     position: relative;
     z-index: 1200;
 }

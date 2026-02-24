@@ -172,9 +172,10 @@
         });
 
         const deleteBtn = document.createElement("button");
-        deleteBtn.className = "specialty-delete-action";
+        deleteBtn.className = "btn-icon btn-icon--danger specialty-delete-action";
         deleteBtn.type = "button";
-        deleteBtn.innerHTML = "✕";
+        deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+        deleteBtn.setAttribute("aria-label", "Eliminar especialidad");
         deleteBtn.title = "Eliminar";
         deleteBtn.addEventListener("click", (event) => {
           event.stopPropagation();

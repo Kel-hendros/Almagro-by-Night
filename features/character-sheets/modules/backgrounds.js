@@ -5,14 +5,21 @@
 
   const deps = {
     save: null,
+    getSheetMode: null,
   };
 
   function configure(nextDeps = {}) {
     deps.save = typeof nextDeps.save === "function" ? nextDeps.save : null;
+    deps.getSheetMode =
+      typeof nextDeps.getSheetMode === "function" ? nextDeps.getSheetMode : null;
   }
 
   function persist() {
     if (deps.save) deps.save();
+  }
+
+  function isPlayMode() {
+    return deps.getSheetMode ? deps.getSheetMode() === "play" : false;
   }
 
   function refreshBackgroundDots(ratingEl, value) {
@@ -64,6 +71,7 @@
         dot.setAttribute("data-value", String(d));
         if (d <= bg.rating) dot.classList.add("filled");
         dot.addEventListener("click", () => {
+          if (isPlayMode()) return;
           if (bg.rating === d && d === 1) {
             bg.rating = 0;
           } else if (bg.rating === d) {
@@ -78,9 +86,9 @@
       }
 
       const editBtn = document.createElement("button");
-      editBtn.className = "background-edit-btn";
+      editBtn.className = "btn-icon background-edit-btn";
       editBtn.type = "button";
-      editBtn.innerHTML = "✎";
+      editBtn.innerHTML = '<i data-lucide="pencil"></i>';
       editBtn.title = "Editar trasfondo";
       editBtn.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -140,9 +148,9 @@
       });
 
       const deleteBtn = document.createElement("button");
-      deleteBtn.className = "background-delete-btn";
+      deleteBtn.className = "btn-icon btn-icon--danger background-delete-btn";
       deleteBtn.type = "button";
-      deleteBtn.innerHTML = "✕";
+      deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
       deleteBtn.title = "Eliminar trasfondo";
       deleteBtn.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -151,7 +159,11 @@
         persist();
       });
 
-      row.append(titleBtn, ratingEl, editBtn, deleteBtn);
+      const actions = document.createElement("div");
+      actions.className = "row-action-buttons mode-edit-only";
+      actions.append(editBtn, deleteBtn);
+
+      row.append(titleBtn, ratingEl, actions);
 
       const descEl = document.createElement("div");
       descEl.className = "background-description";
@@ -160,6 +172,10 @@
       item.append(row, descEl);
       listEl.appendChild(item);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [listEl] });
+    }
   }
 
   function init() {

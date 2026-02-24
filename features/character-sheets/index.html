@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://code.iconify.design/iconify-icon/2.2.0/iconify-icon.min.js"></script>
     <script src="https://kit.fontawesome.com/8a611956c8.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
     <script src="../../js/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -33,8 +34,7 @@
     <div id="ghoul-widget">
         <div class="ghoul-header">
             <h3>Diga, maestro</h3>
-            <i class="fa-solid fa-users-gear" id="ghoul-change-btn" title="Cambiar Ghoul"
-                style="color: white; cursor: pointer;"></i>
+            <i class="fa-solid fa-users-gear ghoul-change-btn" id="ghoul-change-btn" title="Cambiar Ghoul"></i>
         </div>
         <div class="ghoul-body">
             <input type="text" id="ghoul-search-input" class="ghoul-search-input"
@@ -44,10 +44,10 @@
     </div>
 
     <!-- Large Reading Modal -->
-    <div id="ghoul-modal-overlay">
-        <div id="ghoul-modal-content">
-            <div class="ghoul-modal-header">
-                <h2 id="ghoul-modal-title">Titulo</h2>
+    <div id="ghoul-modal-overlay" class="app-modal-overlay">
+        <div id="ghoul-modal-content" class="app-modal">
+            <div class="ghoul-modal-header app-modal-header">
+                <h2 id="ghoul-modal-title" class="app-modal-title">Titulo</h2>
                 <button id="ghoul-modal-close" class="btn-modal-close" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <div id="ghoul-markdown-body" class="ghoul-markdown-body"></div>
@@ -55,10 +55,10 @@
     </div>
 
     <!-- Ghoul Selection Modal -->
-    <div id="ghoul-selection-modal-overlay">
-        <div id="ghoul-selection-modal-content">
-            <div class="ghoul-modal-header">
-                <h2 style="font-family: 'Special Elite'; color: #ff0000; margin: 0;">Elegir Ghoul</h2>
+    <div id="ghoul-selection-modal-overlay" class="app-modal-overlay">
+        <div id="ghoul-selection-modal-content" class="app-modal">
+            <div class="ghoul-modal-header app-modal-header">
+                <h2 class="app-modal-title ghoul-selection-title">Elegir Ghoul</h2>
                 <button id="ghoul-selection-close" class="btn-modal-close" aria-label="Cerrar"><i data-lucide="x"></i></button>
             </div>
             <div id="ghoul-selection-list" class="ghoul-selection-grid">
@@ -132,17 +132,14 @@
                 </div>
             </div>
             <div class="header-actions" aria-label="Acciones rapidas">
+                <button class="header-mini-btn header-mode-btn" type="button" id="sheet-mode-toggle" aria-label="Cambiar modo" title="Cambiar modo">
+                    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+                </button>
                 <button class="header-mini-btn" type="button" id="modeToggle" aria-label="Opciones" title="Opciones">
                     <i class="bi bi-gear-fill" aria-hidden="true"></i>
                 </button>
                 <button class="header-mini-btn discord-btn" type="button" id="discord-btn" aria-label="Discord" title="Configurar Discord webhook">
                     <i class="bi bi-discord" aria-hidden="true"></i>
-                </button>
-                <button class="header-mini-btn" type="button" aria-label="Guardar JSON" title="Guardar JSON" onclick="downloadCharacterData()">
-                    <i class="bi bi-download" aria-hidden="true"></i>
-                </button>
-                <button class="header-mini-btn" type="button" aria-label="Cargar JSON" title="Cargar JSON" onclick="clickOnFileInput()">
-                    <i class="bi bi-upload" aria-hidden="true"></i>
                 </button>
                 <input type="file" id="file-input" hidden accept=".json">
             </div>
@@ -206,6 +203,9 @@
                             <div class="health-type-row">
                                 <span class="health-type-label contundente">Contundente</span>
                                 <div class="health-type-controls">
+                                    <button class="health-btn health-blood-heal-btn type-1" data-health-op="heal-blood" data-health-type="1" id="contundenteHealBlood" type="button" title="Curar contundente (1 sangre)" aria-label="Curar contundente con sangre">
+                                        <iconify-icon icon="mdi:drop-remove" width="12" aria-hidden="true"></iconify-icon>
+                                    </button>
                                     <button class="health-btn" data-health-op="remove" data-health-type="1" id="contundenteRemove" type="button">-</button>
                                     <button class="health-btn" data-health-op="add" data-health-type="1" id="contundenteAdd" type="button">+</button>
                                 </div>
@@ -213,6 +213,9 @@
                             <div class="health-type-row">
                                 <span class="health-type-label letal">Letal</span>
                                 <div class="health-type-controls">
+                                    <button class="health-btn health-blood-heal-btn type-2" data-health-op="heal-blood" data-health-type="2" id="letalHealBlood" type="button" title="Curar letal (1 sangre)" aria-label="Curar letal con sangre">
+                                        <iconify-icon icon="mdi:drop-remove" width="12" aria-hidden="true"></iconify-icon>
+                                    </button>
                                     <button class="health-btn" data-health-op="remove" data-health-type="2" id="letalRemove" type="button">-</button>
                                     <button class="health-btn" data-health-op="add" data-health-type="2" id="letalAdd" type="button">+</button>
                                 </div>
@@ -220,6 +223,9 @@
                             <div class="health-type-row">
                                 <span class="health-type-label agravado">Agravado</span>
                                 <div class="health-type-controls">
+                                    <button class="health-btn health-blood-heal-btn type-3" data-health-op="heal-blood" data-health-type="3" id="agravadoHealBlood" type="button" title="Curar agravado (5 sangre)" aria-label="Curar agravado con sangre">
+                                        <iconify-icon icon="mdi:drop-remove" width="12" aria-hidden="true"></iconify-icon>
+                                    </button>
                                     <button class="health-btn" data-health-op="remove" data-health-type="3" id="agravadoRemove" type="button">-</button>
                                     <button class="health-btn" data-health-op="add" data-health-type="3" id="agravadoAdd" type="button">+</button>
                                 </div>
@@ -324,7 +330,7 @@
                 <section class="card card-soft">
                     <div class="rolls-toolbar">
                         <h1 class="health-title">Acciones</h1>
-                        <button id="saved-roll-add-btn" class="rolls-add-btn" type="button" aria-label="Agregar acción">+</button>
+                        <button id="saved-roll-add-btn" class="rolls-add-btn mode-edit-only" type="button" aria-label="Agregar acción">+</button>
                     </div>
                     <div id="saved-rolls-list" class="quick-actions quick-rolls"></div>
                 </section>
@@ -537,12 +543,12 @@
                                 </div>
                                 <span class="dice-plus">+</span>
                                 <div class="dice-field dice-field-compact">
-                                    <label for="diceMod" id="modLabel">Modif.</label>
+                                    <label for="diceMod" id="modLabel">Modificador</label>
                                     <input id="diceMod" class="diceMod" type="number" value="0" step="1">
                                 </div>
                                 <span class="dice-separator">|</span>
                                 <div class="dice-field dice-field-compact dice-popover-wrapper">
-                                    <label for="difficulty">Dif.</label>
+                                    <label for="difficulty">Dificultad</label>
                                     <input id="difficulty" type="number" value="6" readonly>
                                     <div id="diceDiffPopover" class="dice-popover hidden" role="listbox" aria-label="Seleccionar dificultad">
                                         <button type="button" data-val="3">3</button>
@@ -625,7 +631,7 @@
                         <div class="discipline-pane">
                             <div class="discipline-header">
                                 <h3>Disciplinas</h3>
-                                <button id="open-discipline-repo" class="discipline-repo-trigger" type="button"
+                                <button id="open-discipline-repo" class="discipline-repo-trigger mode-edit-only" type="button"
                                     title="Gestionar disciplinas" aria-label="Gestionar disciplinas">⚙</button>
                             </div>
                             <div id="discipline-list" class="discipline-list">
@@ -634,11 +640,11 @@
                             <div class="discipline-detail">
                                 <div class="discipline-powers-header">
                                     <h3>Poderes</h3>
-                                    <button id="discipline-add-power-toggle" class="discipline-power-header-add" type="button"
+                                    <button id="discipline-add-power-toggle" class="discipline-power-header-add mode-edit-only" type="button"
                                         aria-label="Agregar poder">+</button>
                                 </div>
                                 <div id="discipline-powers-list" class="discipline-powers-list"></div>
-                                <form id="discipline-add-power-form" class="discipline-power-form hidden">
+                                <form id="discipline-add-power-form" class="discipline-power-form hidden mode-edit-only">
                                     <input id="discipline-power-name" type="text" placeholder="Nombre del poder" autocomplete="off">
                                     <textarea id="discipline-power-description" rows="3"
                                         placeholder="Descripción breve del poder"></textarea>
@@ -658,7 +664,7 @@
                             <div class="virtue-path-block">
                                 <div class="virtue-path-header">
                                     <h3 id="virtue-path-label">Humanidad</h3>
-                                    <button id="open-path-repo" class="discipline-repo-trigger" type="button" aria-label="Elegir senda" title="Elegir senda">⚙</button>
+                                    <button id="open-path-repo" class="discipline-repo-trigger mode-edit-only" type="button" aria-label="Elegir senda" title="Elegir senda">⚙</button>
                                 </div>
                                 <div class="rating virtue-rating virtue-humanity-rating" id="humanidad-rating">
                                     <span class="dot" data-value="0"></span><span class="dot" data-value="1"></span><span class="dot" data-value="2"></span><span class="dot" data-value="3"></span><span class="dot" data-value="4"></span><span class="dot" data-value="5"></span><span class="dot" data-value="6"></span><span class="dot" data-value="7"></span><span class="dot" data-value="8"></span><span class="dot" data-value="9"></span>
@@ -700,10 +706,10 @@
                         <div class="background-pane">
                             <div class="discipline-powers-header">
                                 <h3>Trasfondos</h3>
-                                <button id="background-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar trasfondo">+</button>
+                                <button id="background-add-toggle" class="discipline-power-header-add mode-edit-only" type="button" aria-label="Agregar trasfondo">+</button>
                             </div>
                             <div id="background-list" class="background-list"></div>
-                            <form id="background-add-form" class="background-form hidden">
+                            <form id="background-add-form" class="background-form hidden mode-edit-only">
                                 <input id="background-name" type="text" placeholder="Nombre del trasfondo" autocomplete="off">
                                 <textarea id="background-description" rows="3" placeholder="Descripción breve del trasfondo (opcional)"></textarea>
                                 <div class="form-actions">
@@ -721,10 +727,10 @@
                             <div class="background-pane">
                                 <div class="discipline-powers-header">
                                     <h3>Méritos</h3>
-                                    <button id="merit-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar mérito">+</button>
+                                    <button id="merit-add-toggle" class="discipline-power-header-add mode-edit-only" type="button" aria-label="Agregar mérito">+</button>
                                 </div>
                                 <div id="merit-list" class="background-list"></div>
-                                <form id="merit-add-form" class="background-form hidden">
+                                <form id="merit-add-form" class="background-form hidden mode-edit-only">
                                     <input id="merit-name" type="text" placeholder="Nombre del mérito" autocomplete="off">
                                     <input id="merit-cost" type="number" min="1" step="1" value="1" placeholder="Valor (N)">
                                     <textarea id="merit-description" rows="3" placeholder="Descripción del mérito (opcional)"></textarea>
@@ -738,10 +744,10 @@
                             <div class="background-pane">
                                 <div class="discipline-powers-header">
                                     <h3>Defectos</h3>
-                                    <button id="defect-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar defecto">+</button>
+                                    <button id="defect-add-toggle" class="discipline-power-header-add mode-edit-only" type="button" aria-label="Agregar defecto">+</button>
                                 </div>
                                 <div id="defect-list" class="background-list"></div>
-                                <form id="defect-add-form" class="background-form hidden">
+                                <form id="defect-add-form" class="background-form hidden mode-edit-only">
                                     <input id="defect-name" type="text" placeholder="Nombre del defecto" autocomplete="off">
                                     <input id="defect-cost" type="number" min="1" step="1" value="1" placeholder="Valor (N)">
                                     <textarea id="defect-description" rows="3" placeholder="Descripción del defecto (opcional)"></textarea>
@@ -818,9 +824,9 @@
                         <div class="background-pane">
                             <div class="discipline-powers-header">
                                 <h3>Rituales</h3>
-                                <button id="ritual-add-toggle" class="discipline-power-header-add" type="button" aria-label="Agregar ritual">+</button>
+                                <button id="ritual-add-toggle" class="discipline-power-header-add mode-edit-only" type="button" aria-label="Agregar ritual">+</button>
                             </div>
-                            <form id="ritual-add-form" class="background-form hidden">
+                            <form id="ritual-add-form" class="background-form hidden mode-edit-only">
                                 <input id="ritual-name" type="text" placeholder="Nombre del ritual" autocomplete="off" required>
                                 <input id="ritual-level" type="number" min="1" step="1" value="1" placeholder="Nivel">
                                 <button id="ritual-discipline-btn" class="ritual-discipline-select" type="button">Seleccionar disciplina...</button>
@@ -840,7 +846,7 @@
                         <div class="background-pane">
                             <div class="discipline-powers-header">
                                 <h3>Ataques</h3>
-                                <button id="attack-add-btn" class="discipline-power-header-add" type="button">+</button>
+                                <button id="attack-add-btn" class="discipline-power-header-add mode-edit-only" type="button">+</button>
                             </div>
                             <div id="attack-list" class="background-list"></div>
                         </div>
@@ -968,7 +974,7 @@
             <p class="specialty-subtitle">Selecciona la senda principal del personaje.</p>
             <input id="path-repo-search" class="discipline-repo-search" type="text" placeholder="Buscar senda..." autocomplete="off">
             <div id="path-repo-list" class="path-repo-list"></div>
-            <button id="path-repo-apply" class="specialty-add-action" type="button">Aplicar selección</button>
+            <button id="path-repo-apply" class="specialty-add-action btn btn--secondary" type="button">Aplicar selección</button>
         </div>
     </div>
 
@@ -983,7 +989,7 @@
             <input id="discipline-repo-search" class="discipline-repo-search" type="text"
                 placeholder="Buscar disciplina..." autocomplete="off">
             <div id="discipline-repo-list" class="discipline-repo-list"></div>
-            <button id="discipline-repo-apply" class="specialty-add-action" type="button">Aplicar selección</button>
+            <button id="discipline-repo-apply" class="specialty-add-action btn btn--secondary" type="button">Aplicar selección</button>
         </div>
     </div>
 
@@ -998,7 +1004,7 @@
             <input id="senda-repo-search" class="discipline-repo-search" type="text"
                 placeholder="Buscar senda..." autocomplete="off">
             <div id="senda-repo-list" class="discipline-repo-list"></div>
-            <button id="senda-repo-apply" class="specialty-add-action" type="button">Aplicar selección</button>
+            <button id="senda-repo-apply" class="specialty-add-action btn btn--secondary" type="button">Aplicar selección</button>
         </div>
     </div>
 
@@ -1014,6 +1020,12 @@
             <div class="theme-section-block">
                 <h3 class="theme-section-label">Exportar</h3>
                 <button id="export-character-pdf-btn" class="theme-export-btn" type="button">Descargar hoja PDF</button>
+            </div>
+
+            <div class="theme-section-block">
+                <h3 class="theme-section-label">JSON</h3>
+                <button id="download-json-btn" class="theme-export-btn" type="button">Exportar JSON</button>
+                <button id="upload-json-btn" class="theme-export-btn" type="button">Importar JSON</button>
             </div>
         </div>
     </div>
@@ -1031,12 +1043,12 @@
             </div>
             <p class="specialty-subtitle">Selecciona el bono temporal por Sangre.</p>
             <div class="attr-boost-options">
-                <button class="attr-boost-option" type="button" data-boost-value="1">+1</button>
-                <button class="attr-boost-option" type="button" data-boost-value="2">+2</button>
-                <button class="attr-boost-option" type="button" data-boost-value="3">+3</button>
-                <button class="attr-boost-option" type="button" data-boost-value="4">+4</button>
+                <button class="attr-boost-option btn btn--ghost" type="button" data-boost-value="1">+1</button>
+                <button class="attr-boost-option btn btn--ghost" type="button" data-boost-value="2">+2</button>
+                <button class="attr-boost-option btn btn--ghost" type="button" data-boost-value="3">+3</button>
+                <button class="attr-boost-option btn btn--ghost" type="button" data-boost-value="4">+4</button>
             </div>
-            <button class="specialty-add-action attr-boost-clear" type="button">Quitar boost</button>
+            <button class="specialty-add-action attr-boost-clear btn btn--secondary" type="button">Quitar boost</button>
         </div>
     </div>
 
@@ -1058,12 +1070,15 @@
             aria-labelledby="saved-roll-modal-title">
             <div class="specialty-modal-header">
                 <h2 id="saved-roll-modal-title">Nueva Tirada</h2>
-                <button id="saved-roll-modal-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
+                <div class="app-modal-actions">
+                    <button id="saved-roll-delete" class="btn-icon btn-icon--danger hidden mode-edit-only" type="button" aria-label="Eliminar tirada" title="Eliminar tirada"><i data-lucide="trash-2"></i></button>
+                    <button id="saved-roll-modal-close" class="btn-modal-close" type="button" aria-label="Cerrar"><i data-lucide="x"></i></button>
+                </div>
             </div>
             <form id="saved-roll-form" class="saved-roll-form">
                 <div class="saved-roll-field">
                     <label for="saved-roll-name">Nombre</label>
-                    <input id="saved-roll-name" type="text" placeholder="Ej: Disparar arma" autocomplete="off">
+                    <input id="saved-roll-name" type="text" placeholder="Ej: Salto en garlopa" autocomplete="off">
                 </div>
                 <div class="saved-roll-field">
                     <label for="saved-roll-pool1">Atributo (Pool 1)</label>
@@ -1184,10 +1199,12 @@
     <script src="modules/persistence.js"></script>
     <script src="modules/sheet-loader.js"></script>
     <script src="modules/ui-refresh.js"></script>
+    <script src="modules/mode-manager.js"></script>
     <script src="modules/specialties.js"></script>
     <script src="modules/health-blood.js"></script>
     <script src="modules/path-virtues.js"></script>
     <script src="modules/willpower.js"></script>
+    <script src="modules/roll-difficulty-prompt.js"></script>
     <script src="modules/disciplines.js"></script>
     <script src="modules/dice-system.js"></script>
     <script src="modules/dice-ui.js"></script>

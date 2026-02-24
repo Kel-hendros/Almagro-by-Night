@@ -3,6 +3,12 @@ let currentSheetId = null;
 let currentAvatarUrl = null;
 const ratingDotsModule = window.ABNSheetRatingDots;
 const uiRefreshModule = window.ABNSheetUIRefresh;
+const sheetModeModule = window.ABNSheetMode;
+sheetModeModule?.init();
+
+function isEditMode() {
+  return sheetModeModule?.isEditMode?.() ?? true;
+}
 
 //Funcion que actualiza todos lo que hay que actualizar al visualizar/cargar la pagina
 function updateAll() {
@@ -177,6 +183,13 @@ ratings.forEach((rating) => {
   dots.forEach((dot, index) => {
     if (!dot.closest("#blood-track")) {
       dot.addEventListener("click", () => {
+        const isAttributesOrAbilitiesRating = Boolean(
+          rating.closest(".attributes, .abilities")
+        );
+        const isVirtuesRating = Boolean(rating.closest(".virtue-pane"));
+        if (isAttributesOrAbilitiesRating && !isEditMode()) return;
+        if (isVirtuesRating && !isEditMode()) return;
+
         const currentValue = parseInt(input.value) || 0;
 
         // Click on the last active dot → toggle it off (decrease by 1)
@@ -1379,6 +1392,12 @@ function flashBloodConsume() {
   }
 }
 
+async function requestVariableDifficulty(options = {}) {
+  const promptModule = window.ABNSheetRollDifficultyPrompt;
+  if (!promptModule?.request) return null;
+  return promptModule.request(options);
+}
+
 const disciplinesModule = window.ABNSheetDisciplines;
 if (disciplinesModule) {
   disciplinesModule.configure({
@@ -1390,6 +1409,8 @@ if (disciplinesModule) {
     modifyBlood,
     hasBloodAvailable,
     flashBloodWarning,
+    getSheetMode: () => sheetModeModule?.getMode?.() || "edit",
+    requestDifficulty: requestVariableDifficulty,
   });
 }
 
@@ -1532,6 +1553,7 @@ const backgroundsModule = window.ABNSheetBackgrounds;
 if (backgroundsModule) {
   backgroundsModule.configure({
     save: saveCharacterData,
+    getSheetMode: () => sheetModeModule?.getMode?.() || "edit",
   });
 }
 
@@ -1704,6 +1726,8 @@ if (savedRollsModule) {
     rollTheDice,
     rollInitiative,
     actionWakeUp,
+    getSheetMode: () => sheetModeModule?.getMode?.() || "edit",
+    requestDifficulty: requestVariableDifficulty,
   });
 }
 
@@ -1772,6 +1796,7 @@ if (attacksModule) {
     rollTheDice,
     setRollContext: (name) => diceSystemModule?.setRollContext?.(name),
     setOnRollComplete: (callback) => diceSystemModule?.setOnRollComplete?.(callback),
+    getSheetMode: () => sheetModeModule?.getMode?.() || "edit",
   });
 }
 

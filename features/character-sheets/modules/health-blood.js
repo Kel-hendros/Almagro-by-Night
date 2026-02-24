@@ -86,6 +86,7 @@
     const hasBashing = values.includes("1");
     const hasLethal = values.includes("2");
     const hasAggravated = values.includes("3");
+    const bloodCount = (document.querySelector("#blood-value")?.value || "").replace(/0/g, "").length;
 
     document.getElementById("contundenteAdd")?.classList.toggle("disabled", !hasEmpty);
     document.getElementById("letalAdd")?.classList.toggle("disabled", !hasEmpty);
@@ -93,6 +94,15 @@
     document.getElementById("contundenteRemove")?.classList.toggle("disabled", !hasBashing);
     document.getElementById("letalRemove")?.classList.toggle("disabled", !hasLethal);
     document.getElementById("agravadoRemove")?.classList.toggle("disabled", !hasAggravated);
+    document
+      .getElementById("contundenteHealBlood")
+      ?.classList.toggle("disabled", !hasBashing || bloodCount < 1);
+    document
+      .getElementById("letalHealBlood")
+      ?.classList.toggle("disabled", !hasLethal || bloodCount < 1);
+    document
+      .getElementById("agravadoHealBlood")
+      ?.classList.toggle("disabled", !hasAggravated || bloodCount < 5);
   }
 
   function updateHealthImpediment() {
@@ -248,6 +258,29 @@
     persist();
   }
 
+  function consumeBloodPoints(points) {
+    const bloodInput = document.querySelector("#blood-value");
+    if (!bloodInput) return false;
+
+    const maxBloodPool = getMaxBloodPool();
+    let currentValue = String(bloodInput.value || "").padEnd(maxBloodPool, "0").substring(0, maxBloodPool);
+    const before = currentValue.replace(/0/g, "").length;
+    if (before < points) {
+      flashBloodWarning();
+      return false;
+    }
+
+    for (let i = 0; i < points; i += 1) {
+      currentValue = currentValue.substring(1) + "0";
+    }
+
+    bloodInput.value = currentValue;
+    updateBloodUI();
+    flashBloodConsume();
+    persist();
+    return true;
+  }
+
   function updateBloodUI() {
     const bloodValue = document.querySelector("#blood-value")?.value || "";
 
@@ -293,11 +326,14 @@
       attrTitle.textContent = "Atributos";
       abilTitle.textContent = "Habilidades";
     }
+
+    updateHealthButtons();
   }
 
   function bindHealthButtons() {
     const addButtons = document.querySelectorAll('.health-btn[data-health-op="add"]');
     const removeButtons = document.querySelectorAll('.health-btn[data-health-op="remove"]');
+    const bloodHealButtons = document.querySelectorAll('.health-btn[data-health-op="heal-blood"]');
 
     addButtons.forEach((button) => {
       button.addEventListener("click", () => {
@@ -350,6 +386,33 @@
 
         if (i < values.length) values[i] = "0";
 
+        values.sort((a, b) => b - a);
+        healthSquares.forEach((square, index) => {
+          square.nextElementSibling.value = values[index];
+        });
+
+        updateHealthSquares();
+        updateDamagePenalty();
+      });
+    });
+
+    bloodHealButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.classList.contains("disabled")) return;
+
+        const values = getHealthValues();
+        const type = button.getAttribute("data-health-type");
+        const searchValue = type === "1" ? "1" : type === "2" ? "2" : "3";
+        const bloodCost = type === "3" ? 5 : 1;
+
+        let i = 0;
+        for (; i < values.length; i += 1) {
+          if (values[i] === searchValue) break;
+        }
+        if (i >= values.length) return;
+        if (!consumeBloodPoints(bloodCost)) return;
+
+        values[i] = "0";
         values.sort((a, b) => b - a);
         healthSquares.forEach((square, index) => {
           square.nextElementSibling.value = values[index];

@@ -4,15 +4,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.getElementById("ghoul-search-input");
   const resultsList = document.getElementById("ghoul-results");
   const modalOverlay = document.getElementById("ghoul-modal-overlay");
-  const modalContent = document.getElementById("ghoul-modal-content");
   const modalClose = document.getElementById("ghoul-modal-close");
   const modalTitle = document.getElementById("ghoul-modal-title");
   const modalBody = document.getElementById("ghoul-markdown-body");
 
+  // Guard: ghoul UI may not exist on all pages where script is loaded.
+  if (
+    !fab ||
+    !widget ||
+    !searchInput ||
+    !resultsList ||
+    !modalOverlay ||
+    !modalClose ||
+    !modalTitle ||
+    !modalBody
+  ) {
+    return;
+  }
+
   let knowledgeBaseIndex = [];
 
-  // 6. Dynamic Base Path for multiple pages
-  // 6. Dynamic Base Path for multiple pages
+  // Dynamic Base Path for multiple pages
   function getBasePath() {
     // If we are inside character sheet routes, go back to project root.
     const path = window.location.pathname.toLowerCase();
@@ -40,23 +52,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 2. Toggle Widget
-  fab.addEventListener("click", () => {
-    const isActive = widget.classList.contains("active");
-    if (isActive) {
-      widget.classList.remove("active");
-    } else {
-      widget.classList.add("active");
-      searchInput.focus();
-      if (knowledgeBaseIndex.length === 0) {
-        fetchIndex();
-      }
-    }
-  });
+  async function ensureIndexLoaded() {
+    if (knowledgeBaseIndex.length > 0) return;
+    await fetchIndex();
+  }
 
-  // 3. Search Logic
-  searchInput.addEventListener("input", (e) => {
-    const query = e.target.value.toLowerCase();
+  function performSearch(rawQuery) {
+    const query = String(rawQuery || "").trim().toLowerCase();
     if (query.length < 2) {
       renderResults([]); // Clear or show minimal results
       return;
@@ -70,6 +72,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     renderResults(filtered);
+  }
+
+  async function runSearchFromInput() {
+    const query = searchInput.value;
+    if (query.trim().length < 2) {
+      renderResults([]);
+      return;
+    }
+    await ensureIndexLoaded();
+    performSearch(query);
+  }
+
+  // 2. Toggle Widget
+  fab.addEventListener("click", async () => {
+    const isActive = widget.classList.contains("active");
+    if (isActive) {
+      widget.classList.remove("active");
+    } else {
+      widget.classList.add("active");
+      searchInput.focus();
+      await ensureIndexLoaded();
+      // If the user had a previous query persisted, immediately show its results.
+      if (searchInput.value.trim().length >= 2) {
+        performSearch(searchInput.value);
+      }
+    }
+  });
+
+  // 3. Search Logic
+  searchInput.addEventListener("input", async (e) => {
+    const query = e.target.value;
+    if (query.trim().length < 2) {
+      renderResults([]); // Clear or show minimal results
+      return;
+    }
+    await ensureIndexLoaded();
+    performSearch(query);
   });
 
   function renderResults(items) {
@@ -139,6 +178,48 @@ document.addEventListener("DOMContentLoaded", () => {
         /\(([^)]+)\[([^\]]+)\]\)/g,
         "[$1]($2)"
       );
+
+      // Pre-process wikilinks as visual highlights (not links):
+      // [[archivo]] -> <span class="ghoul-wikilink">archivo</span>
+      // [[archivo|Texto]] -> <span class="ghoul-wikilink">Texto</span>
+      // [[Texto|archivo.md]] -> <span class="ghoul-wikilink">Texto</span>
+      function looksLikePath(value) {
+        return /[\\/]/.test(value) || /\.md$/i.test(value);
+      }
+
+      function escapeInlineHtml(text) {
+        if (typeof window.escapeHtml === "function") return window.escapeHtml(text);
+        return String(text ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      markdownContent = markdownContent.replace(/\[\[([^\]]+)\]\]/g, (_, rawInner) => {
+        const inner = String(rawInner || "").trim();
+        if (!inner) return _;
+
+        const parts = inner.split("|").map((p) => p.trim()).filter(Boolean);
+        if (parts.length === 0) return _;
+
+        if (parts.length === 1) {
+          const single = parts[0];
+          return `<span class="ghoul-wikilink">${escapeInlineHtml(single)}</span>`;
+        }
+
+        const first = parts[0];
+        const second = parts[1];
+        let label = first;
+
+        // If format is [[ruta|Texto]], prefer second part as label.
+        if (looksLikePath(first) && !looksLikePath(second)) {
+          label = second;
+        }
+
+        return `<span class="ghoul-wikilink">${escapeInlineHtml(label)}</span>`;
+      });
 
       modalBody.innerHTML = renderMarkdown(markdownContent);
 
@@ -220,28 +301,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const GHOULS = {
     igor: {
       name: "Igor",
-      idle: "../images/igor-idle.png",
-      hover: "../images/igor-hover.png",
+      idle: "images/igor-idle.png",
+      hover: "images/igor-hover.png",
     },
     loba: {
       name: "La Loba",
-      idle: "../images/laloba-idle.png",
-      hover: "../images/laloba-hover.png",
+      idle: "images/laloba-idle.png",
+      hover: "images/laloba-hover.png",
     },
     pierre: {
       name: "Pierre",
-      idle: "../images/pierre-idle.png",
-      hover: "../images/pierre-hover.png",
+      idle: "images/pierre-idle.png",
+      hover: "images/pierre-hover.png",
     },
     bruto: {
       name: "Bruto",
-      idle: "../images/bruto-idle.png",
-      hover: "../images/bruto-hover.png",
+      idle: "images/bruto-idle.png",
+      hover: "images/bruto-hover.png",
     },
     trauco: {
       name: "Trauco",
-      idle: "../images/trauco-idle.png",
-      hover: "../images/trauco-hover.png",
+      idle: "images/trauco-idle.png",
+      hover: "images/trauco-hover.png",
     },
   };
 
@@ -255,16 +336,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function setGhoul(key) {
     const ghoul = GHOULS[key];
-    if (!ghoul) return;
+    if (!ghoul || !selectedGhoulInput) return;
+    const basePath = getBasePath();
+    const idleUrl = `${basePath}${ghoul.idle}`;
+    const hoverUrl = `${basePath}${ghoul.hover}`;
 
     // Update CSS variables
     document.documentElement.style.setProperty(
       "--ghoul-idle",
-      `url('${ghoul.idle}')`
+      `url('${idleUrl}')`
     );
     document.documentElement.style.setProperty(
       "--ghoul-hover",
-      `url('${ghoul.hover}')`
+      `url('${hoverUrl}')`
     );
 
     // Update FAB size hack: Loba is same size (61x100) as Igor, so styles valid.
@@ -278,16 +362,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function openGhoulSelection() {
+    if (!ghoulSelectionList || !ghoulSelectionModal || !selectedGhoulInput) return;
     ghoulSelectionList.innerHTML = "";
     Object.keys(GHOULS).forEach((key) => {
       const ghoul = GHOULS[key];
+      const basePath = getBasePath();
       const div = document.createElement("div");
       div.className = `ghoul-option ${
         selectedGhoulInput.value === key ? "selected" : ""
       }`;
 
       const img = document.createElement("img");
-      img.src = ghoul.idle;
+      img.src = `${basePath}${ghoul.idle}`;
 
       const span = document.createElement("span");
       span.textContent = ghoul.name;

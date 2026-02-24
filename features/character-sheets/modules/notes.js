@@ -102,14 +102,23 @@
 
     const editBtn = document.createElement("button");
     editBtn.type = "button";
-    editBtn.className = "note-action-btn";
-    editBtn.textContent = "Editar";
+    editBtn.className = "btn-icon note-action-btn--icon";
+    editBtn.title = "Editar nota";
+    editBtn.setAttribute("aria-label", "Editar nota");
+    editBtn.innerHTML = '<i data-lucide="pencil"></i>';
     editBtn.addEventListener("click", () => noteOpenEditForm(note));
 
     const archiveBtn = document.createElement("button");
     archiveBtn.type = "button";
-    archiveBtn.className = "note-action-btn";
-    archiveBtn.textContent = note.archived ? "Desarchivar" : "Archivar";
+    archiveBtn.className = "btn-icon note-action-btn--icon";
+    archiveBtn.title = note.archived ? "Desarchivar nota" : "Archivar nota";
+    archiveBtn.setAttribute(
+      "aria-label",
+      note.archived ? "Desarchivar nota" : "Archivar nota"
+    );
+    archiveBtn.innerHTML = note.archived
+      ? '<i data-lucide="archive-restore"></i>'
+      : '<i data-lucide="archive"></i>';
     archiveBtn.addEventListener("click", () => {
       note.archived = !note.archived;
       renderNotes();
@@ -118,8 +127,10 @@
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
-    deleteBtn.className = "note-action-btn delete";
-    deleteBtn.textContent = "Borrar";
+    deleteBtn.className = "btn-icon btn-icon--danger note-action-btn--icon";
+    deleteBtn.title = "Eliminar nota";
+    deleteBtn.setAttribute("aria-label", "Eliminar nota");
+    deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
     deleteBtn.addEventListener("click", () => {
       const idx = state.notes.findIndex((n) => n.id === note.id);
       if (idx !== -1) state.notes.splice(idx, 1);
@@ -128,9 +139,11 @@
       persist();
     });
 
-    actions.appendChild(editBtn);
-    actions.appendChild(archiveBtn);
-    actions.appendChild(deleteBtn);
+    const editDeleteButtons = document.createElement("div");
+    editDeleteButtons.className = "edit-delete-buttons";
+    editDeleteButtons.append(editBtn, deleteBtn);
+
+    actions.append(archiveBtn, editDeleteButtons);
 
     card.appendChild(header);
     card.appendChild(body);
@@ -170,6 +183,10 @@
 
     renderNoteSection(list, active, "No hay notas activas.");
     renderNoteSection(archiveList, archived, "No hay notas archivadas.");
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [list, archiveList] });
+    }
 
     const activeTab = document.querySelector('[data-note-tab="active"]');
     const archivedTab = document.querySelector('[data-note-tab="archived"]');

@@ -70,6 +70,10 @@
     feedPool(inputId);
   }
 
+  function isPlayMode() {
+    return global.ABNSheetMode?.getMode?.() === "play";
+  }
+
   function bindTrack() {
     const track = document.querySelector("#willpower-track");
     if (!track) return;
@@ -81,6 +85,9 @@
       const index = parseInt(btn.getAttribute("data-index"), 10);
 
       if (btn.classList.contains("willpower-perm")) {
+        // In play mode, permanent willpower is read-only.
+        if (isPlayMode()) return;
+
         const permInput = document.querySelector("#voluntadPerm-value");
         if (!permInput) return;
 

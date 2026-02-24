@@ -17,6 +17,7 @@
     rollTheDice: null,
     setRollContext: null,
     setOnRollComplete: null,
+    getSheetMode: null,
   };
 
   function configure(nextDeps = {}) {
@@ -27,6 +28,10 @@
 
   function persist() {
     if (deps.save) deps.save();
+  }
+
+  function isPlayMode() {
+    return deps.getSheetMode ? deps.getSheetMode() === "play" : false;
   }
 
   function serialize() {
@@ -213,20 +218,26 @@
       header.appendChild(nameSpan);
 
       const controls = document.createElement("div");
-      controls.className = "attack-item-controls";
+      controls.className = "attack-item-controls row-action-buttons mode-edit-only";
 
       const editBtn = document.createElement("button");
+      editBtn.className = "btn-icon attack-edit-btn";
       editBtn.type = "button";
-      editBtn.textContent = "✎";
+      editBtn.innerHTML = '<i data-lucide="pencil"></i>';
       editBtn.title = "Editar";
-      editBtn.addEventListener("click", () => openModal(idx));
+      editBtn.addEventListener("click", () => {
+        if (isPlayMode()) return;
+        openModal(idx);
+      });
       controls.appendChild(editBtn);
 
       const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn-icon btn-icon--danger attack-delete-btn";
       deleteBtn.type = "button";
-      deleteBtn.textContent = "✕";
+      deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
       deleteBtn.title = "Eliminar";
       deleteBtn.addEventListener("click", () => {
+        if (isPlayMode()) return;
         state.attacks.splice(idx, 1);
         render();
         persist();
@@ -242,7 +253,7 @@
       const atkBtn = document.createElement("button");
       atkBtn.type = "button";
       atkBtn.className = "attack-btn attack-btn-attack";
-      atkBtn.innerHTML = "⚔ Atacar";
+      atkBtn.textContent = "Atacar";
       atkBtn.addEventListener("click", () => loadAttackRoll(attack));
       actions.appendChild(atkBtn);
 
@@ -251,9 +262,9 @@
       dmgBtn.className = "attack-btn attack-btn-damage";
       if (attack.pendingExtra > 0) {
         dmgBtn.classList.add("has-pending");
-        dmgBtn.innerHTML = `💀 Daño <span class="attack-pending-badge">+${attack.pendingExtra}</span>`;
+        dmgBtn.innerHTML = `Daño <span class="attack-pending-badge">+${attack.pendingExtra}</span>`;
       } else {
-        dmgBtn.innerHTML = "💀 Daño";
+        dmgBtn.textContent = "Daño";
       }
       dmgBtn.addEventListener("click", () => loadDamageRoll(attack));
       actions.appendChild(dmgBtn);
@@ -274,6 +285,10 @@
       item.appendChild(actions);
       list.appendChild(item);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [list] });
+    }
   }
 
   function populateAttackSelects() {
@@ -386,6 +401,7 @@
   }
 
   function openModal(editIndex) {
+    if (isPlayMode()) return;
     const title = document.getElementById("attack-modal-title");
     const attackForm = document.getElementById("attack-form");
 
@@ -456,6 +472,7 @@
     if (form) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        if (isPlayMode()) return;
         const name = document.getElementById("attack-name")?.value?.trim();
         if (!name) return;
 

@@ -96,14 +96,14 @@
       title.textContent = arc.name;
 
       const deleteArcBtn = document.createElement("button");
-      deleteArcBtn.className = "xp-entry-delete";
+      deleteArcBtn.className = "btn-icon btn-icon--danger xp-entry-delete mode-edit-only";
       deleteArcBtn.type = "button";
       deleteArcBtn.style.position = "static";
       deleteArcBtn.style.transform = "none";
       deleteArcBtn.style.opacity = "0";
       deleteArcBtn.style.pointerEvents = "none";
       deleteArcBtn.setAttribute("aria-label", "Eliminar arco");
-      deleteArcBtn.textContent = "✕";
+      deleteArcBtn.innerHTML = '<i data-lucide="trash-2"></i>';
       deleteArcBtn.addEventListener("click", () => {
         state.arcs.splice(arcIndex, 1);
         if (state.currentArcIndex >= state.arcs.length) {
@@ -163,10 +163,10 @@
           main.appendChild(cost);
 
           const deleteBtn = document.createElement("button");
-          deleteBtn.className = "xp-entry-delete";
+          deleteBtn.className = "btn-icon btn-icon--danger xp-entry-delete mode-edit-only";
           deleteBtn.type = "button";
           deleteBtn.setAttribute("aria-label", "Eliminar gasto");
-          deleteBtn.textContent = "✕";
+          deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
           deleteBtn.addEventListener("click", () => {
             state.arcs[arcIndex].entries.splice(entryIndex, 1);
             renderXpArcs();
@@ -182,6 +182,10 @@
       arcBlock.appendChild(entries);
       arcList.appendChild(arcBlock);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [arcList] });
+    }
   }
 
   function initExperience() {

@@ -6,7 +6,7 @@ window.DISCIPLINE_REPO = [
   { id: 3, name_es: "Auspex", name_en: "Auspex" },
   { id: 4, name_es: "Bardo", name_en: "Bardo" },
   { id: 5, name_es: "Celeridad", name_en: "Celerity" },
-  { id: 6, name_es: "Daimoinon", name_en: "Daimoinon" },
+  { id: 6, name_es: "Daimonion", name_en: "Daimonion" },
   { id: 7, name_es: "Deimos", name_en: "Deimos" },
   { id: 8, name_es: "Dementación", name_en: "Dementation" },
   { id: 9, name_es: "Dominación", name_en: "Dominate" },

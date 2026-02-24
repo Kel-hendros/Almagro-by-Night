@@ -78,9 +78,9 @@
       valueBadge.textContent = `${prefix}${Math.max(1, Number(entry.value || 1))}`;
 
       const editBtn = document.createElement("button");
-      editBtn.className = "background-edit-btn";
+      editBtn.className = "btn-icon background-edit-btn";
       editBtn.type = "button";
-      editBtn.innerHTML = "✎";
+      editBtn.innerHTML = '<i data-lucide="pencil"></i>';
       editBtn.title = prefix === "-" ? "Editar mérito" : "Editar defecto";
       editBtn.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -152,9 +152,9 @@
       });
 
       const deleteBtn = document.createElement("button");
-      deleteBtn.className = "background-delete-btn";
+      deleteBtn.className = "btn-icon btn-icon--danger background-delete-btn";
       deleteBtn.type = "button";
-      deleteBtn.innerHTML = "✕";
+      deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
       deleteBtn.title = prefix === "-" ? "Eliminar mérito" : "Eliminar defecto";
       deleteBtn.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -163,10 +163,13 @@
         persist();
       });
 
+      const actions = document.createElement("div");
+      actions.className = "row-action-buttons mode-edit-only";
+      actions.append(editBtn, deleteBtn);
+
       row.appendChild(titleBtn);
       row.appendChild(valueBadge);
-      row.appendChild(editBtn);
-      row.appendChild(deleteBtn);
+      row.appendChild(actions);
 
       const descEl = document.createElement("div");
       descEl.className = "background-description";
@@ -176,6 +179,10 @@
       item.appendChild(descEl);
       listEl.appendChild(item);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [listEl] });
+    }
   }
 
   function renderRitualList() {
@@ -240,9 +247,9 @@
         levelBadge.textContent = "Nv. " + r.level;
 
         const editBtn = document.createElement("button");
-        editBtn.className = "background-edit-btn";
+        editBtn.className = "btn-icon background-edit-btn";
         editBtn.type = "button";
-        editBtn.innerHTML = "✎";
+        editBtn.innerHTML = '<i data-lucide="pencil"></i>';
         editBtn.title = "Editar ritual";
         editBtn.addEventListener("click", (event) => {
           event.stopPropagation();
@@ -322,9 +329,9 @@
         });
 
         const deleteBtn = document.createElement("button");
-        deleteBtn.className = "background-delete-btn";
+        deleteBtn.className = "btn-icon btn-icon--danger background-delete-btn";
         deleteBtn.type = "button";
-        deleteBtn.innerHTML = "✕";
+        deleteBtn.innerHTML = '<i data-lucide="trash-2"></i>';
         deleteBtn.title = "Eliminar ritual";
         deleteBtn.addEventListener("click", (event) => {
           event.stopPropagation();
@@ -337,7 +344,11 @@
         descEl.className = "background-description";
         descEl.textContent = r.description || "";
 
-        row.append(titleBtn, levelBadge, editBtn, deleteBtn);
+        const actions = document.createElement("div");
+        actions.className = "row-action-buttons mode-edit-only";
+        actions.append(editBtn, deleteBtn);
+
+        row.append(titleBtn, levelBadge, actions);
         item.append(row, descEl);
         body.appendChild(item);
       });
@@ -345,6 +356,10 @@
       group.append(header, body);
       listEl.appendChild(group);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [listEl] });
+    }
   }
 
   function init() {

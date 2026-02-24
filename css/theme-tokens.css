@@ -77,6 +77,9 @@ body[data-theme="light"] {
         radial-gradient(60% 50% at 15% 10%, rgba(122, 59, 46, 0.08), transparent 60%),
         radial-gradient(45% 35% at 90% 75%, rgba(123, 75, 55, 0.1), transparent 60%),
         linear-gradient(135deg, #f5f0e7 0%, #fffaf1 35%, #f0ebe2 100%);
+
+    /* Keep same shadow geometry but with stronger opacity so it reads over light gradients */
+    --sidebar-shadow-outer: rgba(0, 0, 0, 0.42);
 }
 
 :root[data-app-theme="camarilla"],

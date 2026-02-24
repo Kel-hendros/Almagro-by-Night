@@ -122,3 +122,14 @@ Regla de promoción:
 - Contrato de integración: cada módulo expone `configure()` + `init()` y APIs de dominio explícitas.
 - Evitar acoples por globals ad-hoc (`window.openX`, `window.tmpState`, etc.). Integrar módulos vía dependencias inyectadas.
 - Referencia operativa: `features/character-sheets/README.md`.
+
+### 8.1 Dice UX rules (Character Sheets)
+
+- Las acciones rápidas y tiradas derivadas de poderes de disciplina deben **preparar** el lanzador de dados (pooles, labels, modificador, dificultad), pero no ejecutar tirada automática.
+- La tirada se ejecuta solo por acción explícita del usuario con el botón `Lanzar`.
+- Dificultad variable:
+  - Tiradas guardadas soportan `Variable`.
+  - En poderes de disciplina, si `roll.difficulty_variable` existe, se considera variable.
+  - Si `roll.difficulty` no es numérico, se considera variable.
+  - Si no hay metadata de dificultad en `roll`, el fallback es variable (no `6` fijo).
+- El prompt de dificultad variable debe ser reutilizable (módulo compartido dentro de la feature) y no duplicar implementación en cada subsistema.

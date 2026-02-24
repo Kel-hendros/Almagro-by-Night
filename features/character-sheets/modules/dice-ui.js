@@ -91,6 +91,7 @@
       diceButton.classList.remove("disabled");
       diceButton.disabled = false;
     }
+
   }
 
   function resetDicePool1() {

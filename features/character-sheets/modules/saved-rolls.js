@@ -17,6 +17,8 @@
     rollTheDice: null,
     rollInitiative: null,
     actionWakeUp: null,
+    getSheetMode: null,
+    requestDifficulty: null,
   };
 
   function configure(nextDeps = {}) {
@@ -27,6 +29,10 @@
 
   function persist() {
     if (deps.save) deps.save();
+  }
+
+  function isEditMode() {
+    return deps.getSheetMode ? deps.getSheetMode() === "edit" : true;
   }
 
   function getAttrOptions() {
@@ -105,10 +111,42 @@
         if (d === 6) option.selected = true;
         diffSelect.appendChild(option);
       }
+      const variableOption = document.createElement("option");
+      variableOption.value = "variable";
+      variableOption.textContent = "Variable";
+      diffSelect.appendChild(variableOption);
     }
   }
 
-  function executeRoll(roll) {
+  function parseRollDifficulty(roll) {
+    const mode =
+      roll?.difficultyMode ||
+      (String(roll?.difficulty).toLowerCase() === "variable" ? "variable" : "fixed");
+    if (mode === "variable") {
+      return { mode: "variable", value: null };
+    }
+    const numeric = Number(roll?.difficulty);
+    return { mode: "fixed", value: Number.isFinite(numeric) ? numeric : 6 };
+  }
+
+  async function resolveDifficultyForRoll(roll) {
+    const parsed = parseRollDifficulty(roll);
+    if (parsed.mode === "fixed") return parsed.value;
+    if (!deps.requestDifficulty) return null;
+
+    const name = roll?.name?.trim() || "Tirada";
+    const value = await deps.requestDifficulty({
+      title: "Dificultad variable",
+      message: `${name}: ingresa la dificultad.`,
+      defaultValue: 6,
+      min: 2,
+      max: 10,
+      confirmLabel: "Tirar",
+    });
+    return Number.isFinite(value) ? value : null;
+  }
+
+  async function executeRoll(roll) {
     const pool1Val = roll.pool1Attr
       ? parseInt(document.getElementById(roll.pool1Attr)?.value, 10) || 0
       : 0;
@@ -164,7 +202,9 @@
       ? capitalize(pool2Label)
       : "";
     document.querySelector("#diceMod").value = String(roll.modifier);
-    document.querySelector("#difficulty").value = String(roll.difficulty);
+    const difficultyValue = await resolveDifficultyForRoll(roll);
+    if (!Number.isFinite(difficultyValue)) return;
+    document.querySelector("#difficulty").value = String(difficultyValue);
 
     const specialtyCheckbox = document.querySelector("#specialty");
     const specialtyLabel = document.querySelector('label[for="specialty"]');
@@ -179,7 +219,6 @@
     }
 
     if (deps.updateFinalPoolSize) deps.updateFinalPoolSize();
-    if (deps.rollTheDice) deps.rollTheDice();
   }
 
   function render() {
@@ -213,40 +252,21 @@
       chip.className = "roll-chip";
       chip.type = "button";
       chip.textContent = roll.name;
-      chip.addEventListener("click", () => executeRoll(roll));
-
-      const actions = document.createElement("div");
-      actions.className = "roll-chip-actions";
-
-      const editBtn = document.createElement("button");
-      editBtn.className = "roll-chip-action";
-      editBtn.type = "button";
-      editBtn.textContent = "✎";
-      editBtn.addEventListener("click", (event) => {
-        event.stopPropagation();
-        openModal(roll);
+      chip.addEventListener("click", async () => {
+        if (isEditMode()) {
+          openModal(roll);
+          return;
+        }
+        await executeRoll(roll);
       });
 
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "roll-chip-action delete";
-      deleteBtn.type = "button";
-      deleteBtn.textContent = "✕";
-      deleteBtn.addEventListener("click", (event) => {
-        event.stopPropagation();
-        state.rolls.splice(
-          state.rolls.findIndex((r) => r.id === roll.id),
-          1
-        );
-        render();
-        persist();
-      });
-
-      actions.appendChild(editBtn);
-      actions.appendChild(deleteBtn);
       wrap.appendChild(chip);
-      wrap.appendChild(actions);
       list.appendChild(wrap);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [list] });
+    }
   }
 
   function openModal(rollToEdit) {
@@ -256,6 +276,7 @@
     const pool2Select = document.getElementById("saved-roll-pool2");
     const modSelect = document.getElementById("saved-roll-mod");
     const diffSelect = document.getElementById("saved-roll-diff");
+    const deleteBtn = document.getElementById("saved-roll-delete");
     if (!nameInput || !pool1Select || !pool2Select || !modSelect || !diffSelect) return;
 
     populateSelects();
@@ -269,7 +290,12 @@
         ? `${rollToEdit.pool2Attr}|spec:${rollToEdit.specialty}`
         : rollToEdit.pool2Attr;
       modSelect.value = String(rollToEdit.modifier);
-      diffSelect.value = String(rollToEdit.difficulty);
+      const difficultyMode =
+        rollToEdit.difficultyMode ||
+        (String(rollToEdit.difficulty).toLowerCase() === "variable" ? "variable" : "fixed");
+      diffSelect.value =
+        difficultyMode === "variable" ? "variable" : String(rollToEdit.difficulty);
+      if (deleteBtn) deleteBtn.classList.remove("hidden");
     } else {
       state.editingId = null;
       if (title) title.textContent = "Nueva Tirada";
@@ -278,6 +304,7 @@
       pool2Select.value = "";
       modSelect.value = "0";
       diffSelect.value = "6";
+      if (deleteBtn) deleteBtn.classList.add("hidden");
     }
 
     if (state.modalController?.open) state.modalController.open();
@@ -302,6 +329,7 @@
     const form = document.getElementById("saved-roll-form");
     const closeBtn = document.getElementById("saved-roll-modal-close");
     const cancelBtn = document.getElementById("saved-roll-cancel");
+    const deleteBtn = document.getElementById("saved-roll-delete");
     const modal = document.getElementById("saved-roll-modal");
     if (!addBtn || !form) return;
 
@@ -314,6 +342,18 @@
 
     addBtn.addEventListener("click", () => openModal(null));
 
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", () => {
+        if (state.editingId === null) return;
+        const idx = state.rolls.findIndex((r) => r.id === state.editingId);
+        if (idx < 0) return;
+        state.rolls.splice(idx, 1);
+        closeModal();
+        render();
+        persist();
+      });
+    }
+
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const name = document.getElementById("saved-roll-name")?.value?.trim();
@@ -322,7 +362,10 @@
       const pool1Attr = document.getElementById("saved-roll-pool1")?.value || "";
       const pool2Raw = document.getElementById("saved-roll-pool2")?.value || "";
       const modifier = parseInt(document.getElementById("saved-roll-mod")?.value, 10) || 0;
-      const difficulty = parseInt(document.getElementById("saved-roll-diff")?.value, 10) || 6;
+      const difficultyRaw = document.getElementById("saved-roll-diff")?.value || "6";
+      const difficultyMode = difficultyRaw === "variable" ? "variable" : "fixed";
+      const difficulty =
+        difficultyMode === "variable" ? "variable" : parseInt(difficultyRaw, 10) || 6;
 
       let pool2Attr = pool2Raw;
       let specialty = "";
@@ -340,6 +383,7 @@
           roll.pool2Attr = pool2Attr;
           roll.modifier = modifier;
           roll.difficulty = difficulty;
+          roll.difficultyMode = difficultyMode;
           roll.specialty = specialty;
         }
       } else {
@@ -350,6 +394,7 @@
           pool2Attr,
           modifier,
           difficulty,
+          difficultyMode,
           specialty,
         });
       }
@@ -368,6 +413,9 @@
       pool2Attr: r.pool2Attr,
       modifier: r.modifier,
       difficulty: r.difficulty,
+      difficultyMode:
+        r.difficultyMode ||
+        (String(r.difficulty).toLowerCase() === "variable" ? "variable" : "fixed"),
       specialty: r.specialty || "",
     }));
   }
@@ -384,7 +432,15 @@
           pool1Attr: r.pool1Attr || "",
           pool2Attr: r.pool2Attr || "",
           modifier: r.modifier || 0,
-          difficulty: r.difficulty || 6,
+          difficulty:
+            String(r.difficulty).toLowerCase() === "variable"
+              ? "variable"
+              : Number.isFinite(Number(r.difficulty))
+                ? Number(r.difficulty)
+                : 6,
+          difficultyMode:
+            r.difficultyMode ||
+            (String(r.difficulty).toLowerCase() === "variable" ? "variable" : "fixed"),
           specialty: r.specialty || "",
         };
         state.rolls.push(roll);

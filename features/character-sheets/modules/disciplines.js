@@ -8,6 +8,10 @@
     dragState: { type: null, index: null, disciplineId: null },
     openDisciplineModal: null,
     openSendaModal: null,
+    levelsById: null,
+    levelsLoadPromise: null,
+    activeLevelPopover: null,
+    disciplineDocCache: new Map(),
   };
 
   const deps = {
@@ -19,6 +23,8 @@
     modifyBlood: null,
     hasBloodAvailable: null,
     flashBloodWarning: null,
+    getSheetMode: null,
+    requestDifficulty: null,
   };
 
   const disciplineRepo = global.DISCIPLINE_REPO || [];
@@ -59,6 +65,10 @@
       typeof nextDeps.flashBloodWarning === "function"
         ? nextDeps.flashBloodWarning
         : null;
+    deps.getSheetMode =
+      typeof nextDeps.getSheetMode === "function" ? nextDeps.getSheetMode : null;
+    deps.requestDifficulty =
+      typeof nextDeps.requestDifficulty === "function" ? nextDeps.requestDifficulty : null;
   }
 
   function persist() {
@@ -97,6 +107,586 @@
 
   function flashBloodWarning() {
     if (deps.flashBloodWarning) deps.flashBloodWarning();
+  }
+
+  function isPlayMode() {
+    if (!deps.getSheetMode) return false;
+    return deps.getSheetMode() === "play";
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  async function fetchJSONFromCandidates(candidates) {
+    for (const url of candidates) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) continue;
+        return await response.json();
+      } catch (_error) {
+        // Try next candidate path.
+      }
+    }
+    return null;
+  }
+
+  async function ensureDisciplineLevelsLoaded() {
+    if (state.levelsById instanceof Map) return state.levelsById;
+    if (state.levelsLoadPromise) return state.levelsLoadPromise;
+
+    const candidates = [];
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes("/features/character-sheets/")) {
+      candidates.push("disciplinesLevels.json");
+    }
+    candidates.push("features/character-sheets/disciplinesLevels.json");
+    candidates.push("../../features/character-sheets/disciplinesLevels.json");
+    candidates.push("./disciplinesLevels.json");
+
+    state.levelsLoadPromise = (async () => {
+      const payload = await fetchJSONFromCandidates(candidates);
+      if (!payload || typeof payload !== "object") {
+        state.levelsById = new Map();
+        return state.levelsById;
+      }
+
+      const byId = new Map();
+      const groups = [payload.disciplines, payload["bloodline-disciplines"]];
+      groups.forEach((group) => {
+        if (!group || typeof group !== "object") return;
+        Object.values(group).forEach((discipline) => {
+          const id = Number(discipline?.id);
+          if (!Number.isFinite(id)) return;
+          byId.set(id, discipline);
+        });
+      });
+
+      state.levelsById = byId;
+      return byId;
+    })();
+
+    return state.levelsLoadPromise;
+  }
+
+  function getPowerForLevel(powers, level) {
+    if (!powers || typeof powers !== "object") return null;
+
+    const direct = powers[String(level)];
+    if (direct) return direct;
+
+    // Handles keys like "1-5" or "2-4".
+    const ranged = Object.entries(powers).find(([rawKey]) => {
+      const key = String(rawKey || "").trim();
+      const match = key.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (!match) return false;
+      const from = Number(match[1]);
+      const to = Number(match[2]);
+      return level >= from && level <= to;
+    });
+    if (ranged) return ranged[1];
+
+    return null;
+  }
+
+  function getKnowledgeBaseBasePath() {
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes("/features/character-sheets/")) return "../../";
+    return "";
+  }
+
+  function slugifyName(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "")
+      .trim();
+  }
+
+  function getDisciplineDocSlugCandidates(disciplineId, disciplineData) {
+    const manualById = {
+      23: ["mytherceria", "mystherceria"],
+      6: ["daimonion"],
+    };
+    const slugs = new Set();
+
+    const repoName = getDisciplineName(disciplineId);
+    if (repoName) slugs.add(slugifyName(repoName));
+
+    const names = [
+      disciplineData?.name?.es,
+      disciplineData?.name?.en,
+      disciplineData?.name_es,
+      disciplineData?.name_en,
+    ].filter(Boolean);
+    names.forEach((name) => slugs.add(slugifyName(name)));
+
+    (manualById[disciplineId] || []).forEach((slug) => slugs.add(slug));
+    return Array.from(slugs).filter(Boolean);
+  }
+
+  async function tryFetchText(url) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      return await response.text();
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  async function resolveDisciplineDoc(disciplineId, disciplineData) {
+    const cached = state.disciplineDocCache.get(disciplineId);
+    if (cached) return cached;
+
+    const base = getKnowledgeBaseBasePath();
+    const slugs = getDisciplineDocSlugCandidates(disciplineId, disciplineData);
+    for (const slug of slugs) {
+      const path = `${base}knowledge_base/disciplinas/${slug}.md`;
+      const content = await tryFetchText(path);
+      if (!content) continue;
+      const entry = { found: true, path, content };
+      state.disciplineDocCache.set(disciplineId, entry);
+      return entry;
+    }
+
+    const missing = { found: false, path: "", content: "" };
+    state.disciplineDocCache.set(disciplineId, missing);
+    return missing;
+  }
+
+  function extractFrontmatterBody(markdown) {
+    const text = String(markdown || "");
+    if (!text.startsWith("---")) return text;
+    const end = text.indexOf("---", 3);
+    if (end === -1) return text;
+    return text.slice(end + 3).trim();
+  }
+
+  function renderMarkdownSafe(markdown) {
+    const cleanInput = extractFrontmatterBody(markdown);
+    if (global.marked?.parse) {
+      const html = global.marked.parse(cleanInput);
+      if (global.DOMPurify?.sanitize) return global.DOMPurify.sanitize(html);
+      return html;
+    }
+    return `<pre>${escapeHtml(cleanInput)}</pre>`;
+  }
+
+  function preprocessKnowledgeMarkdown(markdown) {
+    let content = String(markdown || "");
+    content = content.replace(/\(([^)]+)\[([^\]]+)\]\)/g, "[$1]($2)");
+    content = content.replace(/\[\[([^\]]+)\]\]/g, (_, rawInner) => {
+      const inner = String(rawInner || "").trim();
+      if (!inner) return _;
+      const parts = inner.split("|").map((p) => p.trim()).filter(Boolean);
+      if (parts.length === 0) return _;
+      if (parts.length === 1) return `<span class="ghoul-wikilink">${escapeHtml(parts[0])}</span>`;
+
+      const first = parts[0];
+      const second = parts[1];
+      const looksLikePath = (value) => /[\\/]/.test(value) || /\.md$/i.test(value);
+      let label = first;
+      if (looksLikePath(first) && !looksLikePath(second)) label = second;
+      return `<span class="ghoul-wikilink">${escapeHtml(label)}</span>`;
+    });
+    return content;
+  }
+
+  async function openKnowledgeFileInGhoulModal(filePath, titleText) {
+    const overlay = document.getElementById("ghoul-modal-overlay");
+    const titleEl = document.getElementById("ghoul-modal-title");
+    const bodyEl = document.getElementById("ghoul-markdown-body");
+    if (!overlay || !titleEl || !bodyEl) return false;
+
+    overlay.classList.add("active");
+    titleEl.textContent = titleText || "Tu ghoul sabe esto:";
+    bodyEl.innerHTML = "<p>Cargando...</p>";
+
+    const base = getKnowledgeBaseBasePath();
+    const normalized = String(filePath || "").replace(/^\/+/, "");
+    const url = `${base}knowledge_base/${normalized}`;
+    const text = await tryFetchText(url);
+    if (!text) {
+      bodyEl.innerHTML = "<p>No se pudo cargar la referencia.</p>";
+      return false;
+    }
+
+    const processed = preprocessKnowledgeMarkdown(text);
+    bodyEl.innerHTML = renderMarkdownSafe(processed);
+
+    const links = bodyEl.querySelectorAll("a[href]");
+    links.forEach((link) => {
+      const href = link.getAttribute("href");
+      if (!href || (!href.startsWith("/") && !href.endsWith(".md"))) return;
+      link.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const target = href.startsWith("/") ? href.slice(1) : href;
+        await openKnowledgeFileInGhoulModal(target, titleText || "Tu ghoul sabe esto:");
+      });
+    });
+
+    return true;
+  }
+
+  async function openDisciplineDocModal({ disciplineId, disciplineData }) {
+    const doc = await resolveDisciplineDoc(disciplineId, disciplineData);
+    if (!doc.found) return;
+    await openKnowledgeFileInGhoulModal(
+      doc.path.replace(/^.*knowledge_base\//, ""),
+      "Tu ghoul sabe esto:"
+    );
+  }
+
+  async function hydrateDisciplineDocAction(popover, { disciplineId, disciplineData }) {
+    const actions = popover.querySelector(".discipline-level-popover-actions");
+    if (!actions) return;
+
+    const doc = await resolveDisciplineDoc(disciplineId, disciplineData);
+    if (!doc.found) return;
+    if (!state.activeLevelPopover || state.activeLevelPopover !== popover) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-icon discipline-doc-btn";
+    btn.title = "Abrir referencia completa";
+    btn.setAttribute("aria-label", "Abrir referencia completa de la disciplina");
+    btn.innerHTML = '<i data-lucide="book-open"></i>';
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openDisciplineDocModal({ disciplineId, disciplineData });
+    });
+    actions.appendChild(btn);
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [btn] });
+    }
+  }
+
+  function getFieldMetaById(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return null;
+    const rawLabel = input.getAttribute("name") || "";
+    const label = capitalizeFirstLetter(rawLabel);
+    const value = parseInt(input.value, 10) || 0;
+    return { id: fieldId, label, value };
+  }
+
+  function resolveRollPools(rollConfig) {
+    const poolItems = Array.isArray(rollConfig?.pool) ? rollConfig.pool : [];
+    if (poolItems.length === 0) return { pool1: null, pool2: null };
+
+    const pool1Item = poolItems[0] || null;
+    const pool2Item = poolItems[1] || null;
+    const pool1 = pool1Item?.id ? getFieldMetaById(pool1Item.id) : null;
+    const pool2 = pool2Item?.id ? getFieldMetaById(pool2Item.id) : null;
+
+    return { pool1, pool2 };
+  }
+
+  function resolveRollDifficultyMeta(rollConfig) {
+    const variableLabel = String(rollConfig?.difficulty_variable || "").trim();
+    if (variableLabel) {
+      return { mode: "variable", value: null, variableLabel };
+    }
+
+    const rawDifficulty = rollConfig?.difficulty;
+    if (String(rawDifficulty).toLowerCase() === "variable") {
+      return { mode: "variable", value: null, variableLabel: "Variable" };
+    }
+
+    if (typeof rawDifficulty === "number" && Number.isFinite(rawDifficulty)) {
+      return { mode: "fixed", value: rawDifficulty, variableLabel: "" };
+    }
+
+    // If roll exists but doesn't declare a difficulty, treat it as variable.
+    return { mode: "variable", value: null, variableLabel: "" };
+  }
+
+  async function resolveDifficultyForPowerRoll(rollConfig, contextLabel) {
+    const diffMeta = resolveRollDifficultyMeta(rollConfig);
+    if (diffMeta.mode === "fixed") return diffMeta.value;
+    if (!deps.requestDifficulty) return null;
+
+    const message = diffMeta.variableLabel
+      ? `${contextLabel}: ${diffMeta.variableLabel}.`
+      : `${contextLabel}: ingresa la dificultad.`;
+    const value = await deps.requestDifficulty({
+      title: "Dificultad variable",
+      message,
+      defaultValue: 6,
+      min: 2,
+      max: 10,
+      confirmLabel: "Aplicar",
+    });
+    return Number.isFinite(value) ? value : null;
+  }
+
+  async function applyRollToDiceLauncher(rollConfig, contextLabel) {
+    const pools = resolveRollPools(rollConfig);
+    if (!pools.pool1 && !pools.pool2) return false;
+
+    const pool1El = document.querySelector("#dicePool1");
+    const pool2El = document.querySelector("#dicePool2");
+    const pool1LabelEl = document.querySelector("#dicePool1Label");
+    const pool2LabelEl = document.querySelector("#dicePool2Label");
+    const diffEl = document.querySelector("#difficulty");
+    if (!pool1El || !pool2El || !pool1LabelEl || !pool2LabelEl || !diffEl) return false;
+
+    let pool1Value = pools.pool1 ? pools.pool1.value : 0;
+    let pool1Label = pools.pool1 ? pools.pool1.label : "";
+    let pool2Value = pools.pool2 ? pools.pool2.value : 0;
+    const pool2Label = pools.pool2 ? pools.pool2.label : "";
+
+    // Match roller behavior for physical attributes: include temp boost and passive discipline bonus.
+    if (pools.pool1?.id) {
+      const attrName = pools.pool1.id.replace("-value", "");
+      const boostInput = document.getElementById(
+        `temp${attrName.charAt(0).toUpperCase()}${attrName.slice(1)}`
+      );
+      const tempBoost = boostInput ? parseInt(boostInput.value, 10) || 0 : 0;
+      pool1Value += tempBoost;
+
+      const physBonus = getPhysicalDisciplineBonus(attrName);
+      if (physBonus) {
+        if (physBonus.id === 5) {
+          if (physBonus.level > 0) {
+            pool1Value += physBonus.level;
+            pool1Label += `+${physBonus.shortName}`;
+          }
+        } else if (!state.activatedDisciplines.has(physBonus.id)) {
+          pool1Value += physBonus.level;
+          pool1Label += `+${physBonus.shortName}`;
+        }
+      }
+    }
+
+    pool1El.value = String(pool1Value);
+    pool1LabelEl.innerHTML = pool1Label;
+    pool2El.value = String(pool2Value);
+    pool2LabelEl.innerHTML = pool2Label;
+
+    const difficultyValue = await resolveDifficultyForPowerRoll(
+      rollConfig,
+      contextLabel || "Tirada"
+    );
+    if (!Number.isFinite(difficultyValue)) return false;
+    diffEl.value = String(difficultyValue);
+    updateFinalPoolSize();
+
+    if (contextLabel && global.ABNSheetDiceSystem?.setRollContext) {
+      global.ABNSheetDiceSystem.setRollContext(contextLabel);
+    }
+
+    return true;
+  }
+
+  function buildRollSummary(rollConfig) {
+    const { pool1, pool2 } = resolveRollPools(rollConfig);
+    const parts = [];
+    if (pool1?.label) parts.push(pool1.label);
+    if (pool2?.label) parts.push(pool2.label);
+    const diffMeta = resolveRollDifficultyMeta(rollConfig);
+    const diffLabel =
+      diffMeta.mode === "variable"
+        ? `variable${diffMeta.variableLabel ? ` (${diffMeta.variableLabel})` : ""}`
+        : String(diffMeta.value);
+    if (parts.length === 0) return null;
+    return `${parts.join(" + ")} · dif ${diffLabel}`;
+  }
+
+  function closeDisciplineLevelPopover() {
+    if (!state.activeLevelPopover) return;
+    state.activeLevelPopover.remove();
+    state.activeLevelPopover = null;
+  }
+
+  function positionDisciplineLevelPopover(popoverEl, anchorEl) {
+    if (!popoverEl || !anchorEl || !document.body.contains(popoverEl)) return;
+    const anchorRect = anchorEl.getBoundingClientRect();
+    const popRect = popoverEl.getBoundingClientRect();
+
+    const margin = 10;
+    let left =
+      window.scrollX + anchorRect.left + anchorRect.width / 2 - popRect.width / 2;
+    const minLeft = window.scrollX + margin;
+    const maxLeft = window.scrollX + window.innerWidth - popRect.width - margin;
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+
+    let top = window.scrollY + anchorRect.bottom + 8;
+    const bottomOverflow = top + popRect.height - (window.scrollY + window.innerHeight);
+    if (bottomOverflow > 0) {
+      top = window.scrollY + anchorRect.top - popRect.height - 8;
+    }
+    if (top < window.scrollY + margin) {
+      top = window.scrollY + margin;
+    }
+
+    popoverEl.style.left = `${Math.round(left)}px`;
+    popoverEl.style.top = `${Math.round(top)}px`;
+  }
+
+  function renderDisciplineLevelContent({ disc, clickedLevel, power }) {
+    const disciplineName =
+      disc?.name?.es || disc?.name?.en || getDisciplineName(disc?.id) || "Disciplina";
+    const disciplineDescription =
+      disc?.description?.es || disc?.description?.en || "Sin descripción disponible.";
+
+    if (!power) {
+      return `
+        <div class="discipline-level-popover-head">
+          <div class="discipline-level-popover-head-row">
+            <h4>${escapeHtml(disciplineName)}</h4>
+            <div class="discipline-level-popover-actions"></div>
+          </div>
+        </div>
+        <p class="discipline-level-popover-discipline-desc">${escapeHtml(disciplineDescription)}</p>
+        <div class="discipline-level-popover-power">
+          <p class="discipline-level-popover-level">Nivel ${clickedLevel}</p>
+          <p class="discipline-level-popover-empty">No hay poder cargado para este nivel.</p>
+        </div>
+      `;
+    }
+
+    const powerName = power?.name?.es || power?.name?.en || "Poder";
+    const powerDescription =
+      power?.description?.es || power?.description?.en || "Sin descripción.";
+    const powerSystem = power?.system?.es || power?.system?.en || "Sin sistema.";
+    const rollSummary = buildRollSummary(power?.roll);
+    const hasRoll = !!rollSummary;
+    const dotsHtml = Array.from({ length: 5 }, (_, idx) => {
+      const level = idx + 1;
+      const filled = level <= clickedLevel ? " filled" : "";
+      return `<span class="discipline-level-power-dot${filled}" aria-hidden="true"></span>`;
+    }).join("");
+
+    return `
+      <div class="discipline-level-popover-head">
+        <div class="discipline-level-popover-head-row">
+          <h4>${escapeHtml(disciplineName)}</h4>
+          <div class="discipline-level-popover-actions"></div>
+        </div>
+      </div>
+      <p class="discipline-level-popover-discipline-desc">${escapeHtml(disciplineDescription)}</p>
+      <div class="discipline-level-popover-power">
+        <div class="discipline-level-power-head">
+          <h5>${escapeHtml(powerName)}</h5>
+          <div class="discipline-level-power-dots" aria-label="Nivel ${clickedLevel} de 5">${dotsHtml}</div>
+        </div>
+        <p>${escapeHtml(powerDescription)}</p>
+        <div class="discipline-level-popover-system-box">
+          <p class="discipline-level-popover-system-label">Sistema</p>
+          <p class="discipline-level-popover-system">${escapeHtml(powerSystem)}</p>
+        </div>
+        ${
+          hasRoll
+            ? `<p class="discipline-level-roll-summary">${escapeHtml(rollSummary)}</p>`
+            : ""
+        }
+      </div>
+    `;
+  }
+
+  async function showDisciplineLevelPopover({ anchorEl, disciplineId, clickedLevel }) {
+    closeDisciplineLevelPopover();
+
+    const popover = document.createElement("div");
+    popover.className = "discipline-level-popover";
+    popover.innerHTML = "<p class=\"discipline-level-popover-loading\">Cargando…</p>";
+    document.body.appendChild(popover);
+    state.activeLevelPopover = popover;
+    positionDisciplineLevelPopover(popover, anchorEl);
+
+    let levelsById = null;
+    try {
+      levelsById = await ensureDisciplineLevelsLoaded();
+    } catch (_error) {
+      levelsById = new Map();
+    }
+    if (!state.activeLevelPopover || state.activeLevelPopover !== popover) return;
+
+    const discipline = levelsById.get(disciplineId);
+    const power = getPowerForLevel(discipline?.powers, clickedLevel);
+    const powerName = power?.name?.es || power?.name?.en || "";
+    popover.innerHTML = renderDisciplineLevelContent({
+      disc: discipline,
+      clickedLevel,
+      power,
+    });
+    positionDisciplineLevelPopover(popover, anchorEl);
+    hydrateDisciplineDocAction(popover, {
+      disciplineId,
+      disciplineData: discipline,
+    });
+
+    if (power?.roll) {
+      const systemBox = popover.querySelector(".discipline-level-popover-system-box");
+      if (systemBox) {
+        systemBox.classList.add("is-clickable");
+        systemBox.title = "Cargar tirada en el lanzador";
+        systemBox.setAttribute("role", "button");
+        systemBox.setAttribute("tabindex", "0");
+
+        const runLoad = async () => {
+          const context =
+            powerName && discipline?.name?.es
+              ? `${discipline.name.es}: ${powerName}`
+              : powerName || discipline?.name?.es || "Disciplina";
+          const loaded = await applyRollToDiceLauncher(power.roll, context);
+          if (!loaded) return;
+          closeDisciplineLevelPopover();
+        };
+
+        systemBox.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          await runLoad();
+        });
+        systemBox.addEventListener("keydown", async (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          await runLoad();
+        });
+      }
+    }
+
+    const onPointerDown = (event) => {
+      const target = event.target;
+      if (popover.contains(target)) return;
+      if (anchorEl.contains(target)) return;
+      closeDisciplineLevelPopover();
+      cleanup();
+    };
+
+    const onEscape = (event) => {
+      if (event.key !== "Escape") return;
+      closeDisciplineLevelPopover();
+      cleanup();
+    };
+
+    const onViewportChange = () => {
+      closeDisciplineLevelPopover();
+      cleanup();
+    };
+
+    function cleanup() {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onEscape);
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("scroll", onViewportChange, true);
+    }
+
+    setTimeout(() => {
+      document.addEventListener("mousedown", onPointerDown);
+      document.addEventListener("keydown", onEscape);
+      window.addEventListener("resize", onViewportChange);
+      window.addEventListener("scroll", onViewportChange, true);
+    }, 0);
   }
 
   function normalizeForMatch(str) {
@@ -199,6 +789,8 @@
   }
 
   function renderDisciplineList() {
+    closeDisciplineLevelPopover();
+
     const container = document.getElementById("discipline-list");
     if (!container) return;
     container.innerHTML = "";
@@ -252,7 +844,7 @@
         }
 
         if (hasSendas) {
-          nameAreaHTML += `<button class="discipline-senda-btn" type="button" data-disc-id="${disc.id}" title="Gestionar sendas de ${name}">
+          nameAreaHTML += `<button class="discipline-senda-btn mode-edit-only" type="button" data-disc-id="${disc.id}" title="Gestionar sendas de ${name}">
              <iconify-icon icon="gravity-ui:branches-down" width="14" aria-hidden="true"></iconify-icon>
            </button>`;
         }
@@ -264,8 +856,10 @@
       row.draggable = true;
       row.dataset.discIndex = String(index);
       row.innerHTML = `
-      <span class="drag-handle" title="Arrastrar para reordenar">⠿</span>
-      ${nameAreaHTML}
+      <div class="discipline-main">
+        <span class="drag-handle mode-edit-only" title="Arrastrar para reordenar">⠿</span>
+        ${nameAreaHTML}
+      </div>
       <div class="rating discipline-rating" data-rating="${disc.level}">
         <button class="dot" type="button" data-value="1"></button>
         <button class="dot" type="button" data-value="2"></button>
@@ -288,6 +882,10 @@
         { once: false }
       );
       row.addEventListener("dragstart", (event) => {
+        if (isPlayMode()) {
+          event.preventDefault();
+          return;
+        }
         if (!canDrag) {
           event.preventDefault();
           return;
@@ -323,6 +921,7 @@
       });
       row.addEventListener("drop", (event) => {
         event.preventDefault();
+        if (isPlayMode()) return;
         if (state.dragState.type !== "discipline") return;
         const fromIndex = state.dragState.index;
         const rect = row.getBoundingClientRect();
@@ -346,8 +945,18 @@
       });
 
       dots.forEach((dot) => {
-        dot.addEventListener("click", () => {
+        dot.addEventListener("click", async (event) => {
           const clickedLevel = Number(dot.dataset.value);
+          if (isPlayMode()) {
+            event.stopPropagation();
+            await showDisciplineLevelPopover({
+              anchorEl: dot,
+              disciplineId: disc.id,
+              clickedLevel,
+            });
+            return;
+          }
+
           const newLevel = clickedLevel === disc.level ? clickedLevel - 1 : clickedLevel;
           disc.level = newLevel;
           if (disc.id === 5) {
@@ -427,6 +1036,7 @@
       if (sendaBtn) {
         sendaBtn.addEventListener("click", (event) => {
           event.stopPropagation();
+          if (isPlayMode()) return;
           const discId = Number(sendaBtn.dataset.discId);
           if (typeof state.openSendaModal === "function") state.openSendaModal(discId);
         });
@@ -448,8 +1058,10 @@
           sendaRow.dataset.sendaGlobalIndex = String(sendaGlobalIndex);
           sendaRow.dataset.disciplineId = String(disc.id);
           sendaRow.innerHTML = `
-          <span class="drag-handle" title="Arrastrar para reordenar">⠿</span>
-          <span class="senda-name" title="Click para agregar al tirador">${sendaName}</span>
+          <div class="senda-main">
+            <span class="drag-handle mode-edit-only" title="Arrastrar para reordenar">⠿</span>
+            <span class="senda-name" title="Click para agregar al tirador">${sendaName}</span>
+          </div>
           <div class="rating senda-rating" data-rating="${senda.level}">
             <button class="dot" type="button" data-value="1"></button>
             <button class="dot" type="button" data-value="2"></button>
@@ -472,6 +1084,10 @@
             { once: false }
           );
           sendaRow.addEventListener("dragstart", (event) => {
+            if (isPlayMode()) {
+              event.preventDefault();
+              return;
+            }
             if (!sendaCanDrag) {
               event.preventDefault();
               return;
@@ -518,6 +1134,7 @@
           sendaRow.addEventListener("drop", (event) => {
             event.preventDefault();
             event.stopPropagation();
+            if (isPlayMode()) return;
             if (state.dragState.type !== "senda" || state.dragState.disciplineId !== disc.id) {
               return;
             }
@@ -540,6 +1157,7 @@
 
           sendaDots.forEach((dot) => {
             dot.addEventListener("click", () => {
+              if (isPlayMode()) return;
               const clickedLevel = Number(dot.dataset.value);
               const newLevel = clickedLevel === senda.level ? clickedLevel - 1 : clickedLevel;
               senda.level = newLevel;
@@ -764,8 +1382,14 @@
       item.innerHTML = `
       <div class="discipline-power-row">
         <button class="discipline-power-title-btn" type="button">${power.name}</button>
-        <button class="discipline-power-edit-btn" type="button" aria-label="Editar poder" title="Editar poder">✎</button>
-        <button class="discipline-power-delete-btn" type="button" aria-label="Eliminar poder">✕</button>
+        <div class="row-action-buttons mode-edit-only">
+          <button class="btn-icon discipline-power-edit-btn" type="button" aria-label="Editar poder" title="Editar poder">
+            <i data-lucide="pencil"></i>
+          </button>
+          <button class="btn-icon btn-icon--danger discipline-power-delete-btn" type="button" aria-label="Eliminar poder" title="Eliminar poder">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
       </div>
       <div class="discipline-power-description">${power.description}</div>
     `;
@@ -782,6 +1406,7 @@
       });
 
       editBtn.addEventListener("click", (event) => {
+        if (isPlayMode()) return;
         event.stopPropagation();
         const isEditing = item.classList.contains("editing");
         if (isEditing) {
@@ -837,6 +1462,7 @@
       });
 
       deleteBtn.addEventListener("click", () => {
+        if (isPlayMode()) return;
         state.disciplinePowers.splice(index, 1);
         renderPowersList();
         persist();
@@ -844,6 +1470,10 @@
 
       list.appendChild(item);
     });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [list] });
+    }
   }
 
   function initDisciplinePowers() {
@@ -987,6 +1617,9 @@
     initDisciplineRepoModal();
     initSendaRepoModal();
     initDisciplinePowers();
+    window.addEventListener("abn-sheet-mode-change", () => {
+      closeDisciplineLevelPopover();
+    });
   }
 
   global.ABNSheetDisciplines = {
