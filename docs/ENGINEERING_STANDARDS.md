@@ -133,3 +133,15 @@ Regla de promoción:
   - Si `roll.difficulty` no es numérico, se considera variable.
   - Si no hay metadata de dificultad en `roll`, el fallback es variable (no `6` fijo).
 - El prompt de dificultad variable debe ser reutilizable (módulo compartido dentro de la feature) y no duplicar implementación en cada subsistema.
+
+## 9) Encounter Domain Rules
+
+Referencia detallada: `docs/ENCOUNTERS_RULES.md`
+
+Reglas base:
+
+- Los encuentros están ligados a una Crónica activa (`currentChronicleId`), no se listan globalmente fuera de contexto.
+- Los permisos de gestión (`create/update/status/archive`) dependen del rol en Crónica (narrador/creador), no de admin global.
+- Los jugadores solo acceden a encuentros publicados (`in_game`) y controlan únicamente sus PJs asignados.
+- Templates de PNJ, por defecto, son de owner (`user_id`) salvo implementación explícita de compartición.
+- El guardado de encuentro debe contemplar concurrencia (ideal: `updated_at` u otro mecanismo de control de versión).

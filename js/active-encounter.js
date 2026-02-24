@@ -5,7 +5,11 @@
     templates: [],
     characterSheets: [],
     user: null,
-    isAdmin: false,
+    currentPlayer: null,
+    canManageEncounter: false,
+    canViewEncounter: false,
+    encounterHasUpdatedAt: false,
+    encounterUpdatedAt: null,
     selectedInstanceId: null,
     selectedTokenId: null,
     isApplyingRemoteUpdate: false,
@@ -100,10 +104,12 @@
     const {
       data: { session },
     } = await window.abnGetSession();
-    if (session) {
-      state.user = session.user;
-      state.isAdmin = await fetchIsAdmin(session.user.id);
+    if (!session) {
+      window.location.hash = "welcome";
+      return;
     }
+    state.user = session.user;
+    state.currentPlayer = await fetchCurrentPlayerByUserId(session.user.id);
 
     // DOM Elements
     els.name = document.getElementById("ae-encounter-name");
@@ -129,9 +135,10 @@
 
     setupListeners();
 
-    await Promise.all([loadTemplates(), loadCharacterSheets()]);
+    await loadCharacterSheets();
     const ok = await loadEncounterData();
     if (!ok) return;
+    await loadTemplates();
     setupRealtimeSubscription();
 
     // Init Map
@@ -146,7 +153,7 @@
     state.map.onTokenMove = async (id, x, y, oldX, oldY) => {
       const t = state.encounter.data.tokens.find((tk) => tk.id === id);
       if (t) {
-        if (state.isAdmin) {
+        if (canEditEncounter()) {
           t.x = x;
           t.y = y;
           saveEncounter();
@@ -187,22 +194,21 @@
     });
   }
 
-  async function fetchIsAdmin(userId) {
-    if (!userId) return false;
+  async function fetchCurrentPlayerByUserId(userId) {
+    if (!userId) return null;
     const { data, error } = await supabase
       .from("players")
-      .select("is_admin")
+      .select("id, name")
       .eq("user_id", userId)
       .maybeSingle();
     if (error) {
-      console.warn("No se pudo resolver rol admin:", error.message);
-      return false;
+      console.warn("No se pudo resolver jugador actual:", error.message);
+      return null;
     }
-    return !!data?.is_admin;
+    return data || null;
   }
 
   function normalizeEncounterStatus(status) {
-    if (status === "active") return ENCOUNTER_STATUS.IN_GAME;
     if (
       status === ENCOUNTER_STATUS.WIP ||
       status === ENCOUNTER_STATUS.READY ||
@@ -219,12 +225,12 @@
   }
 
   function canEditEncounter() {
-    return state.isAdmin;
+    return state.canManageEncounter;
   }
 
   function canCurrentUserControlToken(token) {
     if (!token || !state.encounter?.data) return false;
-    if (state.isAdmin) return true;
+    if (canEditEncounter()) return true;
 
     const status = normalizeEncounterStatus(state.encounter.status);
     if (status !== ENCOUNTER_STATUS.IN_GAME) return false;
@@ -455,6 +461,9 @@
     if (!updated || !state.encounter) return;
     state.encounter.status = normalizeEncounterStatus(updated.status);
     state.encounter.data = updated.data || state.encounter.data;
+    if (state.encounterHasUpdatedAt && updated.updated_at) {
+      state.encounterUpdatedAt = updated.updated_at;
+    }
     state.lastEncounterSyncKey = buildEncounterSyncKey(updated);
     sanitizeEncounterTokens();
     ensureActiveInstance();
@@ -476,7 +485,11 @@
 
       const { data, error } = await supabase
         .from("encounters")
-        .select("id, status, data")
+        .select(
+          state.encounterHasUpdatedAt
+            ? "id, status, data, updated_at"
+            : "id, status, data",
+        )
         .eq("id", state.encounterId)
         .maybeSingle();
       if (error || !data) return;
@@ -513,7 +526,7 @@
 
   function requireAdminAction() {
     if (canEditEncounter()) return true;
-    alert("Solo administradores pueden realizar esta acción.");
+    alert("Solo el narrador de la crónica puede realizar esta acción.");
     return false;
   }
 
@@ -658,6 +671,7 @@
       .from("templates")
       .select("*")
       .eq("type", "npc")
+      .eq("user_id", state.user.id)
       .order("name");
     if (data) {
       state.templates = data;
@@ -685,12 +699,23 @@
       return false;
     }
     state.encounter = data;
+    state.encounterHasUpdatedAt = Object.prototype.hasOwnProperty.call(
+      data,
+      "updated_at",
+    );
+    state.encounterUpdatedAt = state.encounterHasUpdatedAt
+      ? data.updated_at || null
+      : null;
     state.encounter.status = normalizeEncounterStatus(state.encounter.status);
     state.lastEncounterSyncKey = buildEncounterSyncKey(state.encounter);
 
-    // Legacy migration: active -> in_game
-    if (data.status === "active" && canEditEncounter()) {
-      updateEncounterStatus(ENCOUNTER_STATUS.IN_GAME, { silent: true });
+    const access = await resolveEncounterAccess(state.encounter);
+    state.canManageEncounter = access.canManage;
+    state.canViewEncounter = access.canView;
+    if (!state.canViewEncounter) {
+      alert("No tienes acceso a este encuentro.");
+      window.location.hash = "combat-tracker";
+      return false;
     }
 
     if (
@@ -753,6 +778,40 @@
       saveEncounter();
     }
     return true;
+  }
+
+  async function resolveEncounterAccess(encounter) {
+    const none = { canManage: false, canView: false };
+    if (!encounter || !state.currentPlayer) return none;
+
+    const playerId = state.currentPlayer.id;
+    const encounterOwnerId = encounter.user_id || null;
+
+    if (!encounter.chronicle_id) {
+      const canLegacy = encounterOwnerId === state.user?.id;
+      return { canManage: canLegacy, canView: canLegacy };
+    }
+
+    const [chronicleRes, participationRes] = await Promise.all([
+      supabase
+        .from("chronicles")
+        .select("id, creator_id")
+        .eq("id", encounter.chronicle_id)
+        .maybeSingle(),
+      supabase
+        .from("chronicle_participants")
+        .select("role")
+        .eq("chronicle_id", encounter.chronicle_id)
+        .eq("player_id", playerId)
+        .maybeSingle(),
+    ]);
+
+    const creatorId = chronicleRes.data?.creator_id || null;
+    const role = participationRes.data?.role || null;
+    const isNarrator = role === "narrator" || creatorId === playerId;
+    const isParticipant = Boolean(role) || creatorId === playerId;
+
+    return { canManage: isNarrator, canView: isParticipant };
   }
 
   async function updateEncounterStatus(nextStatus, options = {}) {
@@ -2210,10 +2269,44 @@
     };
 
     state.isApplyingRemoteUpdate = true;
-    const { error } = await supabase
-      .from("encounters")
-      .update({ data: cleanData })
-      .eq("id", state.encounterId);
+    let error = null;
+
+    if (state.encounterHasUpdatedAt) {
+      let query = supabase
+        .from("encounters")
+        .update({ data: cleanData })
+        .eq("id", state.encounterId);
+
+      if (state.encounterUpdatedAt) {
+        query = query.eq("updated_at", state.encounterUpdatedAt);
+      }
+
+      const { data, error: updateErr } = await query
+        .select("updated_at")
+        .maybeSingle();
+      error = updateErr || null;
+
+      if (!error) {
+        if (state.encounterUpdatedAt && !data) {
+          alert(
+            "Otro usuario actualizó este encuentro antes. Refresca y vuelve a intentar.",
+          );
+          await loadEncounterData();
+          btn.textContent = prevText;
+          state.isApplyingRemoteUpdate = false;
+          return;
+        }
+        if (data?.updated_at) {
+          state.encounterUpdatedAt = data.updated_at;
+        }
+      }
+    } else {
+      const { error: updateErr } = await supabase
+        .from("encounters")
+        .update({ data: cleanData })
+        .eq("id", state.encounterId);
+      error = updateErr || null;
+    }
 
     if (error) alert("Error: " + error.message);
 

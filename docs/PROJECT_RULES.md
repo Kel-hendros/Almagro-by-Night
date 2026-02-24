@@ -1,6 +1,7 @@
 # Project Rules & Guidelines
 
 See also: `docs/ENGINEERING_STANDARDS.md` (source of truth for architecture + UI standards).
+See also: `docs/ENCOUNTERS_RULES.md` (reglas funcionales/técnicas de Encuentros en Crónicas).
 
 ## Code Style
 
@@ -14,3 +15,7 @@ See also: `docs/ENGINEERING_STANDARDS.md` (source of truth for architecture + UI
 2. **Clean Cleanup**: When removing code, ensure all references (variables, listeners) are also removed or updated.
 
 ## Specific Directives
+
+1. **Encounters Scope**: encuentros siempre se resuelven con contexto de Crónica (`currentChronicleId`). No listar encuentros globales fuera de contexto.
+2. **Role-based Permissions**: edición de encuentros se define por rol en Crónica (narrador/creador), no por admin global.
+3. **Template Ownership**: templates de PNJ se filtran por owner (`user_id`) salvo que exista una regla explícita de compartición.

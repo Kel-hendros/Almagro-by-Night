@@ -5,7 +5,10 @@
     templates: [],
     encounters: [],
     user: null,
-    isAdmin: false,
+    currentPlayer: null,
+    currentChronicleId: null,
+    canManageChronicleEncounters: false,
+    canViewChronicleEncounters: false,
     templateEdit: { data: {}, type: "npc", tags: [] },
   };
 
@@ -36,17 +39,18 @@
       return;
     }
     state.user = session.user;
-    state.isAdmin = await fetchIsAdmin(session.user.id);
+    state.currentChronicleId =
+      localStorage.getItem("currentChronicleId") || null;
+    state.currentPlayer = await fetchCurrentPlayerByUserId(session.user.id);
 
     // Chronicle breadcrumb
-    const chronicleId = localStorage.getItem("currentChronicleId");
-    if (chronicleId) {
+    if (state.currentChronicleId) {
       const breadcrumb = document.getElementById("combat-breadcrumb");
       if (breadcrumb) {
         const { data: chron } = await supabase
           .from("chronicles")
           .select("name")
-          .eq("id", chronicleId)
+          .eq("id", state.currentChronicleId)
           .maybeSingle();
         if (chron) {
           breadcrumb.innerHTML = `<a href="#chronicle">${escapeHtml(chron.name)}</a> &rsaquo; Control de Combate`;
@@ -55,37 +59,76 @@
       }
     }
 
+    const access = await resolveChronicleAccess();
+    state.canManageChronicleEncounters = access.canManage;
+    state.canViewChronicleEncounters = access.canView;
+
     setupTabs();
     setupModalListeners();
     setupEncounterListeners();
-    updateRoleUI();
+    updateRoleUI(access);
 
     await loadTemplates();
     await loadEncounters();
   }
 
-  async function fetchIsAdmin(userId) {
-    if (!userId) return false;
+  async function fetchCurrentPlayerByUserId(userId) {
+    if (!userId) return null;
     const { data, error } = await supabase
       .from("players")
-      .select("is_admin")
+      .select("id, name, is_admin")
       .eq("user_id", userId)
       .maybeSingle();
     if (error) {
-      console.warn("No se pudo resolver rol admin:", error.message);
-      return false;
+      console.warn("No se pudo resolver jugador actual:", error.message);
+      return null;
     }
-    return !!data?.is_admin;
+    return data || null;
   }
 
-  function updateRoleUI() {
+  async function resolveChronicleAccess() {
+    const noAccess = { canManage: false, canView: false };
+    if (!state.currentPlayer || !state.currentChronicleId) return noAccess;
+
+    const playerId = state.currentPlayer.id;
+    const [chronicleRes, participationRes] = await Promise.all([
+      supabase
+        .from("chronicles")
+        .select("id, creator_id")
+        .eq("id", state.currentChronicleId)
+        .maybeSingle(),
+      supabase
+        .from("chronicle_participants")
+        .select("role")
+        .eq("chronicle_id", state.currentChronicleId)
+        .eq("player_id", playerId)
+        .maybeSingle(),
+    ]);
+
+    const creatorId = chronicleRes.data?.creator_id || null;
+    const role = participationRes.data?.role || null;
+    const isNarrator = role === "narrator" || creatorId === playerId;
+    const isParticipant = Boolean(role) || creatorId === playerId;
+
+    return {
+      canManage: isNarrator,
+      canView: isParticipant,
+    };
+  }
+
+  function updateRoleUI(access) {
     const createEncounterBtn = document.getElementById("btn-create-encounter");
     const createTemplateBtn = document.getElementById("btn-create-template");
+    const missingChronicleMsg = document.getElementById("encounters-list");
 
-    if (!state.isAdmin) {
-      if (createEncounterBtn) createEncounterBtn.style.display = "none";
-      if (createTemplateBtn) createTemplateBtn.style.display = "none";
+    if (!state.currentChronicleId && missingChronicleMsg) {
+      missingChronicleMsg.innerHTML =
+        "<p>Selecciona una crónica para gestionar encuentros.</p>";
     }
+
+    if (createEncounterBtn)
+      createEncounterBtn.style.display = access.canManage ? "" : "none";
+    if (createTemplateBtn) createTemplateBtn.style.display = "";
   }
 
   // --- Tab Switching ---
@@ -112,10 +155,9 @@
 
   // --- DATA: TEMPLATES ---
   async function loadTemplates() {
-    if (!state.isAdmin) {
+    if (!state.currentPlayer?.id) {
       state.templates = [];
-      lists.templates.innerHTML =
-        "<p>Solo administradores pueden gestionar plantillas.</p>";
+      lists.templates.innerHTML = "<p>No se pudo resolver tu usuario.</p>";
       return;
     }
     lists.templates.innerHTML = "<p>Cargando...</p>";
@@ -123,6 +165,7 @@
       .from("templates")
       .select("*")
       .eq("type", "npc")
+      .eq("user_id", state.user.id)
       .order("name");
 
     if (error) {
@@ -194,7 +237,11 @@
   }
 
   async function deleteTemplate(id) {
-    const { error } = await supabase.from("templates").delete().eq("id", id);
+    const { error } = await supabase
+      .from("templates")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", state.user.id);
     if (error) {
       alert("Error al eliminar: " + error.message);
     } else {
@@ -439,7 +486,11 @@
 
     let error;
     if (id) {
-      const res = await supabase.from("templates").update(payload).eq("id", id);
+      const res = await supabase
+        .from("templates")
+        .update(payload)
+        .eq("id", id)
+        .eq("user_id", state.user.id);
       error = res.error;
     } else {
       const res = await supabase.from("templates").insert(payload);
@@ -463,13 +514,27 @@
       .neq("status", "archived")
       .order("created_at", { ascending: false });
 
-    const chronicleId = localStorage.getItem("currentChronicleId");
+    const chronicleId = state.currentChronicleId;
     if (chronicleId) {
       query = query.eq("chronicle_id", chronicleId);
     }
 
-    if (!state.isAdmin) {
-      query = query.in("status", ["in_game", "active"]);
+    if (!state.currentChronicleId) {
+      state.encounters = [];
+      lists.encounters.innerHTML =
+        "<p>Selecciona una crónica para ver encuentros.</p>";
+      return;
+    }
+
+    if (!state.canViewChronicleEncounters) {
+      state.encounters = [];
+      lists.encounters.innerHTML =
+        "<p>No tienes acceso a los encuentros de esta crónica.</p>";
+      return;
+    }
+
+    if (!state.canManageChronicleEncounters) {
+      query = query.in("status", ["in_game"]);
     }
 
     const { data, error } = await query;
@@ -502,6 +567,10 @@
   }
 
   async function changeEncounterStatus(encounterId, nextStatus) {
+    if (!state.canManageChronicleEncounters) {
+      alert("Solo el narrador de la crónica puede cambiar estados.");
+      return;
+    }
     const { error } = await supabase
       .from("encounters")
       .update({ status: nextStatus })
@@ -515,6 +584,10 @@
   }
 
   async function archiveEncounter(enc) {
+    if (!state.canManageChronicleEncounters) {
+      alert("Solo el narrador de la crónica puede archivar encuentros.");
+      return;
+    }
     if (
       !confirm(
         `¿Archivar "${enc.name}"? No aparecerá en la lista de encuentros activos.`
@@ -550,7 +623,9 @@
         enc.data?.round > 1 ? ` | Ronda ${enc.data.round}` : "";
       const status = normalizeEncounterStatus(enc.status);
       const statusLabel = formatEncounterStatus(status);
-      const actions = state.isAdmin ? getStatusActions(status) : [];
+      const actions = state.canManageChronicleEncounters
+        ? getStatusActions(status)
+        : [];
 
       let statusActionsHtml = "";
       if (actions.length > 0) {
@@ -602,8 +677,8 @@
   }
 
   async function createEncounter(name) {
-    if (!state.isAdmin) {
-      alert("Solo administradores pueden crear encuentros.");
+    if (!state.canManageChronicleEncounters) {
+      alert("Solo el narrador de la crónica puede crear encuentros.");
       return;
     }
     const payload = {
@@ -618,7 +693,7 @@
       },
     };
 
-    const activeChronicle = localStorage.getItem("currentChronicleId");
+    const activeChronicle = state.currentChronicleId;
     if (activeChronicle) {
       payload.chronicle_id = activeChronicle;
     }
@@ -637,8 +712,15 @@
   }
 
   function normalizeEncounterStatus(status) {
-    if (status === "active") return "in_game";
-    return status || "wip";
+    if (
+      status === "wip" ||
+      status === "ready" ||
+      status === "in_game" ||
+      status === "archived"
+    ) {
+      return status;
+    }
+    return "wip";
   }
 
   function formatEncounterStatus(status) {
