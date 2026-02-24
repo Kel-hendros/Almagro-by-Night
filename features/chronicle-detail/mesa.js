@@ -9,8 +9,6 @@
       "No hay encuentros todavía. Crea el primero para iniciar la mesa virtual.",
     emptyPlayer: "No hay encuentros disponibles en juego para tu rol.",
     defaultEncounterName: "Encuentro",
-    participantsSingular: "participante",
-    participantsPlural: "participantes",
     openEncounter: "Abrir encuentro",
     createPrompt: "Nombre del nuevo encuentro:",
     creating: "Creando...",
@@ -40,17 +38,6 @@
       archived: "Archivado",
     };
     return labels[normalized] || "WIP";
-  }
-
-  function encounterParticipantsCount(encounter) {
-    return encounter?.data?.instances?.length || 0;
-  }
-
-  function encounterParticipantsLabel(encounter) {
-    const count = encounterParticipantsCount(encounter);
-    const noun =
-      count === 1 ? TEXT.participantsSingular : TEXT.participantsPlural;
-    return `${count} ${noun}`;
   }
 
   function formatEncounterDate(isoDate) {
@@ -106,9 +93,7 @@
             )}</h4>
             <span class="cd-mesa-status ${status}">${encounterStatusLabel(status)}</span>
           </div>
-          <p class="cd-mesa-card-meta">${formatEncounterDate(encounter.created_at)} · ${encounterParticipantsLabel(
-            encounter
-          )}</p>
+          <p class="cd-mesa-card-meta">${formatEncounterDate(encounter.created_at)}</p>
           <div class="cd-mesa-card-actions">
             <button type="button" class="btn btn--primary cd-mesa-open-btn" data-encounter-id="${encounter.id}">
               ${TEXT.openEncounter}
