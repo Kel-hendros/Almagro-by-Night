@@ -15,8 +15,21 @@
     isApplyingRemoteUpdate: false,
     encounterSyncTimer: null,
     lastEncounterSyncKey: null,
+    backgroundPersistTimer: null,
     browserMode: null, // 'npc' | 'pc'
     browserActiveTags: [],
+    designAssets: [],
+    activeMapLayer: "entities",
+    map: null,
+    realtimeChannels: [],
+  };
+  const runtime = {
+    isBooted: false,
+    beforeUnloadHandler: null,
+    hashChangeHandler: null,
+    documentClickHandler: null,
+    documentKeydownHandler: null,
+    windowScrollHandler: null,
   };
 
   const els = {};
@@ -32,6 +45,50 @@
     [ENCOUNTER_STATUS.IN_GAME]: "En juego",
     [ENCOUNTER_STATUS.ARCHIVED]: "Archivado",
   };
+  const MAP_LAYER_LABELS = window.AEEncounterLayers?.LAYER_LABELS || {
+    background: "Fondo",
+    decor: "Decorado",
+    entities: "Entidades",
+  };
+  const MAP_LAYER_DEFAULTS = {
+    backgroundPath: null,
+    backgroundUrl: "",
+    preserveAspect: true,
+    x: 0,
+    y: 0,
+    widthCells: 20,
+    heightCells: 20,
+    opacity: 1,
+    showGrid: true,
+  };
+  const DESIGN_TOKEN_DEFAULTS = {
+    x: 0,
+    y: 0,
+    size: 1,
+    widthCells: null,
+    heightCells: null,
+    rotationDeg: 0,
+    fill: "#666",
+    opacity: 1,
+    layer: "underlay",
+    zIndex: 0,
+  };
+  const MAP_EFFECT_DEFAULTS = {
+    id: "",
+    type: "",
+    sourceTokenId: null,
+    sourceInstanceId: null,
+    radiusMeters: 0,
+    radiusCells: 0,
+    createdAt: null,
+  };
+  const encounterTurns = window.AEEncounterTurns;
+  let layersController = null;
+  let assetsService = null;
+  let browserController = null;
+  let drawerController = null;
+  let tokenActionsController = null;
+  let tokenContextMenuController = null;
 
   // --- Field mapping: character sheet flat keys → display names ---
   const PC_ATTR_MAP = {
@@ -92,13 +149,18 @@
   };
 
   async function init() {
+    if (!encounterTurns) {
+      alert("Error cargando módulo de turnos del encuentro.");
+      return false;
+    }
+
     const rawHash = window.location.hash.split("?")[1];
     const params = new URLSearchParams(rawHash);
     state.encounterId = params.get("id");
 
     if (!state.encounterId) {
       alert("No se especificó un encuentro ID.");
-      return;
+      return false;
     }
 
     const {
@@ -106,7 +168,7 @@
     } = await window.abnGetSession();
     if (!session) {
       window.location.hash = "welcome";
-      return;
+      return false;
     }
     state.user = session.user;
     state.currentPlayer = await fetchCurrentPlayerByUserId(session.user.id);
@@ -123,6 +185,25 @@
     els.browserSearch = document.getElementById("ae-browser-search");
     els.browserTags = document.getElementById("ae-browser-tags");
     els.browserGrid = document.getElementById("ae-browser-grid");
+    els.browserTokenOption = document.getElementById("ae-browser-token-option");
+    els.browserUploadAssetBtn = document.getElementById(
+      "btn-ae-browser-upload-asset",
+    );
+    els.browserUploadInput = document.getElementById("ae-browser-upload-input");
+    els.mapUploadBgInput = document.getElementById("ae-map-bg-input");
+    els.layerToolbar = document.getElementById("ae-layer-toolbar");
+    els.layerMenu = document.getElementById("ae-layer-menu");
+    els.layerMenuToggle = document.getElementById("btn-ae-layer-menu");
+    els.layerCurrentLabel = document.getElementById("ae-layer-current-label");
+    els.uploadOverlay = document.getElementById("ae-upload-overlay");
+    els.uploadMessage = document.getElementById("ae-upload-message");
+    els.drawerTabAssets = document.getElementById("btn-ae-tab-assets");
+    els.drawerTabAssetsPane = document.getElementById(
+      "ae-drawer-tab-assets-content",
+    );
+    els.listBackground = document.getElementById("ae-list-background");
+    els.listDecor = document.getElementById("ae-list-decor");
+    els.listEntities = document.getElementById("ae-list-entities");
 
     // Detail Modal Els
     els.modal = document.getElementById("ae-modal");
@@ -133,12 +214,82 @@
     els.modalHpText = document.getElementById("ae-modal-hp-text");
     els.modalNotes = document.getElementById("ae-modal-notes");
 
+    layersController = window.AEEncounterLayers?.createController?.({
+      state,
+      els,
+      getMap: () => state.map,
+    });
+    assetsService = window.AEEncounterAssets?.createService?.({
+      state,
+      supabase,
+      normalizeMapLayerData,
+      render,
+      saveEncounter,
+      canEditEncounter,
+      onBusyChange: setUploadBusy,
+    });
+    browserController = window.AEEncounterEntityBrowser?.createController?.({
+      state,
+      els,
+      canEditEncounter,
+      setActiveMapLayer: (...args) => setActiveMapLayer(...args),
+      loadDesignAssets: () => loadDesignAssets(),
+      addNPC: (...args) => addNPC(...args),
+      addPC: (...args) => addPC(...args),
+      addDesignTokenFromAsset: (...args) => addDesignTokenFromAsset(...args),
+      getEncounterAssetPublicUrl: (path) =>
+        assetsService?.getEncounterAssetPublicUrl(path) || "",
+    });
+    drawerController = window.AEEncounterDrawer?.createController?.({
+      state,
+      els,
+      canEditEncounter,
+      requireAdminAction,
+      setActiveMapLayer: (...args) => setActiveMapLayer(...args),
+      openBrowser: (...args) => browserController?.openBrowser(...args),
+      loadDesignAssets: () => loadDesignAssets(),
+      openModal: (...args) => openModal(...args),
+      requestBackgroundUpload: () => els.mapUploadBgInput?.click(),
+      removeEncounterBackground: () => removeEncounterBackground(),
+      getMap: () => state.map,
+    });
+    tokenActionsController = window.AEEncounterTokenActions?.createController?.({
+      state,
+      canEditEncounter,
+      canControlTokenById: (tokenId) => {
+        const token = (state.encounter?.data?.tokens || []).find(
+          (item) => item.id === tokenId,
+        );
+        return !!token && canCurrentUserControlToken(token);
+      },
+      render,
+      saveEncounter,
+    });
+    tokenContextMenuController =
+      window.AEEncounterTokenContextMenu?.createController?.({
+        state,
+        canEditEncounter,
+        getMap: () => state.map,
+        onOpenDetails: (tokenId) => openTokenDetailsFromContext(tokenId),
+        onUnsummonToken: (tokenId) => unsummonTokenFromContext(tokenId),
+        onRemoveToken: (tokenId) => tokenActionsController?.removeTokenById(tokenId),
+        onApplyCondition: (tokenId, conditionKey) =>
+          tokenActionsController?.setTokenCondition(tokenId, conditionKey),
+        onGetAvailablePowers: (tokenId) =>
+          tokenActionsController?.getAvailablePowers(tokenId) || [],
+        onInvokePower: (tokenId, powerId) =>
+          tokenActionsController?.invokePower(tokenId, powerId),
+        onIsPowerActive: (tokenId, powerId) =>
+          !!tokenActionsController?.isPowerActive(tokenId, powerId),
+      });
+
     setupListeners();
 
     await loadCharacterSheets();
     const ok = await loadEncounterData();
-    if (!ok) return;
+    if (!ok) return false;
     await loadTemplates();
+    await loadDesignAssets();
     setupRealtimeSubscription();
 
     // Init Map
@@ -146,10 +297,16 @@
     state.map.setData(
       state.encounter?.data?.tokens,
       state.encounter?.data?.instances,
+      {
+        map: state.encounter?.data?.map || null,
+        designTokens: state.encounter?.data?.designTokens || [],
+        mapEffects: state.encounter?.data?.mapEffects || [],
+      },
     );
     state.map.setActiveInstance(
       state.encounter?.data?.activeInstanceId || null,
     );
+    state.map.setInteractionLayer(state.activeMapLayer);
     state.map.onTokenMove = async (id, x, y, oldX, oldY) => {
       const t = state.encounter.data.tokens.find((tk) => tk.id === id);
       if (t) {
@@ -174,24 +331,85 @@
       handleTokenSelection(instId);
     };
     state.map.onTokenContext = (tokenInfo) => {
-      if (!canEditEncounter()) return;
       if (!tokenInfo || !tokenInfo.tokenId) {
-        hideTokenContextMenu();
+        tokenContextMenuController?.hide?.();
         return;
       }
-      openTokenContextMenu(tokenInfo);
+      const token = (state.encounter?.data?.tokens || []).find(
+        (item) => item.id === tokenInfo.tokenId,
+      );
+      if (!token) {
+        tokenContextMenuController?.hide?.();
+        return;
+      }
+      if (!canEditEncounter() && !canCurrentUserControlToken(token)) {
+        tokenContextMenuController?.hide?.();
+        return;
+      }
+      tokenContextMenuController?.open?.(tokenInfo);
     };
     state.map.canDragToken = (token) => canCurrentUserControlToken(token);
+    state.map.canDragMapEffect = () => canEditEncounter();
+    state.map.onMapEffectChange = (id, patch = {}) => {
+      const list = state.encounter?.data?.mapEffects || [];
+      const effect = list.find((item) => item.id === id);
+      if (!effect) return;
+      Object.assign(effect, patch || {});
+      scheduleBackgroundPersist();
+    };
+    state.map.canDragDesignToken = () => canEditEncounter();
+    state.map.onDesignTokenMove = (id, x, y) => {
+      const list = state.encounter?.data?.designTokens || [];
+      const token = list.find((item) => item.id === id);
+      if (!token) return;
+      token.x = x;
+      token.y = y;
+      scheduleBackgroundPersist();
+    };
+    state.map.onDesignTokenChange = (id, patch = {}) => {
+      const list = state.encounter?.data?.designTokens || [];
+      const token = list.find((item) => item.id === id);
+      if (!token) return;
+      Object.assign(token, patch || {});
+      scheduleBackgroundPersist();
+    };
+    state.map.onDesignTokenSelect = () => {};
+    state.map.onDesignTokenContext = () => {};
+    state.map.canEditBackground = () => canEditEncounter();
+    state.map.onBackgroundChange = (nextMap) => {
+      if (!state.encounter?.data) return;
+      state.encounter.data.map = normalizeMapLayerData(nextMap);
+      render();
+      scheduleBackgroundPersist();
+    };
 
     setupMapControls();
     applyPermissionsUI();
     render();
-    window.addEventListener("beforeunload", stopEncounterSyncPolling);
-    window.addEventListener("hashchange", () => {
+    registerGlobalLifecycleListeners();
+    return true;
+  }
+
+  function registerGlobalLifecycleListeners() {
+    runtime.beforeUnloadHandler = () => stopEncounterSyncPolling();
+    runtime.hashChangeHandler = () => {
       if (!window.location.hash.startsWith("#active-encounter")) {
         stopEncounterSyncPolling();
       }
-    });
+    };
+    window.addEventListener("beforeunload", runtime.beforeUnloadHandler);
+    window.addEventListener("hashchange", runtime.hashChangeHandler);
+  }
+
+  function removeGlobalLifecycleListeners() {
+    if (runtime.beforeUnloadHandler) {
+      window.removeEventListener("beforeunload", runtime.beforeUnloadHandler);
+      runtime.beforeUnloadHandler = null;
+    }
+    if (runtime.hashChangeHandler) {
+      window.removeEventListener("hashchange", runtime.hashChangeHandler);
+      runtime.hashChangeHandler = null;
+    }
   }
 
   async function fetchCurrentPlayerByUserId(userId) {
@@ -227,8 +445,129 @@
     return STATUS_LABELS[normalizeEncounterStatus(status)] || "WIP";
   }
 
+  function normalizeMapLayerData(raw) {
+    if (!raw || typeof raw !== "object") {
+      return { ...MAP_LAYER_DEFAULTS };
+    }
+
+    return {
+      backgroundPath:
+        typeof raw.backgroundPath === "string" && raw.backgroundPath
+          ? raw.backgroundPath
+          : null,
+      backgroundUrl:
+        typeof raw.backgroundUrl === "string" ? raw.backgroundUrl : "",
+      preserveAspect: raw.preserveAspect !== false,
+      x: parseFloat(raw.x) || 0,
+      y: parseFloat(raw.y) || 0,
+      widthCells: Math.max(
+        1,
+        parseFloat(raw.widthCells) || MAP_LAYER_DEFAULTS.widthCells,
+      ),
+      heightCells: Math.max(
+        1,
+        parseFloat(raw.heightCells) || MAP_LAYER_DEFAULTS.heightCells,
+      ),
+      opacity: Math.min(1, Math.max(0, parseFloat(raw.opacity) || 1)),
+      showGrid: raw.showGrid !== false,
+    };
+  }
+
+  function normalizeDesignTokensData(rawTokens) {
+    if (!Array.isArray(rawTokens)) return [];
+
+    return rawTokens
+      .map((token, index) => {
+        if (!token || typeof token !== "object") return null;
+        const layer = token.layer === "overlay" ? "overlay" : "underlay";
+        return {
+          ...DESIGN_TOKEN_DEFAULTS,
+          ...token,
+          id: token.id || `design-token-${index}`,
+          x: parseFloat(token.x) || 0,
+          y: parseFloat(token.y) || 0,
+          size: Math.max(0.2, parseFloat(token.size) || 1),
+          widthCells:
+            token.widthCells == null ? null : Math.max(0.2, parseFloat(token.widthCells) || 0),
+          heightCells:
+            token.heightCells == null ? null : Math.max(0.2, parseFloat(token.heightCells) || 0),
+          rotationDeg: parseFloat(token.rotationDeg) || 0,
+          opacity: Math.min(1, Math.max(0, parseFloat(token.opacity) || 1)),
+          layer,
+          zIndex: parseInt(token.zIndex, 10) || 0,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function normalizeEncounterLayerData(data) {
+    if (!data || typeof data !== "object") return;
+    data.map = normalizeMapLayerData(data.map);
+    data.designTokens = normalizeDesignTokensData(data.designTokens);
+    data.mapEffects = normalizeMapEffectsData(data.mapEffects);
+  }
+
+  function normalizeMapEffectsData(rawEffects) {
+    if (!Array.isArray(rawEffects)) return [];
+    return rawEffects
+      .map((effect, index) => {
+        if (!effect || typeof effect !== "object") return null;
+        const type = String(effect.type || "").trim();
+        if (!type) return null;
+        const radiusMeters = Math.max(0, parseFloat(effect.radiusMeters) || 0);
+        const radiusCells = Math.max(
+          0,
+          parseFloat(effect.radiusCells) ||
+            (radiusMeters > 0 ? radiusMeters / 1.5 : 0),
+        );
+        return {
+          ...MAP_EFFECT_DEFAULTS,
+          ...effect,
+          id: effect.id || `map-effect-${type}-${index}`,
+          type,
+          sourceTokenId: effect.sourceTokenId || null,
+          sourceInstanceId: effect.sourceInstanceId || null,
+          radiusMeters,
+          radiusCells,
+          x: Number.isFinite(Number(effect.x)) ? Number(effect.x) : null,
+          y: Number.isFinite(Number(effect.y)) ? Number(effect.y) : null,
+          createdAt:
+            Number.isFinite(Number(effect.createdAt)) ? Number(effect.createdAt) : null,
+        };
+      })
+      .filter(Boolean);
+  }
+
   function canEditEncounter() {
     return state.canManageEncounter;
+  }
+
+  function setUploadBusy(isBusy, message) {
+    if (els.uploadOverlay) {
+      els.uploadOverlay.classList.toggle("ae-hidden", !isBusy);
+    }
+    if (els.uploadMessage && typeof message === "string" && message) {
+      els.uploadMessage.textContent = message;
+    } else if (els.uploadMessage && !isBusy) {
+      els.uploadMessage.textContent = "Subiendo imagen...";
+    }
+
+    drawerController?.setBusy(isBusy);
+    if (els.browserUploadAssetBtn) {
+      els.browserUploadAssetBtn.disabled = !!isBusy;
+      els.browserUploadAssetBtn.style.opacity = isBusy ? "0.65" : "";
+      els.browserUploadAssetBtn.style.pointerEvents = isBusy ? "none" : "";
+    }
+  }
+
+  function scheduleBackgroundPersist(delayMs = 180) {
+    if (state.backgroundPersistTimer) {
+      clearTimeout(state.backgroundPersistTimer);
+    }
+    state.backgroundPersistTimer = setTimeout(() => {
+      state.backgroundPersistTimer = null;
+      saveEncounter();
+    }, delayMs);
   }
 
   function canCurrentUserControlToken(token) {
@@ -241,10 +580,34 @@
     const inst = (state.encounter.data.instances || []).find(
       (i) => i.id === token.instanceId,
     );
-    if (!inst || !inst.isPC || !inst.characterSheetId) return false;
+    if (!inst) return false;
+
+    if (inst.controllerUserId && state.user?.id) {
+      return inst.controllerUserId === state.user.id;
+    }
+
+    if (!inst.isPC || !inst.characterSheetId) return false;
 
     const sheet = state.characterSheets.find(
       (s) => s.id === inst.characterSheetId,
+    );
+    return !!sheet && !!state.user && sheet.user_id === state.user.id;
+  }
+
+  function canCurrentUserOpenInstanceDetails(instance) {
+    if (!instance) return false;
+    if (canEditEncounter()) return true;
+
+    const status = normalizeEncounterStatus(state.encounter?.status);
+    if (status !== ENCOUNTER_STATUS.IN_GAME) return false;
+
+    if (instance.controllerUserId && state.user?.id) {
+      return instance.controllerUserId === state.user.id;
+    }
+
+    if (!instance.isPC || !instance.characterSheetId) return false;
+    const sheet = state.characterSheets.find(
+      (item) => item.id === instance.characterSheetId,
     );
     return !!sheet && !!state.user && sheet.user_id === state.user.id;
   }
@@ -259,15 +622,77 @@
     if (error) throw error;
   }
 
+  async function unsummonInstanceViaRpc(instanceId) {
+    const { error } = await supabase.rpc("unsummon_encounter_instance", {
+      p_encounter_id: state.encounterId,
+      p_instance_id: instanceId,
+    });
+    if (error) throw error;
+  }
+
+  function removeInstanceLocal(id) {
+    const d = state.encounter?.data;
+    if (!d || !id) return false;
+    const prevLen = (d.instances || []).length;
+    d.instances = (d.instances || []).filter((item) => item.id !== id);
+    d.tokens = (d.tokens || []).filter((token) => token.instanceId !== id);
+    if ((d.instances || []).length === prevLen) return false;
+
+    if (d.activeInstanceId === id) {
+      d.activeInstanceId = null;
+      ensureActiveInstance();
+    }
+    if (state.selectedInstanceId === id) {
+      closeModal();
+    }
+    return true;
+  }
+
+  function openTokenDetailsFromContext(tokenId) {
+    if (!tokenId || !state.encounter?.data) return;
+    const token = (state.encounter.data.tokens || []).find((item) => item.id === tokenId);
+    if (!token?.instanceId) return;
+    const instance = (state.encounter.data.instances || []).find(
+      (item) => item.id === token.instanceId,
+    );
+    if (!instance) return;
+    if (!canCurrentUserOpenInstanceDetails(instance)) return;
+    openModal(instance);
+  }
+
+  async function unsummonTokenFromContext(tokenId) {
+    if (!tokenId || !state.encounter?.data) return;
+    const token = (state.encounter.data.tokens || []).find((item) => item.id === tokenId);
+    if (!token?.instanceId) return;
+    const instance = (state.encounter.data.instances || []).find(
+      (item) => item.id === token.instanceId,
+    );
+    if (!instance?.isSummon) return;
+    if (!canEditEncounter() && !canCurrentUserControlToken(token)) return;
+
+    if (!confirm(`¿Eliminar ${instance.name}? Esto lo quita del mapa y de iniciativa.`)) {
+      return;
+    }
+
+    if (canEditEncounter()) {
+      const removed = removeInstanceLocal(instance.id);
+      if (!removed) return;
+      render();
+      saveEncounter();
+      return;
+    }
+
+    try {
+      await unsummonInstanceViaRpc(instance.id);
+      const removed = removeInstanceLocal(instance.id);
+      if (removed) render();
+    } catch (error) {
+      alert(error?.message || "No se pudo eliminar esta invocación.");
+    }
+  }
+
   function applyPermissionsUI() {
     const adminOnlyIds = [
-      "btn-ae-browse-npc",
-      "btn-ae-browse-pc",
-      "btn-ae-save",
-      "btn-ae-status-ready",
-      "btn-ae-status-in-game",
-      "btn-ae-status-pause",
-      "btn-ae-archive",
       "btn-ae-next-turn",
       "btn-ae-reroll",
     ];
@@ -277,6 +702,15 @@
       if (!el) return;
       el.style.display = canEditEncounter() ? "" : "none";
     });
+    drawerController?.applyPermissions();
+
+    const toolsToggle = document.getElementById("btn-ae-toggle-tools");
+    if (toolsToggle) {
+      toolsToggle.style.display = canEditEncounter() ? "flex" : "none";
+    }
+    if (els.layerToolbar) {
+      els.layerToolbar.style.display = canEditEncounter() ? "flex" : "none";
+    }
   }
 
   function handleTokenSelection(selection) {
@@ -296,74 +730,6 @@
         card.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
-  }
-
-  function ensureTokenContextMenu() {
-    if (els.tokenContextMenu) return els.tokenContextMenu;
-
-    const menu = document.createElement("div");
-    menu.id = "ae-token-context-menu";
-    menu.style.position = "fixed";
-    menu.style.display = "none";
-    menu.style.zIndex = "2000";
-    menu.style.background = "rgba(18, 18, 18, 0.98)";
-    menu.style.border = "1px solid rgba(255, 255, 255, 0.14)";
-    menu.style.borderRadius = "8px";
-    menu.style.padding = "4px";
-    menu.style.minWidth = "140px";
-    menu.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.45)";
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.textContent = "Borrar token";
-    deleteBtn.style.width = "100%";
-    deleteBtn.style.background = "transparent";
-    deleteBtn.style.border = "none";
-    deleteBtn.style.color = "var(--color-cream, #e4d7c5)";
-    deleteBtn.style.padding = "8px 10px";
-    deleteBtn.style.textAlign = "left";
-    deleteBtn.style.borderRadius = "6px";
-    deleteBtn.style.cursor = "pointer";
-    deleteBtn.style.fontSize = "0.86rem";
-
-    deleteBtn.addEventListener("mouseenter", () => {
-      deleteBtn.style.background = "rgba(173, 56, 56, 0.2)";
-    });
-    deleteBtn.addEventListener("mouseleave", () => {
-      deleteBtn.style.background = "transparent";
-    });
-    deleteBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const tokenId = menu.dataset.tokenId;
-      hideTokenContextMenu();
-      if (tokenId) removeTokenById(tokenId);
-    });
-
-    menu.appendChild(deleteBtn);
-    document.body.appendChild(menu);
-    els.tokenContextMenu = menu;
-    return menu;
-  }
-
-  function hideTokenContextMenu() {
-    const menu = els.tokenContextMenu;
-    if (!menu) return;
-    menu.style.display = "none";
-    delete menu.dataset.tokenId;
-  }
-
-  function openTokenContextMenu(tokenInfo) {
-    const menu = ensureTokenContextMenu();
-    menu.dataset.tokenId = tokenInfo.tokenId;
-
-    const maxX = window.innerWidth - 160;
-    const maxY = window.innerHeight - 56;
-    const x = Math.max(8, Math.min(tokenInfo.clientX || 8, maxX));
-    const y = Math.max(8, Math.min(tokenInfo.clientY || 8, maxY));
-
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
-    menu.style.display = "block";
   }
 
   function setupMapControls() {
@@ -394,7 +760,9 @@
   }
 
   function setupRealtimeSubscription() {
-    supabase
+    teardownRealtimeSubscriptions();
+
+    const characterSheetsChannel = supabase
       .channel("character-sheets-changes")
       .on(
         "postgres_changes",
@@ -438,7 +806,7 @@
       )
       .subscribe();
 
-    supabase
+    const encounterChannel = supabase
       .channel(`encounter-${state.encounterId}-changes`)
       .on(
         "postgres_changes",
@@ -457,7 +825,25 @@
       )
       .subscribe();
 
+    state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
+
     startEncounterSyncPolling();
+  }
+
+  function teardownRealtimeSubscriptions() {
+    if (!Array.isArray(state.realtimeChannels) || state.realtimeChannels.length === 0) {
+      return;
+    }
+    state.realtimeChannels.forEach((channel) => {
+      if (!channel) return;
+      try {
+        channel.unsubscribe?.();
+      } catch (_error) {}
+      try {
+        supabase.removeChannel?.(channel);
+      } catch (_error) {}
+    });
+    state.realtimeChannels = [];
   }
 
   function applyRemoteEncounterUpdate(updated) {
@@ -511,6 +897,10 @@
     if (!state.encounterSyncTimer) return;
     clearInterval(state.encounterSyncTimer);
     state.encounterSyncTimer = null;
+    if (state.backgroundPersistTimer) {
+      clearTimeout(state.backgroundPersistTimer);
+      state.backgroundPersistTimer = null;
+    }
   }
 
   function extractPCHealth(charData) {
@@ -537,23 +927,6 @@
     document.getElementById("btn-ae-back").addEventListener("click", () => {
       window.location.hash = "combat-tracker";
     });
-
-    document.getElementById("btn-ae-save").addEventListener("click", () => {
-      if (!requireAdminAction()) return;
-      saveEncounter();
-    });
-    document
-      .getElementById("btn-ae-browse-npc")
-      .addEventListener("click", () => {
-        if (!requireAdminAction()) return;
-        openBrowser("npc");
-      });
-    document
-      .getElementById("btn-ae-browse-pc")
-      .addEventListener("click", () => {
-        if (!requireAdminAction()) return;
-        openBrowser("pc");
-      });
     document
       .getElementById("btn-ae-next-turn")
       .addEventListener("click", () => {
@@ -572,64 +945,44 @@
     });
 
     document
-      .getElementById("btn-ae-status-ready")
-      ?.addEventListener("click", async () => {
+      .getElementById("ae-encounter-status")
+      ?.addEventListener("change", async (event) => {
         if (!requireAdminAction()) return;
-        await updateEncounterStatus(ENCOUNTER_STATUS.READY);
-      });
-    document
-      .getElementById("btn-ae-status-in-game")
-      ?.addEventListener("click", async () => {
-        if (!requireAdminAction()) return;
-        await updateEncounterStatus(ENCOUNTER_STATUS.IN_GAME);
-      });
-    document
-      .getElementById("btn-ae-status-pause")
-      ?.addEventListener("click", async () => {
-        if (!requireAdminAction()) return;
-        await updateEncounterStatus(ENCOUNTER_STATUS.READY);
-      });
-
-    document
-      .getElementById("btn-ae-archive")
-      .addEventListener("click", async () => {
-        if (!requireAdminAction()) return;
-        if (
-          confirm(
-            `¿Archivar "${state.encounter?.name || "este encuentro"}"? No aparecerá en la lista de encuentros activos.`,
-          )
-        ) {
-          const { error } = await supabase
-            .from("encounters")
-            .update({ status: ENCOUNTER_STATUS.ARCHIVED })
-            .eq("id", state.encounterId);
-          if (!error) window.location.hash = "combat-tracker";
+        const nextStatus = normalizeEncounterStatus(event.target?.value);
+        const changed = await updateEncounterStatus(nextStatus);
+        if (!changed && state.encounter) {
+          event.target.value = normalizeEncounterStatus(state.encounter.status);
         }
       });
 
-    // Drawer Toggles
-    const drawer = document.getElementById("ae-tools-drawer");
-    const toggleBtn = document.getElementById("btn-ae-toggle-tools");
-    const closeDrawerBtn = document.getElementById("btn-ae-close-tools");
+    layersController?.bindLayerMenuEvents(requireAdminAction);
 
-    if (toggleBtn && drawer) {
-      toggleBtn.addEventListener("click", () => {
-        drawer.classList.add("open");
-      });
-    }
-
-    if (closeDrawerBtn && drawer) {
-      closeDrawerBtn.addEventListener("click", () => {
-        drawer.classList.remove("open");
-      });
-    }
+    drawerController?.bindEvents();
 
     // Browser Modal Listeners
     document
       .getElementById("btn-ae-browser-close")
-      .addEventListener("click", closeBrowser);
+      .addEventListener("click", () => browserController?.closeBrowser());
     els.browserSearch.addEventListener("input", () => {
-      renderBrowserItems();
+      browserController?.renderBrowserItems();
+    });
+    els.browserUploadAssetBtn?.addEventListener("click", () => {
+      if (!requireAdminAction()) return;
+      els.browserUploadInput?.click();
+    });
+    els.browserUploadInput?.addEventListener("change", async (event) => {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      if (!requireAdminAction()) return;
+      await uploadDesignAsset(file);
+      event.target.value = "";
+    });
+    els.mapUploadBgInput?.addEventListener("change", async (event) => {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      if (!requireAdminAction()) return;
+      await uploadEncounterBackground(file);
+      event.target.value = "";
     });
 
     // Detail Modal Listeners
@@ -643,24 +996,79 @@
       .getElementById("btn-modal-heal")
       .addEventListener("click", () => handleModalAction("heal"));
 
-    document.addEventListener("click", (e) => {
+    runtime.documentClickHandler = (e) => {
       if (
-        !els.tokenContextMenu ||
-        els.tokenContextMenu.style.display === "none"
-      )
-        return;
-      if (!els.tokenContextMenu.contains(e.target)) hideTokenContextMenu();
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") hideTokenContextMenu();
-    });
-    window.addEventListener(
-      "scroll",
-      () => {
-        hideTokenContextMenu();
-      },
-      true,
-    );
+        tokenContextMenuController?.isOpen?.() &&
+        !tokenContextMenuController?.contains?.(e.target)
+      ) {
+        tokenContextMenuController?.hide?.();
+      }
+
+      if (els.layerMenu && els.layerToolbar && !els.layerToolbar.contains(e.target)) {
+        els.layerMenu.style.display = "none";
+      }
+    };
+    runtime.documentKeydownHandler = (e) => {
+      if (e.key === "Escape") tokenContextMenuController?.hide?.();
+
+      if (!canEditEncounter()) return;
+      if (!state.map) return;
+
+      const target = e.target;
+      const isTypingTarget =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (isTypingTarget) return;
+
+      const isBackgroundEdit =
+        state.activeMapLayer === "background" && state.map.selectedBackground;
+      const isDecorEdit =
+        state.activeMapLayer === "decor" && !!state.map.selectedDesignTokenId;
+      if (!isBackgroundEdit && !isDecorEdit) return;
+
+      let handled = false;
+      if (e.key === "ArrowLeft") {
+        handled = isBackgroundEdit
+          ? state.map.nudgeBackgroundPixels(-1, 0)
+          : state.map.nudgeSelectedDesignTokenPixels(-1, 0);
+      } else if (e.key === "ArrowRight") {
+        handled = isBackgroundEdit
+          ? state.map.nudgeBackgroundPixels(1, 0)
+          : state.map.nudgeSelectedDesignTokenPixels(1, 0);
+      } else if (e.key === "ArrowUp") {
+        handled = isBackgroundEdit
+          ? state.map.nudgeBackgroundPixels(0, -1)
+          : state.map.nudgeSelectedDesignTokenPixels(0, -1);
+      } else if (e.key === "ArrowDown") {
+        handled = isBackgroundEdit
+          ? state.map.nudgeBackgroundPixels(0, 1)
+          : state.map.nudgeSelectedDesignTokenPixels(0, 1);
+      } else if (e.key === "+" || e.key === "=" || e.code === "NumpadAdd") {
+        handled = isBackgroundEdit
+          ? state.map.scaleBackgroundPixels(1)
+          : state.map.scaleSelectedDesignTokenPixels(1);
+      } else if (
+        e.key === "-" ||
+        e.key === "_" ||
+        e.code === "NumpadSubtract"
+      ) {
+        handled = isBackgroundEdit
+          ? state.map.scaleBackgroundPixels(-1)
+          : state.map.scaleSelectedDesignTokenPixels(-1);
+      }
+
+      if (handled) {
+        e.preventDefault();
+      }
+    };
+    runtime.windowScrollHandler = () => {
+      tokenContextMenuController?.hide?.();
+    };
+    document.addEventListener("click", runtime.documentClickHandler);
+    document.addEventListener("keydown", runtime.documentKeydownHandler);
+    window.addEventListener("scroll", runtime.windowScrollHandler, true);
   }
 
   // --- DATA LOADING ---
@@ -679,6 +1087,14 @@
     if (data) {
       state.templates = data;
     }
+  }
+
+  async function loadDesignAssets() {
+    if (assetsService?.loadDesignAssets) {
+      await assetsService.loadDesignAssets();
+      return;
+    }
+    state.designAssets = [];
   }
 
   async function loadCharacterSheets() {
@@ -735,6 +1151,10 @@
     if (Array.isArray(state.encounter.data)) {
       state.encounter.data = {
         instances: state.encounter.data,
+        tokens: [],
+        map: { ...MAP_LAYER_DEFAULTS },
+        designTokens: [],
+        mapEffects: [],
         round: 1,
         activeInstanceId: null,
       };
@@ -742,6 +1162,9 @@
       state.encounter.data = {
         instances: [],
         tokens: [],
+        map: { ...MAP_LAYER_DEFAULTS },
+        designTokens: [],
+        mapEffects: [],
         round: 1,
         activeInstanceId: null,
       };
@@ -750,6 +1173,13 @@
     // Ensure tokens array exists
     if (!state.encounter.data.tokens) {
       state.encounter.data.tokens = [];
+    }
+    normalizeEncounterLayerData(state.encounter.data);
+    const uiLayer = state.encounter.data?.ui?.activeLayer;
+    if (MAP_LAYER_LABELS[uiLayer]) {
+      state.activeMapLayer = uiLayer;
+    } else {
+      state.activeMapLayer = "entities";
     }
 
     const { changed } = sanitizeEncounterTokens();
@@ -820,31 +1250,16 @@
   async function updateEncounterStatus(nextStatus, options = {}) {
     if (!state.encounter || !nextStatus) return;
     const prevStatus = normalizeEncounterStatus(state.encounter.status);
-    if (prevStatus === nextStatus) return;
+    if (prevStatus === nextStatus) return false;
 
-    const allowedTransitions = {
-      [ENCOUNTER_STATUS.WIP]: [
-        ENCOUNTER_STATUS.READY,
-        ENCOUNTER_STATUS.ARCHIVED,
-      ],
-      [ENCOUNTER_STATUS.READY]: [
-        ENCOUNTER_STATUS.IN_GAME,
-        ENCOUNTER_STATUS.ARCHIVED,
-      ],
-      [ENCOUNTER_STATUS.IN_GAME]: [
-        ENCOUNTER_STATUS.READY,
-        ENCOUNTER_STATUS.ARCHIVED,
-      ],
-      [ENCOUNTER_STATUS.ARCHIVED]: [],
-    };
-    const canTransition =
-      nextStatus === ENCOUNTER_STATUS.ARCHIVED ||
-      (allowedTransitions[prevStatus] || []).includes(nextStatus);
-    if (!canTransition) {
-      if (!options.silent) {
-        alert("Transición de estado no permitida.");
-      }
-      return;
+    if (
+      nextStatus === ENCOUNTER_STATUS.ARCHIVED &&
+      !options.skipArchiveConfirm &&
+      !confirm(
+        `¿Archivar "${state.encounter?.name || "este encuentro"}"? No aparecerá en la lista de encuentros activos.`,
+      )
+    ) {
+      return false;
     }
 
     state.isApplyingRemoteUpdate = true;
@@ -857,35 +1272,23 @@
       setTimeout(() => {
         state.isApplyingRemoteUpdate = false;
       }, 200);
-      return;
+      return false;
     }
     state.encounter.status = nextStatus;
     render();
+    if (nextStatus === ENCOUNTER_STATUS.ARCHIVED) {
+      window.location.hash = "combat-tracker";
+      return true;
+    }
     setTimeout(() => {
       state.isApplyingRemoteUpdate = false;
     }, 200);
+    return true;
   }
 
   function ensureActiveInstance() {
-    const d = state.encounter.data;
-    if (!d.instances || d.instances.length === 0) {
-      d.activeInstanceId = null;
-      return;
-    }
-
-    const current = d.instances.find((i) => i.id === d.activeInstanceId);
-    if (current && !isInstanceDown(current)) return;
-
-    const alive = d.instances.filter((i) => !isInstanceDown(i));
-    if (alive.length > 0) {
-      const sortedAlive = [...alive].sort(
-        (a, b) => (b.initiative || 0) - (a.initiative || 0),
-      );
-      d.activeInstanceId = sortedAlive[0].id;
-      return;
-    }
-
-    d.activeInstanceId = null;
+    if (!state.encounter?.data) return;
+    encounterTurns.ensureActiveInstance(state.encounter.data);
   }
 
   // --- RENDER ---
@@ -893,20 +1296,30 @@
   function render() {
     if (!state.encounter) return;
     sanitizeEncounterTokens();
-    hideTokenContextMenu();
+    tokenContextMenuController?.hide?.();
 
     els.name.textContent = state.encounter.name;
     const status = normalizeEncounterStatus(state.encounter.status);
-    els.status.textContent = getEncounterStatusLabel(status);
-    els.status.className = `ae-status-chip ${status}`;
+    if (els.status) {
+      els.status.value = status;
+      els.status.className = `ae-status-chip-select ${status}`;
+      els.status.disabled = !canEditEncounter();
+    }
     els.roundCounter.textContent = state.encounter.data.round || 1;
-    updateStatusButtons(status);
+    setActiveMapLayer(state.activeMapLayer, { persist: false, closeMenu: true });
+    drawerController?.renderAssetLists();
 
     // Refresh Map Data
     if (state.map) {
+      state.map.setInteractionLayer(state.activeMapLayer);
       state.map.setData(
         state.encounter.data.tokens,
         state.encounter.data.instances,
+        {
+          map: state.encounter.data.map || null,
+          designTokens: state.encounter.data.designTokens || [],
+          mapEffects: state.encounter.data.mapEffects || [],
+        },
       );
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
     }
@@ -933,6 +1346,7 @@
       const isActive = activeId && inst.id === activeId;
       const isDead = isInstanceDown(inst);
       const isPC = inst.isPC === true;
+      const initiativeDisplay = Math.trunc(Number(inst.initiative) || 0);
 
       const hpPct = (inst.health / inst.maxHealth) * 100;
       const hpClass = getHealthClass(inst.health, inst.maxHealth, inst.status);
@@ -992,7 +1406,7 @@
 
       row.innerHTML = `
         <div class="ae-init-bubble" style="${isDead ? "visibility: hidden !important; opacity: 0;" : ""}">
-          ${isDead ? "" : `<input type="number" class="init-input ae-bubble-input" value="${inst.initiative || 0}">`}
+          ${isDead ? "" : `<input type="number" class="init-input ae-bubble-input" value="${initiativeDisplay}" step="1">`}
         </div>
 
         <div class="ae-card ${activeClass} ${deadClass} ${pcClass}" data-id="${inst.id}">
@@ -1025,8 +1439,16 @@
           e.target.closest(".ae-btn-kill")
         )
           return;
+        if (!canCurrentUserOpenInstanceDetails(inst)) return;
         openModal(inst);
       });
+
+      const cardEl = row.querySelector(".ae-card");
+      if (!canCurrentUserOpenInstanceDetails(inst)) {
+        cardEl.style.cursor = "default";
+        cardEl.style.opacity = "0.72";
+        cardEl.title = "Sin permiso para ver detalle";
+      }
 
       // Delete button
       row.querySelector(".ae-btn-delete").addEventListener("click", (e) => {
@@ -1052,24 +1474,6 @@
         activeCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     });
-  }
-
-  function updateStatusButtons(status) {
-    const btnReady = document.getElementById("btn-ae-status-ready");
-    const btnInGame = document.getElementById("btn-ae-status-in-game");
-    const btnPause = document.getElementById("btn-ae-status-pause");
-    if (!btnReady || !btnInGame || !btnPause) return;
-
-    if (!canEditEncounter()) {
-      btnReady.style.display = "none";
-      btnInGame.style.display = "none";
-      btnPause.style.display = "none";
-      return;
-    }
-
-    btnReady.style.display = status === ENCOUNTER_STATUS.WIP ? "" : "none";
-    btnInGame.style.display = status === ENCOUNTER_STATUS.READY ? "" : "none";
-    btnPause.style.display = status === ENCOUNTER_STATUS.IN_GAME ? "" : "none";
   }
 
   // --- ADD NPC ---
@@ -1288,37 +1692,8 @@
 
   function removeInstance(id) {
     if (!canEditEncounter()) return;
-    const d = state.encounter.data;
-    d.instances = d.instances.filter((i) => i.id !== id);
-    d.tokens = (d.tokens || []).filter((t) => t.instanceId !== id);
-
-    if (d.activeInstanceId === id) {
-      d.activeInstanceId = null;
-      ensureActiveInstance();
-    }
-
-    // Close modal if viewing deleted instance
-    if (state.selectedInstanceId === id) {
-      closeModal();
-    }
-
-    render();
-    saveEncounter();
-  }
-
-  function removeTokenById(tokenId) {
-    if (!canEditEncounter()) return;
-    if (!state.encounter?.data) return;
-    const d = state.encounter.data;
-    const prevLen = (d.tokens || []).length;
-    d.tokens = (d.tokens || []).filter((t) => t.id !== tokenId);
-    if (d.tokens.length === prevLen) return;
-
-    state.selectedTokenId = null;
-    if (state.map) {
-      state.map.selectedTokenId = null;
-    }
-
+    const removed = removeInstanceLocal(id);
+    if (!removed) return;
     render();
     saveEncounter();
   }
@@ -1335,22 +1710,8 @@
 
   function rerollAllInitiatives() {
     if (!canEditEncounter()) return;
-    const d = state.encounter.data;
-    if (!d.instances || d.instances.length === 0) return;
-
-    d.instances.forEach((inst) => {
-      inst.initiative = calculateInitiative({
-        groups: inst.groups,
-        stats: inst.stats,
-      });
-    });
-
-    // Reset active to highest initiative
-    const sorted = [...d.instances].sort(
-      (a, b) => (b.initiative || 0) - (a.initiative || 0),
-    );
-    d.activeInstanceId = sorted[0].id;
-    d.round = 1;
+    const changed = encounterTurns.rerollAllInitiatives(state.encounter?.data);
+    if (!changed) return;
 
     render();
     saveEncounter();
@@ -1360,32 +1721,8 @@
 
   function nextTurn() {
     if (!canEditEncounter()) return;
-    const d = state.encounter.data;
-    if (!d.instances || d.instances.length === 0) return;
-
-    const alive = d.instances.filter((i) => !isInstanceDown(i));
-    if (alive.length === 0) {
-      d.activeInstanceId = null;
-      render();
-      saveEncounter();
-      return;
-    }
-
-    const sorted = [...alive].sort(
-      (a, b) => (b.initiative || 0) - (a.initiative || 0),
-    );
-
-    const currId = d.activeInstanceId;
-    let idx = -1;
-    if (currId) idx = sorted.findIndex((i) => i.id === currId);
-
-    idx++;
-    if (idx >= sorted.length) {
-      idx = 0;
-      d.round = (d.round || 1) + 1;
-    }
-
-    d.activeInstanceId = sorted[idx].id;
+    const changed = encounterTurns.nextTurn(state.encounter?.data);
+    if (!changed) return;
     render();
     saveEncounter();
   }
@@ -1425,230 +1762,72 @@
   // --- ENTITY BROWSER ---
 
   function openBrowser(mode) {
-    if (!canEditEncounter()) return;
-    state.browserMode = mode;
-    state.browserActiveTags = [];
-    els.browserSearch.value = "";
+    browserController?.openBrowser(mode);
+  }
 
-    if (mode === "npc") {
-      els.browserTitle.textContent = "Agregar PNJ";
-    } else {
-      els.browserTitle.textContent = "Agregar PJ";
+  function setActiveMapLayer(layer, options = {}) {
+    if (layersController?.setActiveMapLayer) {
+      layersController.setActiveMapLayer(layer, options);
+      return;
     }
-
-    renderBrowserTags();
-    renderBrowserItems();
-    els.browserModal.style.display = "flex";
-
-    // Close drawer
-    const drawer = document.getElementById("ae-tools-drawer");
-    if (drawer) drawer.classList.remove("open");
-
-    // Focus search
-    setTimeout(() => els.browserSearch.focus(), 100);
+    state.activeMapLayer = MAP_LAYER_LABELS[layer] ? layer : "entities";
   }
 
   function closeBrowser() {
-    els.browserModal.style.display = "none";
-    state.browserMode = null;
-    state.browserActiveTags = [];
+    browserController?.closeBrowser();
   }
 
   function collectAllTags() {
-    const tags = new Set();
-    state.templates.forEach((t) => {
-      const tplTags = t.data?.tags || [];
-      tplTags.forEach((tag) => tags.add(tag));
-    });
-    return [...tags].sort();
+    return [];
   }
 
   function renderBrowserTags() {
-    if (state.browserMode !== "npc") {
-      els.browserTags.innerHTML = "";
-      return;
-    }
-
-    const allTags = collectAllTags();
-    if (allTags.length === 0) {
-      els.browserTags.innerHTML = "";
-      return;
-    }
-
-    els.browserTags.innerHTML = allTags
-      .map((tag) => {
-        const isActive = state.browserActiveTags.includes(tag);
-        return `<span class="ae-browser-tag${isActive ? " active" : ""}" data-tag="${tag}">${tag}</span>`;
-      })
-      .join("");
-
-    els.browserTags.querySelectorAll(".ae-browser-tag").forEach((el) => {
-      el.addEventListener("click", () => {
-        const tag = el.dataset.tag;
-        const idx = state.browserActiveTags.indexOf(tag);
-        if (idx === -1) {
-          state.browserActiveTags.push(tag);
-        } else {
-          state.browserActiveTags.splice(idx, 1);
-        }
-        renderBrowserTags();
-        renderBrowserItems();
-      });
-    });
+    browserController?.renderBrowserTags();
   }
 
   function renderBrowserItems() {
-    const mode = state.browserMode;
-    const search = (els.browserSearch.value || "").toLowerCase().trim();
-    const activeTags = state.browserActiveTags;
+    browserController?.renderBrowserItems();
+  }
 
-    if (mode === "npc") {
-      renderNPCBrowser(search, activeTags);
-    } else {
-      renderPCBrowser(search);
-    }
+  function renderDecorBrowser(search, activeTags) {
+    browserController?.renderBrowserItems();
   }
 
   function renderNPCBrowser(search, activeTags) {
-    let items = state.templates;
-
-    if (search) {
-      items = items.filter((t) => t.name.toLowerCase().includes(search));
-    }
-
-    if (activeTags.length > 0) {
-      items = items.filter((t) => {
-        const tplTags = t.data?.tags || [];
-        return activeTags.every((tag) => tplTags.includes(tag));
-      });
-    }
-
-    if (items.length === 0) {
-      els.browserGrid.innerHTML =
-        '<div class="ae-browser-empty">No se encontraron plantillas</div>';
-      return;
-    }
-
-    els.browserGrid.innerHTML = items
-      .map((t) => {
-        const hp = t.data?.maxHealth || 7;
-        const stats = {};
-        (t.data?.groups || []).forEach((g) => {
-          g.fields.forEach((f) => {
-            stats[f.name] = f.value;
-          });
-        });
-        const fue = stats["Fuerza"] || 0;
-        const des = stats["Destreza"] || 0;
-        const pel = stats["Pelea"] || 0;
-
-        const tags = (t.data?.tags || [])
-          .map((tag) => `<span class="ae-browser-card-tag">${escapeHtml(tag)}</span>`)
-          .join("");
-
-        const initial = t.name[0].toUpperCase();
-
-        return `
-          <div class="ae-browser-card" data-id="${t.id}">
-            <div class="ae-browser-card-top">
-              <div class="ae-browser-card-avatar">${initial}</div>
-              <div class="ae-browser-card-info">
-                <div class="ae-browser-card-name">${escapeHtml(t.name)}</div>
-                <div class="ae-browser-card-meta">
-                  <span>HP ${hp}</span>
-                  <span>F${fue} D${des} P${pel}</span>
-                </div>
-              </div>
-            </div>
-            ${tags ? `<div class="ae-browser-card-tags">${tags}</div>` : ""}
-            <div class="ae-browser-card-actions">
-              <input type="number" class="ae-browser-qty" value="1" min="1" max="20"
-                onclick="event.stopPropagation()">
-              <button class="ae-browser-add-btn" data-tpl-id="${t.id}">Agregar</button>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-
-    // Bind add buttons
-    els.browserGrid.querySelectorAll(".ae-browser-add-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const tplId = btn.dataset.tplId;
-        const qtyInput = btn
-          .closest(".ae-browser-card")
-          .querySelector(".ae-browser-qty");
-        const count = parseInt(qtyInput?.value) || 1;
-        addNPC(tplId, count);
-        closeBrowser();
-      });
-    });
-
-    // Stop qty input clicks from bubbling
-    els.browserGrid.querySelectorAll(".ae-browser-qty").forEach((input) => {
-      input.addEventListener("click", (e) => e.stopPropagation());
-    });
+    browserController?.renderBrowserItems();
   }
 
   function renderPCBrowser(search) {
-    let items = state.characterSheets;
+    browserController?.renderBrowserItems();
+  }
 
-    if (search) {
-      items = items.filter((s) => {
-        const name = (s.name || "").toLowerCase();
-        const clan = (s.data?.clan || "").toLowerCase();
-        return name.includes(search) || clan.includes(search);
+  function getEncounterAssetPublicUrl(path) {
+    return assetsService?.getEncounterAssetPublicUrl(path) || "";
+  }
+
+  async function uploadEncounterBackground(file) {
+    if (assetsService?.uploadEncounterBackground) {
+      await assetsService.uploadEncounterBackground(file);
+    }
+  }
+
+  async function removeEncounterBackground() {
+    if (assetsService?.removeEncounterBackground) {
+      await assetsService.removeEncounterBackground();
+    }
+  }
+
+  async function uploadDesignAsset(file) {
+    if (assetsService?.uploadDesignAsset) {
+      await assetsService.uploadDesignAsset(file, () => {
+        browserController?.renderBrowserTags();
+        browserController?.renderBrowserItems();
       });
     }
+  }
 
-    const existingPCIds = (state.encounter?.data?.instances || [])
-      .filter((i) => i.isPC)
-      .map((i) => i.characterSheetId);
-
-    if (items.length === 0) {
-      els.browserGrid.innerHTML =
-        '<div class="ae-browser-empty">No se encontraron personajes</div>';
-      return;
-    }
-
-    els.browserGrid.innerHTML = items
-      .map((s) => {
-        const name = s.name || "Sin nombre";
-        const clan = s.data?.clan || "";
-        const isAdded = existingPCIds.includes(s.id);
-        const initial = name[0].toUpperCase();
-        const avatarHTML = s.avatar_url
-          ? `<img src="${escapeHtml(s.avatar_url)}" alt="${escapeHtml(name)}">`
-          : escapeHtml(initial);
-
-        return `
-          <div class="ae-browser-card${isAdded ? " disabled" : ""}" data-sheet-id="${s.id}">
-            <div class="ae-browser-card-top">
-              <div class="ae-browser-card-avatar">${avatarHTML}</div>
-              <div class="ae-browser-card-info">
-                <div class="ae-browser-card-name">${escapeHtml(name)}</div>
-                <div class="ae-browser-card-meta">
-                  ${clan ? `<span>${escapeHtml(clan)}</span>` : ""}
-                </div>
-              </div>
-            </div>
-            ${isAdded ? '<span class="ae-browser-added-badge">Ya en encuentro</span>' : ""}
-          </div>
-        `;
-      })
-      .join("");
-
-    // Bind card clicks for PCs (not disabled ones)
-    els.browserGrid
-      .querySelectorAll(".ae-browser-card:not(.disabled)")
-      .forEach((card) => {
-        card.addEventListener("click", () => {
-          const sheetId = card.dataset.sheetId;
-          addPC(sheetId);
-          closeBrowser();
-        });
-      });
+  function addDesignTokenFromAsset(assetId) {
+    assetsService?.addDesignTokenFromAsset(assetId);
   }
 
   // --- MODAL ---
@@ -2260,15 +2439,22 @@
     if (!canEditEncounter()) return;
     sanitizeEncounterTokens();
     const btn = document.getElementById("btn-ae-save");
-    const prevText = btn.textContent;
-    btn.textContent = "Guardando...";
+    const prevText = btn?.textContent || "";
+    if (btn) btn.textContent = "Guardando...";
 
     // Remove runtime-only image objects before persisting.
     const cleanData = {
       ...state.encounter.data,
+      map: normalizeMapLayerData(state.encounter.data.map),
       tokens: (state.encounter.data.tokens || []).map(({ img, ...token }) => ({
         ...token,
       })),
+      designTokens: normalizeDesignTokensData(
+        (state.encounter.data.designTokens || []).map(({ img, ...token }) => ({
+          ...token,
+        })),
+      ),
+      mapEffects: normalizeMapEffectsData(state.encounter.data.mapEffects),
     };
 
     state.isApplyingRemoteUpdate = true;
@@ -2295,7 +2481,7 @@
             "Otro usuario actualizó este encuentro antes. Refresca y vuelve a intentar.",
           );
           await loadEncounterData();
-          btn.textContent = prevText;
+          if (btn) btn.textContent = prevText;
           state.isApplyingRemoteUpdate = false;
           return;
         }
@@ -2313,35 +2499,51 @@
 
     if (error) alert("Error: " + error.message);
 
-    btn.textContent = "Guardado";
-    setTimeout(() => (btn.textContent = prevText), 1000);
+    if (btn) {
+      btn.textContent = "Guardado";
+      setTimeout(() => (btn.textContent = prevText), 1000);
+    }
     setTimeout(() => {
       state.isApplyingRemoteUpdate = false;
     }, 200);
   }
 
+  function teardownGlobalDocumentListeners() {
+    if (runtime.documentClickHandler) {
+      document.removeEventListener("click", runtime.documentClickHandler);
+      runtime.documentClickHandler = null;
+    }
+    if (runtime.documentKeydownHandler) {
+      document.removeEventListener("keydown", runtime.documentKeydownHandler);
+      runtime.documentKeydownHandler = null;
+    }
+    if (runtime.windowScrollHandler) {
+      window.removeEventListener("scroll", runtime.windowScrollHandler, true);
+      runtime.windowScrollHandler = null;
+    }
+  }
+
+  function teardownEncounterView() {
+    stopEncounterSyncPolling();
+    teardownRealtimeSubscriptions();
+    teardownGlobalDocumentListeners();
+    removeGlobalLifecycleListeners();
+    tokenContextMenuController?.destroy?.();
+    tokenContextMenuController = null;
+    tokenActionsController = null;
+
+    if (state.map && typeof state.map.destroy === "function") {
+      state.map.destroy();
+    }
+    state.map = null;
+    state.selectedInstanceId = null;
+    state.selectedTokenId = null;
+  }
+
   // --- UTILITIES ---
 
   function calculateInitiative(data) {
-    let dex = 0;
-    let wits = 0;
-
-    if (data && data.groups && data.groups.length > 0) {
-      const findVal = (name) => {
-        for (const g of data.groups) {
-          const f = g.fields.find((field) => field.name === name);
-          if (f) return f.value;
-        }
-        return 0;
-      };
-      dex = parseInt(findVal("Destreza")) || 0;
-      wits = parseInt(findVal("Astucia")) || 0;
-    } else if (data && data.stats) {
-      dex = parseInt(data.stats["Destreza"]) || 0;
-      wits = parseInt(data.stats["Astucia"]) || 0;
-    }
-
-    return dex + wits + Math.ceil(Math.random() * 10);
+    return encounterTurns.calculateInitiative(data);
   }
 
   function findMaxCode(instances, baseLetter) {
@@ -2366,23 +2568,27 @@
   }
 
   function isInstanceDown(inst) {
-    if (!inst) return false;
-
-    if (
-      inst.status === "dead" ||
-      inst.status === "incapacitated" ||
-      (parseInt(inst.health, 10) || 0) <= 0
-    ) {
-      return true;
-    }
-
-    if (inst.isPC && Array.isArray(inst.pcHealth) && inst.pcHealth.length > 0) {
-      return inst.pcHealth.every((val) => (parseInt(val, 10) || 0) > 0);
-    }
-
-    return false;
+    return encounterTurns.isInstanceDown(inst);
   }
 
-  // Auto-init
-  init();
+  async function boot() {
+    if (runtime.isBooted) return;
+    runtime.isBooted = true;
+    try {
+      const ok = await init();
+      if (!ok) {
+        runtime.isBooted = false;
+      }
+    } catch (error) {
+      runtime.isBooted = false;
+      throw error;
+    }
+  }
+
+  function destroy() {
+    teardownEncounterView();
+    runtime.isBooted = false;
+  }
+
+  window.__ActiveEncounterFeatureModule = { boot, destroy };
 })();

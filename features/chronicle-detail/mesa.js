@@ -1,19 +1,18 @@
 (function initChronicleDetailMesa(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
   const service = () => ns.service;
-  const LOCALE = document?.documentElement?.lang || "es-AR";
   const TEXT = {
     loading: "Cargando encuentros...",
     loadError: "No se pudieron cargar los encuentros.",
-    emptyNarrator:
-      "No hay encuentros todavía. Crea el primero para iniciar la mesa virtual.",
+    emptyNarratorActive:
+      "No hay encuentros activos todavía. Crea el primero para iniciar la mesa virtual.",
+    emptyNarratorArchived: "No hay encuentros archivados.",
     emptyPlayer: "No hay encuentros disponibles en juego para tu rol.",
     defaultEncounterName: "Encuentro",
     openEncounter: "Abrir encuentro",
     createPrompt: "Nombre del nuevo encuentro:",
     creating: "Creando...",
     createError: "No se pudo crear el encuentro.",
-    noDate: "Sin fecha",
   };
 
   function normalizeEncounterStatus(status) {
@@ -40,11 +39,17 @@
     return labels[normalized] || "WIP";
   }
 
-  function formatEncounterDate(isoDate) {
-    if (!isoDate) return TEXT.noDate;
-    const d = new Date(isoDate);
-    if (Number.isNaN(d.getTime())) return TEXT.noDate;
-    return d.toLocaleDateString(LOCALE);
+  function statusOptionsMarkup(currentStatus) {
+    const normalized = normalizeEncounterStatus(currentStatus);
+    const statuses = ["wip", "ready", "in_game", "archived"];
+    return statuses
+      .map((status) => {
+        const selected = status === normalized ? " selected" : "";
+        return `<option value="${status}"${selected}>${encounterStatusLabel(
+          status,
+        )}</option>`;
+      })
+      .join("");
   }
 
   async function init(config) {
@@ -52,31 +57,52 @@
 
     const listEl = document.getElementById("cd-mesa-encounters-list");
     const createBtn = document.getElementById("cd-mesa-create-encounter");
-    if (!listEl || !createBtn) return;
+    const filtersWrap = document.getElementById("cd-mesa-filters");
+    const filterActiveBtn = document.getElementById("cd-mesa-filter-active");
+    const filterArchivedBtn = document.getElementById("cd-mesa-filter-archived");
+    if (!listEl || !createBtn || !filtersWrap || !filterActiveBtn || !filterArchivedBtn)
+      return;
+
+    let allEncounters = [];
+    let currentFilter = "active";
 
     if (isNarrator) {
       createBtn.classList.remove("hidden");
+      filtersWrap.classList.remove("hidden");
     } else {
       createBtn.classList.add("hidden");
+      filtersWrap.classList.add("hidden");
     }
 
-    async function loadEncounters() {
-      listEl.innerHTML = `<span class="cd-card-muted">${TEXT.loading}</span>`;
-      const { data, error } = await service().fetchEncountersForChronicle({
-        chronicleId,
-        isNarrator,
-      });
+    function setFilter(nextFilter) {
+      currentFilter = nextFilter === "archived" ? "archived" : "active";
+      filterActiveBtn.classList.toggle("active", currentFilter === "active");
+      filterArchivedBtn.classList.toggle("active", currentFilter === "archived");
+      renderEncounters();
+    }
 
-      if (error) {
-        console.error("chronicle-detail.mesa.loadEncounters:", error);
-        listEl.innerHTML = `<span class="cd-card-muted">${TEXT.loadError}</span>`;
-        return;
+    function renderEncounters() {
+      let encounters = allEncounters;
+      if (isNarrator) {
+        encounters =
+          currentFilter === "archived"
+            ? allEncounters.filter(
+                (encounter) =>
+                  normalizeEncounterStatus(encounter.status) === "archived",
+              )
+            : allEncounters.filter(
+                (encounter) =>
+                  normalizeEncounterStatus(encounter.status) !== "archived",
+              );
       }
 
-      const encounters = data || [];
       if (!encounters.length) {
         listEl.innerHTML = `<span class="cd-card-muted">${
-          isNarrator ? TEXT.emptyNarrator : TEXT.emptyPlayer
+          isNarrator
+            ? currentFilter === "archived"
+              ? TEXT.emptyNarratorArchived
+              : TEXT.emptyNarratorActive
+            : TEXT.emptyPlayer
         }</span>`;
         return;
       }
@@ -86,14 +112,20 @@
         const status = normalizeEncounterStatus(encounter.status);
         const card = document.createElement("article");
         card.className = "cd-mesa-card";
+        const statusControl = isNarrator
+          ? `<select class="cd-mesa-status-select ${status}" data-encounter-id="${
+              encounter.id
+            }">${statusOptionsMarkup(status)}</select>`
+          : `<span class="cd-mesa-status ${status}">${encounterStatusLabel(
+              status,
+            )}</span>`;
         card.innerHTML = `
           <div class="cd-mesa-card-head">
             <h4 class="cd-mesa-card-title">${escapeHtml(
               encounter.name || TEXT.defaultEncounterName
             )}</h4>
-            <span class="cd-mesa-status ${status}">${encounterStatusLabel(status)}</span>
+            ${statusControl}
           </div>
-          <p class="cd-mesa-card-meta">${formatEncounterDate(encounter.created_at)}</p>
           <div class="cd-mesa-card-actions">
             <button type="button" class="btn btn--primary cd-mesa-open-btn" data-encounter-id="${encounter.id}">
               ${TEXT.openEncounter}
@@ -109,8 +141,48 @@
             )}`;
           });
 
+        card
+          .querySelector(".cd-mesa-status-select")
+          ?.addEventListener("change", async (event) => {
+            const select = event.currentTarget;
+            const nextStatus = normalizeEncounterStatus(select.value);
+            const previousStatus = status;
+            select.disabled = true;
+            const { error } = await service().updateEncounterStatus({
+              encounterId: encounter.id,
+              status: nextStatus,
+            });
+            select.disabled = false;
+
+            if (error) {
+              alert("No se pudo actualizar el estado del encuentro.");
+              select.value = previousStatus;
+              return;
+            }
+
+            encounter.status = nextStatus;
+            renderEncounters();
+          });
+
         listEl.appendChild(card);
       });
+    }
+
+    async function loadEncounters() {
+      listEl.innerHTML = `<span class="cd-card-muted">${TEXT.loading}</span>`;
+      const { data, error } = await service().fetchEncountersForChronicle({
+        chronicleId,
+        isNarrator,
+      });
+
+      if (error) {
+        console.error("chronicle-detail.mesa.loadEncounters:", error);
+        listEl.innerHTML = `<span class="cd-card-muted">${TEXT.loadError}</span>`;
+        return;
+      }
+
+      allEncounters = data || [];
+      renderEncounters();
     }
 
     async function createEncounter() {
@@ -142,6 +214,8 @@
     createBtn.addEventListener("click", () => {
       void createEncounter();
     });
+    filterActiveBtn.addEventListener("click", () => setFilter("active"));
+    filterArchivedBtn.addEventListener("click", () => setFilter("archived"));
 
     await loadEncounters();
     return {

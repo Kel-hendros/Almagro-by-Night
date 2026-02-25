@@ -159,7 +159,6 @@
       .from("encounters")
       .select("id, name, status, created_at, data")
       .eq("chronicle_id", chronicleId)
-      .neq("status", "archived")
       .order("created_at", { ascending: false });
 
     if (!isNarrator) {
@@ -199,6 +198,20 @@
     };
   }
 
+  async function updateEncounterStatus({ encounterId, status }) {
+    const { data, error } = await supabase
+      .from("encounters")
+      .update({ status })
+      .eq("id", encounterId)
+      .select("id, status")
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
   ns.service = {
     getSession,
     getCurrentPlayerByUserId,
@@ -212,5 +225,6 @@
     fetchDashboardData,
     fetchEncountersForChronicle,
     createEncounter,
+    updateEncounterStatus,
   };
 })(window);

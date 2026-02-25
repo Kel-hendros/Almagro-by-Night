@@ -1,0 +1,67 @@
+/* Encounter Mode: fixed visual system (not theme-driven) */
+.active-encounter-container {
+    --color-gold: #d7bb78;
+    --color-red-accent: #cf5f5f;
+    --color-primary: #8f2424;
+    --color-cream: #f1ead9;
+    --color-selected-token: #ffb347;
+    --color-health-100: #2ea663;
+    --color-health-50: #d9a441;
+    --color-health-20: #c05252;
+    --ae-font-family: "Inter", "Segoe UI", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --app-font-body: var(--ae-font-family);
+    --app-font-heading: var(--ae-font-family);
+    font-family: var(--ae-font-family);
+    font-size: clamp(14px, 0.86vw, 16px);
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+}
+
+.active-encounter-container,
+.active-encounter-container button,
+.active-encounter-container input,
+.active-encounter-container select,
+.active-encounter-container textarea {
+    font-family: inherit;
+}
+
+/* Force encounter typography across all nested UI (including initiative/timeline widgets). */
+.active-encounter-container * {
+    font-family: var(--ae-font-family) !important;
+}
+
+.active-encounter-container .ae-title {
+    font-size: clamp(1rem, 0.95vw, 1.2rem);
+    font-weight: 700;
+}
+
+.active-encounter-container h1,
+.active-encounter-container h2,
+.active-encounter-container h3,
+.active-encounter-container h4,
+.active-encounter-container h5,
+.active-encounter-container h6,
+.active-encounter-container button {
+    font-family: var(--ae-font-family);
+}
+
+.active-encounter-container .ae-status-chip-select,
+.active-encounter-container .ae-btn,
+.active-encounter-container .ae-map-btn,
+.active-encounter-container .ae-layer-option,
+.active-encounter-container .ae-drawer-item {
+    font-size: clamp(0.76rem, 0.74vw, 0.9rem);
+}
+
+.active-encounter-container .ae-group-fieldset legend,
+.active-encounter-container .ae-picker-btn {
+    font-family: inherit;
+    letter-spacing: 0.01em;
+}
+
+.active-encounter-container .ae-turn-btn--next,
+.active-encounter-container .ae-turn-btn--reroll,
+.active-encounter-container .ae-btn-close,
+.active-encounter-container .ae-section-add-btn {
+    min-height: 30px;
+}

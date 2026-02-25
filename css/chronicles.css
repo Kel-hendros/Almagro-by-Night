@@ -1614,19 +1614,51 @@ p.chronicle-description {
     flex-wrap: wrap;
 }
 
+.cd-mesa-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.cd-mesa-filter {
+    background: color-mix(in srgb, var(--cd-bg-elevated) 90%, transparent);
+    border: 1px solid var(--cd-border-divider);
+    color: var(--cd-text-secondary);
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cd-mesa-filter:hover {
+    color: var(--cd-text-primary);
+    border-color: var(--cd-border-primary);
+}
+
+.cd-mesa-filter.active {
+    color: var(--cd-text-primary);
+    border-color: var(--cd-accent);
+    background: color-mix(in srgb, var(--cd-accent-soft) 75%, transparent);
+}
+
 .cd-mesa-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 12px;
+    align-items: stretch;
 }
 
 .cd-mesa-card {
     background: var(--cd-bg-surface);
     border-radius: var(--cd-radius-card);
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     border: 1px solid var(--cd-border-divider);
 }
 
@@ -1640,12 +1672,14 @@ p.chronicle-description {
 .cd-mesa-card-title {
     margin: 0;
     font-family: var(--cd-font-primary);
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--cd-text-primary);
+    line-height: 1.35;
 }
 
-.cd-mesa-status {
+.cd-mesa-status,
+.cd-mesa-status-select {
     font-family: var(--cd-font-primary);
     font-size: 11px;
     font-weight: 600;
@@ -1657,44 +1691,61 @@ p.chronicle-description {
     border: 1px solid transparent;
 }
 
-.cd-mesa-status.wip {
+.cd-mesa-status-select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 12px) calc(50% - 1px), calc(100% - 7px) calc(50% - 1px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 24px;
+}
+
+.cd-mesa-status-select:focus {
+    outline: none;
+    border-color: var(--cd-accent);
+}
+
+.cd-mesa-status.wip,
+.cd-mesa-status-select.wip {
     color: var(--cd-text-secondary);
     background: color-mix(in srgb, var(--cd-bg-elevated) 78%, transparent);
     border-color: var(--cd-border-divider);
 }
 
-.cd-mesa-status.ready {
+.cd-mesa-status.ready,
+.cd-mesa-status-select.ready {
     color: var(--cd-status-warning);
     background: color-mix(in srgb, var(--cd-status-warning) 14%, transparent);
     border-color: color-mix(in srgb, var(--cd-status-warning) 24%, transparent);
 }
 
-.cd-mesa-status.in_game {
+.cd-mesa-status.in_game,
+.cd-mesa-status-select.in_game {
     color: var(--cd-status-success);
     background: var(--cd-status-success-bg);
     border-color: color-mix(in srgb, var(--cd-status-success) 30%, transparent);
 }
 
-.cd-mesa-status.archived {
+.cd-mesa-status.archived,
+.cd-mesa-status-select.archived {
     color: var(--cd-text-tertiary);
     background: color-mix(in srgb, var(--cd-bg-elevated) 64%, transparent);
     border-color: var(--cd-border-divider);
 }
 
-.cd-mesa-card-meta {
-    margin: 0;
-    font-family: var(--cd-font-primary);
-    font-size: 12px;
-    color: var(--cd-text-secondary);
-}
-
 .cd-mesa-card-actions {
     display: flex;
     justify-content: flex-end;
+    margin-top: auto;
 }
 
 .cd-mesa-open-btn {
-    min-width: 150px;
+    min-width: 124px;
+    padding: 6px 10px;
+    font-size: 12px;
 }
 
 /* --- Diario Tab --- */

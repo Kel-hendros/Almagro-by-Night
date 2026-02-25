@@ -421,6 +421,7 @@ async function loadRoute(force = false) {
 
   // Split query params if present
   const [baseHash, queryString] = rawHash.split("?");
+  const previousBaseHash = (__currentRoute || "").split("?")[0];
 
   const session = currentSession;
 
@@ -457,6 +458,17 @@ async function loadRoute(force = false) {
     return;
   }
 
+  if (
+    previousBaseHash === "active-encounter" &&
+    (baseHash !== "active-encounter" || force || __currentRoute !== targetHash)
+  ) {
+    try {
+      await window.ActiveEncounterFeature?.destroy?.();
+    } catch (error) {
+      console.warn("Router: active-encounter destroy error", error);
+    }
+  }
+
   const contentEl = document.getElementById("content");
   try {
     const res = await fetch(path);
@@ -465,6 +477,10 @@ async function loadRoute(force = false) {
 
     // Execute scripts in deterministic order to avoid feature bootstrap races.
     await executeFragmentScriptsSequentially(contentEl);
+
+    if (baseHash === "active-encounter") {
+      await window.ActiveEncounterFeature?.boot?.();
+    }
 
     if (window.lucide?.createIcons) lucide.createIcons();
     bindFragmentActions(contentEl);

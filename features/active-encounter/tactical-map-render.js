@@ -1,0 +1,753 @@
+(function initTacticalMapRenderModule(global) {
+  function applyRenderMethods(TacticalMap) {
+    if (!TacticalMap || TacticalMap.__renderMethodsApplied) return;
+    TacticalMap.__renderMethodsApplied = true;
+    const proto = TacticalMap.prototype;
+
+    proto.getHoverFocusType = function getHoverFocusType() {
+      return this.hoverFocus?.type || null;
+    };
+
+    proto.isBackgroundHoverFocused = function isBackgroundHoverFocused() {
+      return this.getHoverFocusType() === "background";
+    };
+
+    proto.isTokenHoverFocused = function isTokenHoverFocused(token) {
+      const hover = this.hoverFocus;
+      if (!hover || hover.type !== "entity" || !token) return false;
+      if (hover.tokenId && hover.tokenId === token.id) return true;
+      if (hover.instanceId && hover.instanceId === token.instanceId) return true;
+      return false;
+    };
+
+    proto.isDesignTokenHoverFocused = function isDesignTokenHoverFocused(token) {
+      const hover = this.hoverFocus;
+      if (!hover || hover.type !== "decor" || !token) return false;
+      return hover.tokenId === token.id;
+    };
+
+    proto.drawHoverHalo = function drawHoverHalo(cx, cy, radius) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      this.ctx.closePath();
+      this.ctx.strokeStyle = "rgba(98, 239, 148, 0.95)";
+      this.ctx.lineWidth = Math.max(2.5 / this.scale, 2);
+      this.ctx.shadowColor = "rgba(98, 239, 148, 0.75)";
+      this.ctx.shadowBlur = Math.max(14 / this.scale, 8);
+      this.ctx.stroke();
+      this.ctx.restore();
+    };
+
+    proto.drawHoverRectHalo = function drawHoverRectHalo(x, y, width, height) {
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(98, 239, 148, 0.95)";
+      this.ctx.lineWidth = Math.max(2.5 / this.scale, 2);
+      this.ctx.shadowColor = "rgba(98, 239, 148, 0.75)";
+      this.ctx.shadowBlur = Math.max(14 / this.scale, 8);
+      this.ctx.strokeRect(x, y, width, height);
+      this.ctx.restore();
+    };
+
+    proto.drawStatusBadge = function drawStatusBadge(
+      cx,
+      cy,
+      radius,
+      svgImg,
+      options = {},
+    ) {
+      const badgeRadius = Math.max(7 / this.scale, radius * 0.3);
+      const extraOffset = options?.extraOffset || 0;
+      const slotIndex = Number(options?.slotIndex) || 0;
+      const slotCount = Math.max(1, Number(options?.slotCount) || 1);
+      const baseOffset = radius * 1.55 + extraOffset;
+      const centeredSlot = slotIndex - (slotCount - 1) / 2;
+      const baseAngle = (3 * Math.PI) / 4; // Bottom-left anchor.
+      const angleStep = Math.min(
+        0.58,
+        (badgeRadius * 2.35) / Math.max(baseOffset, 1),
+      );
+      const angle = baseAngle + centeredSlot * angleStep;
+      const badgeX = cx + Math.cos(angle) * baseOffset;
+      const badgeY = cy + Math.sin(angle) * baseOffset;
+
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+      this.ctx.closePath();
+      this.ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
+      this.ctx.fill();
+      if (svgImg && svgImg.complete && svgImg.naturalWidth > 0) {
+        const size = badgeRadius * 1.68;
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(
+          badgeX,
+          badgeY,
+          badgeRadius - Math.max(0.7 / this.scale, 0.4),
+          0,
+          Math.PI * 2,
+        );
+        this.ctx.closePath();
+        this.ctx.clip();
+        this.ctx.drawImage(svgImg, badgeX - size / 2, badgeY - size / 2, size, size);
+        this.ctx.restore();
+      }
+      this.ctx.restore();
+    };
+
+    proto.getSatellitePopOffset = function getSatellitePopOffset(
+      tokenId,
+      now,
+      radius,
+    ) {
+      const anim = this.satellitePopAnim;
+      if (!anim || anim.tokenId !== tokenId) return 0;
+      const elapsed = now - anim.startAt;
+      if (elapsed <= 0) return 0;
+      if (elapsed >= anim.duration) {
+        this.satellitePopAnim = null;
+        return 0;
+      }
+      const t = elapsed / anim.duration;
+      const factor = Math.sin(Math.PI * t);
+      return radius * 0.34 * Math.max(0, factor);
+    };
+
+    proto.drawMapEffects = function drawMapEffects(timestamp) {
+      const now = typeof timestamp === "number" ? timestamp : performance.now();
+      const effects = Array.isArray(this.mapEffects) ? this.mapEffects : [];
+      if (!effects.length) return;
+
+      effects.forEach((effect) => {
+        if (!effect || (effect.type !== "silence_sphere" && effect.type !== "night_shroud")) return;
+        const sourceToken =
+          (this.tokens || []).find((token) => token.id === effect.sourceTokenId) ||
+          (this.tokens || []).find(
+            (token) => token.instanceId === effect.sourceInstanceId,
+          );
+        const center =
+          typeof this.getMapEffectCenter === "function"
+            ? this.getMapEffectCenter(effect, now)
+            : null;
+        if (!center && !sourceToken) return;
+        const cx = ((center?.x ?? 0) * this.gridSize);
+        const cy = ((center?.y ?? 0) * this.gridSize);
+        const radiusCells = Math.max(0, parseFloat(effect.radiusCells) || 0);
+        if (radiusCells <= 0) return;
+        const radiusPx = radiusCells * this.gridSize;
+        const t = now / 1000;
+        const breath = 0.5 + 0.5 * Math.sin(t * 1.65);
+        const shimmer = 0.5 + 0.5 * Math.sin(t * 2.35 + 0.9);
+
+        if (effect.type === "night_shroud") {
+          this.ctx.save();
+          const swell = 1 + Math.sin(t * 1.3 + (effect.createdAt || 0) * 0.0007) * 0.03;
+          const baseRadius = radiusPx * swell;
+
+          const outer = this.ctx.createRadialGradient(
+            cx,
+            cy,
+            baseRadius * 0.2,
+            cx,
+            cy,
+            baseRadius * 1.08,
+          );
+          outer.addColorStop(0, "rgba(6, 7, 12, 0.78)");
+          outer.addColorStop(0.65, "rgba(7, 8, 15, 0.74)");
+          outer.addColorStop(1, "rgba(4, 5, 10, 0.24)");
+          this.ctx.fillStyle = outer;
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, baseRadius, 0, Math.PI * 2);
+          this.ctx.closePath();
+          this.ctx.fill();
+
+          this.ctx.strokeStyle = `rgba(28, 30, 48, ${0.52 + breath * 0.16})`;
+          this.ctx.lineWidth = Math.max(2.2 / this.scale, 1.3);
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, baseRadius * 0.98, 0, Math.PI * 2);
+          this.ctx.stroke();
+
+          this.ctx.globalCompositeOperation = "lighter";
+          this.ctx.strokeStyle = `rgba(138, 96, 182, ${0.2 + shimmer * 0.1})`;
+          this.ctx.lineWidth = Math.max(1.4 / this.scale, 0.9);
+          this.ctx.setLineDash([
+            Math.max(14 / this.scale, 7),
+            Math.max(10 / this.scale, 5),
+          ]);
+          this.ctx.lineDashOffset = -(t * 30);
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, baseRadius * 0.82, 0, Math.PI * 2);
+          this.ctx.stroke();
+          if (this.selectedMapEffectId === effect.id) {
+            this.ctx.setLineDash([]);
+            this.ctx.globalCompositeOperation = "source-over";
+            this.ctx.strokeStyle = "rgba(255, 172, 68, 0.92)";
+            this.ctx.lineWidth = Math.max(2.6 / this.scale, 1.4);
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, baseRadius * 1.04, 0, Math.PI * 2);
+            this.ctx.stroke();
+          }
+          this.ctx.restore();
+          return;
+        }
+
+        this.ctx.save();
+        // 1) Subtle glass dome fill.
+        const domeGradient = this.ctx.createRadialGradient(
+          cx - radiusPx * 0.2,
+          cy - radiusPx * 0.24,
+          radiusPx * 0.12,
+          cx,
+          cy,
+          radiusPx,
+        );
+        domeGradient.addColorStop(0, `rgba(214, 232, 255, ${0.06 + shimmer * 0.04})`);
+        domeGradient.addColorStop(0.55, `rgba(128, 164, 220, ${0.09 + breath * 0.05})`);
+        domeGradient.addColorStop(1, `rgba(78, 112, 172, ${0.16 + breath * 0.07})`);
+        this.ctx.globalAlpha = 1;
+        this.ctx.fillStyle = domeGradient;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, radiusPx, 0, Math.PI * 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // 2) Refractive outer ring.
+        this.ctx.strokeStyle = `rgba(198, 222, 255, ${0.66 + breath * 0.16})`;
+        this.ctx.lineWidth = Math.max(2.5 / this.scale, 1.35);
+        this.ctx.setLineDash([]);
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, radiusPx, 0, Math.PI * 2);
+        this.ctx.closePath();
+        this.ctx.stroke();
+
+        // Inner faint ring for crystal depth.
+        this.ctx.save();
+        this.ctx.filter = `blur(${Math.max(1.2 / this.scale, 0.8)}px)`;
+        this.ctx.strokeStyle = `rgba(160, 190, 245, ${0.26 + breath * 0.1})`;
+        this.ctx.lineWidth = Math.max(1.25 / this.scale, 0.8);
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, radiusPx * 0.965, 0, Math.PI * 2);
+        this.ctx.closePath();
+        this.ctx.stroke();
+        this.ctx.restore();
+
+        // 3) Gentle interior pressure waves.
+        const waveBase = radiusPx * (0.42 + breath * 0.03);
+        for (let i = 0; i < 2; i++) {
+          const wavePhase = t * (0.95 + i * 0.18) + i * 1.2;
+          const waveRadius = waveBase + radiusPx * 0.16 * i + Math.sin(wavePhase) * radiusPx * 0.02;
+          this.ctx.strokeStyle = `rgba(176, 206, 255, ${0.1 + (1 - i) * 0.05})`;
+          this.ctx.lineWidth = Math.max(1.1 / this.scale, 0.7);
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, waveRadius, 0, Math.PI * 2);
+          this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+      });
+    };
+
+    proto.drawBackground = function drawBackground() {
+      if (!this.mapLayer || !this.backgroundImage) return;
+      if (!this.backgroundImage.complete || this.backgroundImage.naturalWidth <= 0)
+        return;
+
+      const bg = this.mapLayer || {};
+      const gridX = parseFloat(bg.x) || 0;
+      const gridY = parseFloat(bg.y) || 0;
+      const widthCells = Math.max(1, parseFloat(bg.widthCells) || 20);
+      let heightCells = Math.max(1, parseFloat(bg.heightCells) || 20);
+      const opacity = Math.min(1, Math.max(0, parseFloat(bg.opacity) || 1));
+      const preserveAspect = bg.preserveAspect !== false;
+
+      const px = gridX * this.gridSize;
+      const py = gridY * this.gridSize;
+      const pw = widthCells * this.gridSize;
+      if (preserveAspect) {
+        const aspect =
+          this.backgroundImage.naturalWidth / this.backgroundImage.naturalHeight;
+        if (Number.isFinite(aspect) && aspect > 0) {
+          heightCells = widthCells / aspect;
+        }
+      }
+      const ph = heightCells * this.gridSize;
+
+      const hoverType = this.getHoverFocusType();
+      const isFocused = hoverType === "background";
+      const isDimmed = !!hoverType && !isFocused;
+
+      this.ctx.save();
+      this.ctx.globalAlpha = opacity * (isDimmed ? 0.2 : 1);
+      this.ctx.drawImage(this.backgroundImage, px, py, pw, ph);
+      this.ctx.restore();
+
+      if (isFocused) {
+        this.ctx.save();
+        this.ctx.strokeStyle = "rgba(98, 239, 148, 0.95)";
+        this.ctx.lineWidth = Math.max(2.5 / this.scale, 2);
+        this.ctx.shadowColor = "rgba(98, 239, 148, 0.8)";
+        this.ctx.shadowBlur = Math.max(16 / this.scale, 10);
+        this.ctx.strokeRect(px, py, pw, ph);
+        this.ctx.restore();
+      }
+
+      if (this.activeLayer === "background" && this.selectedBackground) {
+        this.drawBackgroundControls(px, py, pw, ph);
+      }
+    };
+
+    proto.drawBackgroundControls = function drawBackgroundControls(px, py, pw, ph) {
+      const handleRadius = Math.max(6 / this.scale, 0.12 * this.gridSize);
+      const points = [
+        { id: "left", x: px, y: py + ph / 2 },
+        { id: "right", x: px + pw, y: py + ph / 2 },
+        { id: "top", x: px + pw / 2, y: py },
+        { id: "bottom", x: px + pw / 2, y: py + ph },
+      ];
+
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(255, 206, 117, 0.9)";
+      this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+      this.ctx.strokeRect(px, py, pw, ph);
+
+      points.forEach((pt) => {
+        this.ctx.beginPath();
+        this.ctx.arc(pt.x, pt.y, handleRadius, 0, Math.PI * 2);
+        this.ctx.closePath();
+        this.ctx.fillStyle = "rgba(22, 22, 22, 0.95)";
+        this.ctx.fill();
+        this.ctx.strokeStyle = "rgba(255, 206, 117, 0.95)";
+        this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+        this.ctx.stroke();
+      });
+      this.ctx.restore();
+    };
+
+    proto.drawDesignTokenControls = function drawDesignTokenControls(x, y, w, h) {
+      const handleRadius = Math.max(6 / this.scale, 0.12 * this.gridSize);
+      const points = [
+        { id: "left", x, y: y + h / 2 },
+        { id: "right", x: x + w, y: y + h / 2 },
+        { id: "top", x: x + w / 2, y },
+        { id: "bottom", x: x + w / 2, y: y + h },
+      ];
+
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(255, 206, 117, 0.9)";
+      this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+      this.ctx.strokeRect(x, y, w, h);
+
+      points.forEach((pt) => {
+        this.ctx.beginPath();
+        this.ctx.arc(pt.x, pt.y, handleRadius, 0, Math.PI * 2);
+        this.ctx.closePath();
+        this.ctx.fillStyle = "rgba(22, 22, 22, 0.95)";
+        this.ctx.fill();
+        this.ctx.strokeStyle = "rgba(255, 206, 117, 0.95)";
+        this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+        this.ctx.stroke();
+      });
+      this.ctx.restore();
+    };
+
+    proto.drawGrid = function drawGrid() {
+      const viewportWidth = this.canvas.width / this.scale;
+      const viewportHeight = this.canvas.height / this.scale;
+      const startX = -this.offsetX / this.scale;
+      const startY = -this.offsetY / this.scale;
+
+      this.ctx.strokeStyle = "#333";
+      this.ctx.lineWidth = 1;
+      this.ctx.beginPath();
+
+      const buffer = 100;
+      const gridMinX =
+        Math.floor((startX - buffer) / this.gridSize) * this.gridSize;
+      const gridMaxX =
+        Math.floor((startX + viewportWidth + buffer) / this.gridSize) *
+        this.gridSize;
+      const gridMinY =
+        Math.floor((startY - buffer) / this.gridSize) * this.gridSize;
+      const gridMaxY =
+        Math.floor((startY + viewportHeight + buffer) / this.gridSize) *
+        this.gridSize;
+
+      for (let x = gridMinX; x <= gridMaxX; x += this.gridSize) {
+        this.ctx.moveTo(x, gridMinY);
+        this.ctx.lineTo(x, gridMaxY);
+      }
+      for (let y = gridMinY; y <= gridMaxY; y += this.gridSize) {
+        this.ctx.moveTo(gridMinX, y);
+        this.ctx.lineTo(gridMaxX, y);
+      }
+      this.ctx.stroke();
+    };
+
+    proto.drawDesignTokens = function drawDesignTokens(layerName = "underlay") {
+      const tokensForLayer = this.designTokenLayers?.[layerName] || [];
+      if (!Array.isArray(tokensForLayer) || tokensForLayer.length === 0) return;
+
+      tokensForLayer.forEach((token) => {
+        const rect = this.getDesignTokenRect(token);
+        const x = rect.x;
+        const y = rect.y;
+        const width = rect.width;
+        const height = rect.height;
+        const cx = x + width / 2;
+        const cy = y + height / 2;
+        const rotation = this.getDesignTokenRotationRad(token);
+
+        const hoverType = this.getHoverFocusType();
+        const isFocused = this.isDesignTokenHoverFocused(token);
+        const isDimmed = !!hoverType && !isFocused;
+
+        this.ctx.save();
+        this.ctx.shadowColor = "rgba(0,0,0,0.45)";
+        this.ctx.shadowBlur = 4;
+        this.ctx.shadowOffsetX = 1;
+        this.ctx.shadowOffsetY = 1;
+
+        this.ctx.globalAlpha =
+          Math.min(1, Math.max(0, parseFloat(token.opacity) || 1)) *
+          (isDimmed ? 0.2 : 1);
+
+        const hasImage =
+          token.img && token.img.complete && token.img.naturalWidth > 0;
+        this.ctx.translate(cx, cy);
+        this.ctx.rotate(rotation);
+        if (hasImage) {
+          this.ctx.drawImage(token.img, -width / 2, -height / 2, width, height);
+        } else {
+          this.ctx.fillStyle = token.fill || "#666";
+          this.ctx.fillRect(-width / 2, -height / 2, width, height);
+        }
+
+        if (this.selectedDesignTokenId === token.id) {
+          this.ctx.strokeStyle = "#ff9800";
+          this.ctx.lineWidth = Math.max(2 / this.scale, 1.5);
+          this.ctx.strokeRect(-width / 2, -height / 2, width, height);
+        }
+
+        this.ctx.restore();
+
+        if (isFocused) {
+          this.drawHoverRectHalo(x, y, width, height);
+        }
+
+        if (this.activeLayer === "decor" && this.selectedDesignTokenId === token.id) {
+          this.drawDesignTokenControls(x, y, width, height);
+          const rotateHandle = this.getDesignTokenRotateHandlePx(token);
+          if (rotateHandle) {
+            this.ctx.save();
+            this.ctx.strokeStyle = "rgba(255, 206, 117, 0.95)";
+            this.ctx.lineWidth = Math.max(1.2 / this.scale, 1);
+            this.ctx.beginPath();
+            this.ctx.moveTo(rotateHandle.anchorX, rotateHandle.anchorY);
+            this.ctx.lineTo(rotateHandle.x, rotateHandle.y);
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.arc(
+              rotateHandle.x,
+              rotateHandle.y,
+              Math.max(6 / this.scale, 4),
+              0,
+              Math.PI * 2,
+            );
+            this.ctx.closePath();
+            this.ctx.fillStyle = "rgba(22, 22, 22, 0.95)";
+            this.ctx.fill();
+            this.ctx.strokeStyle = "rgba(98, 239, 148, 0.95)";
+            this.ctx.lineWidth = Math.max(1.8 / this.scale, 1.2);
+            this.ctx.stroke();
+            this.ctx.restore();
+          }
+        }
+      });
+    };
+
+    proto.getTokenRenderPosition = function getTokenRenderPosition(
+      token,
+      timestamp,
+    ) {
+      const now = typeof timestamp === "number" ? timestamp : performance.now();
+      const st = this.tokenRenderState.get(token.id);
+      if (!st) {
+        return { x: token.x, y: token.y };
+      }
+
+      const isLocallyDraggingThis =
+        this.isDraggingToken &&
+        this.draggedToken &&
+        this.draggedToken.id === token.id;
+
+      if (isLocallyDraggingThis) {
+        st.x = token.x;
+        st.y = token.y;
+        st.fromX = token.x;
+        st.fromY = token.y;
+        st.targetX = token.x;
+        st.targetY = token.y;
+        st.animating = false;
+        return { x: token.x, y: token.y };
+      }
+
+      if (!st.animating) {
+        st.x = st.targetX;
+        st.y = st.targetY;
+        return { x: st.x, y: st.y };
+      }
+
+      const elapsed = Math.max(0, now - st.startAt);
+      const t = Math.min(1, elapsed / Math.max(1, st.duration));
+      st.x = st.fromX + (st.targetX - st.fromX) * t;
+      st.y = st.fromY + (st.targetY - st.fromY) * t;
+      if (t >= 1) {
+        st.animating = false;
+        st.x = st.targetX;
+        st.y = st.targetY;
+      }
+      return { x: st.x, y: st.y };
+    };
+
+    proto.drawTokens = function drawTokens(timestamp) {
+      const now = typeof timestamp === "number" ? timestamp : performance.now();
+
+      this.tokens.forEach((token) => {
+        const hoverType = this.getHoverFocusType();
+        const isFocused = this.isTokenHoverFocused(token);
+        const isDimmed = !!hoverType && !isFocused;
+        const pos = this.getTokenRenderPosition(token, timestamp);
+        const screenX = pos.x * this.gridSize;
+        const screenY = pos.y * this.gridSize;
+        const size = (token.size || 1) * this.gridSize;
+        const radius = size * 0.4;
+        const cx = screenX + size / 2;
+        const cy = screenY + size / 2;
+        const instance = this.instances.find((i) => i.id === token.instanceId);
+        const conditions =
+          instance?.conditions && typeof instance.conditions === "object"
+            ? instance.conditions
+            : {};
+        const isFlying = !!conditions.flying;
+        const flightSeed = String(token.id || "")
+          .split("")
+          .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+        const flightPhase = ((flightSeed % 360) * Math.PI) / 180;
+        const flightBob = isFlying
+          ? Math.sin(now / 420 + flightPhase) *
+            Math.max(1.4 / this.scale, radius * 0.09)
+          : 0;
+        const flightLift = isFlying
+          ? Math.max(12 / this.scale, radius * 0.62) + flightBob
+          : 0;
+        const visualCx = cx;
+        const visualCy = cy - flightLift;
+        const alpha = isDimmed ? 0.2 : 1;
+
+        if (isFlying) {
+          // Ground shadow stays on the real token position while the token body "floats".
+          this.ctx.save();
+          this.ctx.globalAlpha = alpha;
+          this.ctx.fillStyle = "rgba(0,0,0,0.36)";
+          this.ctx.beginPath();
+          if (typeof this.ctx.ellipse === "function") {
+            this.ctx.ellipse(
+              cx,
+              cy + radius * 0.58,
+              radius * 0.82,
+              radius * 0.34,
+              0,
+              0,
+              Math.PI * 2,
+            );
+          } else {
+            this.ctx.arc(cx, cy + radius * 0.58, radius * 0.62, 0, Math.PI * 2);
+          }
+          this.ctx.closePath();
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+
+        this.ctx.save();
+
+        if (this.activeTokenAnim && this.activeTokenAnim.tokenId === token.id) {
+          const elapsed = now - this.activeTokenAnim.startAt;
+          if (elapsed < this.activeTokenAnim.duration) {
+            const p = elapsed / this.activeTokenAnim.duration;
+
+            let s = 1.0;
+            if (p < 0.2) {
+              const t = p / 0.2;
+              s = 1.0 + (0.6 - 1.0) * t;
+            } else if (p < 0.4) {
+              const t = (p - 0.2) / 0.2;
+              s = 0.6 + (1.0 - 0.6) * t;
+            } else if (p < 0.6) {
+              const t = (p - 0.4) / 0.2;
+              s = 1.0 + (1.5 - 1.0) * t;
+            } else if (p < 0.8) {
+              const t = (p - 0.6) / 0.2;
+              s = 1.5 + (0.8 - 1.5) * t;
+            } else {
+              const t = (p - 0.8) / 0.2;
+              s = 0.8 + (1.0 - 0.8) * t;
+            }
+
+            this.ctx.translate(visualCx, visualCy);
+            this.ctx.scale(s, s);
+            this.ctx.translate(-visualCx, -visualCy);
+          } else {
+            this.activeTokenAnim = null;
+          }
+        }
+
+        this.ctx.shadowColor = isFlying ? "rgba(0,0,0,0.34)" : "rgba(0,0,0,0.5)";
+        this.ctx.shadowBlur = isFlying ? 3 : 4;
+        this.ctx.shadowOffsetX = isFlying ? 1 : 2;
+        this.ctx.shadowOffsetY = isFlying ? 1 : 2;
+
+        this.ctx.globalAlpha = alpha;
+        this.ctx.beginPath();
+        this.ctx.arc(visualCx, visualCy, radius, 0, Math.PI * 2);
+        this.ctx.closePath();
+        const isPCFullyDamaged =
+          instance &&
+          instance.isPC &&
+          Array.isArray(instance.pcHealth) &&
+          instance.pcHealth.length > 0 &&
+          instance.pcHealth.every((level) => (parseInt(level, 10) || 0) > 0);
+        const isDead =
+          instance &&
+          (instance.status === "dead" ||
+            instance.health <= 0 ||
+            isPCFullyDamaged);
+        const isActiveTurn =
+          !!instance &&
+          !!this.activeInstanceId &&
+          instance.id === this.activeInstanceId;
+        const hasImage =
+          token.img && token.img.complete && token.img.naturalWidth > 0;
+
+        let tokenFillColor = "#444";
+        if (isDead) tokenFillColor = "#555";
+        else if (isActiveTurn) tokenFillColor = "#5f2626";
+        else if (instance && instance.isPC) tokenFillColor = "#5f4d2d";
+
+        this.ctx.fillStyle = tokenFillColor;
+        this.ctx.fill();
+        this.ctx.clip();
+
+        if (hasImage) {
+          this.ctx.drawImage(
+            token.img,
+            visualCx - radius,
+            visualCy - radius,
+            radius * 2,
+            radius * 2,
+          );
+        }
+
+        if (isDead) {
+          this.ctx.fillStyle = "rgba(120, 120, 120, 0.45)";
+          this.ctx.fillRect(
+            visualCx - radius,
+            visualCy - radius,
+            radius * 2,
+            radius * 2,
+          );
+        }
+
+        if (instance && instance.code && !hasImage) {
+          this.ctx.fillStyle = isDead ? "#9a9a9a" : "#f2f2f2";
+          this.ctx.font = `bold ${Math.max(10, size * 0.4)}px sans-serif`;
+          this.ctx.textAlign = "center";
+          this.ctx.textBaseline = "middle";
+          this.ctx.shadowColor = "rgba(0,0,0,0.55)";
+          this.ctx.shadowBlur = 2;
+          this.ctx.shadowOffsetX = 0;
+          this.ctx.shadowOffsetY = 1;
+          this.ctx.fillText(instance.code, visualCx, visualCy);
+        }
+
+        this.ctx.restore();
+
+        this.ctx.beginPath();
+        this.ctx.arc(visualCx, visualCy, radius, 0, Math.PI * 2);
+
+        let strokeColor = "#999";
+        if (isDead) {
+          strokeColor = instance && instance.isPC ? "#8e7440" : "#444";
+        } else if (instance && instance.isPC) {
+          strokeColor = "#c5a059";
+        }
+
+        if (isActiveTurn) {
+          strokeColor = "#ad3838";
+        }
+
+        this.ctx.strokeStyle = strokeColor;
+        this.ctx.lineWidth = isActiveTurn ? 3 : isDead ? 1 : 2;
+        this.ctx.stroke();
+
+        if (this.selectedTokenId === token.id) {
+          this.ctx.strokeStyle = "#ff9800";
+          this.ctx.lineWidth = 3;
+          this.ctx.stroke();
+        }
+
+        const badgeText = String(token.badgeText || "").trim();
+        if (badgeText) {
+          const badgeRadius = Math.max(8 / this.scale, radius * 0.28);
+          const badgeX = visualCx + radius * 0.56;
+          const badgeY = visualCy - radius * 0.56;
+          this.ctx.save();
+          this.ctx.beginPath();
+          this.ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+          this.ctx.closePath();
+          this.ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
+          this.ctx.fill();
+          this.ctx.strokeStyle = "rgba(20, 24, 32, 0.9)";
+          this.ctx.lineWidth = Math.max(1.1 / this.scale, 0.8);
+          this.ctx.stroke();
+          this.ctx.fillStyle = "#10141a";
+          this.ctx.font = `700 ${Math.max(9 / this.scale, badgeRadius * 1.1)}px Nunito Sans, sans-serif`;
+          this.ctx.textAlign = "center";
+          this.ctx.textBaseline = "middle";
+          this.ctx.fillText(badgeText, badgeX, badgeY);
+          this.ctx.restore();
+        }
+
+        const satellites =
+          typeof this.getTokenSatelliteKinds === "function"
+            ? this.getTokenSatelliteKinds(token, instance)
+            : [];
+        if (satellites.length > 0) {
+          const popOffset = this.getSatellitePopOffset(token.id, now, radius);
+          satellites.forEach((kind, index) => {
+            this.drawStatusBadge(
+              visualCx,
+              visualCy,
+              radius,
+              this.getStatusBadgeImage?.(kind),
+              {
+                extraOffset: popOffset,
+                slotIndex: index,
+                slotCount: satellites.length,
+              },
+            );
+          });
+        }
+
+        if (isFocused) {
+          this.drawHoverHalo(visualCx, visualCy, radius + 5);
+        }
+      });
+    };
+  }
+
+  global.__applyTacticalMapRender = applyRenderMethods;
+  if (global.TacticalMap) {
+    applyRenderMethods(global.TacticalMap);
+  }
+})(window);

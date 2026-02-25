@@ -161,69 +161,30 @@
     border-color: rgba(170, 170, 170, 0.25);
 }
 
-/* Status Action Buttons */
+/* Status Selector (Narrador) */
 .ct-status-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 6px;
-    flex-wrap: wrap;
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px solid var(--theme-border-divider);
 }
 
-.ct-btn-status {
-    background: transparent;
+.ct-status-select {
+    width: 100%;
+    background: color-mix(in srgb, var(--theme-bg-elevated) 88%, transparent);
     border: 1px solid var(--theme-border-divider);
     color: var(--theme-text-primary);
-    padding: 3px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.75rem;
-    transition: all 0.2s;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-family: var(--app-font-body);
 }
 
-.ct-btn-status:hover {
-    filter: brightness(1.3);
-}
-
-.ct-btn-status.status-ready {
-    color: #5dade2;
-    border-color: rgba(93, 173, 226, 0.4);
-}
-
-.ct-btn-status.status-ready:hover {
-    background: rgba(93, 173, 226, 0.15);
-}
-
-.ct-btn-status.status-in-game {
-    color: #2ecc71;
-    border-color: rgba(46, 204, 113, 0.4);
-}
-
-.ct-btn-status.status-in-game:hover {
-    background: rgba(46, 204, 113, 0.15);
-}
-
-.ct-btn-status.status-wip {
-    color: #f1c40f;
-    border-color: rgba(241, 196, 15, 0.4);
-}
-
-.ct-btn-status.status-wip:hover {
-    background: rgba(241, 196, 15, 0.15);
-}
-
-.ct-btn-status.status-archive {
-    color: var(--theme-text-secondary);
-    border-color: rgba(170, 170, 170, 0.3);
-    margin-left: auto;
-}
-
-.ct-btn-status.status-archive:hover {
-    color: #c0392b;
-    border-color: rgba(192, 57, 43, 0.4);
-    background: rgba(192, 57, 43, 0.15);
+.ct-status-select:focus {
+    outline: none;
+    border-color: var(--theme-accent);
 }
 
 .ct-btn {
@@ -591,10 +552,7 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     width: 100%;
-    text-align: center;
-    margin-top: 4px;
-    border-top: 1px solid var(--theme-border-divider);
-    padding-top: 2px;
+    margin: 0;
 }
 
 /* Turn Controls */

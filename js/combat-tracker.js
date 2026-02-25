@@ -550,26 +550,10 @@
     renderEncounters();
   }
 
-  function getStatusActions(status) {
-    const actions = {
-      wip: [
-        { nextStatus: "ready", label: "Marcar Listo", btnClass: "status-ready" },
-      ],
-      ready: [
-        { nextStatus: "in_game", label: "Poner en juego", btnClass: "status-in-game" },
-        { nextStatus: "wip", label: "Volver a WIP", btnClass: "status-wip" },
-      ],
-      in_game: [
-        { nextStatus: "ready", label: "Pausar", btnClass: "status-ready" },
-      ],
-    };
-    return actions[status] || [];
-  }
-
   async function changeEncounterStatus(encounterId, nextStatus) {
     if (!state.canManageChronicleEncounters) {
       alert("Solo el narrador de la crónica puede cambiar estados.");
-      return;
+      return false;
     }
     const { error } = await supabase
       .from("encounters")
@@ -578,33 +562,10 @@
 
     if (error) {
       alert("Error actualizando estado: " + error.message);
-      return;
+      return false;
     }
     await loadEncounters();
-  }
-
-  async function archiveEncounter(enc) {
-    if (!state.canManageChronicleEncounters) {
-      alert("Solo el narrador de la crónica puede archivar encuentros.");
-      return;
-    }
-    if (
-      !confirm(
-        `¿Archivar "${enc.name}"? No aparecerá en la lista de encuentros activos.`
-      )
-    )
-      return;
-
-    const { error } = await supabase
-      .from("encounters")
-      .update({ status: "archived" })
-      .eq("id", enc.id);
-
-    if (error) {
-      alert("Error al archivar: " + error.message);
-      return;
-    }
-    await loadEncounters();
+    return true;
   }
 
   function renderEncounters() {
@@ -623,21 +584,19 @@
         enc.data?.round > 1 ? ` | Ronda ${enc.data.round}` : "";
       const status = normalizeEncounterStatus(enc.status);
       const statusLabel = formatEncounterStatus(status);
-      const actions = state.canManageChronicleEncounters
-        ? getStatusActions(status)
-        : [];
-
-      let statusActionsHtml = "";
-      if (actions.length > 0) {
-        const btns = actions
-          .map(
-            (a) =>
-              `<button class="ct-btn-status ${a.btnClass}" data-enc-id="${enc.id}" data-next-status="${a.nextStatus}">${a.label}</button>`
-          )
-          .join("");
-        const archiveBtn = `<button class="ct-btn-status status-archive" data-enc-id="${enc.id}" data-action="archive" title="Archivar">&#128451;</button>`;
-        statusActionsHtml = `<div class="ct-status-actions">${btns}${archiveBtn}</div>`;
-      }
+      const statusActionsHtml = state.canManageChronicleEncounters
+        ? `
+          <div class="ct-status-actions">
+            <label class="ct-status-label" for="ct-enc-status-${enc.id}">Estado</label>
+            <select id="ct-enc-status-${enc.id}" class="ct-status-select" data-enc-id="${enc.id}">
+              <option value="wip"${status === "wip" ? " selected" : ""}>WIP</option>
+              <option value="ready"${status === "ready" ? " selected" : ""}>Listo</option>
+              <option value="in_game"${status === "in_game" ? " selected" : ""}>En juego</option>
+              <option value="archived"${status === "archived" ? " selected" : ""}>Archivado</option>
+            </select>
+          </div>
+        `
+        : "";
 
       card.innerHTML = `
         <div class="ct-card-header">
@@ -655,16 +614,27 @@
         .querySelector(".btn-open-encounter")
         .addEventListener("click", () => openEncounter(enc));
 
-      card.querySelectorAll(".ct-btn-status[data-next-status]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          changeEncounterStatus(btn.dataset.encId, btn.dataset.nextStatus);
+      card.querySelectorAll(".ct-status-select[data-enc-id]").forEach((select) => {
+        select.addEventListener("change", async () => {
+          const nextStatus = normalizeEncounterStatus(select.value);
+          if (
+            nextStatus === "archived" &&
+            !confirm(
+              `¿Archivar "${enc.name}"? No aparecerá en la lista de encuentros activos.`
+            )
+          ) {
+            select.value = status;
+            return;
+          }
+          const changed = await changeEncounterStatus(
+            select.dataset.encId,
+            nextStatus,
+          );
+          if (!changed) {
+            select.value = status;
+          }
         });
       });
-
-      const archiveBtn = card.querySelector('.ct-btn-status[data-action="archive"]');
-      if (archiveBtn) {
-        archiveBtn.addEventListener("click", () => archiveEncounter(enc));
-      }
 
       lists.encounters.appendChild(card);
     });

@@ -111,6 +111,7 @@ declare
   v_instance_id text;
   v_sheet_id uuid;
   v_owner_user_id uuid;
+  v_controller_user_id text;
   v_is_admin boolean;
 begin
   if auth.uid() is null then
@@ -164,24 +165,30 @@ begin
       raise exception 'Token instance not found';
     end if;
 
-    if coalesce((v_instance->>'isPC')::boolean, false) is not true then
-      raise exception 'Only PC tokens can be moved by players';
-    end if;
+    v_controller_user_id := nullif(v_instance->>'controllerUserId', '');
+    if v_controller_user_id is not null and v_controller_user_id = auth.uid()::text then
+      -- Summoned or controlled token explicitly assigned to this user.
+      null;
+    else
+      if coalesce((v_instance->>'isPC')::boolean, false) is not true then
+        raise exception 'Only PC tokens can be moved by players';
+      end if;
 
-    if coalesce(v_instance->>'characterSheetId', '') = '' then
-      raise exception 'PC instance has no characterSheetId';
-    end if;
+      if coalesce(v_instance->>'characterSheetId', '') = '' then
+        raise exception 'PC instance has no characterSheetId';
+      end if;
 
-    v_sheet_id := (v_instance->>'characterSheetId')::uuid;
+      v_sheet_id := (v_instance->>'characterSheetId')::uuid;
 
-    select cs.user_id
-      into v_owner_user_id
-    from public.character_sheets cs
-    where cs.id = v_sheet_id
-    limit 1;
+      select cs.user_id
+        into v_owner_user_id
+      from public.character_sheets cs
+      where cs.id = v_sheet_id
+      limit 1;
 
-    if v_owner_user_id is distinct from auth.uid() then
-      raise exception 'Player does not own this PC token';
+      if v_owner_user_id is distinct from auth.uid() then
+        raise exception 'Player does not own this PC token';
+      end if;
     end if;
   end if;
 
@@ -199,6 +206,111 @@ end;
 $$;
 
 grant execute on function public.move_encounter_token(uuid, text, integer, integer)
+to authenticated;
+
+create or replace function public.unsummon_encounter_instance(
+  p_encounter_id uuid,
+  p_instance_id text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_enc record;
+  v_data jsonb;
+  v_tokens jsonb;
+  v_instances jsonb;
+  v_instance jsonb;
+  v_active_instance_id text;
+  v_controller_user_id text;
+  v_is_admin boolean;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select public.is_current_user_admin() into v_is_admin;
+
+  select id, status, data
+    into v_enc
+  from public.encounters
+  where id = p_encounter_id
+  for update;
+
+  if not found then
+    raise exception 'Encounter not found';
+  end if;
+
+  if v_enc.data is null then
+    raise exception 'Encounter has no data';
+  end if;
+
+  if not v_is_admin and v_enc.status <> 'in_game' then
+    raise exception 'Encounter is not in_game';
+  end if;
+
+  v_data := v_enc.data;
+  v_instances := coalesce(v_data->'instances', '[]'::jsonb);
+  v_tokens := coalesce(v_data->'tokens', '[]'::jsonb);
+
+  select i.elem
+    into v_instance
+  from jsonb_array_elements(v_instances) as i(elem)
+  where i.elem->>'id' = p_instance_id
+  limit 1;
+
+  if v_instance is null then
+    raise exception 'Instance not found in encounter';
+  end if;
+
+  if coalesce((v_instance->>'isSummon')::boolean, false) is not true then
+    raise exception 'Instance is not a summon';
+  end if;
+
+  if not v_is_admin then
+    v_controller_user_id := nullif(v_instance->>'controllerUserId', '');
+    if v_controller_user_id is null or v_controller_user_id <> auth.uid()::text then
+      raise exception 'Player does not control this summon';
+    end if;
+  end if;
+
+  v_instances := coalesce(
+    (
+      select jsonb_agg(elem)
+      from jsonb_array_elements(v_instances) as i(elem)
+      where i.elem->>'id' <> p_instance_id
+    ),
+    '[]'::jsonb
+  );
+
+  v_tokens := coalesce(
+    (
+      select jsonb_agg(elem)
+      from jsonb_array_elements(v_tokens) as t(elem)
+      where t.elem->>'instanceId' <> p_instance_id
+    ),
+    '[]'::jsonb
+  );
+
+  v_data := jsonb_set(v_data, '{instances}', v_instances, true);
+  v_data := jsonb_set(v_data, '{tokens}', v_tokens, true);
+
+  v_active_instance_id := nullif(v_data->>'activeInstanceId', '');
+  if v_active_instance_id = p_instance_id then
+    v_data := jsonb_set(v_data, '{activeInstanceId}', 'null'::jsonb, true);
+  end if;
+
+  update public.encounters
+  set data = v_data
+  where id = p_encounter_id;
+
+  return true;
+end;
+$$;
+
+grant execute on function public.unsummon_encounter_instance(uuid, text)
 to authenticated;
 
 commit;
