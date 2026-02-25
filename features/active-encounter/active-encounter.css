@@ -1815,15 +1815,6 @@
 }
 
 /* Tactical Map Styles */
-.ae-map-area {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #1a1a1a;
-    display: block;
-    /* Ensure it's not flex/grid unless intended */
-}
 
 .ae-upload-overlay {
     position: absolute;

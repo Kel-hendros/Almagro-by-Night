@@ -130,6 +130,15 @@ window.TacticalMap = class TacticalMap {
     this._onWindowResize = () => this.resize();
     window.addEventListener("resize", this._onWindowResize);
 
+    // Deferred resize: catch layout shifts after sidebar collapse or async rendering
+    requestAnimationFrame(() => { if (!this._isDestroyed) this.resize(); });
+
+    // ResizeObserver: react to container size changes (sidebar, panels, etc.)
+    if (typeof ResizeObserver !== "undefined" && this.container) {
+      this._resizeObserver = new ResizeObserver(() => { if (!this._isDestroyed) this.resize(); });
+      this._resizeObserver.observe(this.container);
+    }
+
     if (typeof this.setupInteractions !== "function") {
       throw new Error(
         "TacticalMap interactions module not loaded (tactical-map-interactions.js).",
@@ -943,6 +952,10 @@ window.TacticalMap = class TacticalMap {
     if (this._onWindowResize) {
       window.removeEventListener("resize", this._onWindowResize);
       this._onWindowResize = null;
+    }
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
     }
     if (typeof this.disposeInteractions === "function") {
       this.disposeInteractions();
