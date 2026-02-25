@@ -36,6 +36,11 @@
         iconPath: "images/svgs/blinded.svg",
       },
       {
+        key: "hidden",
+        label: "Escondido",
+        iconPath: "images/svgs/invisible.svg",
+      },
+      {
         key: "prone",
         label: "Derribado",
         iconPath: "images/svgs/prone.svg",
@@ -62,7 +67,7 @@
       const detailsBtn = document.createElement("button");
       detailsBtn.type = "button";
       detailsBtn.textContent = "Ver detalles";
-      detailsBtn.className = "ae-token-context-action";
+      detailsBtn.className = "ae-token-context-action ae-token-context-action--details";
       detailsBtn.addEventListener("click", (event) => {
         event.stopPropagation();
         const tokenId = menu.dataset.tokenId || null;
@@ -252,6 +257,7 @@
     function renderConditionsPanel(tokenId) {
       if (!secondaryListEl) return;
       secondaryListEl.innerHTML = "";
+      secondaryListEl.classList.add("is-grid");
 
       CONDITION_OPTIONS.forEach((option) => {
         const btn = document.createElement("button");
@@ -279,6 +285,7 @@
     function renderPowersPanel(tokenId) {
       if (!secondaryListEl) return;
       secondaryListEl.innerHTML = "";
+      secondaryListEl.classList.remove("is-grid");
       const powers =
         tokenId && typeof onGetAvailablePowers === "function"
           ? onGetAvailablePowers(tokenId) || []

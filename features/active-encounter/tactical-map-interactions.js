@@ -361,7 +361,31 @@
       const mouseY = e.clientY - rect.top;
       const worldX = (mouseX - this.offsetX) / this.scale;
       const worldY = (mouseY - this.offsetY) / this.scale;
+      const worldCellX = worldX / this.gridSize;
+      const worldCellY = worldY / this.gridSize;
       const layer = this.activeLayer || "entities";
+
+      if (this.measureToolActive) {
+        if (e.button === 0) {
+          e.preventDefault();
+          if (!this.measureStart || this.measureEnd) {
+            this.measureStart = { x: worldCellX, y: worldCellY };
+            this.measureEnd = null;
+            this.measurePreview = { x: worldCellX, y: worldCellY };
+          } else {
+            this.measureEnd = { x: worldCellX, y: worldCellY };
+            this.measurePreview = null;
+          }
+          this.draw();
+          return;
+        }
+        if (e.button === 2) {
+          e.preventDefault();
+          this.isPanning = true;
+          this.dragStart = { x: e.clientX, y: e.clientY };
+          return;
+        }
+      }
 
       if (layer === "background") {
         const bgHandle = this.getBackgroundHandleAt(worldX, worldY);
@@ -641,6 +665,17 @@
         this.offsetX += dx;
         this.offsetY += dy;
         this.dragStart = { x: e.clientX, y: e.clientY };
+        this.draw();
+      } else if (this.measureToolActive && this.measureStart && !this.measureEnd) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        this.measurePreview = {
+          x: worldX / this.gridSize,
+          y: worldY / this.gridSize,
+        };
         this.draw();
       } else if (this.isDraggingToken && this.draggedToken) {
         const rect = this.canvas.getBoundingClientRect();

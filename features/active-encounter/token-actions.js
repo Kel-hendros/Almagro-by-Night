@@ -80,7 +80,8 @@
       if (
         normalizedKey !== "flying" &&
         normalizedKey !== "prone" &&
-        normalizedKey !== "blinded"
+        normalizedKey !== "blinded" &&
+        normalizedKey !== "hidden"
       ) {
         return false;
       }
@@ -146,6 +147,10 @@
         }
         return setTokenCondition(tokenId, action.condition, true);
       }
+      if (action.type === "toggleObfuscation") {
+        const active = isPowerActive(tokenId, powerId);
+        return setObfuscationState(tokenId, !active);
+      }
       if (action.type === "createMapEffect" && action.effectType) {
         if (activationMode === "toggle" && isPowerActive(tokenId, powerId)) {
           return removeMapEffectFromPower(tokenId, action);
@@ -177,6 +182,14 @@
             : {};
         return !!conditions[String(action.condition).toLowerCase()];
       }
+      if (action.type === "toggleObfuscation") {
+        const instance = getInstanceByTokenId(tokenId);
+        const effects =
+          instance?.effects && typeof instance.effects === "object"
+            ? instance.effects
+            : {};
+        return !!effects.obfuscateActive;
+      }
       if (action.type === "createMapEffect" && action.effectType) {
         const token = (state.encounter.data.tokens || []).find(
           (item) => item.id === tokenId,
@@ -189,6 +202,45 @@
         );
       }
       return false;
+    }
+
+    function setObfuscationState(tokenId, enabled) {
+      if (!state.encounter?.data || !tokenId) return false;
+      const instance = getInstanceByTokenId(tokenId);
+      if (!instance) return false;
+
+      const conditions =
+        instance.conditions && typeof instance.conditions === "object"
+          ? { ...instance.conditions }
+          : {};
+      const effects =
+        instance.effects && typeof instance.effects === "object"
+          ? { ...instance.effects }
+          : {};
+
+      if (enabled) {
+        effects.obfuscateActive = true;
+        const alreadyHidden = !!conditions.hidden;
+        if (!alreadyHidden) {
+          conditions.hidden = true;
+          effects.obfuscateAppliedHidden = true;
+        } else {
+          effects.obfuscateAppliedHidden = false;
+        }
+      } else {
+        const appliedHidden = effects.obfuscateAppliedHidden === true;
+        delete effects.obfuscateActive;
+        delete effects.obfuscateAppliedHidden;
+        if (appliedHidden) {
+          delete conditions.hidden;
+        }
+      }
+
+      instance.conditions = conditions;
+      instance.effects = effects;
+      render();
+      saveEncounter();
+      return true;
     }
 
     function promptMapEffectDiameter(action) {

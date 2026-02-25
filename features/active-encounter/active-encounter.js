@@ -59,6 +59,7 @@
     widthCells: 20,
     heightCells: 20,
     opacity: 1,
+    gridOpacity: 1,
     showGrid: true,
   };
   const DESIGN_TOKEN_DEFAULTS = {
@@ -201,9 +202,15 @@
     els.drawerTabAssetsPane = document.getElementById(
       "ae-drawer-tab-assets-content",
     );
+    els.drawerTabSettings = document.getElementById("btn-ae-tab-settings");
+    els.drawerTabSettingsPane = document.getElementById(
+      "ae-drawer-tab-settings-content",
+    );
+    els.gridOpacityLevels = document.getElementById("ae-grid-opacity-levels");
     els.listBackground = document.getElementById("ae-list-background");
     els.listDecor = document.getElementById("ae-list-decor");
-    els.listEntities = document.getElementById("ae-list-entities");
+    els.listEntitiesNpc = document.getElementById("ae-list-entities-npc");
+    els.listEntitiesPc = document.getElementById("ae-list-entities-pc");
 
     // Detail Modal Els
     els.modal = document.getElementById("ae-modal");
@@ -450,6 +457,15 @@
       return { ...MAP_LAYER_DEFAULTS };
     }
 
+    const hasGridOpacity = Object.prototype.hasOwnProperty.call(raw, "gridOpacity");
+    const gridOpacity = Math.min(
+      1,
+      Math.max(
+        0,
+        hasGridOpacity ? parseFloat(raw.gridOpacity) || 0 : MAP_LAYER_DEFAULTS.gridOpacity,
+      ),
+    );
+
     return {
       backgroundPath:
         typeof raw.backgroundPath === "string" && raw.backgroundPath
@@ -469,7 +485,8 @@
         parseFloat(raw.heightCells) || MAP_LAYER_DEFAULTS.heightCells,
       ),
       opacity: Math.min(1, Math.max(0, parseFloat(raw.opacity) || 1)),
-      showGrid: raw.showGrid !== false,
+      gridOpacity,
+      showGrid: raw.showGrid !== false && gridOpacity > 0,
     };
   }
 
@@ -708,8 +725,22 @@
     if (toolsToggle) {
       toolsToggle.style.display = canEditEncounter() ? "flex" : "none";
     }
+    const toolsDrawer = document.getElementById("ae-tools-drawer");
+    if (toolsDrawer) {
+      toolsDrawer.classList.remove("open");
+      toolsDrawer.style.display = canEditEncounter() ? "" : "none";
+    }
     if (els.layerToolbar) {
-      els.layerToolbar.style.display = canEditEncounter() ? "flex" : "none";
+      els.layerToolbar.style.display = "flex";
+    }
+    if (els.layerMenuToggle) {
+      els.layerMenuToggle.style.display = canEditEncounter() ? "flex" : "none";
+    }
+    if (els.layerMenu && !canEditEncounter()) {
+      els.layerMenu.style.display = "none";
+    }
+    if (!canEditEncounter() && state.activeMapLayer !== "entities") {
+      setActiveMapLayer("entities", { persist: false, closeMenu: true });
     }
   }
 
@@ -756,6 +787,16 @@
         state.map.scale = 1.0;
         state.map.draw();
       }
+    });
+
+    const rulerBtn = document.getElementById("btn-ae-ruler");
+    rulerBtn?.addEventListener("click", () => {
+      if (!state.map || typeof state.map.setMeasurementToolActive !== "function") {
+        return;
+      }
+      const nextActive = !state.map.measureToolActive;
+      state.map.setMeasurementToolActive(nextActive);
+      rulerBtn.classList.toggle("is-active", nextActive);
     });
   }
 

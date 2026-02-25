@@ -756,7 +756,11 @@
 
 .ae-section-add-btn {
     width: 20px;
+    min-width: 20px;
+    max-width: 20px;
     height: 20px;
+    min-height: 20px;
+    max-height: 20px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.24);
     background: rgba(255, 255, 255, 0.04);
@@ -773,6 +777,74 @@
 .ae-section-add-btn:hover {
     background: rgba(255, 255, 255, 0.11);
     border-color: rgba(255, 255, 255, 0.36);
+}
+
+.ae-entity-subsection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ae-entity-subheader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #cfcfcf;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ae-setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ae-setting-label {
+    font-size: 0.72rem;
+    color: #d9d9d9;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.ae-levels {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.ae-level-btn {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.05);
+    color: #d5d5d5;
+    border-radius: 8px;
+    height: 28px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ae-level-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.32);
+    color: #fff;
+}
+
+.ae-level-btn.active {
+    background: rgba(173, 56, 56, 0.22);
+    border-color: rgba(173, 56, 56, 0.5);
+    color: #ffc1c1;
+}
+
+.ae-level-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .ae-drawer-list {
@@ -861,6 +933,12 @@
     background: rgba(255, 255, 255, 0.11);
     border-color: rgba(255, 255, 255, 0.25);
     transform: translateY(-1px);
+}
+
+.ae-layer-toolbar-btn.is-active {
+    background: rgba(197, 160, 89, 0.18);
+    border-color: rgba(197, 160, 89, 0.44);
+    color: #ffe0a7;
 }
 
 .ae-layer-current-label {
@@ -1793,8 +1871,8 @@
 }
 
 .ae-token-context-menu.is-expanded {
-    width: 390px;
-    max-width: 390px;
+    width: 460px;
+    max-width: 460px;
 }
 
 .ae-token-context-body {
@@ -1893,6 +1971,12 @@
     opacity: 0.85;
 }
 
+.ae-token-context-action--details::before {
+    content: "🔎";
+    font-size: 0.76rem;
+    opacity: 0.9;
+}
+
 .ae-token-context-action--powers::before {
     content: "⚡";
     font-size: 0.74rem;
@@ -1906,10 +1990,10 @@
 
 .ae-token-context-conditions {
     position: absolute;
-    left: 192px;
+    left: 194px;
     top: 0;
-    width: 182px;
-    max-width: 182px;
+    width: 250px;
+    max-width: 250px;
     overflow: hidden;
     opacity: 0;
     transform: translateX(-8px);
@@ -1930,6 +2014,12 @@
     padding-top: 1px;
 }
 
+.ae-token-context-conditions-list.is-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
 .ae-token-condition-item {
     width: 100%;
     display: flex;
@@ -1944,6 +2034,11 @@
     text-align: left;
     transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
     font-family: inherit;
+}
+
+.ae-token-context-conditions-list.is-grid .ae-token-condition-item {
+    min-height: 40px;
+    padding: 7px 8px;
 }
 
 .ae-token-condition-item:hover {

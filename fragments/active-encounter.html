@@ -36,6 +36,7 @@
                 <div class="ae-drawer-content">
                     <div class="ae-drawer-tabs">
                         <button id="btn-ae-tab-assets" class="ae-drawer-tab active" title="Activos del mapa">☷</button>
+                        <button id="btn-ae-tab-settings" class="ae-drawer-tab" title="Configuración">⚙</button>
                     </div>
 
                     <div id="ae-drawer-tab-assets-content" class="ae-tab-pane active">
@@ -64,10 +65,43 @@
                         <details class="ae-collapse" open>
                             <summary>
                                 <span>Entidades</span>
-                                <button id="btn-ae-add-entity" class="ae-section-add-btn" type="button" title="Agregar entidad" aria-label="Agregar entidad">+</button>
                             </summary>
                             <div class="ae-collapse-body">
-                                <div id="ae-list-entities" class="ae-drawer-list"></div>
+                                <div class="ae-entity-subsection">
+                                    <div class="ae-entity-subheader">
+                                        <span>PNJs</span>
+                                        <button id="btn-ae-add-entity-npc" class="ae-section-add-btn" type="button" title="Agregar PNJ" aria-label="Agregar PNJ">+</button>
+                                    </div>
+                                    <div id="ae-list-entities-npc" class="ae-drawer-list"></div>
+                                </div>
+                                <div class="ae-entity-subsection">
+                                    <div class="ae-entity-subheader">
+                                        <span>PJs</span>
+                                        <button id="btn-ae-add-entity-pc" class="ae-section-add-btn" type="button" title="Agregar PJ" aria-label="Agregar PJ">+</button>
+                                    </div>
+                                    <div id="ae-list-entities-pc" class="ae-drawer-list"></div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div id="ae-drawer-tab-settings-content" class="ae-tab-pane">
+                        <details class="ae-collapse" open>
+                            <summary>
+                                <span>Mapa</span>
+                            </summary>
+                            <div class="ae-collapse-body">
+                                <div class="ae-setting-row">
+                                    <label class="ae-setting-label">Opacidad de grilla</label>
+                                    <div id="ae-grid-opacity-levels" class="ae-levels">
+                                        <button type="button" class="ae-level-btn" data-level="0">0</button>
+                                        <button type="button" class="ae-level-btn" data-level="1">1</button>
+                                        <button type="button" class="ae-level-btn" data-level="2">2</button>
+                                        <button type="button" class="ae-level-btn" data-level="3">3</button>
+                                        <button type="button" class="ae-level-btn" data-level="4">4</button>
+                                        <button type="button" class="ae-level-btn" data-level="5">5</button>
+                                    </div>
+                                </div>
                             </div>
                         </details>
                     </div>
@@ -85,6 +119,7 @@
             <!-- Floating Layer Toolbar (anchored to map area) -->
             <div id="ae-layer-toolbar" class="ae-layer-toolbar">
                 <button id="btn-ae-layer-menu" class="ae-layer-toolbar-btn icon" title="Capas">☰</button>
+                <button id="btn-ae-ruler" class="ae-layer-toolbar-btn icon" title="Regla">📏</button>
                 <span id="ae-layer-current-label" class="ae-layer-current-label">Entidades</span>
 
                 <div id="ae-layer-menu" class="ae-layer-menu" style="display:none;">

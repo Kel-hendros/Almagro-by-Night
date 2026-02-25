@@ -14,6 +14,7 @@ const MAP_LAYER_DEFAULTS = {
   widthCells: 20,
   heightCells: 20,
   opacity: 1,
+  gridOpacity: 1,
   showGrid: true,
 };
 const DESIGN_TOKEN_DEFAULTS = {
@@ -36,6 +37,7 @@ const STATUS_ICON_FILES = {
   prone: "prone.svg",
   batwing: "batwing-emblem.svg",
   blinded: "blinded.svg",
+  hidden: "invisible.svg",
 };
 
 window.TacticalMap = class TacticalMap {
@@ -105,6 +107,10 @@ window.TacticalMap = class TacticalMap {
     this.selectedMapEffectId = null;
     this.selectedBackground = false;
     this.hoverFocus = null;
+    this.measureToolActive = false;
+    this.measureStart = null;
+    this.measureEnd = null;
+    this.measurePreview = null;
     this.satellitePopAnim = null;
     this.statusBadgeImages = {};
     this._rafId = null;
@@ -368,6 +374,7 @@ window.TacticalMap = class TacticalMap {
     ) {
       kinds.push("blinded");
     }
+    if (conditions.hidden) kinds.push("hidden");
     if (conditions.prone) kinds.push("prone");
     return kinds;
   }
@@ -376,6 +383,15 @@ window.TacticalMap = class TacticalMap {
     if (!raw || typeof raw !== "object") {
       return { ...MAP_LAYER_DEFAULTS };
     }
+
+    const hasGridOpacity = Object.prototype.hasOwnProperty.call(raw, "gridOpacity");
+    const gridOpacity = Math.min(
+      1,
+      Math.max(
+        0,
+        hasGridOpacity ? parseFloat(raw.gridOpacity) || 0 : MAP_LAYER_DEFAULTS.gridOpacity,
+      ),
+    );
 
     return {
       backgroundPath:
@@ -389,7 +405,8 @@ window.TacticalMap = class TacticalMap {
       widthCells: Math.max(1, parseFloat(raw.widthCells) || MAP_LAYER_DEFAULTS.widthCells),
       heightCells: Math.max(1, parseFloat(raw.heightCells) || MAP_LAYER_DEFAULTS.heightCells),
       opacity: Math.min(1, Math.max(0, parseFloat(raw.opacity) || 1)),
-      showGrid: raw.showGrid !== false,
+      gridOpacity,
+      showGrid: raw.showGrid !== false && gridOpacity > 0,
     };
   }
 
@@ -693,6 +710,16 @@ window.TacticalMap = class TacticalMap {
     this.draw();
   }
 
+  setMeasurementToolActive(isActive) {
+    this.measureToolActive = !!isActive;
+    if (!this.measureToolActive) {
+      this.measureStart = null;
+      this.measureEnd = null;
+      this.measurePreview = null;
+    }
+    this.draw();
+  }
+
   getBackgroundRect() {
     const bg = this.mapLayer || {};
     return {
@@ -812,6 +839,9 @@ window.TacticalMap = class TacticalMap {
     this.drawTokens(timestamp);
     if (typeof this.drawDesignTokens === "function") {
       this.drawDesignTokens("overlay");
+    }
+    if (typeof this.drawMeasurement === "function") {
+      this.drawMeasurement();
     }
     this.ctx.restore();
   }

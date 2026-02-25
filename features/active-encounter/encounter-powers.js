@@ -16,6 +16,17 @@
 
   const MAP_POWERS = [
     {
+      id: "power_obfuscation_veil",
+      label: "Ofuscación",
+      disciplineId: 29,
+      disciplineName: "Ofuscación",
+      minLevel: 1,
+      mapAction: {
+        type: "toggleObfuscation",
+        activation: "toggle",
+      },
+    },
+    {
       id: "power_obtenebration_night_shroud",
       label: "Manto de la Noche",
       disciplineId: 27,

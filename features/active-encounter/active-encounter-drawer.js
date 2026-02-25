@@ -14,6 +14,66 @@
       getMap,
     } = ctx;
 
+    function setDrawerTab(tab) {
+      const useAssets = tab !== "settings";
+      els.drawerTabAssets?.classList.toggle("active", useAssets);
+      els.drawerTabSettings?.classList.toggle("active", !useAssets);
+      els.drawerTabAssetsPane?.classList.toggle("active", useAssets);
+      els.drawerTabSettingsPane?.classList.toggle("active", !useAssets);
+    }
+
+    function clampGridLevel(level) {
+      const n = parseInt(level, 10);
+      if (!Number.isFinite(n)) return 5;
+      return Math.max(0, Math.min(5, n));
+    }
+
+    function getGridLevelFromMapData() {
+      const mapData = state.encounter?.data?.map || {};
+      const opacity = Math.min(
+        1,
+        Math.max(0, parseFloat(mapData.gridOpacity) || 0),
+      );
+      return clampGridLevel(Math.round(opacity * 5));
+    }
+
+    function refreshGridOpacityButtons() {
+      const level = getGridLevelFromMapData();
+      const buttons = els.gridOpacityLevels?.querySelectorAll("[data-level]") || [];
+      buttons.forEach((btn) => {
+        const btnLevel = clampGridLevel(btn.dataset.level);
+        btn.classList.toggle("active", btnLevel === level);
+        btn.disabled = !canEditEncounter();
+      });
+    }
+
+    function applyGridOpacityLevel(level) {
+      if (!canEditEncounter()) return;
+      const safeLevel = clampGridLevel(level);
+      const gridOpacity = safeLevel / 5;
+      const nextMap = {
+        ...(state.encounter?.data?.map || {}),
+        gridOpacity,
+        showGrid: gridOpacity > 0,
+      };
+      if (state.encounter?.data) {
+        state.encounter.data.map = nextMap;
+      }
+      const map = getMap?.();
+      if (map) {
+        map.mapLayer = {
+          ...map.mapLayer,
+          gridOpacity,
+          showGrid: gridOpacity > 0,
+        };
+        map.draw();
+      }
+      if (typeof map?.onBackgroundChange === "function") {
+        map.onBackgroundChange(nextMap);
+      }
+      refreshGridOpacityButtons();
+    }
+
     function bindAddBtn(id, handler) {
       document.getElementById(id)?.addEventListener("click", (event) => {
         event.preventDefault();
@@ -35,9 +95,13 @@
         openBrowser("decor");
       });
 
-      bindAddBtn("btn-ae-add-entity", () => {
+      bindAddBtn("btn-ae-add-entity-npc", () => {
         if (!requireAdminAction()) return;
         openBrowser("npc");
+      });
+      bindAddBtn("btn-ae-add-entity-pc", () => {
+        if (!requireAdminAction()) return;
+        openBrowser("pc");
       });
 
       const drawer = document.getElementById("ae-tools-drawer");
@@ -54,10 +118,24 @@
           if (!requireAdminAction()) return;
           await removeEncounterBackground();
         });
+
+      els.drawerTabAssets?.addEventListener("click", () => setDrawerTab("assets"));
+      els.drawerTabSettings?.addEventListener("click", () => setDrawerTab("settings"));
+      els.gridOpacityLevels
+        ?.querySelectorAll("[data-level]")
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            applyGridOpacityLevel(btn.dataset.level);
+          });
+        });
+
+      setDrawerTab("assets");
+      refreshGridOpacityButtons();
     }
 
     function renderAssetLists() {
-      if (!els.listBackground || !els.listDecor || !els.listEntities) return;
+      if (!els.listBackground || !els.listDecor || !els.listEntitiesNpc || !els.listEntitiesPc) return;
+      refreshGridOpacityButtons();
       const map = getMap();
 
       const mapData = state.encounter?.data?.map || {};
@@ -115,59 +193,61 @@
       }
 
       const instances = state.encounter?.data?.instances || [];
-      if (!instances.length) {
-        els.listEntities.innerHTML =
-          '<button class="ae-drawer-item empty" disabled>Sin entidades</button>';
-        els.listEntities.onmouseleave = () => map?.clearHoverFocus?.();
-      } else {
-        const orderedInstances = [...instances].sort((a, b) => {
-          const aPc = a?.isPC ? 1 : 0;
-          const bPc = b?.isPC ? 1 : 0;
-          if (aPc !== bPc) return aPc - bPc; // PNJ first, PJ last
-          return String(a?.name || "").localeCompare(String(b?.name || ""));
-        });
+      const npcInstances = [...instances]
+        .filter((inst) => !inst?.isPC)
+        .sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
+      const pcInstances = [...instances]
+        .filter((inst) => !!inst?.isPC)
+        .sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));
 
-        els.listEntities.innerHTML = orderedInstances
+      function bindEntityList(listEl, listItems, roleClass = "") {
+        if (!listEl) return;
+        if (!listItems.length) {
+          listEl.innerHTML = '<button class="ae-drawer-item empty" disabled>Sin entidades</button>';
+          listEl.onmouseleave = () => map?.clearHoverFocus?.();
+          return;
+        }
+        listEl.innerHTML = listItems
           .map((inst) => {
             const name = global.escapeHtml(inst.name || "Entidad");
             const code = global.escapeHtml(inst.code || "-");
-            const typeClass = inst.isPC ? " ae-drawer-item--pc" : "";
-            return `<button class="ae-drawer-item${typeClass}" data-role="entity" data-id="${inst.id}">${name} · ${code}</button>`;
+            return `<button class="ae-drawer-item${roleClass}" data-role="entity" data-id="${inst.id}">${name} · ${code}</button>`;
           })
           .join("");
 
-        els.listEntities
-          .querySelectorAll('[data-role="entity"]')
-          .forEach((btn) => {
-            btn.addEventListener("click", () => {
-              const id = btn.dataset.id;
-              setActiveMapLayer("entities", { openDrawer: false });
-              const token = (state.encounter?.data?.tokens || []).find(
-                (t) => t.instanceId === id,
-              );
-              if (map && token) {
-                map.selectedTokenId = token.id;
-                map.draw();
-              }
-              const inst = (state.encounter?.data?.instances || []).find(
-                (item) => item.id === id,
-              );
-              if (inst) openModal(inst);
-            });
-            btn.addEventListener("mouseenter", () => {
-              const id = btn.dataset.id;
-              const token = (state.encounter?.data?.tokens || []).find(
-                (t) => t.instanceId === id,
-              );
-              map?.setHoverFocus?.({
-                type: "entity",
-                instanceId: id,
-                tokenId: token?.id || null,
-              });
+        listEl.querySelectorAll('[data-role="entity"]').forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.dataset.id;
+            setActiveMapLayer("entities", { openDrawer: false });
+            const token = (state.encounter?.data?.tokens || []).find(
+              (t) => t.instanceId === id,
+            );
+            if (map && token) {
+              map.selectedTokenId = token.id;
+              map.draw();
+            }
+            const inst = (state.encounter?.data?.instances || []).find(
+              (item) => item.id === id,
+            );
+            if (inst) openModal(inst);
+          });
+          btn.addEventListener("mouseenter", () => {
+            const id = btn.dataset.id;
+            const token = (state.encounter?.data?.tokens || []).find(
+              (t) => t.instanceId === id,
+            );
+            map?.setHoverFocus?.({
+              type: "entity",
+              instanceId: id,
+              tokenId: token?.id || null,
             });
           });
-        els.listEntities.onmouseleave = () => map?.clearHoverFocus?.();
+        });
+        listEl.onmouseleave = () => map?.clearHoverFocus?.();
       }
+
+      bindEntityList(els.listEntitiesNpc, npcInstances);
+      bindEntityList(els.listEntitiesPc, pcInstances, " ae-drawer-item--pc");
     }
 
     function setBusy(isBusy) {
@@ -187,7 +267,8 @@
       const adminOnlyIds = [
         "btn-ae-add-bg",
         "btn-ae-add-decor",
-        "btn-ae-add-entity",
+        "btn-ae-add-entity-npc",
+        "btn-ae-add-entity-pc",
         "btn-ae-map-remove-bg",
       ];
 
@@ -196,6 +277,7 @@
         if (!el) return;
         el.style.display = canEditEncounter() ? "" : "none";
       });
+      refreshGridOpacityButtons();
     }
 
     return {
