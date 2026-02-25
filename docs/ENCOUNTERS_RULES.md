@@ -96,16 +96,95 @@ Objetivo:
 - Polling de respaldo cada `1500ms`.
 - Ambos actualizan vista local cuando cambia `status/data` (y `updated_at` si aplica).
 
-## 9) Archivos de referencia
+## 9) Encuentro único por crónica
 
-- `js/combat-tracker.js`
-- `js/active-encounter.js`
-- `fragments/combat-tracker.html`
+Restricción:
+- Solo puede haber **un encuentro `in_game`** por crónica a la vez.
+- Enforced en DB con partial unique index: `idx_encounters_one_active_per_chronicle`.
+- Validación client-side en `combat-tracker.js` y `active-encounter.js` antes de transicionar a `in_game`.
+
+## 10) Encounter–Sheet Bridge (sincronización bidireccional)
+
+Referencia técnica completa: `docs/encounter-bridge.md`
+
+### 10.1 Concepto
+Cuando un jugador abre su hoja de personaje (`#active-character-sheet`) y hay un encuentro activo en la crónica, la hoja se conecta automáticamente al encuentro. Esto habilita:
+- Barra de estado mostrando ronda/turno arriba de la hoja.
+- Límite de gasto de sangre por turno según generación.
+- Activación de Celeridad desde la hoja → acciones extra en la iniciativa.
+
+### 10.2 Comunicación parent ↔ iframe
+La hoja de personaje corre en un iframe. La comunicación es via `postMessage`:
+- **Parent → iframe**: `abn-encounter-state` (estado del encuentro: ronda, turno, conexión).
+- **Iframe → parent**: `abn-celeridad-activate` (activación de Celeridad con count).
+
+El bridge en el parent (`encounter-bridge.js`) se conecta a Supabase Realtime para recibir cambios del encuentro y los retransmite al iframe.
+
+### 10.3 Eventos custom (window del parent)
+- `abn-encounter-connected` — primera conexión a encuentro activo.
+- `abn-encounter-updated` — cualquier cambio en datos del encuentro.
+- `abn-encounter-turn-changed` — cambio de `activeInstanceId`.
+- `abn-encounter-round-changed` — cambio de ronda.
+- `abn-encounter-disconnected` — encuentro terminó o se desconectó.
+
+### 10.4 Sangre por turno
+- Límite calculado por generación: Gen 10+=1, 9=2, 8=3, 7=4, 6=6, 5=8, 4=10, ≤3=99.
+- Hooks `beforeConsume` / `afterConsume` en `health-blood.js` permiten al tracker bloquear el gasto.
+- Indicador visual en la blood card: “Sangre este turno: X / Y”.
+- Se resetea al cambiar de ronda.
+
+### 10.5 Celeridad → acciones extra
+- VtM permite que el gasto de sangre para Celeridad exceda el límite por turno.
+- Al activar: se setea `celeridadBypass`, se gasta sangre, se notifica al parent.
+- El parent llama RPC `add_encounter_extra_actions` que inyecta instancias extra en la iniciativa.
+- Patrón clear-then-add: reactivar reemplaza las extras anteriores de la misma ronda.
+- `count=0` desactiva (remueve extras sin agregar nuevas).
+- Al avanzar de ronda (`nextTurn`), las instancias extra de rondas anteriores se eliminan automáticamente.
+
+### 10.6 Polling de respaldo
+Si no hay encuentro activo al conectar, el bridge pollea cada 15s hasta detectar uno.
+
+## 11) Visibilidad de tokens e instancias
+
+- El narrador puede togglear visibilidad de tokens/instancias desde el context menu.
+- Campo: `instance.visible` (default `true`, `false` = oculto).
+- **Narrador**: ve tokens ocultos con borde dashed y opacidad 0.45.
+- **Jugador**: tokens ocultos no aparecen en mapa, drawer, ni cards.
+- Se aplica tanto a tokens de instancia como a design tokens (decorados).
+
+## 12) Archivos de referencia
+
+Encuentros (narrador):
+- `features/active-encounter/active-encounter.js`
+- `features/active-encounter/active-encounter-turns.js`
+- `features/active-encounter/active-encounter-drawer.js`
+- `features/active-encounter/tactical-map-render.js`
+- `features/active-encounter/token-context-menu.js`
+- `features/active-encounter/active-encounter.css`
 - `fragments/active-encounter.html`
 
-## 10) Pendientes planificados
+Lista de encuentros:
+- `js/combat-tracker.js`
+- `fragments/combat-tracker.html`
+
+Bridge hoja–encuentro:
+- `features/active-character-sheet/encounter-bridge.js` (parent, conexión + realtime)
+- `features/active-character-sheet/encounter-bar.js` (parent, UI barra de estado)
+- `features/active-character-sheet/controller.js` (parent, lifecycle)
+- `features/character-sheets/modules/encounter-blood-tracker.js` (iframe, sangre por turno)
+- `features/character-sheets/modules/health-blood.js` (iframe, hooks de consumo)
+- `features/character-sheets/modules/disciplines.js` (iframe, Celeridad)
+
+SQL:
+- `encounter_bridge.sql` (partial unique index + RPCs)
+
+Documentación técnica detallada:
+- `docs/encounter-bridge.md`
+
+## 13) Pendientes planificados
 
 1. Integrar UI de encuentros dentro de `Crónica` (tab interna), manteniendo templates como biblioteca separada.
 2. Definir modo “templates compartidos” entre Crónicas (owner/shared, RLS y UX).
 3. Migrar guardado por parches/RPC para reducir payload completo de `encounters.data`.
 4. Endurecer RLS en DB para que las reglas del cliente sean respaldo, no única barrera.
+5. Agregar más interacciones hoja→encuentro siguiendo el patrón de Celeridad (ver `docs/encounter-bridge.md` sección “Extending the Bridge”).

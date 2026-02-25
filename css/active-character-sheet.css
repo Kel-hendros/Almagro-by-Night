@@ -1,8 +1,9 @@
 .active-character-sheet-container {
-  min-height: 100dvh;
+  height: 100dvh;
   padding: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .acs-frame-wrap {
@@ -74,4 +75,44 @@
 .acs-encounter-bar.my-turn .acs-eb-turn {
   color: #c5a059;
   font-weight: 600;
+}
+
+/* ── Bar interactive (clickable when encounter active) ── */
+.acs-encounter-bar.visible {
+  cursor: pointer;
+}
+
+.acs-eb-toggle {
+  font-size: 0.55rem;
+  color: #666;
+  transition: transform 0.35s ease;
+  margin-left: 2px;
+}
+
+.acs-encounter-bar.persiana-open .acs-eb-toggle {
+  transform: rotate(180deg);
+}
+
+/* ── Encounter Embed Persiana ── */
+.acs-encounter-embed {
+  flex: 0 0 0;
+  overflow: hidden;
+  transition: flex-basis 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.acs-encounter-embed.open {
+  flex: 1 1 100%;
+}
+
+.acs-encounter-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* Shrink character sheet when persiana is open */
+.active-character-sheet-container.persiana-open .acs-frame-wrap {
+  flex: 0 0 0;
+  overflow: hidden;
 }

@@ -170,7 +170,7 @@ begin
       'id', gen_random_uuid()::text,
       'characterSheetId', p_character_sheet_id,
       'templateId', null,
-      'name', (v_instance->>'name') || ' (Celeridad ' || i || ')',
+      'name', (v_instance->>'name') || ' ⚡' || i,
       'code', (v_instance->>'code') || 'C' || i,
       'status', 'active',
       'initiative', v_min_initiative - (i * 0.1),

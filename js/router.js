@@ -550,13 +550,25 @@ async function loadRoute(force = false) {
 // 4) Initialize app on DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Router: DOMContentLoaded");
+
+  // Embed mode detection — hide shell when loaded in iframe
+  const hashForEmbed = window.location.hash.slice(1);
+  const embedQs = hashForEmbed.includes("?") ? hashForEmbed.split("?")[1] : "";
+  const isEmbedMode = new URLSearchParams(embedQs).get("embed") === "true";
+  if (isEmbedMode) {
+    document.documentElement.classList.add("embed-mode");
+    window.__abnEmbedMode = true;
+  }
+
   await bootstrapRecoverySessionFromHash();
   applyStoredTheme();
   applyStoredFont();
 
   // Initial Sidebar Check
-  updateSidebarResponsiveState();
-  window.addEventListener("resize", updateSidebarResponsiveState);
+  if (!isEmbedMode) {
+    updateSidebarResponsiveState();
+    window.addEventListener("resize", updateSidebarResponsiveState);
+  }
 
   const {
     data: { session },

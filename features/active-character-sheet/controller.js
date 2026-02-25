@@ -56,12 +56,15 @@
     view().setFrameSource(state.frame, sheetUrl);
     bindEvents();
 
-    // Connect encounter bridge + UI bar (async, non-blocking)
+    // Connect encounter bridge + UI bar + persiana (async, non-blocking)
     ns.encounterBar?.bind?.();
+    ns.encounterPersiana?.bind?.();
     ns.encounterBridge?.connect?.();
   }
 
   function destroyPage() {
+    ns.encounterPersiana?.destroy?.();
+    ns.encounterPersiana?.unbind?.();
     ns.encounterBar?.destroy?.();
     ns.encounterBridge?.destroy?.();
 

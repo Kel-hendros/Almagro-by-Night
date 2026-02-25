@@ -41,13 +41,24 @@ js/
   temporal-codex.js     ← Temporal records (177 lines)
   shared-picker.js      ← Reusable picker component (91 lines)
   features/active-character-sheet/ ← Embedded character sheet host feature
+    encounter-bridge.js   ← Realtime encounter sync (parent frame)
+    encounter-bar.js      ← Encounter status bar UI (parent frame)
+  features/active-encounter/      ← Live encounter (narrator + player)
+    active-encounter-turns.js ← Turn/round/initiative logic
   template-definitions.js    ← Template utils (43 lines)
+features/character-sheets/   ← Character sheet app (runs in iframe)
+  modules/
+    encounter-blood-tracker.js ← Blood-per-turn enforcement (iframe)
+    health-blood.js       ← Blood system with consume hooks
+    disciplines.js        ← Disciplines + Celerity activation
 fragments/              ← 14 HTML view templates loaded by router
 css/                    ← 10 CSS files (styles.css has global vars)
-legacy/character-sheets/ ← Standalone legacy sheet app (script.js = 230KB)
 knowledge_base/         ← VtM disciplines & rules docs
+encounter_bridge.sql    ← SQL migration: unique index + RPCs
 docs/
   PROJECT_RULES.md      ← Code style guidelines
+  ENCOUNTERS_RULES.md   ← Encounter domain rules + bridge
+  encounter-bridge.md   ← Bridge technical architecture
   plans/                ← Development plans with dates
 ```
 

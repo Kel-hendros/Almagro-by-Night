@@ -212,12 +212,30 @@
     if (wasConnected) {
       emit("abn-encounter-disconnected", {});
       postToFrame({ type: "abn-encounter-state", connected: false, round: 0 });
+      // Resume watching for a new encounter in the chronicle
+      if (state.chronicleId) watchChronicle();
     }
   }
 
   function handleFrameMessage(event) {
     const data = event.data;
-    if (!data || data.type !== "abn-celeridad-activate") return;
+    if (!data) return;
+
+    // Embed encounter posts live state — update bridge instantly
+    if (data.type === "abn-encounter-embed-state") {
+      if (data.encounterId && data.encounterId === state.encounterId) {
+        applyEncounterData({
+          id: data.encounterId,
+          name: data.encounterName,
+          round: data.round,
+          activeInstanceId: data.activeInstanceId,
+          instances: data.instances || [],
+        });
+      }
+      return;
+    }
+
+    if (data.type !== "abn-celeridad-activate") return;
     if (!state.connected) return;
 
     const encId = data.encounterId || state.encounterId;
@@ -287,8 +305,8 @@
     }
 
     if (!enc) {
-      // No active encounter — stay dormant but poll periodically
-      schedulePoll();
+      // No active encounter — watch for one to appear via realtime
+      watchChronicle();
       return;
     }
 
@@ -296,27 +314,54 @@
     subscribeToEncounter(enc.id);
   }
 
-  // Poll for an active encounter appearing (narrator starts one while sheet is open)
-  let pollTimer = null;
-  const POLL_INTERVAL = 15000;
+  // Watch for an encounter becoming active in this chronicle (realtime)
+  let watchChannel = null;
 
-  function schedulePoll() {
-    clearPoll();
-    pollTimer = setTimeout(async () => {
-      if (state.connected) return;
-      await connect();
-    }, POLL_INTERVAL);
+  function watchChronicle() {
+    unwatchChronicle();
+    const supabase = getSupabase();
+    if (!supabase || !state.chronicleId) return;
+
+    watchChannel = supabase
+      .channel("sheet-chronicle-watch-" + state.chronicleId)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "encounters",
+          filter: "chronicle_id=eq." + state.chronicleId,
+        },
+        function (payload) {
+          var updated = payload.new;
+          if (!updated || state.connected) return;
+          if (updated.status === "in_game") {
+            unwatchChronicle();
+            var data = updated.data || {};
+            applyEncounterData({
+              id: updated.id,
+              name: updated.name,
+              round: data.round || 1,
+              activeInstanceId: data.activeInstanceId || null,
+              instances: data.instances || [],
+            });
+            subscribeToEncounter(updated.id);
+          }
+        },
+      )
+      .subscribe();
   }
 
-  function clearPoll() {
-    if (pollTimer) {
-      clearTimeout(pollTimer);
-      pollTimer = null;
-    }
+  function unwatchChronicle() {
+    if (!watchChannel) return;
+    var supabase = getSupabase();
+    try { watchChannel.unsubscribe?.(); } catch (_e) {}
+    try { supabase?.removeChannel?.(watchChannel); } catch (_e) {}
+    watchChannel = null;
   }
 
   function destroy() {
-    clearPoll();
+    unwatchChronicle();
     disconnect();
     unbindFrameLoad();
     if (state.listeningForFrameMessages) {

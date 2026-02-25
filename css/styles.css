@@ -893,3 +893,9 @@ button.gameButton.secondary:hover {
     box-shadow: inset 0 0 0 1px var(--sidebar-text-active);
     color: var(--sidebar-text-active);
 }
+
+/* ── Embed Mode (loaded in iframe without shell) ── */
+html.embed-mode .sidebar { display: none !important; }
+html.embed-mode .app { --sidebar-current-width: 0px; }
+html.embed-mode .content { margin-left: 0; width: 100%; }
+html.embed-mode .app-theme-modal-overlay { display: none !important; }

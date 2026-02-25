@@ -4,6 +4,7 @@
 
   let barEl = null;
   let bound = false;
+  let currentEncounterId = null;
 
   function getContainer() {
     return document.querySelector(".active-character-sheet-container");
@@ -22,16 +23,28 @@
       '  <span class="acs-eb-status"></span>',
       '  <span class="acs-eb-round"></span>',
       '  <span class="acs-eb-turn"></span>',
+      '  <span class="acs-eb-toggle">&#9660;</span>',
       "</div>",
     ].join("");
 
-    // Insert before the frame wrapper
-    const frameWrap = container.querySelector(".acs-frame-wrap");
-    if (frameWrap) {
-      container.insertBefore(barEl, frameWrap);
+    // Insert before the embed and frame wrappers
+    const embedWrap = container.querySelector(".acs-encounter-embed");
+    if (embedWrap) {
+      container.insertBefore(barEl, embedWrap);
     } else {
-      container.prepend(barEl);
+      const frameWrap = container.querySelector(".acs-frame-wrap");
+      if (frameWrap) {
+        container.insertBefore(barEl, frameWrap);
+      } else {
+        container.prepend(barEl);
+      }
     }
+
+    barEl.addEventListener("click", function () {
+      if (currentEncounterId) {
+        ns.encounterPersiana?.toggle?.(currentEncounterId);
+      }
+    });
 
     return barEl;
   }
@@ -48,8 +61,11 @@
 
     if (!snap || !snap.connected) {
       bar.classList.remove("visible", "my-turn");
+      currentEncounterId = null;
       return;
     }
+
+    currentEncounterId = snap.encounterId || null;
 
     bar.classList.add("visible");
     bar.classList.toggle("my-turn", !!snap.isMyTurn);
@@ -59,7 +75,9 @@
     const turnEl = bar.querySelector(".acs-eb-turn");
 
     if (statusEl) {
-      statusEl.textContent = "En encuentro";
+      var label = "En encuentro";
+      if (snap.encounterName) label += ": " + snap.encounterName;
+      statusEl.textContent = label;
     }
 
     if (roundEl) {
@@ -88,6 +106,7 @@
 
   function handleDisconnected() {
     updateBar(null);
+    ns.encounterPersiana?.destroy?.();
   }
 
   function bind() {

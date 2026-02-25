@@ -438,7 +438,7 @@
     position: relative;
     overflow: hidden;
     transition: all 0.15s ease;
-    height: 38px;
+    min-height: 38px;
 }
 
 .ae-card:hover {
@@ -2160,3 +2160,7 @@
     padding: 10px 9px;
     line-height: 1.35;
 }
+
+/* ── Embed Mode (loaded inside persiana iframe) ── */
+html.embed-mode .ae-header { display: none; }
+html.embed-mode .active-encounter-container { padding-top: 0; }

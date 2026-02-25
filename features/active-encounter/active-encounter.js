@@ -149,11 +149,27 @@
     },
   };
 
+  function embedNavigateAway() {
+    try {
+      window.parent.postMessage({ type: "abn-encounter-embed-close" }, "*");
+    } catch (_e) {}
+  }
+
+  function navigateAway(hash) {
+    if (window.__abnEmbedMode) {
+      embedNavigateAway();
+      return;
+    }
+    window.location.hash = hash;
+  }
+
   async function init() {
     if (!encounterTurns) {
       alert("Error cargando módulo de turnos del encuentro.");
       return false;
     }
+
+    state.isEmbedMode = !!window.__abnEmbedMode;
 
     const rawHash = window.location.hash.split("?")[1];
     const params = new URLSearchParams(rawHash);
@@ -168,7 +184,7 @@
       data: { session },
     } = await window.abnGetSession();
     if (!session) {
-      window.location.hash = "welcome";
+      navigateAway("welcome");
       return false;
     }
     state.user = session.user;
@@ -1001,7 +1017,7 @@
 
   function setupListeners() {
     document.getElementById("btn-ae-back").addEventListener("click", () => {
-      window.location.hash = "combat-tracker";
+      navigateAway("combat-tracker");
     });
     document
       .getElementById("btn-ae-next-turn")
@@ -1220,7 +1236,7 @@
     state.canViewEncounter = access.canView;
     if (!state.canViewEncounter) {
       alert("No tienes acceso a este encuentro.");
-      window.location.hash = "combat-tracker";
+      navigateAway("combat-tracker");
       return false;
     }
 
@@ -1230,7 +1246,7 @@
         ENCOUNTER_STATUS.IN_GAME
     ) {
       alert("Este encuentro no está disponible para jugadores.");
-      window.location.hash = "combat-tracker";
+      navigateAway("combat-tracker");
       return false;
     }
 
@@ -1378,7 +1394,7 @@
     state.encounter.status = nextStatus;
     render();
     if (nextStatus === ENCOUNTER_STATUS.ARCHIVED) {
-      window.location.hash = "combat-tracker";
+      navigateAway("combat-tracker");
       return true;
     }
     setTimeout(() => {
@@ -1605,6 +1621,20 @@
         activeCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     });
+
+    // Sync state to parent when running inside persiana embed
+    if (state.isEmbedMode) {
+      try {
+        window.parent.postMessage({
+          type: "abn-encounter-embed-state",
+          encounterId: state.encounterId,
+          encounterName: state.encounter.name,
+          round: state.encounter.data.round || 1,
+          activeInstanceId: state.encounter.data.activeInstanceId || null,
+          instances: state.encounter.data.instances || [],
+        }, "*");
+      } catch (_e) {}
+    }
   }
 
   // --- ADD NPC ---

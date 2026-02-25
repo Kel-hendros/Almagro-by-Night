@@ -145,3 +145,14 @@ Reglas base:
 - Los jugadores solo acceden a encuentros publicados (`in_game`) y controlan únicamente sus PJs asignados.
 - Templates de PNJ, por defecto, son de owner (`user_id`) salvo implementación explícita de compartición.
 - El guardado de encuentro debe contemplar concurrencia (ideal: `updated_at` u otro mecanismo de control de versión).
+- Solo un encuentro `in_game` por crónica (partial unique index en DB + validación client-side).
+
+### 9.1 Encounter–Sheet Bridge
+
+Referencia técnica: `docs/encounter-bridge.md`
+
+- La hoja de personaje (iframe) se sincroniza con el encuentro activo via `postMessage` + Supabase Realtime.
+- Patrón de comunicación: bridge en parent escucha realtime y emite `CustomEvent` + `postMessage` al iframe.
+- Nuevas interacciones hoja→encuentro (ej: Celeridad) siguen el patrón: iframe `postMessage` → parent handler → RPC a Supabase.
+- Hooks de consumo de sangre (`beforeConsume`/`afterConsume`) permiten al blood tracker intervenir sin acoplar módulos.
+- Ver secciones 10-11 en `ENCOUNTERS_RULES.md` para reglas funcionales completas.
