@@ -10,6 +10,7 @@
       onGetAvailablePowers,
       onInvokePower,
       onIsPowerActive,
+      onToggleVisibility,
       getMap,
     } = ctx;
     let menuEl = null;
@@ -20,6 +21,7 @@
     let unsummonBtnEl = null;
     let conditionsBtnEl = null;
     let powersBtnEl = null;
+    let visibilityBtnEl = null;
     let deleteBtnEl = null;
     let lastTokenInfo = null;
     let lastPlacement = null;
@@ -100,6 +102,19 @@
       });
       powersBtnEl = powersBtn;
 
+      const visibilityBtn = document.createElement("button");
+      visibilityBtn.type = "button";
+      visibilityBtn.className = "ae-token-context-action ae-token-context-action--visibility";
+      visibilityBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const tokenId = menu.dataset.tokenId || null;
+        if (tokenId && typeof onToggleVisibility === "function") {
+          onToggleVisibility(tokenId);
+          refreshVisibilityState(tokenId);
+        }
+      });
+      visibilityBtnEl = visibilityBtn;
+
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
       deleteBtn.textContent = "Borrar token";
@@ -139,6 +154,7 @@
       primary.appendChild(detailsBtn);
       primary.appendChild(conditionBtn);
       primary.appendChild(powersBtn);
+      primary.appendChild(visibilityBtn);
       primary.appendChild(deleteBtn);
       primary.appendChild(unsummonBtn);
       body.appendChild(primary);
@@ -223,6 +239,7 @@
       if (summon) {
         if (conditionsBtnEl) conditionsBtnEl.style.display = "none";
         if (powersBtnEl) powersBtnEl.style.display = "none";
+        if (visibilityBtnEl) visibilityBtnEl.style.display = "none";
         if (deleteBtnEl) deleteBtnEl.style.display = "none";
         if (unsummonBtnEl) unsummonBtnEl.style.display = "";
         activePanel = null;
@@ -233,6 +250,7 @@
 
       if (conditionsBtnEl) conditionsBtnEl.style.display = "";
       if (powersBtnEl) powersBtnEl.style.display = canManage || canUsePowers ? "" : "none";
+      if (visibilityBtnEl) visibilityBtnEl.style.display = canManage ? "" : "none";
       if (deleteBtnEl) deleteBtnEl.style.display = canManage ? "" : "none";
       if (unsummonBtnEl) unsummonBtnEl.style.display = "none";
 
@@ -246,6 +264,14 @@
         updatePrimaryActionsUI();
         menuEl.classList.remove("is-expanded");
       }
+    }
+
+    function refreshVisibilityState(tokenId) {
+      if (!visibilityBtnEl || !tokenId) return;
+      const instance = getInstanceByTokenId(tokenId);
+      const isVisible = instance?.visible !== false;
+      visibilityBtnEl.textContent = isVisible ? "Visible" : "Oculto";
+      visibilityBtnEl.classList.toggle("is-active", !isVisible);
     }
 
     function refreshConditionState(tokenId) {
@@ -543,6 +569,7 @@
       updatePrimaryActionsUI();
       menu.classList.remove("is-expanded");
       applyPrimaryActionsVisibility(tokenInfo.tokenId);
+      refreshVisibilityState(tokenInfo.tokenId);
 
       menu.classList.add("is-open", "is-measuring");
       positionMenu(tokenInfo);

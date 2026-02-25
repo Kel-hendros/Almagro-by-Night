@@ -290,6 +290,7 @@
           tokenActionsController?.invokePower(tokenId, powerId),
         onIsPowerActive: (tokenId, powerId) =>
           !!tokenActionsController?.isPowerActive(tokenId, powerId),
+        onToggleVisibility: (tokenId) => toggleTokenVisibility(tokenId),
       });
 
     setupListeners();
@@ -383,7 +384,10 @@
       scheduleBackgroundPersist();
     };
     state.map.onDesignTokenSelect = () => {};
-    state.map.onDesignTokenContext = () => {};
+    state.map.onDesignTokenContext = (tokenInfo) => {
+      if (!tokenInfo?.tokenId || !canEditEncounter()) return;
+      openDesignTokenContextMenu(tokenInfo);
+    };
     state.map.canEditBackground = () => canEditEncounter();
     state.map.onBackgroundChange = (nextMap) => {
       if (!state.encounter?.data) return;
@@ -732,11 +736,24 @@
       "btn-ae-reroll",
     ];
 
+    const isAdmin = canEditEncounter();
     adminOnlyIds.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.style.display = canEditEncounter() ? "" : "none";
+      el.style.display = isAdmin ? "" : "none";
     });
+
+    const roundLabel = document.getElementById("ae-round-label");
+    if (roundLabel) {
+      roundLabel.style.display = isAdmin ? "none" : "";
+      roundLabel.textContent = `Ronda ${state.encounter?.data?.round || 1}`;
+    }
+
+    const roundInfo = document.querySelector(".ae-round-info");
+    if (roundInfo) {
+      roundInfo.style.display = isAdmin ? "" : "none";
+    }
+
     drawerController?.applyPermissions();
 
     const toolsToggle = document.getElementById("btn-ae-toggle-tools");
@@ -1063,12 +1080,23 @@
         tokenContextMenuController?.hide?.();
       }
 
+      if (
+        isDesignTokenMenuOpen() &&
+        designTokenMenuEl &&
+        !designTokenMenuEl.contains(e.target)
+      ) {
+        closeDesignTokenContextMenu();
+      }
+
       if (els.layerMenu && els.layerToolbar && !els.layerToolbar.contains(e.target)) {
         els.layerMenu.style.display = "none";
       }
     };
     runtime.documentKeydownHandler = (e) => {
-      if (e.key === "Escape") tokenContextMenuController?.hide?.();
+      if (e.key === "Escape") {
+        tokenContextMenuController?.hide?.();
+        closeDesignTokenContextMenu();
+      }
 
       if (!canEditEncounter()) return;
       if (!state.map) return;
@@ -1321,6 +1349,20 @@
       return false;
     }
 
+    // Enforce single active encounter per chronicle
+    if (nextStatus === ENCOUNTER_STATUS.IN_GAME && state.encounter.chronicle_id) {
+      const { count } = await supabase
+        .from("encounters")
+        .select("id", { count: "exact", head: true })
+        .eq("chronicle_id", state.encounter.chronicle_id)
+        .eq("status", "in_game")
+        .neq("id", state.encounterId);
+      if (count > 0) {
+        alert("Ya hay un encuentro activo en esta crónica. Archivá o sacá de juego el actual primero.");
+        return false;
+      }
+    }
+
     state.isApplyingRemoteUpdate = true;
     const { error } = await supabase
       .from("encounters")
@@ -1355,7 +1397,6 @@
   function render() {
     if (!state.encounter) return;
     sanitizeEncounterTokens();
-    tokenContextMenuController?.hide?.();
 
     els.name.textContent = state.encounter.name;
     const status = normalizeEncounterStatus(state.encounter.status);
@@ -1364,22 +1405,46 @@
       els.status.className = `ae-status-chip-select ${status}`;
       els.status.disabled = !canEditEncounter();
     }
-    els.roundCounter.textContent = state.encounter.data.round || 1;
+    const currentRound = state.encounter.data.round || 1;
+    els.roundCounter.textContent = currentRound;
+    const roundLabel = document.getElementById("ae-round-label");
+    if (roundLabel && roundLabel.style.display !== "none") {
+      roundLabel.textContent = `Ronda ${currentRound}`;
+    }
     setActiveMapLayer(state.activeMapLayer, { persist: false, closeMenu: true });
     drawerController?.renderAssetLists();
 
     // Refresh Map Data
     if (state.map) {
       state.map.setInteractionLayer(state.activeMapLayer);
-      state.map.setData(
-        state.encounter.data.tokens,
-        state.encounter.data.instances,
-        {
-          map: state.encounter.data.map || null,
-          designTokens: state.encounter.data.designTokens || [],
-          mapEffects: state.encounter.data.mapEffects || [],
-        },
-      );
+      const isAdmin = canEditEncounter();
+      const allTokens = state.encounter.data.tokens;
+      const allInstances = state.encounter.data.instances;
+      const allDesignTokens = state.encounter.data.designTokens || [];
+
+      const hiddenInstanceIds = isAdmin
+        ? null
+        : new Set(
+            (allInstances || [])
+              .filter((i) => i.visible === false)
+              .map((i) => i.id),
+          );
+
+      const mapTokens = hiddenInstanceIds
+        ? allTokens.filter((t) => !hiddenInstanceIds.has(t.instanceId))
+        : allTokens;
+      const mapInstances = hiddenInstanceIds
+        ? allInstances.filter((i) => i.visible !== false)
+        : allInstances;
+      const mapDesignTokens = isAdmin
+        ? allDesignTokens
+        : allDesignTokens.filter((dt) => dt.visible !== false);
+
+      state.map.setData(mapTokens, mapInstances, {
+        map: state.encounter.data.map || null,
+        designTokens: mapDesignTokens,
+        mapEffects: state.encounter.data.mapEffects || [],
+      });
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
     }
 
@@ -1399,6 +1464,9 @@
     }
 
     sorted.forEach((inst) => {
+      const isHidden = inst.visible === false;
+      if (isHidden && !canEditEncounter()) return;
+
       const row = document.createElement("div");
       row.className = "ae-timeline-row";
 
@@ -1410,9 +1478,13 @@
       const hpPct = (inst.health / inst.maxHealth) * 100;
       const hpClass = getHealthClass(inst.health, inst.maxHealth, inst.status);
 
+      const isOwn = isPC && inst.characterSheetId && state.user?.id &&
+        state.characterSheets.some((s) => s.id === inst.characterSheetId && s.user_id === state.user.id);
       const pcClass = isPC ? "pc" : "";
+      const ownClass = isOwn ? "own" : "";
       const activeClass = isActive ? "active" : "";
       const deadClass = isDead ? "dead" : "";
+      const hiddenClass = isHidden ? "narrator-hidden" : "";
 
       let healthHTML = "";
       if (isPC && inst.pcHealth) {
@@ -1468,7 +1540,7 @@
           ${isDead ? "" : `<input type="number" class="init-input ae-bubble-input" value="${initiativeDisplay}" step="1">`}
         </div>
 
-        <div class="ae-card ${activeClass} ${deadClass} ${pcClass}" data-id="${inst.id}">
+        <div class="ae-card ${activeClass} ${deadClass} ${pcClass} ${ownClass} ${hiddenClass}" data-id="${inst.id}">
           <button class="ae-btn-delete" title="Eliminar">&times;</button>
           <div class="ae-card-header">
             <div class="ae-card-title">
@@ -1772,6 +1844,7 @@
     const changed = encounterTurns.rerollAllInitiatives(state.encounter?.data);
     if (!changed) return;
 
+    ensureActiveInstance();
     render();
     saveEncounter();
   }
@@ -1813,8 +1886,111 @@
     else if (inst.health > 0 && inst.status === "incapacitated")
       inst.status = "active";
 
+    ensureActiveInstance();
     render();
     if (state.selectedInstanceId === id) updateModalUI(inst);
+    saveEncounter();
+  }
+
+  // --- VISIBILITY ---
+
+  function toggleTokenVisibility(tokenId) {
+    if (!canEditEncounter()) return;
+    const token = (state.encounter?.data?.tokens || []).find((t) => t.id === tokenId);
+    if (!token?.instanceId) return;
+    const inst = (state.encounter?.data?.instances || []).find((i) => i.id === token.instanceId);
+    if (!inst) return;
+    inst.visible = inst.visible === false ? true : false;
+    ensureActiveInstance();
+    render();
+    saveEncounter();
+  }
+
+  function toggleDesignTokenVisibility(tokenId) {
+    if (!canEditEncounter()) return;
+    const dt = (state.encounter?.data?.designTokens || []).find((t) => t.id === tokenId);
+    if (!dt) return;
+    dt.visible = dt.visible === false ? true : false;
+    render();
+    saveEncounter();
+  }
+
+  // --- DESIGN TOKEN CONTEXT MENU ---
+
+  let designTokenMenuEl = null;
+
+  function openDesignTokenContextMenu(tokenInfo) {
+    closeDesignTokenContextMenu();
+    const dt = (state.encounter?.data?.designTokens || []).find((t) => t.id === tokenInfo.tokenId);
+    if (!dt) return;
+
+    const menu = document.createElement("div");
+    menu.className = "ae-token-context-menu ae-design-token-context-menu is-open";
+    menu.dataset.tokenId = tokenInfo.tokenId;
+
+    const isVisible = dt.visible !== false;
+    menu.innerHTML = `
+      <div class="ae-token-context-body">
+        <div class="ae-token-context-primary">
+          <button type="button" class="ae-token-context-action ae-token-context-action--visibility ${isVisible ? "" : "is-active"}"
+            data-action="visibility">${isVisible ? "Visible" : "Oculto"}</button>
+          <button type="button" class="ae-token-context-action ae-token-context-action--danger"
+            data-action="delete">Borrar decorado</button>
+        </div>
+      </div>
+    `;
+
+    menu.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const action = e.target.closest("[data-action]")?.dataset.action;
+      if (!action) return;
+      const id = menu.dataset.tokenId;
+      if (action === "visibility") {
+        toggleDesignTokenVisibility(id);
+        const updated = (state.encounter?.data?.designTokens || []).find((t) => t.id === id);
+        const btn = menu.querySelector('[data-action="visibility"]');
+        if (btn && updated) {
+          const vis = updated.visible !== false;
+          btn.textContent = vis ? "Visible" : "Oculto";
+          btn.classList.toggle("is-active", !vis);
+        }
+      } else if (action === "delete") {
+        closeDesignTokenContextMenu();
+        removeDesignToken(id);
+      }
+    });
+
+    document.body.appendChild(menu);
+    designTokenMenuEl = menu;
+
+    const margin = 10;
+    const menuWidth = menu.offsetWidth || 180;
+    const menuHeight = menu.offsetHeight || 80;
+    const left = Math.min(tokenInfo.clientX, window.innerWidth - menuWidth - margin);
+    const top = Math.min(tokenInfo.clientY, window.innerHeight - menuHeight - margin);
+    menu.style.left = `${Math.max(margin, left)}px`;
+    menu.style.top = `${Math.max(margin, top)}px`;
+  }
+
+  function closeDesignTokenContextMenu() {
+    if (designTokenMenuEl?.parentNode) {
+      designTokenMenuEl.parentNode.removeChild(designTokenMenuEl);
+    }
+    designTokenMenuEl = null;
+  }
+
+  function isDesignTokenMenuOpen() {
+    return !!designTokenMenuEl;
+  }
+
+  function removeDesignToken(tokenId) {
+    if (!canEditEncounter()) return;
+    const list = state.encounter?.data?.designTokens;
+    if (!Array.isArray(list)) return;
+    const idx = list.findIndex((t) => t.id === tokenId);
+    if (idx === -1) return;
+    list.splice(idx, 1);
+    render();
     saveEncounter();
   }
 
@@ -2589,6 +2765,7 @@
     removeGlobalLifecycleListeners();
     tokenContextMenuController?.destroy?.();
     tokenContextMenuController = null;
+    closeDesignTokenContextMenu();
     tokenActionsController = null;
 
     if (state.map && typeof state.map.destroy === "function") {

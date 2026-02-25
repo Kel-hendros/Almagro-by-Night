@@ -555,6 +555,21 @@
       alert("Solo el narrador de la crónica puede cambiar estados.");
       return false;
     }
+
+    // Enforce single active encounter per chronicle
+    if (nextStatus === "in_game" && state.currentChronicleId) {
+      const { count } = await supabase
+        .from("encounters")
+        .select("id", { count: "exact", head: true })
+        .eq("chronicle_id", state.currentChronicleId)
+        .eq("status", "in_game")
+        .neq("id", encounterId);
+      if (count > 0) {
+        alert("Ya hay un encuentro activo en esta crónica. Archivá o sacá de juego el actual primero.");
+        return false;
+      }
+    }
+
     const { error } = await supabase
       .from("encounters")
       .update({ status: nextStatus })

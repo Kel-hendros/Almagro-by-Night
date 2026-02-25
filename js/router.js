@@ -469,6 +469,17 @@ async function loadRoute(force = false) {
     }
   }
 
+  if (
+    previousBaseHash === "active-character-sheet" &&
+    (baseHash !== "active-character-sheet" || force || __currentRoute !== targetHash)
+  ) {
+    try {
+      window.ABNActiveCharacterSheet?.controller?.destroyPage?.();
+    } catch (error) {
+      console.warn("Router: active-character-sheet destroy error", error);
+    }
+  }
+
   const contentEl = document.getElementById("content");
   try {
     const res = await fetch(path);

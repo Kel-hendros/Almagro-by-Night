@@ -1,0 +1,340 @@
+(function initEncounterBridge(global) {
+  const ns = (global.ABNActiveCharacterSheet =
+    global.ABNActiveCharacterSheet || {});
+
+  const state = {
+    sheetId: null,
+    chronicleId: null,
+    encounterId: null,
+    encounterName: null,
+    round: 0,
+    activeInstanceId: null,
+    myInstance: null,
+    instances: [],
+    connected: false,
+    channel: null,
+    listeningForFrameMessages: false,
+    frameLoadBound: false,
+  };
+
+  function getSupabase() {
+    return global.supabase || null;
+  }
+
+  function getSheetId() {
+    return ns.service?.getSheetIdFromHash?.() || null;
+  }
+
+  function getChronicleId() {
+    return localStorage.getItem("currentChronicleId") || null;
+  }
+
+  function emit(eventName, detail) {
+    global.dispatchEvent(
+      new CustomEvent(eventName, { detail: detail || {} }),
+    );
+  }
+
+  function buildFramePayload() {
+    return {
+      type: "abn-encounter-state",
+      connected: state.connected,
+      encounterId: state.encounterId,
+      sheetId: state.sheetId,
+      round: state.round,
+      isMyTurn: isMyTurn(),
+      activeInstanceId: state.activeInstanceId,
+    };
+  }
+
+  function postToFrame(data) {
+    try {
+      const frame = document.getElementById("acs-frame");
+      if (frame?.contentWindow) {
+        frame.contentWindow.postMessage(data, "*");
+      }
+    } catch (_e) {}
+  }
+
+  function handleFrameLoad() {
+    // Re-send encounter state when iframe finishes loading
+    if (state.connected) {
+      postToFrame(buildFramePayload());
+    }
+  }
+
+  function bindFrameLoad() {
+    if (state.frameLoadBound) return;
+    const frame = document.getElementById("acs-frame");
+    if (frame) {
+      frame.addEventListener("load", handleFrameLoad);
+      state.frameLoadBound = true;
+    }
+  }
+
+  function unbindFrameLoad() {
+    if (!state.frameLoadBound) return;
+    const frame = document.getElementById("acs-frame");
+    if (frame) {
+      frame.removeEventListener("load", handleFrameLoad);
+    }
+    state.frameLoadBound = false;
+  }
+
+  function findMyInstance(instances, sheetId) {
+    if (!Array.isArray(instances) || !sheetId) return null;
+    return (
+      instances.find(
+        (i) =>
+          i.characterSheetId === sheetId &&
+          i.isPC &&
+          !i.isExtraAction,
+      ) || null
+    );
+  }
+
+  function isMyTurn() {
+    if (!state.connected || !state.myInstance) return false;
+    return state.activeInstanceId === state.myInstance.id;
+  }
+
+  function applyEncounterData(enc) {
+    if (!enc) {
+      disconnect();
+      return;
+    }
+
+    const prevRound = state.round;
+    const prevActiveId = state.activeInstanceId;
+
+    state.encounterId = enc.id;
+    state.encounterName = enc.name || null;
+    state.round = enc.round || 1;
+    state.activeInstanceId = enc.activeInstanceId || null;
+    state.instances = enc.instances || [];
+    state.myInstance = findMyInstance(state.instances, state.sheetId);
+
+    if (!state.connected) {
+      state.connected = true;
+      emit("abn-encounter-connected", snapshot());
+    }
+
+    emit("abn-encounter-updated", snapshot());
+
+    if (prevActiveId !== state.activeInstanceId) {
+      emit("abn-encounter-turn-changed", snapshot());
+    }
+
+    if (prevRound !== state.round && prevRound > 0) {
+      emit("abn-encounter-round-changed", snapshot());
+    }
+
+    // Notify iframe for blood-per-turn tracking and Celerity
+    postToFrame(buildFramePayload());
+  }
+
+  function snapshot() {
+    return {
+      encounterId: state.encounterId,
+      encounterName: state.encounterName,
+      round: state.round,
+      activeInstanceId: state.activeInstanceId,
+      myInstance: state.myInstance,
+      isMyTurn: isMyTurn(),
+      instances: state.instances,
+      connected: state.connected,
+    };
+  }
+
+  function subscribeToEncounter(encounterId) {
+    const supabase = getSupabase();
+    if (!supabase || !encounterId) return;
+
+    unsubscribe();
+
+    const channel = supabase
+      .channel(`sheet-encounter-bridge-${encounterId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "encounters",
+          filter: `id=eq.${encounterId}`,
+        },
+        (payload) => {
+          const updated = payload.new;
+          if (!updated) return;
+
+          if (updated.status !== "in_game") {
+            disconnect();
+            return;
+          }
+
+          const data = updated.data || {};
+          applyEncounterData({
+            id: updated.id,
+            name: updated.name,
+            round: data.round || 1,
+            activeInstanceId: data.activeInstanceId || null,
+            instances: data.instances || [],
+          });
+        },
+      )
+      .subscribe();
+
+    state.channel = channel;
+  }
+
+  function unsubscribe() {
+    if (!state.channel) return;
+    const supabase = getSupabase();
+    try {
+      state.channel.unsubscribe?.();
+    } catch (_e) {}
+    try {
+      supabase?.removeChannel?.(state.channel);
+    } catch (_e) {}
+    state.channel = null;
+  }
+
+  function disconnect() {
+    const wasConnected = state.connected;
+    unsubscribe();
+    state.encounterId = null;
+    state.encounterName = null;
+    state.round = 0;
+    state.activeInstanceId = null;
+    state.myInstance = null;
+    state.instances = [];
+    state.connected = false;
+
+    if (wasConnected) {
+      emit("abn-encounter-disconnected", {});
+      postToFrame({ type: "abn-encounter-state", connected: false, round: 0 });
+    }
+  }
+
+  function handleFrameMessage(event) {
+    const data = event.data;
+    if (!data || data.type !== "abn-celeridad-activate") return;
+    if (!state.connected) return;
+
+    const encId = data.encounterId || state.encounterId;
+    const sId = data.sheetId || state.sheetId;
+    const count = parseInt(data.count, 10);
+    if (!encId || !sId || isNaN(count) || count < 0) return;
+
+    callExtraActionsRPC(encId, sId, count);
+  }
+
+  async function callExtraActionsRPC(encId, sId, count) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    const { error } = await supabase.rpc("add_encounter_extra_actions", {
+      p_encounter_id: encId,
+      p_character_sheet_id: sId,
+      p_action_type: "celeridad",
+      p_count: count,
+    });
+
+    if (error) {
+      console.warn("[EncounterBridge] Celerity RPC error:", error.message);
+    }
+  }
+
+  async function connect() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    // Bind listeners once
+    if (!state.listeningForFrameMessages) {
+      global.addEventListener("message", handleFrameMessage);
+      state.listeningForFrameMessages = true;
+    }
+    bindFrameLoad();
+
+    state.sheetId = getSheetId();
+    state.chronicleId = getChronicleId();
+
+    if (!state.sheetId) return;
+
+    // If no chronicle ID in localStorage, look it up from the sheet
+    if (!state.chronicleId) {
+      const { data: sheet } = await supabase
+        .from("character_sheets")
+        .select("chronicle_id")
+        .eq("id", state.sheetId)
+        .single();
+
+      if (sheet?.chronicle_id) {
+        state.chronicleId = sheet.chronicle_id;
+      }
+    }
+
+    if (!state.chronicleId) return;
+
+    // Call the RPC to get the active encounter
+    const { data: enc, error } = await supabase.rpc(
+      "get_active_encounter_for_chronicle",
+      { p_chronicle_id: state.chronicleId },
+    );
+
+    if (error) {
+      console.warn("[EncounterBridge] RPC error:", error.message);
+      return;
+    }
+
+    if (!enc) {
+      // No active encounter — stay dormant but poll periodically
+      schedulePoll();
+      return;
+    }
+
+    applyEncounterData(enc);
+    subscribeToEncounter(enc.id);
+  }
+
+  // Poll for an active encounter appearing (narrator starts one while sheet is open)
+  let pollTimer = null;
+  const POLL_INTERVAL = 15000;
+
+  function schedulePoll() {
+    clearPoll();
+    pollTimer = setTimeout(async () => {
+      if (state.connected) return;
+      await connect();
+    }, POLL_INTERVAL);
+  }
+
+  function clearPoll() {
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function destroy() {
+    clearPoll();
+    disconnect();
+    unbindFrameLoad();
+    if (state.listeningForFrameMessages) {
+      global.removeEventListener("message", handleFrameMessage);
+      state.listeningForFrameMessages = false;
+    }
+    state.sheetId = null;
+    state.chronicleId = null;
+  }
+
+  ns.encounterBridge = {
+    connect,
+    disconnect,
+    destroy,
+    snapshot,
+    isMyTurn,
+    get state() {
+      return snapshot();
+    },
+  };
+})(window);

@@ -160,7 +160,10 @@
       });
       els.listBackground.onmouseleave = () => map?.clearHoverFocus?.();
 
-      const decor = state.encounter?.data?.designTokens || [];
+      const allDecor = state.encounter?.data?.designTokens || [];
+      const decor = canEditEncounter()
+        ? allDecor
+        : allDecor.filter((dt) => dt.visible !== false);
       if (!decor.length) {
         els.listDecor.innerHTML =
           '<button class="ae-drawer-item empty" disabled>Sin decorados</button>';
@@ -192,7 +195,10 @@
         els.listDecor.onmouseleave = () => map?.clearHoverFocus?.();
       }
 
-      const instances = state.encounter?.data?.instances || [];
+      const allInstances = state.encounter?.data?.instances || [];
+      const instances = canEditEncounter()
+        ? allInstances
+        : allInstances.filter((inst) => inst.visible !== false);
       const npcInstances = [...instances]
         .filter((inst) => !inst?.isPC)
         .sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || "")));

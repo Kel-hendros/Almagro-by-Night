@@ -4,6 +4,8 @@
     updateFinalPoolSize: null,
     flashBloodWarning: null,
     flashBloodConsume: null,
+    beforeConsume: null,
+    afterConsume: null,
   };
 
   const HEALTH_LEVEL_TEXTS = [
@@ -33,6 +35,23 @@
       typeof nextDeps.flashBloodConsume === "function"
         ? nextDeps.flashBloodConsume
         : null;
+    deps.beforeConsume =
+      typeof nextDeps.beforeConsume === "function"
+        ? nextDeps.beforeConsume
+        : null;
+    deps.afterConsume =
+      typeof nextDeps.afterConsume === "function"
+        ? nextDeps.afterConsume
+        : null;
+  }
+
+  function setConsumeHooks(hooks = {}) {
+    if (typeof hooks.beforeConsume === "function") {
+      deps.beforeConsume = hooks.beforeConsume;
+    }
+    if (typeof hooks.afterConsume === "function") {
+      deps.afterConsume = hooks.afterConsume;
+    }
   }
 
   function persist() {
@@ -168,19 +187,23 @@
     updateHealthImpediment();
   }
 
+  function getBloodPerTurn() {
+    const gen = parseInt(document.querySelector("#generacion")?.value, 10);
+    if (isNaN(gen) || gen >= 10) return 1;
+    if (gen === 9) return 2;
+    if (gen === 8) return 3;
+    if (gen === 7) return 4;
+    if (gen === 6) return 6;
+    if (gen === 5) return 8;
+    if (gen === 4) return 10;
+    return 99;
+  }
+
   function calculateBloodPerTurn() {
     const bloodPerTurn = document.querySelector("#bloodPerTurn");
-    const generationValue = document.querySelector("#generacion")?.value;
     if (!bloodPerTurn) return;
-
-    if (generationValue >= 10) bloodPerTurn.innerHTML = "1";
-    if (generationValue == 9) bloodPerTurn.innerHTML = "2";
-    if (generationValue == 8) bloodPerTurn.innerHTML = "3";
-    if (generationValue == 7) bloodPerTurn.innerHTML = "4";
-    if (generationValue == 6) bloodPerTurn.innerHTML = "6";
-    if (generationValue == 5) bloodPerTurn.innerHTML = "8";
-    if (generationValue == 4) bloodPerTurn.innerHTML = "10";
-    if (generationValue <= 3) bloodPerTurn.innerHTML = "???";
+    const val = getBloodPerTurn();
+    bloodPerTurn.innerHTML = val > 10 ? "???" : String(val);
   }
 
   function updateBloodPerTurn() {
@@ -220,6 +243,10 @@
     const bloodInput = document.querySelector("#blood-value");
     if (!bloodInput) return;
 
+    if (action === "consume" && deps.beforeConsume) {
+      if (!deps.beforeConsume(1)) return;
+    }
+
     let currentValue = bloodInput.value;
     const maxBloodPool = getMaxBloodPool();
     const bloodBefore = currentValue.replace(/0/g, "").length;
@@ -250,6 +277,7 @@
       const bloodAfter = currentValue.replace(/0/g, "").length;
       if (bloodAfter < bloodBefore) {
         flashBloodConsume();
+        if (deps.afterConsume) deps.afterConsume(1);
       } else {
         flashBloodWarning();
       }
@@ -261,6 +289,10 @@
   function consumeBloodPoints(points) {
     const bloodInput = document.querySelector("#blood-value");
     if (!bloodInput) return false;
+
+    if (deps.beforeConsume && !deps.beforeConsume(points)) {
+      return false;
+    }
 
     const maxBloodPool = getMaxBloodPool();
     let currentValue = String(bloodInput.value || "").padEnd(maxBloodPool, "0").substring(0, maxBloodPool);
@@ -278,6 +310,7 @@
     updateBloodUI();
     flashBloodConsume();
     persist();
+    if (deps.afterConsume) deps.afterConsume(points);
     return true;
   }
 
@@ -453,6 +486,7 @@
 
   global.ABNSheetHealthBlood = {
     configure,
+    setConsumeHooks,
     init,
     getHealthValues,
     updateHealthValues,
@@ -462,6 +496,7 @@
     updateHealthImpediment,
     calculateBloodPerTurn,
     updateBloodPerTurn,
+    getBloodPerTurn,
     getMaxBloodPool,
     blockBloodPool,
     modifyBlood,

@@ -55,9 +55,26 @@
     const sheetUrl = service().buildSheetUrl(sheetId);
     view().setFrameSource(state.frame, sheetUrl);
     bindEvents();
+
+    // Connect encounter bridge + UI bar (async, non-blocking)
+    ns.encounterBar?.bind?.();
+    ns.encounterBridge?.connect?.();
+  }
+
+  function destroyPage() {
+    ns.encounterBar?.destroy?.();
+    ns.encounterBridge?.destroy?.();
+
+    if (state.frame) {
+      state.frame.removeEventListener("load", handleFrameLoad);
+    }
+    window.removeEventListener("abn-theme-font-changed", applyThemeFontToFrame);
+    state.frame = null;
+    state.bound = false;
   }
 
   ns.controller = {
     initPage,
+    destroyPage,
   };
 })(window);

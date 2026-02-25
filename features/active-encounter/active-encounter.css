@@ -291,6 +291,15 @@
     justify-content: flex-end;
 }
 
+.ae-round-label {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #999;
+    letter-spacing: 0.5px;
+}
+
 .ae-turn-btn--next {
     flex-grow: 1;
     background: rgba(46, 204, 113, 0.2);
@@ -484,9 +493,39 @@
     opacity: 0.6;
 }
 
+/* Narrator-hidden card */
+.ae-card.narrator-hidden {
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.25);
+    opacity: 0.55;
+}
+
+.ae-card.narrator-hidden .ae-card-name {
+    font-style: italic;
+}
+
 /* PC card */
 .ae-card.pc .ae-card-name {
     color: var(--color-gold, #c5a059);
+}
+
+/* Own character card (inverse) */
+.ae-card.own {
+    background: var(--color-gold, #c5a059);
+    border-color: var(--color-gold, #c5a059);
+}
+
+.ae-card.own:hover {
+    background: #d4b06a;
+    border-color: #d4b06a;
+}
+
+.ae-card.own .ae-card-name {
+    color: #1a1a1c;
+}
+
+.ae-card.own .ae-card-code {
+    color: rgba(26, 26, 28, 0.6);
 }
 
 /* Card Header */
@@ -1951,6 +1990,22 @@
 .ae-token-context-action.is-active .ae-token-context-chevron {
     transform: translateX(2px) rotate(90deg);
     opacity: 0.9;
+}
+
+.ae-token-context-action--visibility::before {
+    content: "👁";
+    font-size: 0.82rem;
+    line-height: 1;
+    opacity: 0.9;
+}
+
+.ae-token-context-action--visibility.is-active {
+    color: #999;
+    font-style: italic;
+}
+
+.ae-token-context-action--visibility.is-active::before {
+    opacity: 0.5;
 }
 
 .ae-token-context-action--danger::before {

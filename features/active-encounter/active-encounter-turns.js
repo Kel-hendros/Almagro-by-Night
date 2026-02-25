@@ -39,6 +39,12 @@
     return false;
   }
 
+  function shouldSkipTurn(inst) {
+    if (!inst) return true;
+    if (inst.visible === false) return true;
+    return isInstanceDown(inst);
+  }
+
   function ensureActiveInstance(encounterData) {
     const d = encounterData;
     if (!d || !Array.isArray(d.instances) || d.instances.length === 0) {
@@ -47,9 +53,9 @@
     }
 
     const current = d.instances.find((i) => i.id === d.activeInstanceId);
-    if (current && !isInstanceDown(current)) return;
+    if (current && !shouldSkipTurn(current)) return;
 
-    const alive = d.instances.filter((i) => !isInstanceDown(i));
+    const alive = d.instances.filter((i) => !shouldSkipTurn(i));
     if (alive.length > 0) {
       const sortedAlive = [...alive].sort(
         (a, b) => (b.initiative || 0) - (a.initiative || 0),
@@ -88,33 +94,52 @@
       return false;
     }
 
-    const alive = d.instances.filter((i) => !isInstanceDown(i));
+    const alive = d.instances.filter((i) => !shouldSkipTurn(i));
     if (alive.length === 0) {
       d.activeInstanceId = null;
       return true;
     }
 
-    const sorted = [...alive].sort(
+    // Sort ALL instances (including down/hidden) to preserve initiative positions
+    const allSorted = [...d.instances].sort(
       (a, b) => (b.initiative || 0) - (a.initiative || 0),
     );
 
     const currId = d.activeInstanceId;
-    let idx = -1;
-    if (currId) idx = sorted.findIndex((i) => i.id === currId);
+    const currIdx = currId
+      ? allSorted.findIndex((i) => i.id === currId)
+      : -1;
+    const len = allSorted.length;
+    let wrapped = false;
 
-    idx++;
-    if (idx >= sorted.length) {
-      idx = 0;
-      d.round = (d.round || 1) + 1;
+    for (let step = 1; step <= len; step++) {
+      const nextIdx = (currIdx + step) % len;
+      if (!wrapped && currIdx >= 0 && nextIdx <= currIdx) {
+        wrapped = true;
+      }
+      if (!shouldSkipTurn(allSorted[nextIdx])) {
+        if (wrapped) {
+          d.round = (d.round || 1) + 1;
+          // Remove expired extra-action instances from previous rounds
+          d.instances = d.instances.filter(
+            (i) =>
+              !i.isExtraAction ||
+              (i.extraActionRound || 0) >= d.round,
+          );
+        }
+        d.activeInstanceId = allSorted[nextIdx].id;
+        return true;
+      }
     }
 
-    d.activeInstanceId = sorted[idx].id;
+    d.activeInstanceId = null;
     return true;
   }
 
   global.AEEncounterTurns = {
     calculateInitiative,
     isInstanceDown,
+    shouldSkipTurn,
     ensureActiveInstance,
     rerollAllInitiatives,
     nextTurn,

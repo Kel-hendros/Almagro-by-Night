@@ -1011,6 +1011,7 @@
         pointBtn.addEventListener("click", (event) => {
           event.stopPropagation();
           const pointNum = Number(pointBtn.dataset.point);
+          const tracker = global.ABNEncounterBloodTracker;
 
           if (pointBtn.classList.contains("active")) {
             state.celeridadActivatedPoints = pointNum - 1;
@@ -1022,11 +1023,20 @@
               flashBloodWarning();
               return;
             }
+            // Celerity blood spending bypasses per-turn limit (VtM core rules)
+            tracker?.setCeleridadBypass?.(true);
             for (let i = 0; i < pointsToActivate; i += 1) {
               modifyBlood("consume", "");
             }
+            tracker?.setCeleridadBypass?.(false);
             state.celeridadActivatedPoints = pointNum;
           }
+
+          // Notify encounter of extra actions
+          if (tracker?.isEncounterActive?.()) {
+            tracker.notifyCeleridadActivation(state.celeridadActivatedPoints);
+          }
+
           renderDisciplineList();
           refreshPool1ForPhysicalDiscipline(5);
         });

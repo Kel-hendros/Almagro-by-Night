@@ -1,17 +1,77 @@
 .active-character-sheet-container {
   min-height: 100dvh;
   padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .acs-frame-wrap {
-  min-height: 100dvh;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   background: transparent;
 }
 
 .acs-frame {
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   border: 0;
   display: block;
+}
+
+/* ── Encounter Status Bar ── */
+.acs-encounter-bar {
+  background: #1a1a1c;
+  border-bottom: 1px solid #333;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.acs-encounter-bar.visible {
+  max-height: 48px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.acs-encounter-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  letter-spacing: 0.3px;
+}
+
+.acs-eb-status {
+  color: #6E9E6E;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.acs-eb-round {
+  color: #999;
+}
+
+.acs-eb-turn {
+  color: #bbb;
+}
+
+/* My turn highlight */
+.acs-encounter-bar.my-turn {
+  background: linear-gradient(90deg, #2a2210 0%, #1a1a1c 50%, #2a2210 100%);
+  border-bottom-color: #c5a059;
+}
+
+.acs-encounter-bar.my-turn .acs-eb-status {
+  color: #c5a059;
+}
+
+.acs-encounter-bar.my-turn .acs-eb-turn {
+  color: #c5a059;
+  font-weight: 600;
 }

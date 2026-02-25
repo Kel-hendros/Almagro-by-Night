@@ -1162,6 +1162,11 @@ function updateBloodUI() {
 
 healthBloodModule?.init();
 
+// Encounter blood-per-turn tracker (hooks into health-blood via setConsumeHooks)
+if (window.ABNEncounterBloodTracker?.init) {
+  window.ABNEncounterBloodTracker.init();
+}
+
 ////////-------------------------------------------////////
 ////////-------------------------------------------////////
 ////////-------------------------------------------////////

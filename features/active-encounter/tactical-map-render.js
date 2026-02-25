@@ -477,9 +477,10 @@
         this.ctx.shadowOffsetX = 1;
         this.ctx.shadowOffsetY = 1;
 
+        const isNarratorHidden = token.visible === false;
         this.ctx.globalAlpha =
           Math.min(1, Math.max(0, parseFloat(token.opacity) || 1)) *
-          (isDimmed ? 0.2 : 1);
+          (isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1);
 
         const hasImage =
           token.img && token.img.complete && token.img.naturalWidth > 0;
@@ -496,6 +497,14 @@
           this.ctx.strokeStyle = "#ff9800";
           this.ctx.lineWidth = Math.max(2 / this.scale, 1.5);
           this.ctx.strokeRect(-width / 2, -height / 2, width, height);
+        }
+
+        if (isNarratorHidden) {
+          this.ctx.setLineDash([Math.max(6 / this.scale, 3), Math.max(4 / this.scale, 2)]);
+          this.ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          this.ctx.lineWidth = Math.max(2 / this.scale, 1.5);
+          this.ctx.strokeRect(-width / 2, -height / 2, width, height);
+          this.ctx.setLineDash([]);
         }
 
         this.ctx.restore();
@@ -612,7 +621,8 @@
           : 0;
         const visualCx = cx;
         const visualCy = cy - flightLift;
-        const alpha = isDimmed ? 0.2 : 1;
+        const isNarratorHidden = instance && instance.visible === false;
+        const alpha = isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1;
 
         if (isFlying) {
           // Ground shadow stays on the real token position while the token body "floats".
@@ -781,6 +791,18 @@
           this.ctx.strokeStyle = "#ff9800";
           this.ctx.lineWidth = 3;
           this.ctx.stroke();
+        }
+
+        if (isNarratorHidden) {
+          this.ctx.save();
+          this.ctx.setLineDash([Math.max(6 / this.scale, 3), Math.max(4 / this.scale, 2)]);
+          this.ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          this.ctx.lineWidth = Math.max(2 / this.scale, 1.5);
+          this.ctx.beginPath();
+          this.ctx.arc(visualCx, visualCy, radius + Math.max(3 / this.scale, 2), 0, Math.PI * 2);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+          this.ctx.restore();
         }
 
         if (isObfuscated) {
