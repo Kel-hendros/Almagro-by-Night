@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .acs-frame-wrap {
@@ -80,6 +81,8 @@
 /* ── Bar interactive (clickable when encounter active) ── */
 .acs-encounter-bar.visible {
   cursor: pointer;
+  position: relative;
+  z-index: 60;
 }
 
 .acs-eb-toggle {
@@ -95,13 +98,27 @@
 
 /* ── Encounter Embed Persiana ── */
 .acs-encounter-embed {
-  flex: 0 0 0;
-  overflow: hidden;
-  transition: flex-basis 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s ease;
+  pointer-events: none;
+  background: #000;
+}
+
+.acs-encounter-embed.loading {
+  /* iframe is loading — keep hidden but positioned */
+  transform: translateY(-100%);
+  opacity: 0;
 }
 
 .acs-encounter-embed.open {
-  flex: 1 1 100%;
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .acs-encounter-frame {
@@ -109,10 +126,4 @@
   height: 100%;
   border: 0;
   display: block;
-}
-
-/* Shrink character sheet when persiana is open */
-.active-character-sheet-container.persiana-open .acs-frame-wrap {
-  flex: 0 0 0;
-  overflow: hidden;
 }

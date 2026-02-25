@@ -5,10 +5,7 @@
   let isOpen = false;
   let loadedEncounterId = null;
   let listening = false;
-
-  function getContainer() {
-    return document.querySelector(".active-character-sheet-container");
-  }
+  let loadHandler = null;
 
   function getEmbedWrap() {
     return document.getElementById("acs-encounter-embed");
@@ -18,38 +15,65 @@
     return document.getElementById("acs-encounter-frame");
   }
 
+  function setBarState(openState) {
+    var bar = document.querySelector(".acs-encounter-bar");
+    if (!bar) return;
+    bar.classList.toggle("persiana-open", openState);
+  }
+
   function open(encounterId) {
     if (!encounterId) return;
-    const frame = getEmbedFrame();
-    const wrap = getEmbedWrap();
+    if (isOpen) return;
+    var frame = getEmbedFrame();
+    var wrap = getEmbedWrap();
     if (!frame || !wrap) return;
 
-    // Load iframe only when encounter changes or first open
-    if (loadedEncounterId !== encounterId) {
-      frame.src =
-        "index.html#active-encounter?id=" +
-        encodeURIComponent(encounterId) +
-        "&embed=true";
-      loadedEncounterId = encounterId;
+    isOpen = true;
+    setBarState(true);
+
+    // Already loaded with same encounter — animate immediately
+    if (loadedEncounterId === encounterId) {
+      wrap.classList.add("open");
+      return;
     }
 
-    wrap.classList.add("open");
-    getContainer()?.classList.add("persiana-open");
-    isOpen = true;
+    // Show loading state (hidden but positioned)
+    wrap.classList.remove("open");
+    wrap.classList.add("loading");
 
-    // Update bar chevron
-    var bar = document.querySelector(".acs-encounter-bar");
-    if (bar) bar.classList.add("persiana-open");
+    // Clean up any previous load handler
+    if (loadHandler) {
+      frame.removeEventListener("load", loadHandler);
+      loadHandler = null;
+    }
+
+    // Wait for iframe to fully load, then slide down
+    loadHandler = function () {
+      frame.removeEventListener("load", loadHandler);
+      loadHandler = null;
+      // Small delay to let the encounter render its first frame
+      setTimeout(function () {
+        wrap.classList.remove("loading");
+        if (isOpen) wrap.classList.add("open");
+      }, 150);
+    };
+    frame.addEventListener("load", loadHandler);
+
+    frame.src =
+      "index.html#active-encounter?id=" +
+      encodeURIComponent(encounterId) +
+      "&embed=true";
+    loadedEncounterId = encounterId;
   }
 
   function close() {
+    if (!isOpen) return;
     var wrap = getEmbedWrap();
-    if (wrap) wrap.classList.remove("open");
-    getContainer()?.classList.remove("persiana-open");
+    if (wrap) {
+      wrap.classList.remove("open", "loading");
+    }
     isOpen = false;
-
-    var bar = document.querySelector(".acs-encounter-bar");
-    if (bar) bar.classList.remove("persiana-open");
+    setBarState(false);
   }
 
   function toggle(encounterId) {
@@ -60,7 +84,13 @@
   function destroy() {
     close();
     var frame = getEmbedFrame();
-    if (frame) frame.src = "about:blank";
+    if (frame) {
+      if (loadHandler) {
+        frame.removeEventListener("load", loadHandler);
+        loadHandler = null;
+      }
+      frame.src = "about:blank";
+    }
     loadedEncounterId = null;
   }
 
