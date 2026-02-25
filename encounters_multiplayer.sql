@@ -313,4 +313,115 @@ $$;
 grant execute on function public.unsummon_encounter_instance(uuid, text)
 to authenticated;
 
+create or replace function public.patch_encounter_instance_state(
+  p_encounter_id uuid,
+  p_instance_id text,
+  p_conditions jsonb default null,
+  p_effects jsonb default null
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_enc record;
+  v_data jsonb;
+  v_instances jsonb;
+  v_sheet_instances jsonb;
+  v_instance jsonb;
+  v_instance_idx integer;
+  v_sheet_id text;
+  v_owner_user_id uuid;
+  v_controller_user_id text;
+  v_is_admin boolean;
+  v_sheet_owner_user_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select public.is_current_user_admin() into v_is_admin;
+
+  select id, status, data
+    into v_enc
+  from public.encounters
+  where id = p_encounter_id
+  for update;
+
+  if not found then
+    raise exception 'Encounter not found';
+  end if;
+
+  if v_enc.data is null then
+    raise exception 'Encounter has no data';
+  end if;
+
+  v_data := v_enc.data;
+  v_instances := coalesce(v_data->'instances', '[]'::jsonb);
+  v_sheet_instances := coalesce(v_data->'sheetInstances', '{}'::jsonb);
+
+  select i.ord::int - 1, i.elem
+    into v_instance_idx, v_instance
+  from jsonb_array_elements(v_instances) with ordinality as i(elem, ord)
+  where i.elem->>'id' = p_instance_id
+  limit 1;
+
+  if v_instance is null then
+    raise exception 'Instance not found in encounter';
+  end if;
+
+  if not v_is_admin then
+    v_controller_user_id := nullif(v_instance->>'controllerUserId', '');
+    if v_controller_user_id is not null and v_controller_user_id = auth.uid()::text then
+      null;
+    else
+      if coalesce((v_instance->>'isPC')::boolean, false) is not true then
+        raise exception 'Only owned PC instances can be patched by players';
+      end if;
+
+      v_sheet_id := coalesce(
+        nullif(v_instance->>'characterSheetId', ''),
+        nullif(v_instance->>'sheetId', '')
+      );
+      if v_sheet_id is null then
+        raise exception 'PC instance has no sheet id';
+      end if;
+
+      select cs.user_id
+        into v_owner_user_id
+      from public.character_sheets cs
+      where cs.id = v_sheet_id::uuid
+      limit 1;
+
+      v_sheet_owner_user_id := nullif(v_sheet_instances->v_sheet_id->>'ownerUserId', '')::uuid;
+      v_owner_user_id := coalesce(v_owner_user_id, v_sheet_owner_user_id);
+
+      if v_owner_user_id is distinct from auth.uid() then
+        raise exception 'Player does not own this PC instance';
+      end if;
+    end if;
+  end if;
+
+  if p_conditions is not null then
+    v_instance := jsonb_set(v_instance, '{conditions}', p_conditions, true);
+  end if;
+  if p_effects is not null then
+    v_instance := jsonb_set(v_instance, '{effects}', p_effects, true);
+  end if;
+
+  v_instances := jsonb_set(v_instances, array[v_instance_idx::text], v_instance, true);
+  v_data := jsonb_set(v_data, '{instances}', v_instances, true);
+
+  update public.encounters
+  set data = v_data
+  where id = p_encounter_id;
+
+  return true;
+end;
+$$;
+
+grant execute on function public.patch_encounter_instance_state(uuid, text, jsonb, jsonb)
+to authenticated;
+
 commit;

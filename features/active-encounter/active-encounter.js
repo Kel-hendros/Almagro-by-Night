@@ -269,6 +269,8 @@
         );
         return !!token && canCurrentUserControlToken(token);
       },
+      persistPlayerInstanceState: async (instanceId, patch = {}) =>
+        persistPlayerInstanceStateViaRpc(instanceId, patch),
       render,
       saveEncounter,
     });
@@ -643,6 +645,22 @@
     const { error } = await supabase.rpc("unsummon_encounter_instance", {
       p_encounter_id: state.encounterId,
       p_instance_id: instanceId,
+    });
+    if (error) throw error;
+  }
+
+  async function persistPlayerInstanceStateViaRpc(instanceId, patch = {}) {
+    const conditions =
+      patch?.conditions && typeof patch.conditions === "object"
+        ? patch.conditions
+        : null;
+    const effects =
+      patch?.effects && typeof patch.effects === "object" ? patch.effects : null;
+    const { error } = await supabase.rpc("patch_encounter_instance_state", {
+      p_encounter_id: state.encounterId,
+      p_instance_id: instanceId,
+      p_conditions: conditions,
+      p_effects: effects,
     });
     if (error) throw error;
   }

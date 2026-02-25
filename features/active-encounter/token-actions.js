@@ -4,6 +4,7 @@
       state,
       canEditEncounter,
       canControlTokenById,
+      persistPlayerInstanceState,
       render,
       saveEncounter,
     } = ctx;
@@ -63,8 +64,8 @@
     }
 
     function setTokenCondition(tokenId, conditionKey, forceValue) {
-      if (!canEditEncounter()) return false;
       if (!state.encounter?.data || !tokenId || !conditionKey) return false;
+      if (!canUseToken(tokenId)) return false;
 
       const token = (state.encounter.data.tokens || []).find(
         (item) => item.id === tokenId,
@@ -98,7 +99,13 @@
       instance.conditions = conditions;
 
       render();
-      saveEncounter();
+      if (canEditEncounter()) {
+        saveEncounter();
+      } else if (typeof persistPlayerInstanceState === "function") {
+        persistPlayerInstanceState(instance.id, { conditions }).catch((error) => {
+          console.warn("No se pudo persistir condición de instancia:", error?.message || error);
+        });
+      }
       return true;
     }
 
@@ -239,7 +246,13 @@
       instance.conditions = conditions;
       instance.effects = effects;
       render();
-      saveEncounter();
+      if (canEditEncounter()) {
+        saveEncounter();
+      } else if (typeof persistPlayerInstanceState === "function") {
+        persistPlayerInstanceState(instance.id, { conditions, effects }).catch((error) => {
+          console.warn("No se pudo persistir estado de Ofuscación:", error?.message || error);
+        });
+      }
       return true;
     }
 

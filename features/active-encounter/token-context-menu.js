@@ -212,6 +212,11 @@
       if (!menuEl) return;
       const canManage = !!canEditEncounter?.();
       const summon = !!isSummonToken(tokenId);
+      const availablePowers =
+        tokenId && typeof onGetAvailablePowers === "function"
+          ? onGetAvailablePowers(tokenId) || []
+          : [];
+      const canUsePowers = availablePowers.length > 0;
 
       if (detailsBtnEl) detailsBtnEl.style.display = tokenId ? "" : "none";
 
@@ -226,12 +231,17 @@
         return;
       }
 
-      if (conditionsBtnEl) conditionsBtnEl.style.display = canManage ? "" : "none";
-      if (powersBtnEl) powersBtnEl.style.display = canManage ? "" : "none";
+      if (conditionsBtnEl) conditionsBtnEl.style.display = "";
+      if (powersBtnEl) powersBtnEl.style.display = canManage || canUsePowers ? "" : "none";
       if (deleteBtnEl) deleteBtnEl.style.display = canManage ? "" : "none";
       if (unsummonBtnEl) unsummonBtnEl.style.display = "none";
 
-      if (!canManage) {
+      if (!canManage && activePanel !== "powers") {
+        activePanel = null;
+        updatePrimaryActionsUI();
+        menuEl.classList.remove("is-expanded");
+      }
+      if (!canManage && activePanel === "powers" && !canUsePowers) {
         activePanel = null;
         updatePrimaryActionsUI();
         menuEl.classList.remove("is-expanded");
