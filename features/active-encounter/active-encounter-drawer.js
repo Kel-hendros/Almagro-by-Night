@@ -129,6 +129,21 @@
           });
         });
 
+      var freeMovCheck = document.getElementById("ae-free-movement-check");
+      if (freeMovCheck) {
+        freeMovCheck.checked = !!state.encounter?.data?.freeMovement;
+        freeMovCheck.disabled = !canEditEncounter();
+        freeMovCheck.addEventListener("change", function () {
+          if (!canEditEncounter()) return;
+          if (state.encounter?.data) {
+            state.encounter.data.freeMovement = freeMovCheck.checked;
+          }
+          var map = getMap?.();
+          if (map) map.freeMovement = freeMovCheck.checked;
+          if (typeof ctx.saveEncounter === "function") ctx.saveEncounter();
+        });
+      }
+
       setDrawerTab("assets");
       refreshGridOpacityButtons();
     }
@@ -284,6 +299,12 @@
         el.style.display = canEditEncounter() ? "" : "none";
       });
       refreshGridOpacityButtons();
+
+      var freeMovCheck = document.getElementById("ae-free-movement-check");
+      if (freeMovCheck) {
+        freeMovCheck.disabled = !canEditEncounter();
+        freeMovCheck.checked = !!state.encounter?.data?.freeMovement;
+      }
     }
 
     return {

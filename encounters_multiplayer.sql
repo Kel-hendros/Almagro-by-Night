@@ -92,8 +92,8 @@ using (public.is_current_user_admin());
 create or replace function public.move_encounter_token(
   p_encounter_id uuid,
   p_token_id text,
-  p_x integer,
-  p_y integer
+  p_x double precision,
+  p_y double precision
 )
 returns boolean
 language plpgsql
@@ -205,7 +205,7 @@ begin
 end;
 $$;
 
-grant execute on function public.move_encounter_token(uuid, text, integer, integer)
+grant execute on function public.move_encounter_token(uuid, text, double precision, double precision)
 to authenticated;
 
 create or replace function public.unsummon_encounter_instance(
@@ -422,6 +422,66 @@ end;
 $$;
 
 grant execute on function public.patch_encounter_instance_state(uuid, text, jsonb, jsonb)
+to authenticated;
+
+-- RPC: send_encounter_ping — any authenticated user can ping on an in_game encounter
+create or replace function public.send_encounter_ping(
+  p_encounter_id uuid,
+  p_x double precision,
+  p_y double precision,
+  p_player text,
+  p_ts double precision default null
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_enc record;
+  v_data jsonb;
+  v_is_admin boolean;
+  v_ts double precision;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select public.is_current_user_admin() into v_is_admin;
+
+  select id, status, data
+    into v_enc
+  from public.encounters
+  where id = p_encounter_id
+  for update;
+
+  if not found then
+    raise exception 'Encounter not found';
+  end if;
+
+  if not v_is_admin and v_enc.status <> 'in_game' then
+    raise exception 'Encounter is not in_game';
+  end if;
+
+  v_ts := coalesce(p_ts, extract(epoch from now()) * 1000);
+
+  v_data := coalesce(v_enc.data, '{}'::jsonb);
+  v_data := jsonb_set(v_data, '{ping}', jsonb_build_object(
+    'x', p_x,
+    'y', p_y,
+    'ts', v_ts,
+    'player', p_player
+  ), true);
+
+  update public.encounters
+  set data = v_data
+  where id = p_encounter_id;
+
+  return true;
+end;
+$$;
+
+grant execute on function public.send_encounter_ping(uuid, double precision, double precision, text, double precision)
 to authenticated;
 
 commit;

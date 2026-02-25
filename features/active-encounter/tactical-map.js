@@ -98,6 +98,8 @@ window.TacticalMap = class TacticalMap {
     this.onDesignTokenMove = null;
     this.onDesignTokenSelect = null;
     this.onDesignTokenContext = null;
+    this.onEmptyContext = null;
+    this.onPing = null;
     this.onDesignTokenChange = null;
     this.canDragDesignToken = null;
     this.onBackgroundChange = null;
@@ -107,12 +109,19 @@ window.TacticalMap = class TacticalMap {
     this.selectedMapEffectId = null;
     this.selectedBackground = false;
     this.hoverFocus = null;
+    this.freeMovement = false;
     this.measureToolActive = false;
     this.measureStart = null;
     this.measureEnd = null;
     this.measurePreview = null;
     this.satellitePopAnim = null;
     this.statusBadgeImages = {};
+    this._viewPinEl = null;
+    this._viewPinTimer = null;
+    this._viewPinCell = null;
+    this._pingEl = null;
+    this._pingTimer = null;
+    this._pingCell = null;
     this._rafId = null;
     this._isDestroyed = false;
     this.preloadStatusBadgeImages();
@@ -710,6 +719,137 @@ window.TacticalMap = class TacticalMap {
     this.draw();
   }
 
+  panToCell(cellX, cellY, animate) {
+    var worldX = cellX * this.gridSize;
+    var worldY = cellY * this.gridSize;
+    var targetOX = this.canvas.width / 2 - worldX * this.scale;
+    var targetOY = this.canvas.height / 2 - worldY * this.scale;
+
+    if (!animate) {
+      this.offsetX = targetOX;
+      this.offsetY = targetOY;
+      this.draw();
+      return;
+    }
+
+    var startOX = this.offsetX;
+    var startOY = this.offsetY;
+    var duration = 500;
+    var startTime = performance.now();
+    var self = this;
+
+    function step(now) {
+      var t = Math.min(1, (now - startTime) / duration);
+      var ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      self.offsetX = startOX + (targetOX - startOX) * ease;
+      self.offsetY = startOY + (targetOY - startOY) * ease;
+      self.draw();
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  showViewPin(cellX, cellY, label, durationMs) {
+    this.clearViewPin();
+    if (!this.container) return;
+    var dur = durationMs || 4000;
+    this._viewPinCell = { x: cellX, y: cellY };
+
+    var el = document.createElement("div");
+    el.className = "ae-view-pin";
+    var labelSpan = document.createElement("span");
+    labelSpan.className = "ae-view-pin-label";
+    labelSpan.textContent = label || "";
+    var iconSpan = document.createElement("span");
+    iconSpan.className = "ae-view-pin-icon";
+    iconSpan.textContent = "📍";
+    el.appendChild(labelSpan);
+    el.appendChild(iconSpan);
+    el.style.animationDuration = dur + "ms";
+    this.container.appendChild(el);
+    this._viewPinEl = el;
+    this._repositionViewPin();
+
+    var self = this;
+    this._viewPinTimer = setTimeout(function () {
+      self.clearViewPin();
+    }, dur);
+  }
+
+  clearViewPin() {
+    if (this._viewPinTimer) {
+      clearTimeout(this._viewPinTimer);
+      this._viewPinTimer = null;
+    }
+    if (this._viewPinEl && this._viewPinEl.parentNode) {
+      this._viewPinEl.parentNode.removeChild(this._viewPinEl);
+    }
+    this._viewPinEl = null;
+    this._viewPinCell = null;
+  }
+
+  _repositionViewPin() {
+    if (!this._viewPinEl || !this._viewPinCell) return;
+    var worldX = this._viewPinCell.x * this.gridSize;
+    var worldY = this._viewPinCell.y * this.gridSize;
+    var screenX = worldX * this.scale + this.offsetX;
+    var screenY = worldY * this.scale + this.offsetY;
+    this._viewPinEl.style.left = screenX + "px";
+    this._viewPinEl.style.top = screenY + "px";
+  }
+
+  showPing(cellX, cellY, label, durationMs) {
+    this.clearPing();
+    if (!this.container) return;
+    var dur = durationMs || 3000;
+    this._pingCell = { x: cellX, y: cellY };
+
+    var el = document.createElement("div");
+    el.className = "ae-map-ping";
+    var nameSpan = document.createElement("span");
+    nameSpan.className = "ae-map-ping-name";
+    nameSpan.textContent = label || "";
+    var ringSpan = document.createElement("span");
+    ringSpan.className = "ae-map-ping-ring";
+    el.appendChild(nameSpan);
+    el.appendChild(ringSpan);
+    el.style.animationDuration = dur + "ms";
+    this.container.appendChild(el);
+    this._pingEl = el;
+    this._repositionPing();
+
+    var self = this;
+    this._pingTimer = setTimeout(function () {
+      self.clearPing();
+    }, dur);
+  }
+
+  clearPing() {
+    if (this._pingTimer) {
+      clearTimeout(this._pingTimer);
+      this._pingTimer = null;
+    }
+    if (this._pingEl && this._pingEl.parentNode) {
+      this._pingEl.parentNode.removeChild(this._pingEl);
+    }
+    this._pingEl = null;
+    this._pingCell = null;
+  }
+
+  isPingActive() {
+    return !!this._pingEl;
+  }
+
+  _repositionPing() {
+    if (!this._pingEl || !this._pingCell) return;
+    var worldX = this._pingCell.x * this.gridSize;
+    var worldY = this._pingCell.y * this.gridSize;
+    var screenX = worldX * this.scale + this.offsetX;
+    var screenY = worldY * this.scale + this.offsetY;
+    this._pingEl.style.left = screenX + "px";
+    this._pingEl.style.top = screenY + "px";
+  }
+
   setMeasurementToolActive(isActive) {
     this.measureToolActive = !!isActive;
     if (!this.measureToolActive) {
@@ -794,6 +934,8 @@ window.TacticalMap = class TacticalMap {
 
   destroy() {
     this._isDestroyed = true;
+    this.clearViewPin();
+    this.clearPing();
     if (this._rafId != null) {
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
@@ -844,6 +986,8 @@ window.TacticalMap = class TacticalMap {
       this.drawMeasurement();
     }
     this.ctx.restore();
+    this._repositionViewPin();
+    this._repositionPing();
   }
 };
 

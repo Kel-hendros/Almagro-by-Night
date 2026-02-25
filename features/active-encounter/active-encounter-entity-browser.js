@@ -268,6 +268,7 @@
                 <input type="number" class="ae-browser-qty" value="1" min="1" max="20"
                   onclick="event.stopPropagation()">
                 <button class="ae-browser-add-btn" data-tpl-id="${t.id}">Agregar</button>
+                <button class="ae-browser-add-hidden-btn" data-tpl-id="${t.id}" title="Agregar oculto">Oculto</button>
               </div>
             </div>
           `;
@@ -280,6 +281,16 @@
           const qtyInput = btn.closest(".ae-browser-card").querySelector(".ae-browser-qty");
           const count = parseInt(qtyInput?.value, 10) || 1;
           addNPC(btn.dataset.tplId, count);
+          closeBrowser();
+        });
+      });
+
+      els.browserGrid.querySelectorAll(".ae-browser-add-hidden-btn").forEach((btn) => {
+        btn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const qtyInput = btn.closest(".ae-browser-card").querySelector(".ae-browser-qty");
+          const count = parseInt(qtyInput?.value, 10) || 1;
+          addNPC(btn.dataset.tplId, count, { hidden: true });
           closeBrowser();
         });
       });

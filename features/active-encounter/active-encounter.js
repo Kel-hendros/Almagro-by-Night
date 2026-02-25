@@ -22,6 +22,8 @@
     activeMapLayer: "entities",
     map: null,
     realtimeChannels: [],
+    lastViewTargetTs: null,
+    lastPingTs: null,
   };
   const runtime = {
     isBooted: false,
@@ -275,6 +277,7 @@
       requestBackgroundUpload: () => els.mapUploadBgInput?.click(),
       removeEncounterBackground: () => removeEncounterBackground(),
       getMap: () => state.map,
+      saveEncounter: () => saveEncounter(),
     });
     tokenActionsController = window.AEEncounterTokenActions?.createController?.({
       state,
@@ -320,6 +323,7 @@
 
     // Init Map
     state.map = new TacticalMap("ae-map-canvas", "ae-map-container");
+    state.map.freeMovement = !!state.encounter?.data?.freeMovement;
     state.map.setData(
       state.encounter?.data?.tokens,
       state.encounter?.data?.instances,
@@ -403,6 +407,13 @@
     state.map.onDesignTokenContext = (tokenInfo) => {
       if (!tokenInfo?.tokenId || !canEditEncounter()) return;
       openDesignTokenContextMenu(tokenInfo);
+    };
+    state.map.onEmptyContext = (info) => {
+      if (!canEditEncounter()) return;
+      openMapContextMenu(info);
+    };
+    state.map.onPing = (info) => {
+      sendPing(info.cellX, info.cellY);
     };
     state.map.canEditBackground = () => canEditEncounter();
     state.map.onBackgroundChange = (nextMap) => {
@@ -1104,6 +1115,14 @@
         closeDesignTokenContextMenu();
       }
 
+      if (
+        isMapContextMenuOpen() &&
+        mapContextMenuEl &&
+        !mapContextMenuEl.contains(e.target)
+      ) {
+        closeMapContextMenu();
+      }
+
       if (els.layerMenu && els.layerToolbar && !els.layerToolbar.contains(e.target)) {
         els.layerMenu.style.display = "none";
       }
@@ -1112,6 +1131,7 @@
       if (e.key === "Escape") {
         tokenContextMenuController?.hide?.();
         closeDesignTokenContextMenu();
+        closeMapContextMenu();
       }
 
       if (!canEditEncounter()) return;
@@ -1309,6 +1329,13 @@
     });
 
     ensureActiveInstance();
+
+    // Seed timestamps so existing DB data doesn't replay animations on load
+    var existingVt = state.encounter.data.viewTarget;
+    if (existingVt && existingVt.ts) state.lastViewTargetTs = existingVt.ts;
+    var existingPg = state.encounter.data.ping;
+    if (existingPg && existingPg.ts) state.lastPingTs = existingPg.ts;
+
     render();
     if (changed) {
       saveEncounter();
@@ -1432,6 +1459,7 @@
 
     // Refresh Map Data
     if (state.map) {
+      state.map.freeMovement = !!state.encounter.data.freeMovement;
       state.map.setInteractionLayer(state.activeMapLayer);
       const isAdmin = canEditEncounter();
       const allTokens = state.encounter.data.tokens;
@@ -1440,17 +1468,26 @@
 
       const hiddenInstanceIds = isAdmin
         ? null
-        : new Set(
-            (allInstances || [])
-              .filter((i) => i.visible === false)
-              .map((i) => i.id),
-          );
+        : (function () {
+            var directlyHidden = new Set(
+              (allInstances || [])
+                .filter((i) => i.visible === false)
+                .map((i) => i.id),
+            );
+            (allInstances || []).forEach(function (i) {
+              if (i.extraActionSourceInstanceId &&
+                  directlyHidden.has(i.extraActionSourceInstanceId)) {
+                directlyHidden.add(i.id);
+              }
+            });
+            return directlyHidden;
+          })();
 
       const mapTokens = hiddenInstanceIds
         ? allTokens.filter((t) => !hiddenInstanceIds.has(t.instanceId))
         : allTokens;
       const mapInstances = hiddenInstanceIds
-        ? allInstances.filter((i) => i.visible !== false)
+        ? allInstances.filter((i) => !hiddenInstanceIds.has(i.id))
         : allInstances;
       const mapDesignTokens = isAdmin
         ? allDesignTokens
@@ -1462,6 +1499,32 @@
         mapEffects: state.encounter.data.mapEffects || [],
       });
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
+
+      // Handle narrator's "Ver aquí" — pan players to target + show pin
+      var vt = state.encounter.data.viewTarget;
+      if (
+        vt && typeof vt.x === "number" && typeof vt.y === "number" &&
+        vt.ts && vt.ts !== state.lastViewTargetTs
+      ) {
+        state.lastViewTargetTs = vt.ts;
+        if (!canEditEncounter()) {
+          state.map.panToCell(vt.x, vt.y, true);
+          var pinLabel = vt.narrator || "Narrador";
+          setTimeout(function () {
+            if (state.map) state.map.showViewPin(vt.x, vt.y, pinLabel);
+          }, 550);
+        }
+      }
+
+      // Handle ping — show attention indicator from any player
+      var pg = state.encounter.data.ping;
+      if (
+        pg && typeof pg.x === "number" && typeof pg.y === "number" &&
+        pg.ts && pg.ts !== state.lastPingTs
+      ) {
+        state.lastPingTs = pg.ts;
+        state.map.showPing(pg.x, pg.y, pg.player || "Jugador");
+      }
     }
 
     const instances = state.encounter.data.instances || [];
@@ -1480,7 +1543,9 @@
     }
 
     sorted.forEach((inst) => {
-      const isHidden = inst.visible === false;
+      const parentHidden = inst.extraActionSourceInstanceId &&
+        instances.some((p) => p.id === inst.extraActionSourceInstanceId && p.visible === false);
+      const isHidden = inst.visible === false || parentHidden;
       if (isHidden && !canEditEncounter()) return;
 
       const row = document.createElement("div");
@@ -1552,7 +1617,7 @@
       }
 
       row.innerHTML = `
-        <div class="ae-init-bubble" style="${isDead ? "visibility: hidden !important; opacity: 0;" : ""}">
+        <div class="ae-init-bubble ${activeClass}" style="${isDead ? "visibility: hidden !important; opacity: 0;" : ""}">
           ${isDead ? "" : `<input type="number" class="init-input ae-bubble-input" value="${initiativeDisplay}" step="1">`}
         </div>
 
@@ -1639,10 +1704,11 @@
 
   // --- ADD NPC ---
 
-  async function addNPC(tplId, count) {
+  async function addNPC(tplId, count, options) {
     if (!canEditEncounter()) return;
     if (!tplId) return;
     count = count || 1;
+    var opts = options || {};
 
     const tpl = state.templates.find((t) => t.id === tplId);
     if (!tpl) return;
@@ -1671,7 +1737,7 @@
 
       const instanceId = crypto.randomUUID();
 
-      instances.push({
+      const inst = {
         id: instanceId,
         templateId: tpl.id,
         name: tpl.name,
@@ -1684,7 +1750,9 @@
         health: tplData.maxHealth || 7,
         maxHealth: tplData.maxHealth || 7,
         isPC: false,
-      });
+      };
+      if (opts.hidden) inst.visible = false;
+      instances.push(inst);
 
       // Auto-create token if requested (or default behavior)
       // For now we assume yes if adding to map, or maybe we add a checkbox later?
@@ -2022,6 +2090,93 @@
     list.splice(idx, 1);
     render();
     saveEncounter();
+  }
+
+  // --- MAP CONTEXT MENU ("Ver aqui") ---
+
+  let mapContextMenuEl = null;
+
+  function openMapContextMenu(info) {
+    closeMapContextMenu();
+
+    const menu = document.createElement("div");
+    menu.className = "ae-token-context-menu ae-map-context-menu is-open";
+
+    menu.innerHTML =
+      '<div class="ae-token-context-body">' +
+      '<div class="ae-token-context-primary">' +
+      '<button type="button" class="ae-token-context-action ae-token-context-action--viewhere" ' +
+      'data-action="viewhere">Ver aquí</button>' +
+      "</div></div>";
+
+    menu.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var action = e.target.closest("[data-action]")?.dataset.action;
+      if (action === "viewhere") {
+        closeMapContextMenu();
+        setViewTarget(info.cellX, info.cellY);
+      }
+    });
+
+    document.body.appendChild(menu);
+    mapContextMenuEl = menu;
+
+    var margin = 10;
+    var menuWidth = menu.offsetWidth || 160;
+    var menuHeight = menu.offsetHeight || 44;
+    var left = Math.min(info.clientX, window.innerWidth - menuWidth - margin);
+    var top = Math.min(info.clientY, window.innerHeight - menuHeight - margin);
+    menu.style.left = Math.max(margin, left) + "px";
+    menu.style.top = Math.max(margin, top) + "px";
+  }
+
+  function closeMapContextMenu() {
+    if (mapContextMenuEl?.parentNode) {
+      mapContextMenuEl.parentNode.removeChild(mapContextMenuEl);
+    }
+    mapContextMenuEl = null;
+  }
+
+  function isMapContextMenuOpen() {
+    return !!mapContextMenuEl;
+  }
+
+  function setViewTarget(cellX, cellY) {
+    if (!state.encounter?.data) return;
+    var narratorName = state.currentPlayer?.name || "Narrador";
+    state.encounter.data.viewTarget = {
+      x: cellX, y: cellY, ts: Date.now(), narrator: narratorName,
+    };
+    saveEncounter();
+    if (state.map) {
+      state.map.showViewPin(cellX, cellY, narratorName);
+    }
+  }
+
+  var _pingCooldownUntil = 0;
+
+  function sendPing(cellX, cellY) {
+    if (!state.encounter?.data || !state.encounterId) return;
+    if (Date.now() < _pingCooldownUntil) return;
+    _pingCooldownUntil = Date.now() + 3000;
+    var playerName = state.currentPlayer?.name || "Jugador";
+    var ts = Date.now();
+    state.encounter.data.ping = {
+      x: cellX, y: cellY, ts: ts, player: playerName,
+    };
+    state.lastPingTs = ts;
+    if (state.map) {
+      state.map.showPing(cellX, cellY, playerName);
+    }
+    supabase.rpc("send_encounter_ping", {
+      p_encounter_id: state.encounterId,
+      p_x: cellX,
+      p_y: cellY,
+      p_player: playerName,
+      p_ts: ts,
+    }).then(function (res) {
+      if (res.error) console.warn("Ping error:", res.error.message);
+    });
   }
 
   // --- ENTITY BROWSER ---
@@ -2796,6 +2951,7 @@
     tokenContextMenuController?.destroy?.();
     tokenContextMenuController = null;
     closeDesignTokenContextMenu();
+    closeMapContextMenu();
     tokenActionsController = null;
 
     if (state.map && typeof state.map.destroy === "function") {

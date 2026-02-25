@@ -502,8 +502,16 @@
               });
             }
           } else {
-            this.isPanning = true;
-            this.dragStart = { x: e.clientX, y: e.clientY };
+            if (this.onEmptyContext) {
+              this.onEmptyContext({
+                worldX, worldY,
+                cellX: worldCellX, cellY: worldCellY,
+                clientX: e.clientX, clientY: e.clientY,
+              });
+            } else {
+              this.isPanning = true;
+              this.dragStart = { x: e.clientX, y: e.clientY };
+            }
             if (this.onDesignTokenContext) this.onDesignTokenContext(null);
           }
           return;
@@ -574,8 +582,16 @@
             });
           }
         } else {
-          this.isPanning = true;
-          this.dragStart = { x: e.clientX, y: e.clientY };
+          if (this.onEmptyContext) {
+            this.onEmptyContext({
+              worldX, worldY,
+              cellX: worldCellX, cellY: worldCellY,
+              clientX: e.clientX, clientY: e.clientY,
+            });
+          } else {
+            this.isPanning = true;
+            this.dragStart = { x: e.clientX, y: e.clientY };
+          }
           if (this.onTokenContext) this.onTokenContext(null);
         }
         return;
@@ -687,8 +703,8 @@
         const rawGridX = (worldX - this.dragTokenOffset.x) / this.gridSize;
         const rawGridY = (worldY - this.dragTokenOffset.y) / this.gridSize;
 
-        const nextX = Math.round(rawGridX);
-        const nextY = Math.round(rawGridY);
+        const nextX = this.freeMovement ? Math.round(rawGridX * 10) / 10 : Math.round(rawGridX);
+        const nextY = this.freeMovement ? Math.round(rawGridY * 10) / 10 : Math.round(rawGridY);
         const liveToken = (this.tokens || []).find(
           (token) => token.id === this.draggedToken.id,
         );
@@ -938,7 +954,6 @@
     };
 
     proto.handleDoubleClick = function handleDoubleClick(e) {
-      if (this.activeLayer !== "decor") return;
       if (e.button !== 0) return;
 
       const rect = this.canvas.getBoundingClientRect();
@@ -946,31 +961,50 @@
       const mouseY = e.clientY - rect.top;
       const worldX = (mouseX - this.offsetX) / this.scale;
       const worldY = (mouseY - this.offsetY) / this.scale;
-      const rotateHandle = this.getDesignTokenRotateHandleAt(worldX, worldY);
-      if (!rotateHandle) return;
+      const worldCellX = worldX / this.gridSize;
+      const worldCellY = worldY / this.gridSize;
 
-      const token = (this.designTokens || []).find(
-        (item) => item.id === rotateHandle.tokenId,
-      );
-      if (!token) return;
-
-      const canEdit =
-        typeof this.canDragDesignToken === "function"
-          ? !!this.canDragDesignToken(token)
-          : true;
-      if (!canEdit) return;
-
-      const current = ((parseFloat(token.rotationDeg) || 0) % 360 + 360) % 360;
-      const next = (((Math.floor(current / 45) + 1) * 45) % 360 + 360) % 360;
-      token.rotationDeg = next;
-      this.draw();
-
-      if (this.onDesignTokenChange) {
-        this.onDesignTokenChange(token.id, { rotationDeg: next });
+      // Decor layer: rotate handle on double-click
+      if (this.activeLayer === "decor") {
+        const rotateHandle = this.getDesignTokenRotateHandleAt(worldX, worldY);
+        if (rotateHandle) {
+          const token = (this.designTokens || []).find(
+            (item) => item.id === rotateHandle.tokenId,
+          );
+          if (token) {
+            const canEdit =
+              typeof this.canDragDesignToken === "function"
+                ? !!this.canDragDesignToken(token)
+                : true;
+            if (canEdit) {
+              const current = ((parseFloat(token.rotationDeg) || 0) % 360 + 360) % 360;
+              const next = (((Math.floor(current / 45) + 1) * 45) % 360 + 360) % 360;
+              token.rotationDeg = next;
+              this.draw();
+              if (this.onDesignTokenChange) {
+                this.onDesignTokenChange(token.id, { rotationDeg: next });
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+          }
+        }
       }
 
-      e.preventDefault();
-      e.stopPropagation();
+      // Any layer: ping on double-click empty space
+      var clickedToken = this.getTokenAt(worldX, worldY);
+      var clickedDecor = this.getDesignTokenAt(worldX, worldY);
+      if (!clickedToken && !clickedDecor && this.onPing) {
+        this.onPing({
+          cellX: worldCellX,
+          cellY: worldCellY,
+          clientX: e.clientX,
+          clientY: e.clientY,
+        });
+        e.preventDefault();
+        e.stopPropagation();
+      }
     };
   }
 
