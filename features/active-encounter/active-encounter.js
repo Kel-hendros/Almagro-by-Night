@@ -1028,7 +1028,7 @@
 
   function setupListeners() {
     document.getElementById("btn-ae-back").addEventListener("click", () => {
-      navigateAway("combat-tracker");
+      navigateAway("chronicle");
     });
     document
       .getElementById("btn-ae-next-turn")
@@ -1205,7 +1205,7 @@
       .from("templates")
       .select("*")
       .eq("type", "npc")
-      .eq("user_id", state.user.id)
+      .or(`user_id.eq.${state.user.id},is_system.eq.true`)
       .order("name");
     if (data) {
       state.templates = data;
@@ -1256,7 +1256,7 @@
     state.canViewEncounter = access.canView;
     if (!state.canViewEncounter) {
       alert("No tienes acceso a este encuentro.");
-      navigateAway("combat-tracker");
+      navigateAway("chronicle");
       return false;
     }
 
@@ -1266,7 +1266,7 @@
         ENCOUNTER_STATUS.IN_GAME
     ) {
       alert("Este encuentro no está disponible para jugadores.");
-      navigateAway("combat-tracker");
+      navigateAway("chronicle");
       return false;
     }
 
@@ -1421,7 +1421,7 @@
     state.encounter.status = nextStatus;
     render();
     if (nextStatus === ENCOUNTER_STATUS.ARCHIVED) {
-      navigateAway("combat-tracker");
+      navigateAway("chronicle");
       return true;
     }
     setTimeout(() => {

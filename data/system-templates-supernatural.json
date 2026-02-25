@@ -1,0 +1,178 @@
+[
+  {
+    "name": "Ghoul Feral",
+    "type": "npc",
+    "source": "ghoul.md → Independent Ghoul (feral variant). Enhanced physicals from uncontrolled vitae use.",
+    "tags": ["Ghoul", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 3, "Resistencia": 4,
+      "Carisma": 1, "Manipulación": 1, "Apariencia": 1,
+      "Percepción": 3, "Inteligencia": 1, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Supervivencia": {"value": 3, "type": "Técnicas"}
+    },
+    "willpower": 4,
+    "maxHealth": 7,
+    "notes": "Mordida 4L, Garras improvisadas 4C. Potencia 1. Sangre: 1-2. Frenesí permanente. Ataca a cualquier vampiro por su sangre. No puede ser razonado. ghoul.md: 'frenzy like vampires, base difficulty 6'."
+  },
+  {
+    "name": "Szlachta (Ghoul de Guerra)",
+    "type": "npc",
+    "source": "monstrous-creations.md → Standard Szlachta Stats (exactos del módulo)",
+    "tags": ["Ghoul de Guerra", "Amenaza:Alta", "Tzimisce"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 3, "Resistencia": 4,
+      "Carisma": 1, "Manipulación": 3, "Apariencia": 0,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"}
+    },
+    "willpower": 4,
+    "maxHealth": 7,
+    "notes": "Arma ósea 2L/2C, Mordida 4L. Potencia 1 o Fortaleza 1. Sangre: 10. Armadura 4 (8 soak total). Salud: OK,-1,-1,-2,-2,-5,Incap. Inmune a Dominación/Presencia. Obedece solo a su creador. Ruptura de Mascarada. monstrous-creations.md: stats exactos."
+  },
+  {
+    "name": "Revenant (Bratovich)",
+    "type": "npc",
+    "source": "revenant.md → Bratovich family. Attrs 6/4/3, Abilities 11/7/4.",
+    "tags": ["Ghoul", "Amenaza:Media", "Revenant"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 3, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 3, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 1, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Subterfugio": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 2, "type": "Técnicas"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Trato con Animales": {"value": 2, "type": "Técnicas"},
+      "Etiqueta": {"value": 1, "type": "Técnicas"},
+      "Ocultismo": {"value": 2, "type": "Conocimientos"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Según arma equipada. Animalismo 1, Fortaleza 1, Potencia 1. Sangre: 1 (regenera 1/día). No envejece rápido. Humanidad máx 5. +2 dif resistir frenesí, no puede gastar Voluntad para evitarlo. revenant.md: Bratovich — 'Lupine hunting, war dog breeding, assassinations'."
+  },
+  {
+    "name": "Sangre Débil",
+    "type": "npc",
+    "source": "vampire.md → Gen 14ª-15ª. Attrs base + minimal XP. Thin-blood rules V20 p.70.",
+    "tags": ["Cainita", "Amenaza:Baja", "Sangre Débil"],
+    "attributes": {
+      "Fuerza": 2, "Destreza": 2, "Resistencia": 2,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 2, "Inteligencia": 2, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 1, "type": "Talentos"},
+      "Pelea": {"value": 1, "type": "Talentos"},
+      "Callejeo": {"value": 2, "type": "Talentos"},
+      "Subterfugio": {"value": 1, "type": "Talentos"},
+      "Empatía": {"value": 1, "type": "Talentos"},
+      "Sigilo": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 3,
+    "maxHealth": 7,
+    "notes": "Sangre: 10. Gen 14ª-15ª (1 sangre/turno). Puede caminar bajo el sol (daño contusivo). Puede comer comida. Disciplinas limitadas (máx nivel 1-2). No causa Vínculo de Sangre. Despreciado por la Camarilla."
+  },
+  {
+    "name": "Vampiro Neófito",
+    "type": "npc",
+    "source": "vampire.md → Character creation (7/5/3 attrs, 13/9/5 abilities, 3 Disciplines). Gen 12ª-13ª.",
+    "tags": ["Cainita", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 1, "type": "Talentos"},
+      "Subterfugio": {"value": 1, "type": "Talentos"},
+      "Armas C.C.": {"value": 1, "type": "Técnicas"},
+      "Sigilo": {"value": 1, "type": "Técnicas"},
+      "Etiqueta": {"value": 1, "type": "Técnicas"},
+      "Ocultismo": {"value": 1, "type": "Conocimientos"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Puño 3C, Mordida 3 agg. Sangre: 10-11. Gen 12ª-13ª (1 sangre/turno). 3 dots Disciplinas de clan (nivel 1-2). Soak letal con Resistencia. Regenera 1 letal/sangre. Vulnerable a fuego y sol (agg)."
+  },
+  {
+    "name": "Vampiro Ancilla",
+    "type": "npc",
+    "source": "vampire.md → Gen 9ª-10ª. Experienced vampire with XP beyond creation. vampire.md generation table.",
+    "tags": ["Cainita", "Amenaza:Alta"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 4, "Resistencia": 3,
+      "Carisma": 3, "Manipulación": 4, "Apariencia": 3,
+      "Percepción": 3, "Inteligencia": 3, "Astucia": 4
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"},
+      "Subterfugio": {"value": 3, "type": "Talentos"},
+      "Empatía": {"value": 2, "type": "Talentos"},
+      "Liderazgo": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Etiqueta": {"value": 2, "type": "Técnicas"},
+      "Investigación": {"value": 1, "type": "Conocimientos"},
+      "Ocultismo": {"value": 2, "type": "Conocimientos"},
+      "Política": {"value": 2, "type": "Conocimientos"}
+    },
+    "willpower": 7,
+    "maxHealth": 7,
+    "notes": "Según clan y disciplinas. Sangre: 13-14. Gen 9ª-10ª (1-2 sangre/turno). 6-8 dots Disciplinas (nivel 1-4). Tiene ghouls, refugio protegido, contactos. Difícil de sorprender. vampire.md generation table."
+  },
+  {
+    "name": "Vampiro Antiguo (Elder)",
+    "type": "npc",
+    "source": "vampire.md → Gen 7ª. Centuries of XP. Trait max 6. vampire.md generation table.",
+    "tags": ["Cainita", "Amenaza:Extrema"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 5, "Resistencia": 4,
+      "Carisma": 4, "Manipulación": 5, "Apariencia": 4,
+      "Percepción": 4, "Inteligencia": 4, "Astucia": 5
+    },
+    "abilities": {
+      "Alerta": {"value": 4, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 4, "type": "Talentos"},
+      "Intimidación": {"value": 4, "type": "Talentos"},
+      "Subterfugio": {"value": 4, "type": "Talentos"},
+      "Empatía": {"value": 3, "type": "Talentos"},
+      "Liderazgo": {"value": 3, "type": "Talentos"},
+      "Armas C.C.": {"value": 3, "type": "Técnicas"},
+      "Sigilo": {"value": 3, "type": "Técnicas"},
+      "Etiqueta": {"value": 3, "type": "Técnicas"},
+      "Investigación": {"value": 2, "type": "Conocimientos"},
+      "Ocultismo": {"value": 4, "type": "Conocimientos"},
+      "Política": {"value": 3, "type": "Conocimientos"},
+      "Leyes": {"value": 2, "type": "Conocimientos"},
+      "Lingüística": {"value": 3, "type": "Conocimientos"}
+    },
+    "willpower": 9,
+    "maxHealth": 7,
+    "notes": "Devastador según disciplinas. Sangre: 20. Gen 7ª (5 sangre/turno, Trait Max 6). 12-15 dots Disciplinas (nivel 1-6+). Red de ghouls, aliados y peones. NO es un encuentro casual — es un evento de campaña."
+  }
+]

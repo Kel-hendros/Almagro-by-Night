@@ -1,0 +1,100 @@
+<div class="main-container games">
+    <link rel="stylesheet" href="features/resource-manager/resource-manager.css">
+
+    <div class="chronicles-header">
+        <div class="chronicles-title-wrap">
+            <h1>Gestión de Recursos</h1>
+            <p class="chronicles-subtitle">Gestiona plantillas de PNJs y decorados para encuentros.</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ct-tabs">
+        <button class="ct-tab-btn active" data-tab="templates">Plantillas PNJ</button>
+        <button class="ct-tab-btn" data-tab="decor">Decorados</button>
+    </div>
+
+    <!-- VIEW 1: TEMPLATES -->
+    <div id="view-templates" class="ct-view active">
+        <div class="ct-view-header">
+            <p class="ct-view-subtitle">Define tipos de enemigos reutilizables. Tus plantillas se guardan en la base de datos.</p>
+            <button class="btn btn--primary" id="btn-create-template">+ Nueva Plantilla</button>
+        </div>
+        <input class="app-input ct-search" type="text" id="search-templates" placeholder="Buscar por nombre o tag...">
+        <div id="templates-list" class="ct-grid">
+            <p>Cargando plantillas...</p>
+        </div>
+    </div>
+
+    <!-- VIEW 2: DECORADOS -->
+    <div id="view-decor" class="ct-view">
+        <div class="ct-view-header">
+            <p class="ct-view-subtitle">Assets visuales reutilizables para decorar tus mapas de encuentro.</p>
+            <button class="btn btn--primary" id="btn-upload-decor">+ Subir Decorado</button>
+            <input type="file" id="decor-upload-input" accept="image/*" style="display:none;">
+        </div>
+        <input class="app-input ct-search" type="text" id="search-decor" placeholder="Buscar por nombre o tag...">
+        <div id="decor-list" class="ct-grid ct-grid--decor">
+            <p>Cargando decorados...</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CREATE/EDIT TEMPLATE -->
+<div id="modal-template" class="ct-modal-overlay hidden">
+    <div class="ct-modal">
+        <h3 id="modal-template-title">Nueva Plantilla</h3>
+        <form id="form-template">
+            <input type="hidden" id="tpl-id">
+
+            <div class="ct-inline-field">
+                <label class="app-label">Nombre</label>
+                <input class="app-input" type="text" id="tpl-name" placeholder="Ej: Matón Brujah">
+            </div>
+
+            <div id="tpl-type-container" class="ct-inline-field ct-type-field"></div>
+
+            <div class="ct-inline-field">
+                <label class="app-label">Tags</label>
+                <div id="tpl-tags-container" class="ct-tags-wrap"></div>
+            </div>
+
+            <div id="tpl-stats-container" class="ct-stats-container"></div>
+
+            <div class="ct-form-group">
+                <label class="app-label">Notas</label>
+                <textarea class="app-input" id="tpl-notes" rows="3" placeholder="Información adicional..."></textarea>
+            </div>
+
+            <div class="ct-actions">
+                <button type="button" class="btn btn--ghost" id="btn-cancel-template">Cancelar</button>
+                <button type="button" class="btn btn--secondary" id="btn-duplicate-template">Duplicar</button>
+                <button type="submit" class="btn btn--primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDIT DECORADO -->
+<div id="modal-decor" class="ct-modal-overlay hidden">
+    <div class="ct-modal ct-modal--narrow">
+        <h3>Editar Decorado</h3>
+        <form id="form-decor">
+            <input type="hidden" id="decor-edit-id">
+            <div class="ct-form-group">
+                <label class="app-label">Nombre</label>
+                <input class="app-input" type="text" id="decor-edit-name" placeholder="Nombre del decorado">
+            </div>
+            <div class="ct-form-group">
+                <label class="app-label">Tags</label>
+                <div id="decor-edit-tags-container" class="ct-tags-wrap"></div>
+            </div>
+            <div class="ct-actions">
+                <button type="button" class="btn btn--ghost" id="btn-cancel-decor">Cancelar</button>
+                <button type="submit" class="btn btn--primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="features/resource-manager/resource-manager.js"></script>

@@ -1,0 +1,84 @@
+[
+  {
+    "name": "Cazador (Fe Verdadera)",
+    "type": "npc",
+    "source": "mortal.md → Exceptional Individual + Hunter archetype. True Faith from mortal.md Step 9.",
+    "tags": ["Cazador", "Amenaza:Alta"],
+    "attributes": {
+      "Fuerza": 2, "Destreza": 2, "Resistencia": 3,
+      "Carisma": 3, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 3, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Empatía": {"value": 2, "type": "Talentos"},
+      "Subterfugio": {"value": 1, "type": "Talentos"},
+      "Liderazgo": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 1, "type": "Técnicas"},
+      "Supervivencia": {"value": 1, "type": "Técnicas"},
+      "Investigación": {"value": 2, "type": "Conocimientos"},
+      "Ocultismo": {"value": 3, "type": "Conocimientos"},
+      "Academicismo": {"value": 2, "type": "Conocimientos"}
+    },
+    "willpower": 8,
+    "maxHealth": 7,
+    "notes": "Estaca 3L, Cruz (repele). FE VERDADERA 3 — vampiros tiran Voluntad (dif 10 - Fe) para acercarse. Puede provocar Rötschreck con símbolo sagrado. mortal.md: 'Repels vampires, extremely rare (Faith 3+ almost unheard of)'."
+  },
+  {
+    "name": "Ghoul Sirviente",
+    "type": "npc",
+    "source": "ghoul.md → Vassal (Protector/Bodyguard role). Attrs 6/4/3, Abilities 11/7/4.",
+    "tags": ["Ghoul", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 1, "type": "Talentos"},
+      "Subterfugio": {"value": 1, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 2, "type": "Técnicas"},
+      "Sigilo": {"value": 1, "type": "Técnicas"},
+      "Conducir": {"value": 2, "type": "Técnicas"},
+      "Etiqueta": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Según armas equipadas. Potencia 1. Sangre: 1-2. Vinculado a su amo. Puede gastar sangre para +1 Físico/turno. Puede entrar en frenesí (dif 6). ghoul.md: hereda debilidad de clan del domitor."
+  },
+  {
+    "name": "Inquisidor (Sociedad de Leopoldo)",
+    "type": "npc",
+    "source": "mortal.md → Exceptional Individual + Hunter archetype. Society of Leopold training.",
+    "tags": ["Cazador", "Amenaza:Muy Alta"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 3, "Manipulación": 3, "Apariencia": 2,
+      "Percepción": 4, "Inteligencia": 3, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Liderazgo": {"value": 2, "type": "Talentos"},
+      "Subterfugio": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 3, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 3, "type": "Técnicas"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Supervivencia": {"value": 1, "type": "Técnicas"},
+      "Investigación": {"value": 3, "type": "Conocimientos"},
+      "Ocultismo": {"value": 4, "type": "Conocimientos"},
+      "Academicismo": {"value": 2, "type": "Conocimientos"},
+      "Medicina": {"value": 1, "type": "Conocimientos"}
+    },
+    "willpower": 8,
+    "maxHealth": 7,
+    "notes": "Espada bendita 5L (agg vs vampiros con Fe), Ballesta 5L, Pistola 4L. Fe Verdadera 2. Agua bendita (1 agg/frasco), estacas. Conoce Disciplinas comunes. mortal.md: 'Common Abilities: Investigation, Occult, Firearms, Melee. Suggested Merits: True Faith, Danger Sense, Iron Will'."
+  }
+]

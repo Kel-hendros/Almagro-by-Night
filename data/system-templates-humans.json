@@ -1,0 +1,252 @@
+[
+  {
+    "_section": "CALLEJEROS",
+    "name": "Matón Callejero",
+    "type": "npc",
+    "source": "mortal.md → Average Person",
+    "tags": ["Mortal", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 2, "Resistencia": 3,
+      "Carisma": 1, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 2, "Inteligencia": 2, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 1, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Callejeo": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 1, "type": "Técnicas"},
+      "Sigilo": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 3,
+    "maxHealth": 7,
+    "notes": "Puño 3C, Navaja 4L. Huye si recibe 3+ niveles de daño."
+  },
+  {
+    "name": "Pandillero",
+    "type": "npc",
+    "source": "mortal.md → Average Person (armado)",
+    "tags": ["Mortal", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 2, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Callejeo": {"value": 3, "type": "Talentos"},
+      "Armas C.C.": {"value": 1, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 2, "type": "Técnicas"},
+      "Sigilo": {"value": 1, "type": "Técnicas"},
+      "Conducir": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 4,
+    "maxHealth": 7,
+    "notes": "Puño 3C, Pistola 4L. +1 dado si hay 3+ pandilleros juntos. Conoce el barrio."
+  },
+  {
+    "name": "Asaltante Armado",
+    "type": "npc",
+    "source": "mortal.md → Average Person",
+    "tags": ["Mortal", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 2, "Destreza": 3, "Resistencia": 2,
+      "Carisma": 1, "Manipulación": 3, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 1, "type": "Talentos"},
+      "Pelea": {"value": 1, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Callejeo": {"value": 2, "type": "Talentos"},
+      "Subterfugio": {"value": 2, "type": "Talentos"},
+      "Armas de Fuego": {"value": 2, "type": "Técnicas"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Latrocinio": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 3,
+    "maxHealth": 7,
+    "notes": "Revólver 4L. Prefiere amenazar antes que disparar. Huye si la víctima se resiste."
+  },
+  {
+    "name": "Patovica",
+    "type": "npc",
+    "source": "mortal.md → Competent Professional",
+    "tags": ["Mortal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 2, "Resistencia": 4,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"},
+      "Empatía": {"value": 1, "type": "Talentos"},
+      "Callejeo": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Puño 4C, Presa/Grapple 5C. Intenta reducir antes de golpear. No usa armas letales salvo emergencia."
+  },
+  {
+    "_section": "PROFESIONALES",
+    "name": "Policía",
+    "type": "npc",
+    "source": "mortal.md → Competent Professional (Investigator archetype)",
+    "tags": ["Mortal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Callejeo": {"value": 2, "type": "Talentos"},
+      "Armas C.C.": {"value": 1, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 3, "type": "Técnicas"},
+      "Conducir": {"value": 2, "type": "Técnicas"},
+      "Investigación": {"value": 1, "type": "Conocimientos"},
+      "Leyes": {"value": 2, "type": "Conocimientos"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Pistola reglamentaria 4L, Bastón tonfa 4C. Chaleco antibalas (+2 soak vs balas). Pide refuerzos por radio."
+  },
+  {
+    "name": "SWAT / Grupo Especial",
+    "type": "npc",
+    "source": "mortal.md → Exceptional Individual",
+    "tags": ["Mortal", "Amenaza:Alta"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 4, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 1, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Liderazgo": {"value": 1, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 4, "type": "Técnicas"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Conducir": {"value": 1, "type": "Técnicas"},
+      "Supervivencia": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 6,
+    "maxHealth": 7,
+    "notes": "Subfusil 5L, Escopeta 8L. Armadura táctica (+3 soak balas, +2 Pelea). Equipo de 4. Granadas flash (+3 dif x1 turno). Entrenamiento CQB."
+  },
+  {
+    "name": "Guardia de Seguridad",
+    "type": "npc",
+    "source": "mortal.md → Average Person (profesional menor)",
+    "tags": ["Mortal", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 2, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 1, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 1, "type": "Talentos"},
+      "Armas de Fuego": {"value": 2, "type": "Técnicas"},
+      "Seguridad": {"value": 2, "type": "Técnicas"},
+      "Conducir": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 4,
+    "maxHealth": 7,
+    "notes": "Pistola 4L, Porra 4C. Reporta primero, actúa después. No es combatiente dedicado."
+  },
+  {
+    "name": "Guardaespaldas",
+    "type": "npc",
+    "source": "mortal.md → Competent Professional",
+    "tags": ["Mortal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 2, "Apariencia": 2,
+      "Percepción": 4, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 4, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Empatía": {"value": 1, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 3, "type": "Técnicas"},
+      "Conducir": {"value": 2, "type": "Técnicas"},
+      "Seguridad": {"value": 2, "type": "Técnicas"}
+    },
+    "willpower": 6,
+    "maxHealth": 7,
+    "notes": "Pistola 4L, Puño 3C. Chaleco (+2 soak). Puede interponerse (bodyguard action). Prioridad: proteger al principal."
+  },
+  {
+    "name": "Detective",
+    "type": "npc",
+    "source": "mortal.md → Competent Professional (Investigator archetype)",
+    "tags": ["Mortal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 2, "Destreza": 2, "Resistencia": 2,
+      "Carisma": 3, "Manipulación": 3, "Apariencia": 2,
+      "Percepción": 4, "Inteligencia": 3, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 1, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Callejeo": {"value": 2, "type": "Talentos"},
+      "Subterfugio": {"value": 2, "type": "Talentos"},
+      "Empatía": {"value": 3, "type": "Talentos"},
+      "Armas de Fuego": {"value": 2, "type": "Técnicas"},
+      "Sigilo": {"value": 1, "type": "Técnicas"},
+      "Conducir": {"value": 2, "type": "Técnicas"},
+      "Investigación": {"value": 3, "type": "Conocimientos"},
+      "Leyes": {"value": 2, "type": "Conocimientos"},
+      "Política": {"value": 1, "type": "Conocimientos"}
+    },
+    "willpower": 6,
+    "maxHealth": 7,
+    "notes": "Revólver 4L. Observador astuto (Percepción 4). Puede notar incongruencias sobrenaturales. Contactos policiales. mortal.md: 'High Investigation, Streetwise, Law'."
+  },
+  {
+    "name": "Soldado",
+    "type": "npc",
+    "source": "mortal.md → Competent Professional",
+    "tags": ["Mortal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 1, "Apariencia": 2,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Liderazgo": {"value": 1, "type": "Talentos"},
+      "Armas C.C.": {"value": 2, "type": "Técnicas"},
+      "Armas de Fuego": {"value": 3, "type": "Técnicas"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Conducir": {"value": 1, "type": "Técnicas"},
+      "Supervivencia": {"value": 2, "type": "Técnicas"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Fusil de asalto 7L, Cuchillo 4L. Disciplina militar. Opera en escuadra (4-8). Armadura ligera (+2 soak)."
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Zombi / Caminante",
+    "type": "npc",
+    "source": "No módulo específico — criatura estándar WoD animada por nigromancia o magia.",
+    "tags": ["No-Muerto", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 1, "Resistencia": 4,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 1, "Inteligencia": 1, "Astucia": 1
+    },
+    "abilities": {
+      "Pelea": {"value": 2, "type": "Talentos"}
+    },
+    "willpower": 0,
+    "maxHealth": 7,
+    "notes": "Golpe 3C, Mordida 3L. Inmune a efectos mentales, veneno y dolor. No esquiva. Solo daño agravado o destrucción total lo detiene. Siempre actúa último en iniciativa."
+  },
+  {
+    "name": "Entidad Espiritual",
+    "type": "npc",
+    "source": "No módulo específico — spirit genérico del Mundo de Tinieblas. Referencia: shared.spirits.",
+    "tags": ["Espíritu", "Amenaza:Alta"],
+    "attributes": {
+      "Fuerza": 2, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 2, "Manipulación": 3, "Apariencia": 1,
+      "Percepción": 4, "Inteligencia": 3, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 4, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"},
+      "Empatía": {"value": 2, "type": "Talentos"},
+      "Sigilo": {"value": 3, "type": "Técnicas"},
+      "Ocultismo": {"value": 3, "type": "Conocimientos"}
+    },
+    "willpower": 7,
+    "maxHealth": 7,
+    "notes": "Toque helado 3 agg (ignora armadura). Parcialmente inmaterial — armas normales hacen medio daño. Vulnerable a fuego, Fe Verdadera y magia. Puede desaparecer/reaparecer. Tiene Charms según tipo (Awe, Blast, Materialize, etc.)."
+  },
+  {
+    "name": "Gárgola (Centinela)",
+    "type": "npc",
+    "source": "gargoyle.md → Sentinel Gargoyle variant. In-clan: Flight, Potence, Fortitude.",
+    "tags": ["Cainita", "Amenaza:Alta", "Gárgola"],
+    "attributes": {
+      "Fuerza": 5, "Destreza": 3, "Resistencia": 5,
+      "Carisma": 1, "Manipulación": 1, "Apariencia": 1,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 4, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Supervivencia": {"value": 1, "type": "Técnicas"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Garra 6L, Puño 5C (+Potencia), Picado 8L (vuelo + carga). Sangre: 10-13. Gen 10ª. Vuelo 3, Potencia 2, Fortaleza 2. Visceratika 4: Armadura +4 soak. -2 Voluntad vs control mental (debilidad base). Debilidad Sentinel: dados a la mitad si está solo sin aliado. Sigilo +2-3 cerca de piedra. gargoyle.md: stats y disciplinas exactas."
+  }
+]

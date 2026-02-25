@@ -125,10 +125,10 @@ function setActiveSidebarItem(baseHash) {
     "active-character-sheet": "menu-chars",
     games: "menu-games",
     game: "menu-games",
+    "resource-manager": "menu-resources",
     tools: "menu-tools",
     "portrait-generator": "menu-tools",
     "card-creator": "menu-tools",
-    "combat-tracker": "menu-tools",
     "active-encounter": "menu-tools",
     "temporal-codex": "menu-tools",
   };
@@ -150,6 +150,7 @@ function updateContentBackgroundMode(baseHash) {
     baseHash === "chronicles" ||
     baseHash === "chronicle" ||
     baseHash === "character-sheets" ||
+    baseHash === "resource-manager" ||
     baseHash === "welcome" ||
     baseHash === "login" ||
     baseHash === "register" ||
@@ -319,6 +320,10 @@ async function updateSidebar() {
     const displayName = session.user.user_metadata?.full_name || session.user.email;
     if (spanName) spanName.textContent = displayName;
 
+    const liResources = document.getElementById("menu-resources");
+    if (liResources) {
+      liResources.classList.remove("hidden");
+    }
     // Check Admin for Tools Menu - NOW OPEN FOR ALL AUTHENTICATED USERS
     const liTools = document.getElementById("menu-tools");
     if (liTools) {
@@ -339,6 +344,7 @@ async function updateSidebar() {
     liLogout?.classList.add("hidden");
     liSettings?.classList.add("hidden");
     liQuickActions?.classList.add("hidden");
+    document.getElementById("menu-resources")?.classList.add("hidden");
     document.getElementById("menu-tools")?.classList.add("hidden");
     document.getElementById("menu-chars")?.classList.add("hidden");
     document.getElementById("menu-chronicles")?.classList.add("hidden");
@@ -358,7 +364,7 @@ const routes = {
   "card-creator": "fragments/card-creator.html",
   "character-sheets": "fragments/character-sheets.html",
   "active-character-sheet": "fragments/active-character-sheet.html",
-  "combat-tracker": "fragments/combat-tracker.html",
+  "resource-manager": "fragments/resource-manager.html",
   "active-encounter": "fragments/active-encounter.html",
   "temporal-codex": "fragments/temporal-codex.html",
 };
@@ -531,9 +537,9 @@ async function loadRoute(force = false) {
     }
   }
 
-  if (baseHash === "combat-tracker") {
-    if (typeof window.initCombatTracker === "function") {
-      window.initCombatTracker();
+  if (baseHash === "resource-manager") {
+    if (typeof window.initResourceManager === "function") {
+      window.initResourceManager();
     }
   }
 

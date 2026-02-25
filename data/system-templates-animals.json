@@ -1,0 +1,168 @@
+[
+  {
+    "name": "Lobo",
+    "type": "npc",
+    "source": "animal-ghoul.md → Wolf",
+    "tags": ["Animal", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 3, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 2, "type": "Talentos"},
+      "Atletismo": {"value": 1, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Empatía": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"},
+      "Sigilo": {"value": 2, "type": "Técnicas"},
+      "Supervivencia": {"value": 4, "type": "Técnicas"}
+    },
+    "willpower": 3,
+    "maxHealth": 4,
+    "notes": "Mordida 4L, Garra 3C. Manada: +1 dado por lobo adicional (3+). Olfato agudo. Salud: OK,-1,-5,Incap. Endangered — raro en noches modernas."
+  },
+  {
+    "name": "Perro de Guerra",
+    "type": "npc",
+    "source": "animal-ghoul.md → Dog (Large Breed/War Hound)",
+    "tags": ["Animal", "Amenaza:Baja"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 3, "Resistencia": 4,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 4, "Inteligencia": 2, "Astucia": 4
+    },
+    "abilities": {
+      "Alerta": {"value": 4, "type": "Talentos"},
+      "Atletismo": {"value": 4, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"},
+      "Sigilo": {"value": 2, "type": "Técnicas"}
+    },
+    "willpower": 5,
+    "maxHealth": 7,
+    "notes": "Mordida 5L. Soak: 4 (Resistencia). Salud: OK,OK,-1,-1,-2,-5,Incap. Entrenado para obedecer comandos. Bratovich crían variantes modificadas con Vicisitud."
+  },
+  {
+    "name": "Enjambre de Ratas",
+    "type": "npc",
+    "source": "animal-ghoul.md → Rat (escalado como enjambre)",
+    "tags": ["Animal", "Amenaza:Baja", "Enjambre"],
+    "attributes": {
+      "Fuerza": 1, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 2, "Inteligencia": 1, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 2, "type": "Talentos"},
+      "Pelea": {"value": 2, "type": "Talentos"},
+      "Sigilo": {"value": 4, "type": "Técnicas"}
+    },
+    "willpower": 2,
+    "maxHealth": 5,
+    "notes": "Mordidas múltiples 2L (auto-hit en cuerpo a cuerpo). Inmune a ataques de Pelea (solo daño por área/fuego). Se dispersa con 5+ niveles de daño. Nosferatu los usan como vigías (Spawning Pools, LotC p.161)."
+  },
+  {
+    "name": "Puma / Felino Grande",
+    "type": "npc",
+    "source": "animal-ghoul.md → Leopard/Jaguar/Panther/Cougar",
+    "tags": ["Animal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 3, "Resistencia": 3,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 3, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Empatía": {"value": 2, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Sigilo": {"value": 4, "type": "Técnicas"}
+    },
+    "willpower": 4,
+    "maxHealth": 9,
+    "notes": "Mordida 5L, Garra 5L. Salud: OK,OK,-1,-1,-2,-2,-5,-5,Incap. Emboscada: +2 dados desde ocultamiento. Gangrel los favorecen."
+  },
+  {
+    "name": "Oso",
+    "type": "npc",
+    "source": "animal-ghoul.md → Bear",
+    "tags": ["Animal", "Amenaza:Alta"],
+    "attributes": {
+      "Fuerza": 7, "Destreza": 2, "Resistencia": 4,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 5, "Inteligencia": 2, "Astucia": 3
+    },
+    "abilities": {
+      "Alerta": {"value": 5, "type": "Talentos"},
+      "Atletismo": {"value": 4, "type": "Talentos"},
+      "Pelea": {"value": 4, "type": "Talentos"},
+      "Intimidación": {"value": 3, "type": "Talentos"}
+    },
+    "willpower": 4,
+    "maxHealth": 10,
+    "notes": "Garra 7L, Mordida 5L. Armadura 1 (5 soak total). Salud: OK,OK,OK,-1,-1,-1,-3,-3,-5,Incap. Olfato sobrenatural (7x sabueso). Grizzly/polar más agresivos."
+  },
+  {
+    "name": "Enjambre de Murciélagos",
+    "type": "npc",
+    "source": "animal-ghoul.md → Bat (escalado como enjambre)",
+    "tags": ["Animal", "Amenaza:Baja", "Enjambre"],
+    "attributes": {
+      "Fuerza": 1, "Destreza": 3, "Resistencia": 2,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 3, "Inteligencia": 1, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Esquivar": {"value": 3, "type": "Talentos"},
+      "Sigilo": {"value": 2, "type": "Técnicas"}
+    },
+    "willpower": 2,
+    "maxHealth": 4,
+    "notes": "Mordidas 1L (auto-hit). Ecolocalización. +2 dificultad a todas las acciones dentro del enjambre. Inmune a Pelea. Nosferatu los usan como espías y mensajeros."
+  },
+  {
+    "name": "Serpiente Venenosa",
+    "type": "npc",
+    "source": "animal-ghoul.md → Snake (Venomous)",
+    "tags": ["Animal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 1, "Destreza": 2, "Resistencia": 2,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 2, "Inteligencia": 3, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Sigilo": {"value": 3, "type": "Técnicas"}
+    },
+    "willpower": 4,
+    "maxHealth": 4,
+    "notes": "Mordida 2 dados + veneno. Armadura 1 (3 soak). Salud: OK,-1,-2,-5,Incap. Veneno: 3 dados L/turno x3 turnos (mortales). Vampiros inmunes. Seguidores de Set los favorecen."
+  },
+  {
+    "name": "Jabalí",
+    "type": "npc",
+    "source": "Extrapolado de Bear/Dog scaling (sin entrada exacta en módulo)",
+    "tags": ["Animal", "Amenaza:Media"],
+    "attributes": {
+      "Fuerza": 4, "Destreza": 2, "Resistencia": 4,
+      "Carisma": 0, "Manipulación": 0, "Apariencia": 0,
+      "Percepción": 3, "Inteligencia": 1, "Astucia": 2
+    },
+    "abilities": {
+      "Alerta": {"value": 3, "type": "Talentos"},
+      "Atletismo": {"value": 3, "type": "Talentos"},
+      "Pelea": {"value": 3, "type": "Talentos"},
+      "Intimidación": {"value": 2, "type": "Talentos"},
+      "Supervivencia": {"value": 3, "type": "Técnicas"}
+    },
+    "willpower": 4,
+    "maxHealth": 6,
+    "notes": "Embestida 5L (colmillos), Mordida 3L. Armadura 1 (5 soak). Carga: +2 daño en línea recta. Agresivo y territorial."
+  }
+]
