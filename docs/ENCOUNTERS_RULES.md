@@ -152,7 +152,28 @@ Si no hay encuentro activo al conectar, el bridge pollea cada 15s hasta detectar
 - **Jugador**: tokens ocultos no aparecen en mapa, drawer, ni cards.
 - Se aplica tanto a tokens de instancia como a design tokens (decorados).
 
-## 12) Archivos de referencia
+## 12) Roll Feed (tiradas en vivo sobre el mapa)
+
+Cuando un personaje en un encuentro activo hace una tirada de dados o iniciativa, el resultado se muestra como notificación flotante en el mapa táctico (tanto standalone como embebido en la persiana).
+
+- **Broadcast efímero**: usa Supabase Realtime broadcast (canal `encounter-rolls-{encounterId}`), sin escrituras a DB.
+- **Flujo**: `dice-system.js` (iframe) → `postMessage` → `encounter-bridge.js` (parent) → broadcast → `roll-feed.js` (VTT).
+- **UI**: Notificaciones flotantes arriba a la derecha del mapa, con retrato del personaje, pool, modificadores y resultado. Expandible para ver dados individuales.
+- **Autodismiss**: 15 segundos o click en X. Máximo 10 notificaciones visibles.
+
+Referencia técnica completa: `docs/encounter-bridge.md` sección "Roll Feed".
+
+## 13) Embed Mode (Persiana) — Layout
+
+Cuando el VTT se carga dentro de la persiana (`embed=true`):
+
+- El header del encuentro se oculta (`html.embed-mode .ae-header`).
+- El container usa `height: 100dvh` con `padding-top: 30px` para dejar espacio al encounter bar del parent.
+- El VTT layout ocupa `height: 100%` sin border ni border-radius.
+
+**IMPORTANTE: El `padding-top: 30px` del embed mode está calibrado pixel a pixel con el encounter bar. No modificar sin verificar visualmente en la persiana.**
+
+## 14) Archivos de referencia
 
 Encuentros (narrador):
 - `features/active-encounter/active-encounter.js`
@@ -161,6 +182,7 @@ Encuentros (narrador):
 - `features/active-encounter/tactical-map-render.js`
 - `features/active-encounter/token-context-menu.js`
 - `features/active-encounter/active-encounter.css`
+- `features/active-encounter/roll-feed.js`
 - `fragments/active-encounter.html`
 
 Lista de encuentros:
@@ -181,7 +203,7 @@ SQL:
 Documentación técnica detallada:
 - `docs/encounter-bridge.md`
 
-## 13) Pendientes planificados
+## 15) Pendientes planificados
 
 1. Integrar UI de encuentros dentro de `Crónica` (tab interna), manteniendo templates como biblioteca separada.
 2. Definir modo “templates compartidos” entre Crónicas (owner/shared, RLS y UX).

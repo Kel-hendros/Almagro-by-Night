@@ -153,6 +153,128 @@ The bridge binds the iframe's `load` event. When the iframe finishes loading, `h
 
 When `nextTurn()` in `active-encounter-turns.js` detects a round wrap, it filters out expired extra-action instances where `extraActionRound < newRound`. This prevents Celerity ghosts from piling up across rounds.
 
+## Roll Feed (Live Dice Notifications on Map)
+
+When a character rolls dice during an active encounter, the result is broadcast to all connected clients and displayed as a floating notification on the tactical map.
+
+### Data Flow
+
+```
+┌──────────────────────────────────────────────────┐
+│  Iframe (character-sheets)                       │
+│                                                  │
+│  dice-system.js                                  │
+│    └─ broadcastRollToParent()                    │
+│       → postMessage("abn-dice-roll-result")      │
+└──────────────┬───────────────────────────────────┘
+               │ postMessage (iframe → parent)
+               ▼
+┌──────────────────────────────────────────────────┐
+│  Parent (encounter-bridge.js)                    │
+│    └─ handleFrameMessage()                       │
+│       → broadcastDiceRoll() via Supabase         │
+│         Realtime broadcast channel               │
+│         "encounter-rolls-{encounterId}"          │
+└──────────────┬───────────────────────────────────┘
+               │ Supabase Realtime broadcast
+               │ (no DB writes — ephemeral pub/sub)
+               ▼
+┌──────────────────────────────────────────────────┐
+│  roll-feed.js (in every VTT instance)            │
+│    ├─ Standalone VTT (narrator)                  │
+│    └─ Embedded VTT (persiana iframe)             │
+│       → subscribes to same broadcast channel     │
+│       → renders floating notification            │
+│       → auto-dismiss after 15s or click X        │
+└──────────────────────────────────────────────────┘
+```
+
+### postMessage: `abn-dice-roll-result`
+
+Sent from `dice-system.js` (iframe) to parent after every dice roll or initiative roll.
+
+**Dice roll:**
+```js
+{
+  type: "abn-dice-roll-result",
+  id: string,              // crypto.randomUUID()
+  timestamp: number,       // Date.now()
+  rollType: "dice",
+  characterName: string,
+  avatarUrl: string | null,
+  rollName: string,        // from saved roll context, or ""
+  pool1: string,           // e.g. "Fuerza"
+  pool1Size: number,
+  pool2: string,           // e.g. "Atletismo"
+  pool2Size: number,
+  modifier: number,
+  totalPool: number,
+  difficulty: number,
+  rolls: number[],         // sorted d10 results descending
+  result: string,          // "3 Éxitos", "Fallo", "Fracaso"
+  status: string,          // "success" | "fail" | "botch"
+  damagePenalty: number,
+  damagePenaltyApplied: boolean,
+  willpower: boolean,
+  specialty: boolean,
+  potencia: boolean,
+  potenciaLevel: number,
+}
+```
+
+**Initiative roll:**
+```js
+{
+  type: "abn-dice-roll-result",
+  id: string,
+  timestamp: number,
+  rollType: "initiative",
+  characterName: string,
+  avatarUrl: string | null,
+  total: number,
+  breakdown: string,       // "d10: 7  +  Destreza: 3  +  Astucia: 4"
+  status: "success",
+}
+```
+
+### Broadcast Channel
+
+- Name: `encounter-rolls-{encounterId}`
+- Type: Supabase Realtime **broadcast** (not postgres_changes)
+- Event: `dice-roll`
+- No data is persisted to the database — purely ephemeral.
+
+### Roll Feed UI (`roll-feed.js`)
+
+- Module: `features/active-encounter/roll-feed.js`
+- Loaded in the active-encounter script chain via `index.js`
+- Creates a floating container (`.ae-roll-feed`) inside `#ae-map-container`
+- Positioned `top: 60px; right: 12px` on the map area
+- Each notification shows: character portrait (left), name + pool + modifiers + result (right)
+- Click "Ver detalle" to expand: shows individual dice, difficulty, pool breakdown
+- Auto-dismisses after 15 seconds; click X to dismiss immediately
+- Max 10 visible notifications, oldest removed when exceeded
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `features/character-sheets/modules/dice-system.js` | `broadcastRollToParent()` — posts roll data to parent |
+| `features/active-character-sheet/encounter-bridge.js` | Receives roll postMessage, broadcasts via Supabase |
+| `features/active-encounter/roll-feed.js` | Subscribes to broadcast, renders notifications |
+| `features/active-encounter/active-encounter.css` | Roll feed styles (`.ae-roll-feed`, `.ae-roll-notif`) |
+
+## Embed Mode (Persiana) Layout
+
+When the VTT loads inside the persiana iframe (`embed=true`), special CSS rules apply:
+
+- The encounter bar (`.acs-encounter-bar`) in the parent frame overlays the top of the iframe with `z-index: 60`.
+- Inside the iframe, `html.embed-mode` is set by the router.
+- The VTT header is hidden; the container uses `height: 100dvh` with `padding-top: 30px` to clear the bar.
+- The VTT layout fills `height: 100%` with no border/radius.
+
+**CRITICAL: The `padding-top: 30px` on `.active-encounter-container` in embed mode is pixel-calibrated to align with the encounter bar overlay. Do not change this value without visually testing in the persiana.**
+
 ## Extending the Bridge
 
 ### Adding a new iframe → parent message type
