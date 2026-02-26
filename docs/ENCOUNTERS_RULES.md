@@ -158,8 +158,23 @@ Cuando un personaje en un encuentro activo hace una tirada de dados o iniciativa
 
 - **Broadcast efímero**: usa Supabase Realtime broadcast (canal `encounter-rolls-{encounterId}`), sin escrituras a DB.
 - **Flujo**: `dice-system.js` (iframe) → `postMessage` → `encounter-bridge.js` (parent) → broadcast → `roll-feed.js` (VTT).
+- **Enriquecimiento**: `encounter-bridge.js` inyecta `sheetId` en el payload antes del broadcast para permitir la identificación de la instancia en el encuentro.
 - **UI**: Notificaciones flotantes arriba a la derecha del mapa, con retrato del personaje, pool, modificadores y resultado. Expandible para ver dados individuales.
 - **Autodismiss**: 15 segundos o click en X. Máximo 10 notificaciones visibles.
+
+### 12.1 Integración de tirada de iniciativa con el encuentro
+
+Cuando una tirada de iniciativa llega al roll feed, además de mostrarse como notificación, se aplica automáticamente a la instancia del personaje en el encuentro:
+
+1. `roll-feed.js` detecta `rollType === "initiative"` y llama al callback `onInitiativeRoll` si fue proporcionado al crear el feed.
+2. `active-encounter.js` provee ese callback (`applyBroadcastInitiative`) al inicializar el roll feed.
+3. El handler busca la instancia PC correspondiente:
+   - Primero por `sheetId` (`inst.characterSheetId === roll.sheetId`).
+   - Fallback por nombre (`inst.name === roll.characterName`).
+4. Si encuentra match, actualiza `inst.initiative`, re-renderiza la barra de iniciativa y guarda el encuentro.
+5. Si no hay match (personaje no está en el encuentro), solo se muestra la notificación sin efecto en la iniciativa.
+
+**Regla de turno activo**: una instancia nueva (agregada via addPC o template) nunca se convierte en el turno activo por tener mayor iniciativa. Solo el botón de avanzar turno o `rerollAllInitiatives` puede cambiar el turno activo. `ensureActiveInstance()` solo interviene cuando el activo actual es inválido (muerto, oculto, eliminado).
 
 Referencia técnica completa: `docs/encounter-bridge.md` sección "Roll Feed".
 

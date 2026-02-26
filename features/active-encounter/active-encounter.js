@@ -736,9 +736,10 @@
     if (!instance?.isSummon) return;
     if (!canEditEncounter() && !canCurrentUserControlToken(token)) return;
 
-    if (!confirm(`¿Eliminar ${instance.name}? Esto lo quita del mapa y de iniciativa.`)) {
-      return;
-    }
+    const ok = await ABNShared.modal.confirm(
+      `¿Eliminar ${instance.name}? Esto lo quita del mapa y de iniciativa.`,
+    );
+    if (!ok) return;
 
     if (canEditEncounter()) {
       const removed = removeInstanceLocal(instance.id);
@@ -933,7 +934,9 @@
     // Roll feed: subscribe to broadcast channel for dice roll notifications
     if (window.AERollFeed) {
       window.AERollFeed.destroy();
-      window.AERollFeed.create(state.encounterId);
+      window.AERollFeed.create(state.encounterId, {
+        onInitiativeRoll: applyBroadcastInitiative,
+      });
     }
 
     startEncounterSyncPolling();
@@ -1046,15 +1049,12 @@
         if (!requireAdminAction()) return;
         nextTurn();
       });
-    document.getElementById("btn-ae-reroll").addEventListener("click", () => {
+    document.getElementById("btn-ae-reroll").addEventListener("click", async () => {
       if (!requireAdminAction()) return;
-      if (
-        confirm(
-          "¿Resetear iniciativa? Esto reiniciará la ronda y mezclará el orden.",
-        )
-      ) {
-        rerollAllInitiatives();
-      }
+      const ok = await ABNShared.modal.confirm(
+        "¿Resetear iniciativa? Esto reiniciará la ronda y mezclará el orden.",
+      );
+      if (ok) rerollAllInitiatives();
     });
 
     document
@@ -1392,14 +1392,11 @@
     const prevStatus = normalizeEncounterStatus(state.encounter.status);
     if (prevStatus === nextStatus) return false;
 
-    if (
-      nextStatus === ENCOUNTER_STATUS.ARCHIVED &&
-      !options.skipArchiveConfirm &&
-      !confirm(
+    if (nextStatus === ENCOUNTER_STATUS.ARCHIVED && !options.skipArchiveConfirm) {
+      const ok = await ABNShared.modal.confirm(
         `¿Archivar "${state.encounter?.name || "este encuentro"}"? No aparecerá en la lista de encuentros activos.`,
-      )
-    ) {
-      return false;
+      );
+      if (!ok) return false;
     }
 
     // Enforce single active encounter per chronicle
@@ -1673,12 +1670,11 @@
       }
 
       // Delete button
-      row.querySelector(".ae-btn-delete").addEventListener("click", (e) => {
+      row.querySelector(".ae-btn-delete").addEventListener("click", async (e) => {
         e.stopPropagation();
         if (!requireAdminAction()) return;
-        if (confirm(`¿Eliminar ${inst.name} (${inst.code})?`)) {
-          removeInstance(inst.id);
-        }
+        const ok = await ABNShared.modal.confirm(`¿Eliminar ${inst.name} (${inst.code})?`);
+        if (ok) removeInstance(inst.id);
       });
 
       if (!canEditEncounter()) {
@@ -1783,7 +1779,6 @@
       }
     }
 
-    ensureActiveInstance();
     render();
     saveEncounter();
   }
@@ -1865,7 +1860,6 @@
       });
     }
 
-    ensureActiveInstance();
     render();
     saveEncounter();
   }
@@ -1945,6 +1939,31 @@
       render();
       saveEncounter();
     }
+  }
+
+  function applyBroadcastInitiative(roll) {
+    if (!state.encounter?.data?.instances) return;
+    const instances = state.encounter.data.instances;
+    const total = parseInt(roll.total, 10);
+    if (!Number.isFinite(total)) return;
+
+    // Match by sheetId first, fallback to character name
+    let inst = null;
+    if (roll.sheetId) {
+      inst = instances.find(
+        (i) => i.isPC && i.characterSheetId === roll.sheetId,
+      );
+    }
+    if (!inst && roll.characterName) {
+      inst = instances.find(
+        (i) => i.isPC && i.name === roll.characterName,
+      );
+    }
+    if (!inst) return;
+
+    inst.initiative = total;
+    render();
+    saveEncounter();
   }
 
   function rerollAllInitiatives() {

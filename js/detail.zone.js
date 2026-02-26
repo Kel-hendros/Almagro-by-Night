@@ -604,7 +604,7 @@ window.DetailView.renderZone = async function (id) {
 
   // Tabs Container
   const tabsContainer = document.createElement("div");
-  tabsContainer.className = "tab-buttons";
+  tabsContainer.className = "app-tabs zone-detail-tabs";
 
   const tabs = [
     { id: "info", label: "Información", icon: "ℹ️" },
@@ -616,17 +616,16 @@ window.DetailView.renderZone = async function (id) {
 
   tabs.forEach((tab) => {
     const btn = document.createElement("button");
-    btn.className = `tab-chip ${tab.id === activeTabId ? "active" : ""}`;
+    btn.className = `app-tab ${tab.id === activeTabId ? "active" : ""}`;
     btn.innerHTML = `${tab.label}`;
     btn.onclick = () => {
-      // Switch tabs
       wrapper
-        .querySelectorAll(".tab-chip")
+        .querySelectorAll(".app-tab")
         .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
       wrapper
-        .querySelectorAll(".tab-content")
+        .querySelectorAll(".app-tab-panel")
         .forEach((c) => c.classList.remove("active"));
       const target = wrapper.querySelector(`#tab-${tab.id}`);
       if (target) target.classList.add("active");
@@ -638,7 +637,7 @@ window.DetailView.renderZone = async function (id) {
   // --- Tab 1: Información ---
   const tabInfo = document.createElement("div");
   tabInfo.id = "tab-info";
-  tabInfo.className = "tab-content active";
+  tabInfo.className = "app-tab-panel active";
   tabInfo.innerHTML = `
       <div class="detail-body">
         <div class="detail-info">
@@ -655,7 +654,7 @@ window.DetailView.renderZone = async function (id) {
   // --- Tab 2: Tenientes ---
   const tabLieutenants = document.createElement("div");
   tabLieutenants.id = "tab-lieutenants";
-  tabLieutenants.className = "tab-content";
+  tabLieutenants.className = "app-tab-panel";
   // Se llenará dinámicamente
   wrapper.appendChild(tabLieutenants);
 
@@ -675,7 +674,7 @@ window.DetailView.renderZone = async function (id) {
   // --- Tab 3: Beneficios ---
   const tabBenefits = document.createElement("div");
   tabBenefits.id = "tab-benefits";
-  tabBenefits.className = "tab-content";
+  tabBenefits.className = "app-tab-panel";
   if (data.benefits) {
     const isControlled = zoneStatus?.control_state === "CONTROLLED";
     const controllingColor = isControlled

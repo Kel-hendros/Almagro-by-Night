@@ -648,6 +648,8 @@
           this.ctx.restore();
         }
 
+        // Outer save: holds the scale animation so ring, badges & satellites
+        // all participate in the same transform.
         this.ctx.save();
 
         if (this.activeTokenAnim && this.activeTokenAnim.tokenId === token.id) {
@@ -680,6 +682,9 @@
             this.activeTokenAnim = null;
           }
         }
+
+        // Inner save: holds the clip region for the token face (fill + image).
+        this.ctx.save();
 
         this.ctx.shadowColor = isFlying ? "rgba(0,0,0,0.34)" : "rgba(0,0,0,0.5)";
         this.ctx.shadowBlur = isFlying ? 3 : 4;
@@ -861,6 +866,9 @@
         if (isFocused) {
           this.drawHoverHalo(visualCx, visualCy, radius + 5);
         }
+
+        // Close the outer save that holds the scale animation transform.
+        this.ctx.restore();
       });
     };
   }

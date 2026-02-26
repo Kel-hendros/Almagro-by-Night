@@ -274,7 +274,7 @@
     ch.send({
       type: "broadcast",
       event: "dice-roll",
-      payload: data,
+      payload: Object.assign({}, data, { sheetId: state.sheetId }),
     });
   }
 

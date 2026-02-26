@@ -30,18 +30,18 @@
         </div>
 
         <!-- Tab Bar -->
-        <div class="cd-tabs" id="chronicle-tabs">
-            <button class="cd-tab active" data-tab="resumen">Resumen</button>
-            <button class="cd-tab" data-tab="jugadores">Jugadores</button>
-            <button class="cd-tab" data-tab="diario">Diario</button>
-            <button class="cd-tab" data-tab="mesa">Mesa Virtual</button>
+        <div class="app-tabs app-tabs--underline cd-tabs" id="chronicle-tabs">
+            <button class="app-tab active" data-tab="resumen">Resumen</button>
+            <button class="app-tab" data-tab="jugadores">Jugadores</button>
+            <button class="app-tab" data-tab="diario">Diario</button>
+            <button class="app-tab" data-tab="mesa">Mesa Virtual</button>
         </div>
     </div>
 
     <!-- Tab Content -->
     <div class="cd-content" id="chronicle-tab-content">
         <!-- Placeholder: content per tab goes here -->
-        <div class="cd-tab-panel" data-panel="resumen">
+        <div class="cd-tab-panel active" data-panel="resumen">
             <div class="cd-summary-grid">
                 <div class="cd-summary-main">
                     <!-- Proxima Sesion -->
@@ -110,12 +110,12 @@
                 </aside>
             </div>
         </div>
-        <div class="cd-tab-panel hidden" data-panel="jugadores">
+        <div class="cd-tab-panel" data-panel="jugadores">
             <div id="cd-players-grid" class="cd-players-grid">
                 <span class="cd-card-muted">Cargando...</span>
             </div>
         </div>
-        <div class="cd-tab-panel hidden" data-panel="diario">
+        <div class="cd-tab-panel" data-panel="diario">
             <!-- Sub-tabs (mobile only, hidden on desktop via CSS) -->
             <div class="cd-diario-tabs">
                 <button class="cd-diario-tab active" data-dtab="sesiones">Sesiones</button>
@@ -154,7 +154,7 @@
                 </div>
             </div>
         </div>
-        <div class="cd-tab-panel hidden" data-panel="mesa">
+        <div class="cd-tab-panel" data-panel="mesa">
             <div class="cd-mesa-head">
                 <span class="cd-section-label">ENCUENTROS</span>
                 <div id="cd-mesa-filters" class="cd-mesa-filters hidden">

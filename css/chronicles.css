@@ -1023,35 +1023,13 @@ p.chronicle-description {
     min-height: 2.5rem;
 }
 
-/* --- Tab Bar --- */
+/* --- Tab Bar (uses global .app-tabs--underline from ui-components.css) --- */
 .cd-tabs {
-    display: flex;
-    gap: 0;
     padding: 0 24px;
-    border-bottom: 1px solid var(--cd-border-divider);
 }
 
-.cd-tab {
-    font-family: var(--cd-font-primary);
+.cd-tabs .app-tab {
     font-size: 13px;
-    font-weight: 500;
-    color: var(--cd-text-tertiary);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 10px 16px;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s;
-    white-space: nowrap;
-}
-
-.cd-tab:hover {
-    color: var(--cd-text-secondary);
-}
-
-.cd-tab.active {
-    color: var(--cd-text-primary);
-    border-bottom-color: var(--cd-accent);
 }
 
 /* --- Tab Content --- */
@@ -1065,7 +1043,7 @@ p.chronicle-description {
     gap: 24px;
 }
 
-.cd-tab-panel.hidden {
+.cd-tab-panel:not(.active) {
     display: none;
 }
 
@@ -2166,7 +2144,7 @@ p.chronicle-description {
         overflow-x: auto;
     }
 
-    .cd-tab {
+    .cd-tabs .app-tab {
         font-size: 12px;
         padding: 8px 12px;
     }
@@ -2194,7 +2172,7 @@ p.chronicle-description {
         padding: 0 40px;
     }
 
-    .cd-tab {
+    .cd-tabs .app-tab {
         font-size: 14px;
         padding: 12px 16px;
     }

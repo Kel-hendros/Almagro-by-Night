@@ -125,7 +125,7 @@
     ns.banner?.init({ chronicle, isNarrator });
 
     // ── Tab switching ──
-    const tabButtons = document.querySelectorAll(".cd-tab");
+    const tabButtons = document.querySelectorAll(".app-tab");
     const tabPanels = document.querySelectorAll(".cd-tab-panel");
 
     const scrollContainer = document.querySelector(".content");
@@ -136,7 +136,7 @@
             b.classList.toggle("active", b.dataset.tab === target);
         });
         tabPanels.forEach(p => {
-            p.classList.toggle("hidden", p.dataset.panel !== target);
+            p.classList.toggle("active", p.dataset.panel === target);
         });
         sessionStorage.setItem("chronicle-tab", target);
         scrollContainer.scrollTop = scrollPos;
@@ -148,7 +148,7 @@
 
     // Restore last active tab
     const savedTab = sessionStorage.getItem("chronicle-tab");
-    if (savedTab && document.querySelector(`.cd-tab[data-tab="${savedTab}"]`)) {
+    if (savedTab && document.querySelector(`.app-tab[data-tab="${savedTab}"]`)) {
         switchTab(savedTab);
     }
 

@@ -9,13 +9,13 @@
     </div>
 
     <!-- Tabs -->
-    <div class="ct-tabs">
-        <button class="ct-tab-btn active" data-tab="templates">Plantillas PNJ</button>
-        <button class="ct-tab-btn" data-tab="decor">Decorados</button>
+    <div class="app-tabs ct-tabs">
+        <button class="app-tab active" data-tab="templates">Plantillas PNJ</button>
+        <button class="app-tab" data-tab="decor">Decorados</button>
     </div>
 
     <!-- VIEW 1: TEMPLATES -->
-    <div id="view-templates" class="ct-view active">
+    <div id="view-templates" class="app-tab-panel active">
         <div class="ct-view-header">
             <p class="ct-view-subtitle">Define tipos de enemigos reutilizables. Tus plantillas se guardan en la base de datos.</p>
             <button class="btn btn--primary" id="btn-create-template">+ Nueva Plantilla</button>
@@ -27,11 +27,11 @@
     </div>
 
     <!-- VIEW 2: DECORADOS -->
-    <div id="view-decor" class="ct-view">
+    <div id="view-decor" class="app-tab-panel">
         <div class="ct-view-header">
             <p class="ct-view-subtitle">Assets visuales reutilizables para decorar tus mapas de encuentro.</p>
             <button class="btn btn--primary" id="btn-upload-decor">+ Subir Decorado</button>
-            <input type="file" id="decor-upload-input" accept="image/*" style="display:none;">
+            <input type="file" id="decor-upload-input" accept="image/*" class="hidden">
         </div>
         <input class="app-input ct-search" type="text" id="search-decor" placeholder="Buscar por nombre o tag...">
         <div id="decor-list" class="ct-grid ct-grid--decor">

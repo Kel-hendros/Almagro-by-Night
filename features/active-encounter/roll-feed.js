@@ -6,14 +6,18 @@
   let channel = null;
   let notifications = [];
   let currentEncounterId = null;
+  let onInitiativeRoll = null;
 
   function getSupabase() {
     return global.supabase || null;
   }
 
-  function create(encounterId) {
+  function create(encounterId, options) {
     if (!encounterId) return;
     currentEncounterId = encounterId;
+    onInitiativeRoll = (options && typeof options.onInitiativeRoll === "function")
+      ? options.onInitiativeRoll
+      : null;
 
     feedEl = document.createElement("div");
     feedEl.className = "ae-roll-feed";
@@ -35,6 +39,15 @@
 
   function addNotification(data) {
     if (!feedEl) return;
+
+    if (data.rollType === "initiative" && onInitiativeRoll) {
+      onInitiativeRoll({
+        sheetId: data.sheetId || null,
+        characterName: data.characterName || null,
+        total: data.total,
+      });
+    }
+
     var id = data.id || crypto.randomUUID();
     var el = buildNotificationEl(id, data);
 
@@ -273,6 +286,7 @@
     }
 
     currentEncounterId = null;
+    onInitiativeRoll = null;
   }
 
   global.AERollFeed = { create: create, destroy: destroy };

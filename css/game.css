@@ -1395,57 +1395,10 @@ dialog.panel-actuar::backdrop {
 }
 
 
-.tab-buttons {
-    display: flex;
-    gap: 10px;
+/* Zone detail tabs — uses global .app-tabs / .app-tab from ui-components.css */
+.zone-detail-tabs {
     margin-bottom: 20px;
     flex-wrap: wrap;
-}
-
-.tab-chip {
-    background-color: #333;
-    /* Dark gray */
-    color: var(--color-cream);
-    border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-.tab-chip:hover {
-    background-color: #444;
-}
-
-.tab-chip.active {
-    background-color: #666;
-    /* Lighter gray */
-    color: #fff;
-    font-weight: bold;
-}
-
-.tab-content {
-    display: none;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-.tab-content.active {
-    display: block;
-    height: 100%;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
 }
 
 /* Benefits Tab Styling */

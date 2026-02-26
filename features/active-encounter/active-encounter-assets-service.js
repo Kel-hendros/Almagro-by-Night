@@ -189,7 +189,8 @@
       const currentPath = state.encounter.data.map.backgroundPath;
       if (!currentPath && !state.encounter.data.map.backgroundUrl) return false;
 
-      if (!confirm("¿Quitar fondo del encuentro actual?")) return false;
+      const ok = await ABNShared.modal.confirm("¿Quitar fondo del encuentro actual?");
+      if (!ok) return false;
 
       if (currentPath) {
         await supabase.storage.from("encounter-backgrounds").remove([currentPath]);

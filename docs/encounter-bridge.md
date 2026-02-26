@@ -175,6 +175,7 @@ When a character rolls dice during an active encounter, the result is broadcast 
 │       → broadcastDiceRoll() via Supabase         │
 │         Realtime broadcast channel               │
 │         "encounter-rolls-{encounterId}"          │
+│       → enriches payload with sheetId            │
 └──────────────┬───────────────────────────────────┘
                │ Supabase Realtime broadcast
                │ (no DB writes — ephemeral pub/sub)
@@ -186,6 +187,18 @@ When a character rolls dice during an active encounter, the result is broadcast 
 │       → subscribes to same broadcast channel     │
 │       → renders floating notification            │
 │       → auto-dismiss after 15s or click X        │
+│       → if rollType="initiative" & callback:     │
+│            calls onInitiativeRoll(roll)           │
+│                        │                         │
+└────────────────────────┼─────────────────────────┘
+                         │ callback (initiative only)
+                         ▼
+┌──────────────────────────────────────────────────┐
+│  active-encounter.js                             │
+│    └─ applyBroadcastInitiative(roll)             │
+│       → matches instance by sheetId or name      │
+│       → updates inst.initiative                  │
+│       → render() + saveEncounter()               │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -237,6 +250,16 @@ Sent from `dice-system.js` (iframe) to parent after every dice roll or initiativ
 }
 ```
 
+### Broadcast Payload Enrichment
+
+`encounter-bridge.js` enriches the roll payload before broadcasting:
+
+```js
+payload: Object.assign({}, data, { sheetId: state.sheetId })
+```
+
+This injects the `sheetId` (character sheet UUID) into every broadcast. The iframe does not send `sheetId` — the bridge owns it and adds it at broadcast time. This allows the VTT to match initiative rolls to encounter instances without coupling the iframe to encounter internals.
+
 ### Broadcast Channel
 
 - Name: `encounter-rolls-{encounterId}`
@@ -255,13 +278,45 @@ Sent from `dice-system.js` (iframe) to parent after every dice roll or initiativ
 - Auto-dismisses after 15 seconds; click X to dismiss immediately
 - Max 10 visible notifications, oldest removed when exceeded
 
+### Roll Feed API
+
+```js
+AERollFeed.create(encounterId, options?)
+AERollFeed.destroy()
+```
+
+**Options:**
+- `onInitiativeRoll(roll)` — Optional callback invoked when an initiative roll arrives (`rollType === "initiative"`). The callback receives `{ sheetId, characterName, total }`. This allows the encounter controller to apply the result to the initiative bar without coupling roll-feed to encounter data.
+
+**Usage in active-encounter.js:**
+```js
+AERollFeed.create(state.encounterId, {
+  onInitiativeRoll: applyBroadcastInitiative,
+});
+```
+
+### Initiative Roll → Encounter Integration
+
+When `roll-feed.js` receives a broadcast with `rollType === "initiative"`, it:
+1. Renders the notification (always).
+2. Calls `onInitiativeRoll({ sheetId, characterName, total })` if the callback was provided.
+
+`active-encounter.js` handles the callback in `applyBroadcastInitiative(roll)`:
+1. Finds the matching PC instance by `characterSheetId === roll.sheetId`.
+2. Falls back to name match if no `sheetId` (for narrator-side rolls or older clients).
+3. If a match is found, sets `inst.initiative = total`, re-renders, and saves.
+4. If no match, does nothing (notification still shows).
+
+**Active turn rule:** new instances added to an encounter (via addPC or templates) never steal the active turn based on initiative. Only explicit actions (next turn button, reroll all initiatives) change the active turn holder. `ensureActiveInstance()` only intervenes when the current active is invalid (dead, hidden, or removed).
+
 ### Files
 
 | File | Purpose |
 |------|---------|
 | `features/character-sheets/modules/dice-system.js` | `broadcastRollToParent()` — posts roll data to parent |
-| `features/active-character-sheet/encounter-bridge.js` | Receives roll postMessage, broadcasts via Supabase |
-| `features/active-encounter/roll-feed.js` | Subscribes to broadcast, renders notifications |
+| `features/active-character-sheet/encounter-bridge.js` | Receives roll postMessage, enriches with `sheetId`, broadcasts via Supabase |
+| `features/active-encounter/roll-feed.js` | Subscribes to broadcast, renders notifications, calls `onInitiativeRoll` for initiative rolls |
+| `features/active-encounter/active-encounter.js` | Provides `applyBroadcastInitiative` callback to apply initiative to encounter instances |
 | `features/active-encounter/active-encounter.css` | Roll feed styles (`.ae-roll-feed`, `.ae-roll-notif`) |
 
 ## Embed Mode (Persiana) Layout

@@ -208,3 +208,104 @@
 .app-msg.success {
     color: var(--theme-success);
 }
+
+/* ── Confirm Dialog ── */
+
+.app-confirm-overlay {
+    z-index: 50000;
+}
+
+.app-confirm-card {
+    width: min(100%, 360px);
+    text-align: center;
+}
+
+.app-confirm-message {
+    margin: 0 0 1.15rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: var(--theme-text-secondary);
+    font-family: var(--app-font-body);
+}
+
+.app-confirm-card .app-modal-actions {
+    justify-content: center;
+}
+
+/* ── Tab System ── */
+
+/* Default: pill tabs */
+.app-tabs {
+    display: flex;
+    gap: 0.65rem;
+}
+
+.app-tab {
+    background: transparent;
+    border: 1px solid var(--theme-border-divider);
+    color: var(--theme-text-secondary);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    font-family: var(--app-font-body);
+    font-size: 0.88rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.app-tab:hover {
+    border-color: var(--theme-accent);
+    color: var(--theme-text-primary);
+}
+
+.app-tab.active {
+    background: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-bg-elevated));
+    color: var(--theme-text-primary);
+    border-color: var(--theme-accent);
+    font-weight: 700;
+}
+
+/* Variant: underline tabs */
+.app-tabs--underline {
+    gap: 0;
+    border-bottom: 1px solid var(--theme-border-divider);
+}
+
+.app-tabs--underline .app-tab {
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+    color: var(--theme-text-tertiary);
+    white-space: nowrap;
+}
+
+.app-tabs--underline .app-tab:hover {
+    color: var(--theme-text-secondary);
+}
+
+.app-tabs--underline .app-tab.active {
+    background: none;
+    color: var(--theme-text-primary);
+    border-bottom-color: var(--theme-accent);
+    font-weight: 500;
+}
+
+/* Tab panels */
+.app-tab-panel {
+    display: none;
+}
+
+.app-tab-panel.active {
+    display: block;
+    animation: app-tab-fade 0.3s ease-in-out;
+}
+
+@keyframes app-tab-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

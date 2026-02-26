@@ -1,45 +1,8 @@
 /* features/resource-manager/resource-manager.css */
 
-/* ── Tabs ── */
+/* ── Tabs (uses global .app-tabs / .app-tab from ui-components.css) ── */
 .ct-tabs {
-    display: flex;
-    gap: 0.65rem;
     margin-bottom: 1.5rem;
-}
-
-.ct-tab-btn {
-    background: transparent;
-    border: 1px solid var(--theme-border-divider);
-    color: var(--theme-text-secondary);
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    border-radius: 8px;
-    font-family: var(--app-font-body);
-    font-size: 0.88rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-
-.ct-tab-btn:hover {
-    border-color: var(--theme-accent);
-    color: var(--theme-text-primary);
-}
-
-.ct-tab-btn.active {
-    background: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-bg-elevated));
-    color: var(--theme-text-primary);
-    border-color: var(--theme-accent);
-    font-weight: 700;
-}
-
-/* ── Views ── */
-.ct-view {
-    display: none;
-}
-
-.ct-view.active {
-    display: block;
 }
 
 .ct-view-header {

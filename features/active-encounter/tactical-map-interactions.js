@@ -703,8 +703,8 @@
         const rawGridX = (worldX - this.dragTokenOffset.x) / this.gridSize;
         const rawGridY = (worldY - this.dragTokenOffset.y) / this.gridSize;
 
-        const nextX = this.freeMovement ? Math.round(rawGridX * 10) / 10 : Math.round(rawGridX);
-        const nextY = this.freeMovement ? Math.round(rawGridY * 10) / 10 : Math.round(rawGridY);
+        const nextX = this.freeMovement ? rawGridX : Math.round(rawGridX);
+        const nextY = this.freeMovement ? rawGridY : Math.round(rawGridY);
         const liveToken = (this.tokens || []).find(
           (token) => token.id === this.draggedToken.id,
         );

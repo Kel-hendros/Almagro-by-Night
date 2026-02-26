@@ -11,17 +11,11 @@
     decorEditTags: [],
   };
 
-  let containers = {};
   let lists = {};
   let modalTemplate = null;
 
   // --- Initialization ---
   async function init() {
-    containers = {
-      templates: document.getElementById("view-templates"),
-      decor: document.getElementById("view-decor"),
-    };
-
     lists = {
       templates: document.getElementById("templates-list"),
       decor: document.getElementById("decor-list"),
@@ -66,26 +60,20 @@
 
   // --- Tab Switching ---
   function setupTabs() {
-    document.querySelectorAll(".ct-tab-btn").forEach((tab) => {
+    document.querySelectorAll(".app-tab").forEach((tab) => {
       tab.addEventListener("click", () => switchTab(tab.dataset.tab));
     });
   }
 
   function switchTab(tabName) {
-    document.querySelectorAll(".ct-tab-btn").forEach((b) => {
+    document.querySelectorAll(".app-tab").forEach((b) => {
       if (b.dataset.tab)
         b.classList.toggle("active", b.dataset.tab === tabName);
     });
 
-    Object.values(containers).forEach((el) => {
-      if (el) el.style.display = "none";
+    document.querySelectorAll(".app-tab-panel").forEach((panel) => {
+      panel.classList.toggle("active", panel.id === `view-${tabName}`);
     });
-
-    if (tabName === "templates" && containers.templates) {
-      containers.templates.style.display = "block";
-    } else if (tabName === "decor" && containers.decor) {
-      containers.decor.style.display = "block";
-    }
   }
 
   // --- Search / Filter ---
@@ -263,11 +251,11 @@
 
     // Hide/show save button
     const saveBtn = modal.querySelector('button[type="submit"]');
-    if (saveBtn) saveBtn.style.display = readonly ? "none" : "";
+    if (saveBtn) saveBtn.classList.toggle("hidden", readonly);
 
     // Show duplicate button only when viewing an existing template
     const dupBtn = document.getElementById("btn-duplicate-template");
-    if (dupBtn) dupBtn.style.display = tpl ? "" : "none";
+    if (dupBtn) dupBtn.classList.toggle("hidden", !tpl);
 
     // Change cancel button text
     const cancelBtn = document.getElementById("btn-cancel-template");
