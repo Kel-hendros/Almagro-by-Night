@@ -100,6 +100,22 @@
     if (deps.save) deps.save();
   }
 
+  function broadcastRollToParent(data) {
+    try {
+      global.parent.postMessage(
+        Object.assign(
+          {
+            type: "abn-dice-roll-result",
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+          },
+          data,
+        ),
+        "*",
+      );
+    } catch (_e) {}
+  }
+
   function uncheckWillpowerAndSpecialty() {
     const willpower = document.querySelector("#willpower");
     const specialty = document.querySelector("#specialty");
@@ -590,6 +606,29 @@
       potenciaTrueFalse
     );
 
+    broadcastRollToParent({
+      rollType: "dice",
+      characterName: characterName,
+      avatarUrl: getCharacterIdentity().currentAvatarUrl || null,
+      rollName: state.rollContextName || "",
+      pool1: pool1,
+      pool1Size: parseInt(pool1Size, 10) || 0,
+      pool2: pool2,
+      pool2Size: parseInt(pool2Size, 10) || 0,
+      modifier: parseInt(mods, 10) || 0,
+      totalPool: finalPoolSize,
+      difficulty: difficulty,
+      rolls: rolls.slice(),
+      result: resultText,
+      status: stateClass,
+      damagePenalty: damagePenalty,
+      damagePenaltyApplied: damagePenaltyTrueFalse === "Si",
+      willpower: willpowerTrueFalse === "Si",
+      specialty: specialtyTrueFalse === "Si",
+      potencia: potenciaTrueFalse === "Si",
+      potenciaLevel: potenciaSuccess,
+    });
+
     let historyStatus = "success";
     if (resultText.includes("Fracaso")) historyStatus = "botch";
     else if (resultText.includes("Fallo")) historyStatus = "fail";
@@ -694,6 +733,15 @@
     if (state.diceRollHistory.length > DICE_HISTORY_MAX) state.diceRollHistory.pop();
 
     sendInitiativeToDiscord(total, d10, totalDestreza, astucia, damagePenalty);
+
+    broadcastRollToParent({
+      rollType: "initiative",
+      characterName: getCharacterIdentity().characterName || "Vampiro",
+      avatarUrl: getCharacterIdentity().currentAvatarUrl || null,
+      total: total,
+      breakdown: parts.join("  +  "),
+      status: "success",
+    });
   }
 
   function actionWakeUp() {

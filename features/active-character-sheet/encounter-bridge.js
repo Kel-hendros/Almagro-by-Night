@@ -200,6 +200,7 @@
 
   function disconnect() {
     const wasConnected = state.connected;
+    teardownRollBroadcastChannel();
     unsubscribe();
     state.encounterId = null;
     state.encounterName = null;
@@ -235,6 +236,14 @@
       return;
     }
 
+    // Dice roll result from character sheet — broadcast to encounter
+    if (data.type === "abn-dice-roll-result") {
+      if (state.connected && state.encounterId) {
+        broadcastDiceRoll(data);
+      }
+      return;
+    }
+
     if (data.type !== "abn-celeridad-activate") return;
     if (!state.connected) return;
 
@@ -244,6 +253,41 @@
     if (!encId || !sId || isNaN(count) || count < 0) return;
 
     callExtraActionsRPC(encId, sId, count);
+  }
+
+  // --- Dice roll broadcast channel ---
+  let rollBroadcastChannel = null;
+
+  function ensureRollBroadcastChannel() {
+    if (rollBroadcastChannel) return rollBroadcastChannel;
+    const sb = getSupabase();
+    if (!sb || !state.encounterId) return null;
+    rollBroadcastChannel = sb
+      .channel("encounter-rolls-" + state.encounterId)
+      .subscribe();
+    return rollBroadcastChannel;
+  }
+
+  function broadcastDiceRoll(data) {
+    const ch = ensureRollBroadcastChannel();
+    if (!ch) return;
+    ch.send({
+      type: "broadcast",
+      event: "dice-roll",
+      payload: data,
+    });
+  }
+
+  function teardownRollBroadcastChannel() {
+    if (!rollBroadcastChannel) return;
+    const sb = getSupabase();
+    try {
+      rollBroadcastChannel.unsubscribe?.();
+    } catch (_e) {}
+    try {
+      sb?.removeChannel?.(rollBroadcastChannel);
+    } catch (_e) {}
+    rollBroadcastChannel = null;
   }
 
   async function callExtraActionsRPC(encId, sId, count) {

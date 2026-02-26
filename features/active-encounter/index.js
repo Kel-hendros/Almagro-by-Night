@@ -12,6 +12,7 @@
     "encounter-powers.js",
     "token-actions.js",
     "token-context-menu.js",
+    "roll-feed.js",
     "active-encounter.js",
   ];
 

@@ -2307,6 +2307,226 @@
     100% { transform: scale(1.3); opacity: 1; }
 }
 
+/* ── Roll Feed (floating dice roll notifications) ── */
+
+.ae-roll-feed {
+    position: absolute;
+    top: 60px;
+    right: 12px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: calc(100% - 80px);
+    overflow-y: auto;
+    width: 290px;
+    pointer-events: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.ae-roll-notif {
+    pointer-events: auto;
+    background: rgba(12, 12, 12, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    display: flex;
+    overflow: hidden;
+}
+
+.ae-roll-notif.ae-roll-notif-enter {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.ae-roll-notif.ae-roll-notif-exit {
+    animation: ae-roll-slide-out 0.3s ease forwards;
+}
+
+@keyframes ae-roll-slide-out {
+    to {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+}
+
+.ae-roll-notif--success {
+    border-left: 3px solid #4caf50;
+}
+
+.ae-roll-notif--fail {
+    border-left: 3px solid #555;
+}
+
+.ae-roll-notif--botch {
+    border-left: 3px solid #c62828;
+}
+
+/* Portrait (left side, full height) */
+.ae-roll-notif-portrait {
+    width: 52px;
+    min-height: 100%;
+    object-fit: cover;
+    flex-shrink: 0;
+    display: block;
+}
+
+/* Right side body */
+.ae-roll-notif-body {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+}
+
+/* Top row: name + close */
+.ae-roll-notif-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.ae-roll-notif-name {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #ccc;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ae-roll-notif-close {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.ae-roll-notif-close:hover {
+    color: #eee;
+}
+
+.ae-roll-notif-pool {
+    font-size: 0.68rem;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.ae-roll-notif-mods {
+    font-size: 0.6rem;
+    color: #777;
+    margin-bottom: 3px;
+}
+
+.ae-roll-notif-result {
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding: 2px 0;
+}
+
+.ae-roll-notif--success .ae-roll-notif-result {
+    color: #4caf50;
+}
+
+.ae-roll-notif--fail .ae-roll-notif-result {
+    color: #777;
+}
+
+.ae-roll-notif--botch .ae-roll-notif-result {
+    color: #e53935;
+}
+
+.ae-roll-notif-toggle {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 0.6rem;
+    cursor: pointer;
+    padding: 2px 0;
+    text-align: left;
+    transition: color 0.15s;
+}
+
+.ae-roll-notif-toggle:hover {
+    color: #aaa;
+}
+
+.ae-roll-notif-detail {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ae-roll-notif-detail.ae-hidden {
+    display: none;
+}
+
+.ae-roll-detail-line {
+    font-size: 0.62rem;
+    color: #777;
+    margin-bottom: 3px;
+}
+
+.ae-roll-dice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 4px;
+}
+
+.ae-roll-die {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.ae-roll-die.success {
+    background: rgba(76, 175, 80, 0.18);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.35);
+}
+
+.ae-roll-die.fail {
+    background: rgba(255, 255, 255, 0.04);
+    color: #555;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ae-roll-die.botch {
+    background: rgba(198, 40, 40, 0.18);
+    color: #e53935;
+    border: 1px solid rgba(198, 40, 40, 0.35);
+}
+
+.ae-roll-die-potencia {
+    font-style: italic;
+}
+
 /* ── Embed Mode (loaded inside persiana iframe) ── */
 html.embed-mode .ae-header { display: none; }
-html.embed-mode .active-encounter-container { padding-top: 0; }
+html.embed-mode .active-encounter-container {
+    padding: 30px 0 0 0;
+    min-height: 0;
+    height: 100dvh;
+    box-sizing: border-box;
+}
+html.embed-mode .ae-vtt-layout {
+    height: 100%;
+    border: none;
+    border-radius: 0;
+}

@@ -930,10 +930,20 @@
 
     state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
 
+    // Roll feed: subscribe to broadcast channel for dice roll notifications
+    if (window.AERollFeed) {
+      window.AERollFeed.destroy();
+      window.AERollFeed.create(state.encounterId);
+    }
+
     startEncounterSyncPolling();
   }
 
   function teardownRealtimeSubscriptions() {
+    if (window.AERollFeed) {
+      window.AERollFeed.destroy();
+    }
+
     if (!Array.isArray(state.realtimeChannels) || state.realtimeChannels.length === 0) {
       return;
     }
