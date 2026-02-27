@@ -92,6 +92,9 @@
   max-height: 170px;
   overflow: auto;
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, max-content));
+  justify-content: start;
+  align-items: start;
   gap: 6px;
 }
 
@@ -106,6 +109,10 @@
   padding: 4px 10px 4px 4px;
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
+  width: auto;
+  justify-self: start;
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 
 .ra-recipient-chip:hover {
@@ -145,6 +152,7 @@
 
 .ra-recipient-name {
   font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .ra-form-actions {
