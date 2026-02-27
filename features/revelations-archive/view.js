@@ -31,7 +31,7 @@
   }
 
   function setMessage(message, tone = "neutral") {
-    const el = document.getElementById("ra-msg");
+    const el = document.getElementById("ra-modal-msg");
     if (!el) return;
     el.textContent = message || "";
     el.classList.remove("ok", "error");
@@ -49,6 +49,28 @@
     document.querySelectorAll(".ra-recipient-check").forEach((node) => {
       node.checked = false;
     });
+  }
+
+  function setFormValues({ title, imageUrl, bodyMarkdown, recipientPlayerIds } = {}) {
+    const titleInput = document.getElementById("ra-title-input");
+    const imageInput = document.getElementById("ra-image-input");
+    const bodyInput = document.getElementById("ra-body-input");
+    if (titleInput) titleInput.value = String(title || "");
+    if (imageInput) imageInput.value = String(imageUrl || "");
+    if (bodyInput) bodyInput.value = String(bodyMarkdown || "");
+
+    const selected = new Set((recipientPlayerIds || []).map((id) => String(id)));
+    document.querySelectorAll(".ra-recipient-check").forEach((node) => {
+      node.checked = selected.has(String(node.value || ""));
+    });
+  }
+
+  function setFormMode(mode) {
+    const titleEl = document.getElementById("ra-handout-modal-title");
+    const saveBtn = document.getElementById("ra-save");
+    const isEdit = mode === "edit";
+    if (titleEl) titleEl.textContent = isEdit ? "Editar Revelación" : "Crear Revelación";
+    if (saveBtn) saveBtn.textContent = isEdit ? "Guardar Cambios" : "Guardar Revelación";
   }
 
   function renderRecipients(participants) {
@@ -76,7 +98,9 @@
     const host = document.getElementById("ra-narrator-list");
     if (!host) return;
 
-    const rows = Array.isArray(handouts) ? handouts : [];
+    const rows = (Array.isArray(handouts) ? handouts : [])
+      .slice()
+      .sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
     if (!rows.length) {
       host.innerHTML = '<p class="muted">Aún no hay revelaciones en esta crónica.</p>';
       return;
@@ -85,6 +109,9 @@
     host.innerHTML = rows
       .map((item) => {
         const deliveries = Array.isArray(item.deliveries) ? item.deliveries : [];
+        const associatedNames = deliveries
+          .map((delivery) => delivery?.recipient?.name || "Jugador")
+          .filter(Boolean);
         const deliveriesHtml = deliveries.length
           ? deliveries
               .map(
@@ -110,21 +137,25 @@
 
         return `
           <article class="ra-card" data-handout-id="${escapeHtml(item.id)}">
+            <div class="ra-card-image-wrap">
+              ${
+                item.image_url
+                  ? `<img class="ra-card-image" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.title || "Revelación")}">`
+                  : `<div class="ra-card-image ra-card-image--empty">Sin imagen</div>`
+              }
+            </div>
             <div class="ra-card-head">
               <h3>${escapeHtml(item.title || "Revelación")}</h3>
-              <div class="ra-card-head-actions">
-                <button type="button" class="btn btn--ghost ra-open-reader" data-handout-id="${escapeHtml(
-                  item.id,
-                )}">Leer</button>
-                <button type="button" class="btn btn--danger ra-delete-handout" data-handout-id="${escapeHtml(
-                  item.id,
-                )}">Eliminar</button>
-              </div>
             </div>
             <p class="ra-meta">${escapeHtml(created)}</p>
-            ${item.image_url ? `<a class="ra-image-link" href="${escapeHtml(item.image_url)}" target="_blank" rel="noopener">Ver imagen</a>` : ""}
+            <p class="ra-associated-line"><strong>Jugadores:</strong> ${escapeHtml(associatedNames.join(", ") || "Sin destinatarios")}</p>
             <p class="ra-preview">${escapeHtml(bodyPreview || "Sin descripción.")}</p>
             <div class="ra-delivery-list">${deliveriesHtml}</div>
+            <div class="ra-card-actions">
+              <button type="button" class="btn btn--danger ra-delete-handout" data-handout-id="${escapeHtml(
+                item.id,
+              )}">Eliminar</button>
+            </div>
           </article>
         `;
       })
@@ -185,6 +216,8 @@
     setAccessMode,
     setMessage,
     clearForm,
+    setFormValues,
+    setFormMode,
     renderRecipients,
     renderNarratorList,
     renderPlayerList,

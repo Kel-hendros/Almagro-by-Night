@@ -15,36 +15,11 @@
     <section id="ra-narrator-panel" class="ra-panel hidden">
         <div class="ra-panel-head">
             <h2>Gestionar revelaciones</h2>
-            <span class="ra-counter">Narrador</span>
+            <div class="ra-panel-head-actions">
+                <span class="ra-counter">Narrador</span>
+                <button id="ra-open-create" type="button" class="btn btn--primary">Crear Revelación</button>
+            </div>
         </div>
-
-        <form id="ra-form" class="ra-form">
-            <div class="ra-grid">
-                <label class="ra-field">
-                    <span>Titulo</span>
-                    <input id="ra-title-input" class="app-input" type="text" maxlength="120" placeholder="Ej: Carta encontrada en el Elysium">
-                </label>
-                <label class="ra-field">
-                    <span>Imagen (URL opcional)</span>
-                    <input id="ra-image-input" class="app-input" type="url" placeholder="https://...">
-                </label>
-            </div>
-            <label class="ra-field">
-                <span>Descripción (Markdown)</span>
-                <textarea id="ra-body-input" class="app-input" rows="4" placeholder="Describe la revelación..."></textarea>
-            </label>
-            <div class="ra-field">
-                <span>Destinatarios</span>
-                <div id="ra-recipients" class="ra-recipients">
-                    <p class="muted">Cargando jugadores...</p>
-                </div>
-            </div>
-            <div class="ra-form-actions">
-                <button type="submit" class="btn btn--primary">Guardar Revelación</button>
-                <button id="ra-clear" type="button" class="btn btn--ghost">Limpiar</button>
-                <span id="ra-msg" class="ra-msg"></span>
-            </div>
-        </form>
 
         <div id="ra-narrator-list" class="ra-list">
             <p class="muted">Cargando revelaciones...</p>
@@ -60,6 +35,45 @@
             <p class="muted">Cargando revelaciones...</p>
         </div>
     </section>
+
+    <div id="ra-handout-modal" class="app-modal-overlay">
+        <div class="app-modal ra-handout-modal">
+            <div class="app-modal-header">
+                <h2 id="ra-handout-modal-title" class="app-modal-title">Crear Revelación</h2>
+                <button id="ra-handout-close" class="btn-modal-close" type="button" aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <form id="ra-form" class="ra-form">
+                <div class="ra-grid">
+                    <label class="ra-field">
+                        <span>Titulo</span>
+                        <input id="ra-title-input" class="app-input" type="text" maxlength="120" placeholder="Ej: Carta encontrada en el Elysium">
+                    </label>
+                    <label class="ra-field">
+                        <span>Imagen (URL opcional)</span>
+                        <input id="ra-image-input" class="app-input" type="url" placeholder="https://...">
+                    </label>
+                </div>
+                <label class="ra-field">
+                    <span>Descripción (Markdown)</span>
+                    <textarea id="ra-body-input" class="app-input" rows="4" placeholder="Describe la revelación..."></textarea>
+                </label>
+                <div class="ra-field">
+                    <span>Destinatarios</span>
+                    <div id="ra-recipients" class="ra-recipients">
+                        <p class="muted">Cargando jugadores...</p>
+                    </div>
+                </div>
+                <div class="ra-form-actions">
+                    <button id="ra-save" type="submit" class="btn btn--primary">Guardar Revelación</button>
+                    <button id="ra-clear" type="button" class="btn btn--ghost">Limpiar</button>
+                    <span id="ra-modal-msg" class="ra-msg"></span>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div id="ra-reader-modal" class="app-modal-overlay">
         <div class="app-modal ra-reader-modal">

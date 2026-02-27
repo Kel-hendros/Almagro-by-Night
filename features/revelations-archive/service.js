@@ -87,6 +87,10 @@
     return global.ABNShared?.handouts?.createHandout?.(payload) || { handout: null, error: null };
   }
 
+  async function updateHandout(payload) {
+    return global.ABNShared?.handouts?.updateHandout?.(payload) || { handout: null, error: null };
+  }
+
   async function listHandoutsByChronicle(chronicleId) {
     return global.ABNShared?.handouts?.listHandoutsByChronicle?.(chronicleId) || [];
   }
@@ -127,6 +131,7 @@
     getParticipationByUserId,
     getRecipients,
     createHandout,
+    updateHandout,
     listHandoutsByChronicle,
     listPlayerDeliveries,
     revokeDelivery,

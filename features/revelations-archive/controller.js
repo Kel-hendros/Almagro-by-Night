@@ -9,8 +9,10 @@
     isNarrator: false,
     narratorHandouts: [],
     playerDeliveries: [],
+    handoutModal: null,
     readerModal: null,
     realtimeChannel: null,
+    editingHandoutId: null,
     listenersBound: false,
   };
 
@@ -28,11 +30,37 @@
     return state.playerDeliveries.find((item) => item.id === deliveryId) || null;
   }
 
-  function bindReaderModal() {
+  function bindModals() {
+    state.handoutModal = global.ABNShared?.modal?.createController?.({
+      overlay: "ra-handout-modal",
+      closeButtons: ["#ra-handout-close"],
+    });
     state.readerModal = global.ABNShared?.modal?.createController?.({
       overlay: "ra-reader-modal",
       closeButtons: ["#ra-reader-close"],
     });
+  }
+
+  function openCreateModal() {
+    state.editingHandoutId = null;
+    view().setFormMode("create");
+    view().clearForm();
+    view().setMessage("");
+    state.handoutModal?.open?.();
+  }
+
+  function openEditModal(handout) {
+    if (!handout) return;
+    state.editingHandoutId = handout.id;
+    view().setFormMode("edit");
+    view().setFormValues({
+      title: handout.title || "",
+      imageUrl: handout.image_url || "",
+      bodyMarkdown: handout.body_markdown || "",
+      recipientPlayerIds: (handout.deliveries || []).map((d) => d.recipient_player_id),
+    });
+    view().setMessage("");
+    state.handoutModal?.open?.();
   }
 
   async function loadNarratorData() {
@@ -61,23 +89,32 @@
     const bodyMarkdown = document.getElementById("ra-body-input")?.value || "";
     const imageUrl = document.getElementById("ra-image-input")?.value || "";
 
-    const { error } = await service().createHandout({
-      chronicleId: state.chronicleId,
-      createdByPlayerId: state.currentPlayerId,
+    const payload = {
       title,
       bodyMarkdown,
       imageUrl,
       recipientPlayerIds: selectedRecipients(),
-    });
+    };
+
+    const { error } = state.editingHandoutId
+      ? await service().updateHandout({ revelationId: state.editingHandoutId, ...payload })
+      : await service().createHandout({
+          chronicleId: state.chronicleId,
+          createdByPlayerId: state.currentPlayerId,
+          ...payload,
+        });
 
     if (error) {
       view().setMessage(error.message || "No se pudo guardar revelación.", "error");
       return;
     }
 
-    view().setMessage("Revelación guardada y asociada.", "ok");
-    view().clearForm();
+    view().setMessage(
+      state.editingHandoutId ? "Revelación actualizada." : "Revelación guardada y asociada.",
+      "ok",
+    );
     await loadNarratorData();
+    state.handoutModal?.close?.();
   }
 
   async function handleNarratorListClick(event) {
@@ -89,10 +126,9 @@
       if (!ok) return;
       const { error } = await service().revokeDelivery(revokeBtn.dataset.deliveryId);
       if (error) {
-        view().setMessage(error.message || "No se pudo quitar la asociación.", "error");
+        alert(error.message || "No se pudo quitar la asociación.");
         return;
       }
-      view().setMessage("Asociación eliminada.", "ok");
       await loadNarratorData();
       return;
     }
@@ -105,25 +141,19 @@
       if (!ok) return;
       const { error } = await service().deleteHandout(deleteBtn.dataset.handoutId);
       if (error) {
-        view().setMessage(error.message || "No se pudo eliminar revelación.", "error");
+        alert(error.message || "No se pudo eliminar revelación.");
         return;
       }
-      view().setMessage("Revelación eliminada.", "ok");
       await loadNarratorData();
       return;
     }
 
-    const readBtn = event.target.closest(".ra-open-reader");
-    if (readBtn?.dataset.handoutId) {
-      const handout = findHandoutById(readBtn.dataset.handoutId);
-      if (!handout) return;
-      view().openReader({
-        title: handout.title,
-        bodyMarkdown: handout.body_markdown,
-        imageUrl: handout.image_url,
-      });
-      state.readerModal?.open?.();
-    }
+    const card = event.target.closest("[data-handout-id]");
+    if (!card?.dataset.handoutId) return;
+
+    const handout = findHandoutById(card.dataset.handoutId);
+    if (!handout) return;
+    openEditModal(handout);
   }
 
   async function handlePlayerListClick(event) {
@@ -150,6 +180,10 @@
 
     document.getElementById("ra-back-active-session")?.addEventListener("click", () => {
       window.location.hash = `active-session?id=${encodeURIComponent(state.chronicleId)}`;
+    });
+
+    document.getElementById("ra-open-create")?.addEventListener("click", () => {
+      openCreateModal();
     });
 
     document.getElementById("ra-clear")?.addEventListener("click", () => {
@@ -218,7 +252,7 @@
     view().setHeader({ chronicleName: chronicle.name, isNarrator: state.isNarrator });
     view().setAccessMode({ isNarrator: state.isNarrator });
 
-    bindReaderModal();
+    bindModals();
     bindActions();
 
     if (state.isNarrator) {
@@ -240,8 +274,11 @@
     unbindActions();
     service().unsubscribeChannel(state.realtimeChannel);
     state.realtimeChannel = null;
+    state.handoutModal?.destroy?.();
+    state.handoutModal = null;
     state.readerModal?.destroy?.();
     state.readerModal = null;
+    state.editingHandoutId = null;
     state.chronicleId = null;
     state.currentPlayerId = null;
     state.isNarrator = false;

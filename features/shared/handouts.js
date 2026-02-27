@@ -93,6 +93,97 @@
     return { handout: revelation, error: null };
   }
 
+  async function updateHandout({
+    revelationId,
+    title,
+    bodyMarkdown,
+    imageUrl,
+    recipientPlayerIds,
+  }) {
+    const supabase = getSupabase();
+    if (!supabase || !revelationId) {
+      return { handout: null, error: new Error("Contexto incompleto.") };
+    }
+
+    const cleanTitle = String(title || "").trim();
+    const cleanBody = String(bodyMarkdown || "").trim();
+    if (!cleanTitle) {
+      return { handout: null, error: new Error("El titulo es obligatorio.") };
+    }
+    if (!cleanBody) {
+      return { handout: null, error: new Error("La descripcion es obligatoria.") };
+    }
+    const recipients = Array.from(
+      new Set((recipientPlayerIds || []).map((id) => String(id || "").trim()).filter(Boolean)),
+    );
+    if (!recipients.length) {
+      return { handout: null, error: new Error("Selecciona al menos un destinatario.") };
+    }
+
+    const { data: revelation, error: revelationError } = await supabase
+      .from("revelations")
+      .update({
+        title: cleanTitle,
+        body_markdown: cleanBody,
+        image_url: String(imageUrl || "").trim() || null,
+      })
+      .eq("id", revelationId)
+      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id")
+      .maybeSingle();
+
+    if (revelationError || !revelation) {
+      return {
+        handout: null,
+        error: revelationError || new Error("No se pudo actualizar revelación."),
+      };
+    }
+
+    const { data: existingAssoc, error: existingAssocError } = await supabase
+      .from("revelation_players")
+      .select("id, player_id")
+      .eq("revelation_id", revelationId);
+    if (existingAssocError) {
+      return { handout: null, error: existingAssocError };
+    }
+
+    const existingRows = existingAssoc || [];
+    const existingPlayerIds = new Set(
+      existingRows.map((row) => String(row.player_id || "")).filter(Boolean),
+    );
+    const wantedPlayerIds = new Set(recipients);
+
+    const toDeleteIds = existingRows
+      .filter((row) => !wantedPlayerIds.has(String(row.player_id || "")))
+      .map((row) => row.id)
+      .filter(Boolean);
+    if (toDeleteIds.length) {
+      const { error: deleteError } = await supabase
+        .from("revelation_players")
+        .delete()
+        .in("id", toDeleteIds);
+      if (deleteError) {
+        return { handout: null, error: deleteError };
+      }
+    }
+
+    const toInsert = recipients
+      .filter((playerId) => !existingPlayerIds.has(playerId))
+      .map((playerId) => ({
+        revelation_id: revelationId,
+        player_id: playerId,
+      }));
+    if (toInsert.length) {
+      const { error: insertError } = await supabase
+        .from("revelation_players")
+        .insert(toInsert);
+      if (insertError) {
+        return { handout: null, error: insertError };
+      }
+    }
+
+    return { handout: revelation, error: null };
+  }
+
   async function listHandoutsByChronicle(chronicleId) {
     const supabase = getSupabase();
     if (!supabase || !chronicleId) return [];
@@ -227,6 +318,7 @@
     getCurrentPlayerByUserId,
     getChronicleParticipants,
     createHandout,
+    updateHandout,
     listHandoutsByChronicle,
     revokeDelivery,
     deleteHandout,
