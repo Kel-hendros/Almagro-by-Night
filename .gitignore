@@ -6,6 +6,9 @@
 Por si a caso/
 backups/
 
+# Design files (Pencil)
+design/
+
 # Local tooling config
 .mcp.json
 .claude/settings.local.json
