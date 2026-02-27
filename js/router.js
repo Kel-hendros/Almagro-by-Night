@@ -122,6 +122,7 @@ function setActiveSidebarItem(baseHash) {
     chronicles: "menu-chronicles",
     chronicle: "menu-chronicles",
     "active-session": "menu-chronicles",
+    "revelations-archive": "menu-chronicles",
     "character-sheets": "menu-chars",
     "active-character-sheet": "menu-chars",
     games: "menu-games",
@@ -151,6 +152,7 @@ function updateContentBackgroundMode(baseHash) {
     baseHash === "chronicles" ||
     baseHash === "chronicle" ||
     baseHash === "active-session" ||
+    baseHash === "revelations-archive" ||
     baseHash === "character-sheets" ||
     baseHash === "resource-manager" ||
     baseHash === "welcome" ||
@@ -367,6 +369,7 @@ const routes = {
   "character-sheets": "fragments/character-sheets.html",
   "active-character-sheet": "fragments/active-character-sheet.html",
   "active-session": "fragments/active-session.html",
+  "revelations-archive": "fragments/revelations-archive.html",
   "resource-manager": "fragments/resource-manager.html",
   "active-encounter": "fragments/active-encounter.html",
   "temporal-codex": "fragments/temporal-codex.html",
@@ -446,6 +449,7 @@ async function loadRoute(force = false) {
       baseHash === "chronicles" ||
       baseHash === "chronicle" ||
       baseHash === "active-session" ||
+      baseHash === "revelations-archive" ||
       baseHash === "settings" ||
       baseHash === "active-character-sheet")
   ) {
@@ -498,6 +502,17 @@ async function loadRoute(force = false) {
       window.ABNActiveSession?.controller?.destroyPage?.();
     } catch (error) {
       console.warn("Router: active-session destroy error", error);
+    }
+  }
+
+  if (
+    previousBaseHash === "revelations-archive" &&
+    (baseHash !== "revelations-archive" || force || __currentRoute !== targetHash)
+  ) {
+    try {
+      window.ABNRevelationsArchive?.controller?.destroyPage?.();
+    } catch (error) {
+      console.warn("Router: revelations-archive destroy error", error);
     }
   }
 

@@ -10,9 +10,7 @@
     overlay: null,
     encounterBridge: null,
     backBtnHandler: null,
-    clearFormHandler: null,
-    handoutSubmitHandler: null,
-    handoutListClickHandler: null,
+    openArchiveBtnHandler: null,
   };
 
   function mountEncounterOverlay() {
@@ -45,63 +43,12 @@
       backBtn.addEventListener("click", state.backBtnHandler);
     }
 
-    const clearBtn = document.getElementById("as-handout-clear");
-    if (clearBtn) {
-      state.clearFormHandler = () => {
-        view().clearHandoutForm();
-        view().setHandoutMessage("");
+    const openArchiveBtn = document.getElementById("as-open-revelations");
+    if (openArchiveBtn) {
+      state.openArchiveBtnHandler = () => {
+        window.location.hash = `revelations-archive?id=${encodeURIComponent(state.chronicleId)}`;
       };
-      clearBtn.addEventListener("click", state.clearFormHandler);
-    }
-
-    const form = document.getElementById("as-handout-form");
-    if (form) {
-      state.handoutSubmitHandler = async (event) => {
-        event.preventDefault();
-        await submitHandoutForm();
-      };
-      form.addEventListener("submit", state.handoutSubmitHandler);
-    }
-
-    const list = document.getElementById("as-handout-list");
-    if (list) {
-      state.handoutListClickHandler = async (event) => {
-        const revokeBtn = event.target.closest(".as-delivery-remove");
-        if (revokeBtn?.dataset.deliveryId) {
-          const ok = await global.ABNShared?.modal?.confirm?.(
-            "¿Quitar esta revelación del archivo de este jugador?",
-          );
-          if (!ok) return;
-          const { error } = await global.ABNShared.handouts.revokeDelivery(
-            revokeBtn.dataset.deliveryId,
-          );
-          if (error) {
-            view().setHandoutMessage(error.message || "No se pudo quitar la asociación.", "error");
-            return;
-          }
-          view().setHandoutMessage("Asociación eliminada.", "ok");
-          await loadHandouts();
-          return;
-        }
-
-        const deleteBtn = event.target.closest(".as-handout-delete");
-        if (deleteBtn?.dataset.handoutId) {
-          const ok = await global.ABNShared?.modal?.confirm?.(
-            "¿Eliminar esta revelación completa del archivo de crónica?",
-          );
-          if (!ok) return;
-          const { error } = await global.ABNShared.handouts.deleteHandout(
-            deleteBtn.dataset.handoutId,
-          );
-          if (error) {
-            view().setHandoutMessage(error.message || "No se pudo eliminar revelación.", "error");
-            return;
-          }
-          view().setHandoutMessage("Revelación eliminada.", "ok");
-          await loadHandouts();
-        }
-      };
-      list.addEventListener("click", state.handoutListClickHandler);
+      openArchiveBtn.addEventListener("click", state.openArchiveBtnHandler);
     }
   }
 
@@ -112,74 +59,11 @@
     }
     state.backBtnHandler = null;
 
-    const clearBtn = document.getElementById("as-handout-clear");
-    if (clearBtn && state.clearFormHandler) {
-      clearBtn.removeEventListener("click", state.clearFormHandler);
+    const openArchiveBtn = document.getElementById("as-open-revelations");
+    if (openArchiveBtn && state.openArchiveBtnHandler) {
+      openArchiveBtn.removeEventListener("click", state.openArchiveBtnHandler);
     }
-    state.clearFormHandler = null;
-
-    const form = document.getElementById("as-handout-form");
-    if (form && state.handoutSubmitHandler) {
-      form.removeEventListener("submit", state.handoutSubmitHandler);
-    }
-    state.handoutSubmitHandler = null;
-
-    const list = document.getElementById("as-handout-list");
-    if (list && state.handoutListClickHandler) {
-      list.removeEventListener("click", state.handoutListClickHandler);
-    }
-    state.handoutListClickHandler = null;
-  }
-
-  async function loadHandoutRecipients() {
-    const participants = await global.ABNShared.handouts.getChronicleParticipants(
-      state.chronicleId,
-    );
-    const filtered = participants.filter(
-      (row) =>
-        row?.player?.id &&
-        row.player.id !== state.currentPlayerId &&
-        String(row.role || "").toLowerCase() === "player",
-    );
-    view().renderHandoutRecipients(filtered);
-  }
-
-  async function loadHandouts() {
-    const handouts = await global.ABNShared.handouts.listHandoutsByChronicle(
-      state.chronicleId,
-    );
-    view().renderHandoutList(handouts);
-  }
-
-  function getSelectedRecipients() {
-    return Array.from(document.querySelectorAll(".as-recipient-check:checked"))
-      .map((node) => node.value)
-      .filter(Boolean);
-  }
-
-  async function submitHandoutForm() {
-    const title = document.getElementById("as-handout-title")?.value || "";
-    const bodyMarkdown = document.getElementById("as-handout-body")?.value || "";
-    const imageUrl = document.getElementById("as-handout-image")?.value || "";
-    const recipientPlayerIds = getSelectedRecipients();
-
-    const { error } = await global.ABNShared.handouts.createHandout({
-      chronicleId: state.chronicleId,
-      createdByPlayerId: state.currentPlayerId,
-      title,
-      bodyMarkdown,
-      imageUrl,
-      recipientPlayerIds,
-    });
-
-    if (error) {
-      view().setHandoutMessage(error.message || "No se pudo guardar revelación.", "error");
-      return;
-    }
-
-    view().setHandoutMessage("Revelación guardada y asociada.", "ok");
-    view().clearHandoutForm();
-    await loadHandouts();
+    state.openArchiveBtnHandler = null;
   }
 
   async function initPage() {
@@ -236,9 +120,6 @@
     mountEncounterOverlay();
     handleEncounterState(null);
     bindUIActions();
-
-    await loadHandoutRecipients();
-    await loadHandouts();
 
     state.encounterBridge = service().createEncounterBridge({
       chronicleId: state.chronicleId,

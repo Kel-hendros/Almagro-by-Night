@@ -29,6 +29,13 @@
   color: var(--theme-text-secondary);
 }
 
+.as-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .as-content {
   flex: 1;
   display: grid;

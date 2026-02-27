@@ -1728,6 +1728,12 @@ p.chronicle-description {
 
 /* --- Diario Tab --- */
 
+.cd-diario-head-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
 /* Sub-tabs (Sesiones / Mis Notas — mobile only) */
 .cd-diario-tabs {
     display: flex;

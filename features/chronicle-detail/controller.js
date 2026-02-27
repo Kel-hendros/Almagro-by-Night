@@ -129,6 +129,13 @@
         });
     }
 
+    const revelationsArchiveBtn = document.getElementById("cd-open-revelations-archive");
+    if (revelationsArchiveBtn) {
+        revelationsArchiveBtn.addEventListener("click", () => {
+            window.location.hash = `revelations-archive?id=${encodeURIComponent(chronicleId)}`;
+        });
+    }
+
     await ns.header?.populate({ chronicleId, chronicle, isNarrator });
     ns.banner?.init({ chronicle, isNarrator });
 
