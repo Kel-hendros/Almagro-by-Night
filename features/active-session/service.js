@@ -122,11 +122,29 @@
 
   async function getChronicle(chronicleId) {
     if (!chronicleId || !global.supabase) return { data: null, error: null };
-    return global.supabase
+    const primary = await global.supabase
       .from("chronicles")
       .select("id, name, creator_id, system_id")
       .eq("id", chronicleId)
       .maybeSingle();
+
+    if (!primary?.error) return primary;
+
+    const message = String(primary.error.message || "").toLowerCase();
+    const missingSystemId =
+      primary.error.code === "42703" ||
+      (message.includes("system_id") && message.includes("does not exist"));
+    if (!missingSystemId) return primary;
+
+    const fallback = await global.supabase
+      .from("chronicles")
+      .select("id, name, creator_id")
+      .eq("id", chronicleId)
+      .maybeSingle();
+    if (fallback?.data) {
+      fallback.data.system_id = null;
+    }
+    return fallback;
   }
 
   async function getRosterSummary(chronicleId) {

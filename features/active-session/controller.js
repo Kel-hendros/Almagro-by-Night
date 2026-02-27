@@ -206,7 +206,8 @@
     const { data: chronicle, error } = await service().getChronicle(state.chronicleId);
     if (error || !chronicle) {
       console.warn("ActiveSession: cronica no encontrada", error?.message);
-      window.location.hash = "chronicles";
+      alert("No se pudo abrir Sesión Activa para esta crónica.");
+      window.location.hash = `chronicle?id=${encodeURIComponent(state.chronicleId)}`;
       return;
     }
 
