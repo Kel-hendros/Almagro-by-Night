@@ -5,6 +5,40 @@
         <iframe id="acs-encounter-frame" class="acs-encounter-frame" title="Encuentro"></iframe>
     </div>
 
+    <button id="acs-handouts-btn" class="acs-handouts-btn hidden" type="button">
+        Revelaciones
+        <span id="acs-handouts-badge" class="acs-handouts-badge hidden">0</span>
+    </button>
+
+    <div id="acs-handouts-modal" class="app-modal-overlay">
+        <div class="app-modal acs-handouts-modal">
+            <div class="app-modal-header">
+                <h2 class="app-modal-title">Archivo de Revelaciones</h2>
+                <button id="acs-handouts-close" class="btn-modal-close" type="button" aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div id="acs-handouts-list" class="acs-handouts-list">
+                <p class="muted">Sin revelaciones asociadas.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="acs-handout-reader-modal" class="app-modal-overlay">
+        <div class="app-modal acs-handout-reader">
+            <div class="app-modal-header">
+                <h2 id="acs-handout-reader-title" class="app-modal-title">Revelación</h2>
+                <button id="acs-handout-reader-close" class="btn-modal-close" type="button" aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="acs-handout-reader-body">
+                <img id="acs-handout-reader-image" class="acs-handout-reader-image hidden" alt="">
+                <div id="acs-handout-reader-content" class="acs-handout-reader-content"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="acs-frame-wrap">
         <iframe id="acs-frame" class="acs-frame" title="Hoja de Personaje"></iframe>
     </div>
@@ -16,5 +50,6 @@
 <script src="features/active-character-sheet/encounter-bridge.js"></script>
 <script src="features/active-character-sheet/encounter-bar.js"></script>
 <script src="features/active-character-sheet/encounter-persiana.js"></script>
+<script src="features/active-character-sheet/handouts-inbox.js"></script>
 <script src="features/active-character-sheet/controller.js"></script>
 <script src="features/active-character-sheet/index.js"></script>

@@ -66,3 +66,13 @@ All previously flagged inline styles in resource-manager.js and resource-manager
 - `detail.zone.js`: inline `style="border-color:${accentColor}"` on modal-content, `style="color:${accentColor}"` on faction name — data-driven faction color, acceptable
 - `detail.zone.js`: `style="width:${width}%; background:${seg.color};"` on progress bar segments — computed % width + data-driven faction color, acceptable
 - `detail.zone.js`: `style="background:${colorPill}"` on `.detail-status-pill` — data-driven zone control color, acceptable
+- `view.js` (active-session): `style="width:${bloodRatio.percent}%;"` on `.as-blood-fill` — runtime percentage width, matches progress bar pattern
+
+## Active Session Feature (css/active-session.css, features/active-session/, fragments/active-session.html)
+- CSS Ownership: `css/active-session.css`, loaded via `<link>` inside `fragments/active-session.html`
+- Namespace prefix: `as-` for all component classes
+- UNRESOLVED violations as of Feb 2026:
+  - `active-session.css` line 198: `.as-blood-fill` gradient uses 3 hardcoded hex values (`#7f0f1a`, `#c62828`, `#f04d4d`) — fix with `color-mix(var(--theme-accent), black/white)`
+  - `active-session.css` lines 234–246: health dot damage colors (6 raw hex values) — extract to `--abn-damage-*` CSS custom properties at top of file
+- STRUCTURAL GAP: ~18 `.as-handout-*`, `.as-delivery-*`, `.as-recipient-*`, `.as-form-msg` classes are used in HTML/JS but have NO CSS definitions in `active-session.css` — Handouts panel is completely unstyled
+- Game-domain damage color pattern: VtM damage levels (bashing/lethal/aggravated) are not theme-specific. Correct approach is named CSS custom properties (e.g., `--abn-damage-lethal-bg`), not raw hex in rules.

@@ -121,6 +121,7 @@ function setActiveSidebarItem(baseHash) {
     settings: "menu-settings",
     chronicles: "menu-chronicles",
     chronicle: "menu-chronicles",
+    "active-session": "menu-chronicles",
     "character-sheets": "menu-chars",
     "active-character-sheet": "menu-chars",
     games: "menu-games",
@@ -149,6 +150,7 @@ function updateContentBackgroundMode(baseHash) {
     baseHash === "settings" ||
     baseHash === "chronicles" ||
     baseHash === "chronicle" ||
+    baseHash === "active-session" ||
     baseHash === "character-sheets" ||
     baseHash === "resource-manager" ||
     baseHash === "welcome" ||
@@ -364,6 +366,7 @@ const routes = {
   "card-creator": "fragments/card-creator.html",
   "character-sheets": "fragments/character-sheets.html",
   "active-character-sheet": "fragments/active-character-sheet.html",
+  "active-session": "fragments/active-session.html",
   "resource-manager": "fragments/resource-manager.html",
   "active-encounter": "fragments/active-encounter.html",
   "temporal-codex": "fragments/temporal-codex.html",
@@ -442,6 +445,7 @@ async function loadRoute(force = false) {
       baseHash === "game" ||
       baseHash === "chronicles" ||
       baseHash === "chronicle" ||
+      baseHash === "active-session" ||
       baseHash === "settings" ||
       baseHash === "active-character-sheet")
   ) {
@@ -483,6 +487,17 @@ async function loadRoute(force = false) {
       window.ABNActiveCharacterSheet?.controller?.destroyPage?.();
     } catch (error) {
       console.warn("Router: active-character-sheet destroy error", error);
+    }
+  }
+
+  if (
+    previousBaseHash === "active-session" &&
+    (baseHash !== "active-session" || force || __currentRoute !== targetHash)
+  ) {
+    try {
+      window.ABNActiveSession?.controller?.destroyPage?.();
+    } catch (error) {
+      console.warn("Router: active-session destroy error", error);
     }
   }
 

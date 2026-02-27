@@ -1,0 +1,71 @@
+<div class="active-session-container">
+    <link rel="stylesheet" href="css/active-session.css">
+
+    <header class="as-header">
+        <div>
+            <h1 id="as-title">Sesion Activa</h1>
+            <p id="as-subtitle" class="as-subtitle">Hub operativo del narrador</p>
+        </div>
+        <div class="as-actions">
+            <button id="as-back-chronicle" class="btn btn--ghost" type="button">Volver a Crónica</button>
+        </div>
+    </header>
+
+    <section class="as-content">
+        <section class="as-handouts">
+            <div class="as-panel-head">
+                <h2>Archivo de Revelaciones</h2>
+                <span class="as-counter">Narrador</span>
+            </div>
+
+            <form id="as-handout-form" class="as-handout-form">
+                <div class="as-handout-grid">
+                    <label class="as-handout-field">
+                        <span>Titulo</span>
+                        <input id="as-handout-title" class="app-input" type="text" maxlength="120"
+                            placeholder="Ej: Carta encontrada en el Elysium">
+                    </label>
+                    <label class="as-handout-field">
+                        <span>Imagen (URL opcional)</span>
+                        <input id="as-handout-image" class="app-input" type="url" placeholder="https://...">
+                    </label>
+                </div>
+                <label class="as-handout-field">
+                    <span>Descripcion (Markdown)</span>
+                    <textarea id="as-handout-body" class="app-input" rows="4"
+                        placeholder="Describe la revelación..."></textarea>
+                </label>
+                <div class="as-handout-field">
+                    <span>Destinatarios</span>
+                    <div id="as-handout-recipients" class="as-recipient-list">
+                        <p class="muted">Cargando jugadores...</p>
+                    </div>
+                </div>
+                <div class="as-handout-actions">
+                    <button type="submit" class="btn btn--primary">Guardar Revelación</button>
+                    <button type="button" id="as-handout-clear" class="btn btn--ghost">Limpiar</button>
+                    <span id="as-handout-msg" class="as-form-msg"></span>
+                </div>
+            </form>
+
+            <div id="as-handout-list" class="as-handout-list">
+                <p class="muted">Cargando revelaciones...</p>
+            </div>
+        </section>
+
+        <aside class="as-roster">
+            <div class="as-panel-head">
+                <h2>Personajes</h2>
+                <span id="as-roster-count" class="as-counter">0</span>
+            </div>
+            <div id="as-roster-list" class="as-roster-list">
+                <p class="muted">Cargando personajes...</p>
+            </div>
+        </aside>
+    </section>
+</div>
+
+<script src="features/active-session/service.js"></script>
+<script src="features/active-session/view.js"></script>
+<script src="features/active-session/controller.js"></script>
+<script src="features/active-session/index.js"></script>

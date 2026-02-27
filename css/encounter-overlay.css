@@ -13,8 +13,9 @@
   opacity: 1;
   pointer-events: auto;
   cursor: pointer;
-  position: relative;
-  z-index: 60;
+  position: sticky;
+  top: 0;
+  z-index: 80;
 }
 
 .abn-encounter-bar-inner {

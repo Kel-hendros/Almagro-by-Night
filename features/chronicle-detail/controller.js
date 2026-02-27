@@ -121,6 +121,14 @@
 
     const isNarrator = participation?.role === "narrator" || chronicle.creator_id === currentPlayer.id;
 
+    const activeSessionBtn = document.getElementById("cd-open-active-session");
+    if (activeSessionBtn) {
+        if (isNarrator) activeSessionBtn.classList.remove("hidden");
+        activeSessionBtn.addEventListener("click", () => {
+            window.location.hash = `active-session?id=${encodeURIComponent(chronicleId)}`;
+        });
+    }
+
     await ns.header?.populate({ chronicleId, chronicle, isNarrator });
     ns.banner?.init({ chronicle, isNarrator });
 

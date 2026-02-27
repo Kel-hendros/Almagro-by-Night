@@ -60,6 +60,7 @@
     ns.encounterBar?.bind?.();
     ns.encounterPersiana?.bind?.();
     ns.encounterBridge?.connect?.();
+    ns.handoutsInbox?.init?.();
   }
 
   function destroyPage() {
@@ -67,6 +68,7 @@
     ns.encounterPersiana?.unbind?.();
     ns.encounterBar?.destroy?.();
     ns.encounterBridge?.destroy?.();
+    ns.handoutsInbox?.destroy?.();
 
     if (state.frame) {
       state.frame.removeEventListener("load", handleFrameLoad);
