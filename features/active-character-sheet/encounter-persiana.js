@@ -2,116 +2,57 @@
   const ns = (global.ABNActiveCharacterSheet =
     global.ABNActiveCharacterSheet || {});
 
-  let isOpen = false;
-  let loadedEncounterId = null;
-  let listening = false;
-  let loadHandler = null;
+  let overlay = null;
 
-  function getEmbedWrap() {
-    return document.getElementById("acs-encounter-embed");
-  }
-
-  function getEmbedFrame() {
-    return document.getElementById("acs-encounter-frame");
-  }
-
-  function setBarState(openState) {
-    var bar = document.querySelector(".acs-encounter-bar");
-    if (!bar) return;
-    bar.classList.toggle("persiana-open", openState);
+  function ensureOverlay() {
+    if (overlay) return overlay;
+    const factory = global.ABNShared?.encounterOverlay?.createController;
+    if (!factory) return null;
+    overlay = factory({
+      host: ".active-character-sheet-container",
+      bar: ".acs-encounter-bar",
+      embedWrap: "#acs-encounter-embed",
+      frame: "#acs-encounter-frame",
+      insertBefore: ".acs-encounter-embed",
+      barClass: "acs-encounter-bar",
+      barInnerClass: "acs-encounter-bar-inner",
+      statusClass: "acs-eb-status",
+      roundClass: "acs-eb-round",
+      turnClass: "acs-eb-turn",
+      toggleClass: "acs-eb-toggle",
+      embedClass: "acs-encounter-embed",
+      frameClass: "acs-encounter-frame",
+      closeMessageType: "abn-encounter-embed-close",
+    });
+    return overlay;
   }
 
   function open(encounterId) {
-    if (!encounterId) return;
-    if (isOpen) return;
-    var frame = getEmbedFrame();
-    var wrap = getEmbedWrap();
-    if (!frame || !wrap) return;
-
-    isOpen = true;
-    setBarState(true);
-
-    // Already loaded with same encounter — animate immediately
-    if (loadedEncounterId === encounterId) {
-      wrap.classList.add("open");
-      return;
-    }
-
-    // Show loading state (hidden but positioned)
-    wrap.classList.remove("open");
-    wrap.classList.add("loading");
-
-    // Clean up any previous load handler
-    if (loadHandler) {
-      frame.removeEventListener("load", loadHandler);
-      loadHandler = null;
-    }
-
-    // Wait for iframe to fully load, then slide down
-    loadHandler = function () {
-      frame.removeEventListener("load", loadHandler);
-      loadHandler = null;
-      // Small delay to let the encounter render its first frame
-      setTimeout(function () {
-        wrap.classList.remove("loading");
-        if (isOpen) wrap.classList.add("open");
-      }, 150);
-    };
-    frame.addEventListener("load", loadHandler);
-
-    frame.src =
-      "index.html#active-encounter?id=" +
-      encodeURIComponent(encounterId) +
-      "&embed=true";
-    loadedEncounterId = encounterId;
+    ensureOverlay()?.open(encounterId);
   }
 
   function close() {
-    if (!isOpen) return;
-    var wrap = getEmbedWrap();
-    if (wrap) {
-      wrap.classList.remove("open", "loading");
-    }
-    isOpen = false;
-    setBarState(false);
+    ensureOverlay()?.close();
   }
 
   function toggle(encounterId) {
-    if (isOpen) close();
-    else open(encounterId);
+    ensureOverlay()?.toggle(encounterId);
   }
 
   function destroy() {
-    close();
-    var frame = getEmbedFrame();
-    if (frame) {
-      if (loadHandler) {
-        frame.removeEventListener("load", loadHandler);
-        loadHandler = null;
-      }
-      frame.src = "about:blank";
-    }
-    loadedEncounterId = null;
-  }
-
-  function handleEmbedMessage(event) {
-    var data = event.data;
-    if (!data) return;
-    if (data.type === "abn-encounter-embed-close") {
-      close();
-    }
+    ensureOverlay()?.destroy();
   }
 
   function bind() {
-    if (listening) return;
-    global.addEventListener("message", handleEmbedMessage);
-    listening = true;
+    ensureOverlay()?.bind();
   }
 
   function unbind() {
-    if (!listening) return;
-    global.removeEventListener("message", handleEmbedMessage);
-    listening = false;
+    ensureOverlay()?.unbind();
+  }
+
+  function setState(snapshot) {
+    ensureOverlay()?.setState(snapshot);
   }
 
   ns.encounterPersiana = {
@@ -121,8 +62,9 @@
     destroy,
     bind,
     unbind,
+    setState,
     get isOpen() {
-      return isOpen;
+      return !!ensureOverlay()?.isOpen;
     },
   };
 })(window);

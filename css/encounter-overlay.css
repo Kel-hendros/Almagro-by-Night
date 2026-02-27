@@ -1,0 +1,99 @@
+.abn-encounter-bar {
+  background: #1a1a1c;
+  border-bottom: 1px solid #333;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.abn-encounter-bar.visible {
+  max-height: 48px;
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+  position: relative;
+  z-index: 60;
+}
+
+.abn-encounter-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  letter-spacing: 0.3px;
+}
+
+.abn-eb-status {
+  color: #6e9e6e;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.abn-eb-round {
+  color: #999;
+}
+
+.abn-eb-turn {
+  color: #bbb;
+}
+
+.abn-encounter-bar.my-turn {
+  background: linear-gradient(90deg, #2a2210 0%, #1a1a1c 50%, #2a2210 100%);
+  border-bottom-color: #c5a059;
+}
+
+.abn-encounter-bar.my-turn .abn-eb-status,
+.abn-encounter-bar.my-turn .abn-eb-turn {
+  color: #c5a059;
+}
+
+.abn-encounter-bar.my-turn .abn-eb-turn {
+  font-weight: 600;
+}
+
+.abn-eb-toggle {
+  font-size: 0.55rem;
+  color: #666;
+  transition: transform 0.35s ease;
+  margin-left: 2px;
+}
+
+.abn-encounter-bar.persiana-open .abn-eb-toggle {
+  transform: rotate(180deg);
+}
+
+.abn-encounter-embed {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition:
+    transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.35s ease;
+  pointer-events: none;
+  background: #000;
+}
+
+.abn-encounter-embed.loading {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.abn-encounter-embed.open {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.abn-encounter-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
