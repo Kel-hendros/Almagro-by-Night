@@ -39,11 +39,18 @@
 .as-content {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 20px;
   min-height: 0;
   overflow: auto;
   padding: 16px 20px 8px;
+  align-items: start;
+}
+
+.as-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .as-roster {
@@ -234,10 +241,9 @@
 }
 
 .as-roster-list {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .as-card {
@@ -402,26 +408,67 @@
 }
 
 .as-health-dot.contundente {
-  background: #f4e4b8;
-  border-color: #9a7a2e;
+  background: var(--color-dmg-bashing);
+  border-color: color-mix(in srgb, var(--color-dmg-bashing) 60%, black);
 }
 
 .as-health-dot.letal {
-  background: #c62828;
-  border-color: #5e0f0f;
+  background: var(--color-dmg-lethal);
+  border-color: color-mix(in srgb, var(--color-dmg-lethal) 60%, black);
 }
 
 .as-health-dot.agravado {
-  background: #5a1010;
-  border-color: #140202;
+  background: var(--color-dmg-aggravated);
+  border-color: color-mix(in srgb, var(--color-dmg-aggravated) 60%, black);
+}
+
+/* Shortcuts panel */
+.as-shortcuts {
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-surface);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.as-shortcuts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.as-shortcut-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 10px;
+  background: var(--theme-bg-elevated);
+  color: var(--theme-text-primary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.as-shortcut-btn:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, var(--theme-border-divider));
+  background: color-mix(in srgb, var(--theme-accent) 6%, var(--theme-bg-elevated));
+}
+
+.as-shortcut-btn svg {
+  width: 16px;
+  height: 16px;
+  color: var(--theme-text-secondary);
 }
 
 @media (max-width: 980px) {
+  .as-content {
+    grid-template-columns: 1fr;
+  }
+
   .as-handout-grid {
     grid-template-columns: 1fr;
   }
 
-  .as-roster-list {
-    grid-template-columns: 1fr;
-  }
 }

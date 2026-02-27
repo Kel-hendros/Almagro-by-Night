@@ -1,6 +1,17 @@
 (function initChronicleDetailBanner(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
   const service = () => ns.service;
+  const STORAGE_LIMIT_MESSAGE =
+    "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
+
+  async function showStorageLimitReachedModal() {
+    const showModal = global.ABNShared?.modal?.showChronicleStorageLimitReached;
+    if (typeof showModal === "function") {
+      await showModal();
+      return;
+    }
+    alert(STORAGE_LIMIT_MESSAGE);
+  }
 
   function init({ chronicle, isNarrator }) {
     const bannerArea = document.getElementById("chronicle-banner-area");
@@ -58,13 +69,39 @@
         return;
       }
 
+      try {
+        const { data: quotaData, error: quotaError } = await supabase.rpc(
+          "check_chronicle_storage_quota",
+          {
+            p_chronicle_id: chronicle.id,
+            p_incoming_bytes: Number(file.size || 0),
+          },
+        );
+        if (quotaError) {
+          throw new Error(`No se pudo validar cuota: ${quotaError.message}`);
+        }
+        if (quotaData?.error) {
+          if (quotaData.error === "not_authorized") {
+            throw new Error("No tenés permisos en esta crónica para subir archivos.");
+          }
+          throw new Error(`No se pudo validar cuota (${quotaData.error}).`);
+        }
+        if (quotaData && quotaData.allowed === false) {
+          await showStorageLimitReachedModal();
+          return;
+        }
+      } catch (quotaErr) {
+        alert(quotaErr.message || "No se pudo validar la cuota de almacenamiento.");
+        return;
+      }
+
       uploadBtn.disabled = true;
 
       try {
         await service().removeBannerFileByUrl(chronicle.banner_url);
 
         const ext = file.name.split(".").pop();
-        const fileName = `${chronicle.id}/${Date.now()}.${ext}`;
+        const fileName = `chronicle/${chronicle.id}/banners/${Date.now()}.${ext}`;
         const { publicUrl, error: uploadError } = await service().uploadBannerFile(
           fileName,
           file
@@ -158,4 +195,3 @@
     init,
   };
 })(window);
-

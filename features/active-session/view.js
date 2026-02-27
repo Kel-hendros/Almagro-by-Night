@@ -197,7 +197,7 @@
               )}">Eliminar</button>
             </div>
             <p class="as-handout-meta">${escapeHtml(created)}</p>
-            ${item.image_url ? `<a class="as-handout-image-link" href="${escapeHtml(item.image_url)}" target="_blank" rel="noopener">Ver imagen</a>` : ""}
+            ${item.image_signed_url ? `<a class="as-handout-image-link" href="${escapeHtml(item.image_signed_url)}" target="_blank" rel="noopener">Ver imagen</a>` : ""}
             <p class="as-handout-preview">${escapeHtml(bodyPreview || "Sin descripción.")}</p>
             <div class="as-delivery-list">${deliveriesHtml}</div>
           </article>

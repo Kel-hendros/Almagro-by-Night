@@ -132,6 +132,14 @@
     return global.ABNShared?.handouts?.updateHandout?.(payload) || { handout: null, error: null };
   }
 
+  async function uploadHandoutImage(payload) {
+    return global.ABNShared?.handouts?.uploadHandoutImage?.(payload) || { imageRef: null, error: null };
+  }
+
+  async function deleteHandoutImage(imageRef) {
+    return global.ABNShared?.handouts?.deleteHandoutImage?.(imageRef) || { error: null };
+  }
+
   async function listHandoutsByChronicle(chronicleId) {
     return global.ABNShared?.handouts?.listHandoutsByChronicle?.(chronicleId) || [];
   }
@@ -173,6 +181,8 @@
     getRecipientCharacters,
     createHandout,
     updateHandout,
+    uploadHandoutImage,
+    deleteHandoutImage,
     listHandoutsByChronicle,
     listPlayerDeliveries,
     revokeDelivery,

@@ -28,6 +28,12 @@
     return label;
   }
 
+  function bytesToMegas(bytes) {
+    const numeric = Number(bytes || 0);
+    if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+    return Math.floor(numeric / (1024 * 1024));
+  }
+
   async function init(config) {
     const {
       chronicleId,
@@ -57,6 +63,11 @@
     const inviteModalClose = document.getElementById("cd-invite-modal-close");
     const inviteModalCancel = document.getElementById("cd-invite-modal-cancel");
     const inviteModalConfirm = document.getElementById("cd-invite-modal-confirm");
+    const storageSection = document.getElementById("cd-storage-summary-section");
+    const storageMetric = document.getElementById("cd-storage-metric");
+    const storageProgressWrap = document.getElementById("cd-storage-progress-wrap");
+    const storageProgressFill = document.getElementById("cd-storage-progress-fill");
+    const storageNote = document.getElementById("cd-storage-note");
 
     let currentInviteCode = chronicle?.invite_code || "";
 
@@ -166,6 +177,44 @@
     if (countPlayers) countPlayers.textContent = String(participantsCount || 0);
     if (countCharacters) countCharacters.textContent = String(charactersCount || 0);
     if (countSessions) countSessions.textContent = String(sessionsCount || 0);
+
+    if (storageSection && isNarrator) {
+      storageSection.classList.remove("hidden");
+      if (storageMetric) storageMetric.textContent = "Cargando...";
+      if (storageProgressWrap) storageProgressWrap.classList.add("hidden");
+      if (storageNote) storageNote.textContent = "";
+
+      const { data: storageData, error: storageError } = await service().getChronicleStorageQuota(
+        chronicleId,
+      );
+
+      if (storageError || !storageData || storageData.error) {
+        if (storageMetric) storageMetric.textContent = "No disponible";
+        if (storageNote) {
+          storageNote.textContent =
+            storageError?.message || "No se pudo obtener el uso de almacenamiento.";
+        }
+      } else {
+        const usageBytes = Number(storageData.usage_bytes || 0);
+        const usageMegas = bytesToMegas(usageBytes);
+        const hasLimit = storageData.limit_bytes !== null && storageData.limit_bytes !== undefined;
+
+        if (!hasLimit) {
+          if (storageMetric) storageMetric.textContent = `${usageMegas}megas usados`;
+          if (storageProgressWrap) storageProgressWrap.classList.add("hidden");
+          if (storageNote) storageNote.textContent = "Narrador admin: almacenamiento sin límite.";
+        } else {
+          const limitBytes = Number(storageData.limit_bytes || 0);
+          const limitMegas = Math.max(bytesToMegas(limitBytes), 1);
+          const percent = limitBytes > 0 ? Math.max(0, Math.min((usageBytes / limitBytes) * 100, 100)) : 0;
+
+          if (storageMetric) storageMetric.textContent = `${usageMegas}/${limitMegas}megas`;
+          if (storageProgressWrap) storageProgressWrap.classList.remove("hidden");
+          if (storageProgressFill) storageProgressFill.style.width = `${percent}%`;
+          if (storageNote) storageNote.textContent = "Límite para narrador normal.";
+        }
+      }
+    }
 
     if (inviteSection && inviteCopyBtn && inviteCodeValue && isNarrator && currentInviteCode) {
       inviteSection.classList.remove("hidden");

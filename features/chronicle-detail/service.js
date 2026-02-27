@@ -212,6 +212,17 @@
     };
   }
 
+  async function getChronicleStorageQuota(chronicleId) {
+    const { data, error } = await supabase.rpc("check_chronicle_storage_quota", {
+      p_chronicle_id: chronicleId,
+      p_incoming_bytes: 0,
+    });
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
   ns.service = {
     getSession,
     getCurrentPlayerByUserId,
@@ -226,5 +237,6 @@
     fetchEncountersForChronicle,
     createEncounter,
     updateEncounterStatus,
+    getChronicleStorageQuota,
   };
 })(window);

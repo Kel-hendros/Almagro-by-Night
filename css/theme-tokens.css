@@ -13,6 +13,12 @@
     --color-success: #6e9e6e;
     --color-warning: #d4a14a;
     --color-danger: #c62828;
+
+    /* VtM damage types (fixed by game rules, not theme-aware) */
+    --color-dmg-bashing: #9a9a9a;
+    --color-dmg-lethal: #d39c5e;
+    --color-dmg-aggravated: #bb1515;
+
     --color-bg-decorative:
         radial-gradient(60% 50% at 15% 10%, rgba(191, 90, 61, 0.18), transparent 60%),
         radial-gradient(45% 35% at 90% 75%, rgba(120, 30, 30, 0.22), transparent 60%),

@@ -9,6 +9,8 @@
       canEditEncounter,
       onBusyChange,
     } = ctx;
+    const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
+      "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
 
     async function runWithBusy(message, task) {
       if (typeof onBusyChange === "function") onBusyChange(true, message);
@@ -25,10 +27,40 @@
         return [];
       }
 
-      const { data, error } = await supabase
-        .from("encounter_design_assets")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const chronicleId = state.encounter?.chronicle_id || null;
+      let data = [];
+      let error = null;
+      if (chronicleId) {
+        const scoped = await supabase
+          .from("encounter_design_assets")
+          .select("*")
+          .eq("chronicle_id", chronicleId)
+          .order("created_at", { ascending: false });
+        if (scoped.error) {
+          error = scoped.error;
+        } else {
+          data = scoped.data || [];
+        }
+
+        if (!error && state.user?.id) {
+          const legacy = await supabase
+            .from("encounter_design_assets")
+            .select("*")
+            .is("chronicle_id", null)
+            .eq("owner_user_id", state.user.id)
+            .order("created_at", { ascending: false });
+          if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length) {
+            data = [...data, ...legacy.data];
+          }
+        }
+      } else {
+        const all = await supabase
+          .from("encounter_design_assets")
+          .select("*")
+          .order("created_at", { ascending: false });
+        data = all.data || [];
+        error = all.error || null;
+      }
 
       if (error) {
         console.warn("No se pudieron cargar assets de diseno:", error.message);
@@ -80,6 +112,58 @@
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");
       return `${prefix}/${Date.now()}-${cleanName}`;
+    }
+
+    async function showStorageLimitReachedModal() {
+      const showModal = global.ABNShared?.modal?.showChronicleStorageLimitReached;
+      if (typeof showModal === "function") {
+        await showModal();
+        return;
+      }
+      alert(CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE);
+    }
+
+    async function ensureChronicleQuota(chronicleId, incomingBytes) {
+      if (!chronicleId) {
+        return {
+          ok: false,
+          reason: "missing_chronicle",
+          message: "No hay crónica asociada para este upload.",
+        };
+      }
+      const { data, error } = await supabase.rpc("check_chronicle_storage_quota", {
+        p_chronicle_id: chronicleId,
+        p_incoming_bytes: Number(incomingBytes || 0),
+      });
+      if (error) {
+        return {
+          ok: false,
+          reason: "quota_check_failed",
+          message: `No se pudo validar cuota: ${error.message}`,
+        };
+      }
+      if (data?.error) {
+        if (data.error === "not_authorized") {
+          return {
+            ok: false,
+            reason: "not_authorized",
+            message: "No tenés permisos en esta crónica para subir archivos.",
+          };
+        }
+        return {
+          ok: false,
+          reason: "quota_check_failed",
+          message: `No se pudo validar cuota (${data.error}).`,
+        };
+      }
+      if (data && data.allowed === false) {
+        return {
+          ok: false,
+          reason: "limit_reached",
+          message: CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE,
+        };
+      }
+      return { ok: true, reason: null, message: "" };
     }
 
     function readImageDimensions(file) {
@@ -138,9 +222,22 @@
     async function uploadEncounterBackground(file) {
       if (!state.encounter || !file) return false;
       return runWithBusy("Subiendo fondo...", async () => {
-        const chronicleId = state.encounter.chronicle_id || "no-chronicle";
+        const chronicleId = state.encounter.chronicle_id || null;
+        if (!chronicleId) {
+          alert("No hay crónica activa para guardar el fondo.");
+          return false;
+        }
+        const quota = await ensureChronicleQuota(chronicleId, file.size);
+        if (!quota.ok) {
+          if (quota.reason === "limit_reached") {
+            await showStorageLimitReachedModal();
+            return false;
+          }
+          alert(quota.message);
+          return false;
+        }
         const filePath = buildUploadKey(
-          `chronicle/${chronicleId}/encounter/${state.encounterId}/background`,
+          `chronicle/${chronicleId}/encounter-backgrounds/${state.encounterId}`,
           file.name,
         );
 
@@ -208,6 +305,11 @@
 
     async function uploadDesignAsset(file, onAfterUpload) {
       if (!file || !state.user?.id) return false;
+      const chronicleId = state.encounter?.chronicle_id || null;
+      if (!chronicleId) {
+        alert("No hay crónica activa para guardar este asset.");
+        return false;
+      }
       const rawName = prompt(
         "Nombre del asset",
         file.name.replace(/\.[a-z0-9]+$/i, ""),
@@ -220,7 +322,20 @@
       const tags = parseTagList(rawTags);
 
       return runWithBusy("Subiendo asset...", async () => {
-        const filePath = buildUploadKey(`user/${state.user.id}/assets`, file.name);
+        const quota = await ensureChronicleQuota(chronicleId, file.size);
+        if (!quota.ok) {
+          if (quota.reason === "limit_reached") {
+            await showStorageLimitReachedModal();
+            return false;
+          }
+          alert(quota.message);
+          return false;
+        }
+
+        const filePath = buildUploadKey(
+          `chronicle/${chronicleId}/encounter-assets`,
+          file.name,
+        );
         const { error: uploadError } = await supabase.storage
           .from("encounter-assets")
           .upload(filePath, file, { upsert: false });
@@ -232,6 +347,7 @@
 
         const payload = {
           owner_user_id: state.user.id,
+          chronicle_id: chronicleId,
           name,
           image_path: filePath,
           tags,

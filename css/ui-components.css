@@ -232,6 +232,34 @@
     justify-content: center;
 }
 
+/* ── Alert Dialog ── */
+
+.app-alert-overlay {
+    z-index: 50000;
+}
+
+.app-alert-card {
+    width: min(100%, 430px);
+    text-align: left;
+}
+
+.app-alert-title {
+    margin-bottom: 0.65rem;
+}
+
+.app-alert-message {
+    margin: 0 0 1.15rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--theme-text-secondary);
+    font-family: var(--app-font-body);
+    white-space: pre-line;
+}
+
+.app-alert-actions {
+    justify-content: flex-end;
+}
+
 /* ── Tab System ── */
 
 /* Default: pill tabs */

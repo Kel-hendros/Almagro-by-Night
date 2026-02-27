@@ -60,7 +60,7 @@
     titleEl.textContent = handout.title || "Revelación";
     bodyEl.innerHTML = global.renderMarkdown(handout.body_markdown || "");
 
-    const url = String(handout.image_url || "").trim();
+    const url = String(handout.image_signed_url || "").trim();
     if (url) {
       imageEl.src = url;
       imageEl.classList.remove("hidden");

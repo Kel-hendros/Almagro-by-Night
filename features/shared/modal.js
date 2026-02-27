@@ -84,6 +84,7 @@
      ─────────────────────────────────────────────────────────────── */
 
   let confirmOverlay = null;
+  let alertOverlay = null;
 
   function ensureConfirmDOM() {
     if (confirmOverlay) return confirmOverlay;
@@ -140,8 +141,78 @@
     });
   }
 
+  function ensureAlertDOM() {
+    if (alertOverlay) return alertOverlay;
+
+    const overlay = document.createElement("div");
+    overlay.className = "app-modal-overlay app-alert-overlay";
+    overlay.innerHTML = `
+      <div class="app-modal app-alert-card" role="alertdialog" aria-modal="true" aria-labelledby="app-alert-title">
+        <h3 id="app-alert-title" class="app-modal-title app-alert-title"></h3>
+        <p class="app-alert-message"></p>
+        <div class="app-modal-actions app-alert-actions">
+          <button type="button" class="btn btn--primary app-alert-ok">Entendido</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    alertOverlay = overlay;
+    return overlay;
+  }
+
+  function showAlert(message, options = {}) {
+    const overlay = ensureAlertDOM();
+    const titleEl = overlay.querySelector(".app-alert-title");
+    const msgEl = overlay.querySelector(".app-alert-message");
+    const okBtn = overlay.querySelector(".app-alert-ok");
+
+    const title = String(options.title || "Aviso").trim();
+    titleEl.textContent = title;
+    titleEl.classList.toggle("hidden", !title);
+    msgEl.textContent = String(message || "");
+    okBtn.textContent = options.buttonLabel || "Entendido";
+
+    overlay.classList.add("visible");
+    okBtn.focus();
+
+    return new Promise((resolve) => {
+      function cleanup() {
+        overlay.classList.remove("visible");
+        okBtn.removeEventListener("click", onOk);
+        overlay.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onKey);
+      }
+      function onOk() {
+        cleanup();
+        resolve();
+      }
+      function onBackdrop(event) {
+        if (event.target !== overlay) return;
+        onOk();
+      }
+      function onKey(event) {
+        if (event.key === "Escape") onOk();
+      }
+
+      okBtn.addEventListener("click", onOk);
+      overlay.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onKey);
+    });
+  }
+
+  function showChronicleStorageLimitReached() {
+    return showAlert(
+      "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.",
+      {
+        title: "Almacenamiento",
+        buttonLabel: "Entendido",
+      },
+    );
+  }
+
   root.modal = {
     createController,
     confirm,
+    alert: showAlert,
+    showChronicleStorageLimitReached,
   };
 })(window);

@@ -650,15 +650,15 @@
 }
 
 .ae-health-sq.contundente {
-    background-color: #aaa;
+    background-color: var(--color-dmg-bashing);
 }
 
 .ae-health-sq.letal {
-    background-color: #e8aa5a;
+    background-color: var(--color-dmg-lethal);
 }
 
 .ae-health-sq.agravado {
-    background-color: #e02020;
+    background-color: var(--color-dmg-aggravated);
 }
 
 /* Health Fill Colors */

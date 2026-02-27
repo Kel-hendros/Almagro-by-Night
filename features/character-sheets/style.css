@@ -641,9 +641,9 @@ h3 {
 
 /* Legacy health classes for script.js background images */
 .health-container {
-	--contundente: #9a9a9a;
-	--letal: #d39c5e;
-	--agravado: #bb1515;
+	--contundente: var(--color-dmg-bashing, #9a9a9a);
+	--letal: var(--color-dmg-lethal, #d39c5e);
+	--agravado: var(--color-dmg-aggravated, #bb1515);
 }
 
 .health-container.lesionado {

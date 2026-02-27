@@ -10,6 +10,8 @@
     templateEdit: { data: {}, type: "npc", tags: [], groups: null },
     decorEditTags: [],
   };
+  const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
+    "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
 
   let lists = {};
   let modalTemplate = null;
@@ -560,10 +562,37 @@
     }
     if (lists.decor) lists.decor.innerHTML = "<p>Cargando...</p>";
 
-    const { data, error } = await supabase
-      .from("encounter_design_assets")
-      .select("*")
-      .order("created_at", { ascending: false });
+    let data = [];
+    let error = null;
+    if (state.currentChronicleId) {
+      const scoped = await supabase
+        .from("encounter_design_assets")
+        .select("*")
+        .eq("chronicle_id", state.currentChronicleId)
+        .order("created_at", { ascending: false });
+      if (scoped.error) {
+        error = scoped.error;
+      } else {
+        data = scoped.data || [];
+      }
+
+      const legacy = await supabase
+        .from("encounter_design_assets")
+        .select("*")
+        .is("chronicle_id", null)
+        .eq("owner_user_id", state.user.id)
+        .order("created_at", { ascending: false });
+      if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length) {
+        data = [...data, ...legacy.data];
+      }
+    } else {
+      const all = await supabase
+        .from("encounter_design_assets")
+        .select("*")
+        .order("created_at", { ascending: false });
+      data = all.data || [];
+      error = all.error || null;
+    }
 
     if (error) {
       console.error(error);
@@ -676,8 +705,64 @@
     ];
   }
 
+  async function showStorageLimitReachedModal() {
+    const showModal = window.ABNShared?.modal?.showChronicleStorageLimitReached;
+    if (typeof showModal === "function") {
+      await showModal();
+      return;
+    }
+    alert(CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE);
+  }
+
+  async function ensureChronicleQuota(chronicleId, incomingBytes) {
+    if (!chronicleId) {
+      return {
+        ok: false,
+        reason: "missing_chronicle",
+        message: "Selecciona una crónica activa antes de subir assets.",
+      };
+    }
+    const { data, error } = await supabase.rpc("check_chronicle_storage_quota", {
+      p_chronicle_id: chronicleId,
+      p_incoming_bytes: Number(incomingBytes || 0),
+    });
+    if (error) {
+      return {
+        ok: false,
+        reason: "quota_check_failed",
+        message: `No se pudo validar cuota: ${error.message}`,
+      };
+    }
+    if (data?.error) {
+      if (data.error === "not_authorized") {
+        return {
+          ok: false,
+          reason: "not_authorized",
+          message: "No tenés permisos en esta crónica para subir archivos.",
+        };
+      }
+      return {
+        ok: false,
+        reason: "quota_check_failed",
+        message: `No se pudo validar cuota (${data.error}).`,
+      };
+    }
+    if (data && data.allowed === false) {
+      return {
+        ok: false,
+        reason: "limit_reached",
+        message: CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE,
+      };
+    }
+    return { ok: true, reason: null, message: "" };
+  }
+
   async function uploadDecorAsset(file) {
     if (!file || !state.user?.id) return;
+    if (!state.currentChronicleId) {
+      alert("Primero abre una crónica para asociar este decorado.");
+      return;
+    }
 
     const rawName = prompt("Nombre del decorado", file.name.replace(/\.[a-z0-9]+$/i, ""));
     if (rawName === null) return;
@@ -692,7 +777,16 @@
       .replace(/[^a-z0-9._-]+/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "");
-    const filePath = `user/${state.user.id}/assets/${Date.now()}-${cleanName}`;
+    const quota = await ensureChronicleQuota(state.currentChronicleId, file.size);
+    if (!quota.ok) {
+      if (quota.reason === "limit_reached") {
+        await showStorageLimitReachedModal();
+        return;
+      }
+      alert(quota.message);
+      return;
+    }
+    const filePath = `chronicle/${state.currentChronicleId}/encounter-assets/${Date.now()}-${cleanName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("encounter-assets")
@@ -707,6 +801,7 @@
       .from("encounter_design_assets")
       .insert({
         owner_user_id: state.user.id,
+        chronicle_id: state.currentChronicleId,
         name,
         image_path: filePath,
         tags,

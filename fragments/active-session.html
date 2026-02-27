@@ -7,21 +7,36 @@
             <p id="as-subtitle" class="as-subtitle">Hub operativo del narrador</p>
         </div>
         <div class="as-actions">
-            <button id="as-open-revelations" class="btn btn--secondary" type="button">Archivo de Revelaciones</button>
             <button id="as-back-chronicle" class="btn btn--ghost" type="button">Volver a Crónica</button>
         </div>
     </header>
 
     <section class="as-content">
-        <aside class="as-roster">
-            <div class="as-panel-head">
-                <h2>Personajes</h2>
-                <span id="as-roster-count" class="as-counter">0</span>
-            </div>
-            <div id="as-roster-list" class="as-roster-list">
-                <p class="muted">Cargando personajes...</p>
-            </div>
-        </aside>
+        <div class="as-col as-col--left">
+            <aside class="as-roster">
+                <div class="as-panel-head">
+                    <h2>Personajes</h2>
+                    <span id="as-roster-count" class="as-counter">0</span>
+                </div>
+                <div id="as-roster-list" class="as-roster-list">
+                    <p class="muted">Cargando personajes...</p>
+                </div>
+            </aside>
+        </div>
+
+        <div class="as-col as-col--right">
+            <aside class="as-shortcuts">
+                <div class="as-panel-head">
+                    <h2>Atajos</h2>
+                </div>
+                <div class="as-shortcuts-list">
+                    <button id="as-open-revelations" class="as-shortcut-btn" type="button">
+                        <i data-lucide="scroll-text"></i>
+                        <span>Archivo de Revelaciones</span>
+                    </button>
+                </div>
+            </aside>
+        </div>
     </section>
 </div>
 
