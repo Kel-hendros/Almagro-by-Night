@@ -41,24 +41,37 @@
 
   function clearForm() {
     const title = document.getElementById("ra-title-input");
-    const image = document.getElementById("ra-image-input");
+    const tagsInput = document.getElementById("ra-tags-input");
+    const imageFile = document.getElementById("ra-image-file-input");
+    const imageRef = document.getElementById("ra-image-ref-input");
     const body = document.getElementById("ra-body-input");
     if (title) title.value = "";
-    if (image) image.value = "";
+    if (tagsInput) tagsInput.value = "";
+    if (imageFile) imageFile.value = "";
+    if (imageRef) imageRef.value = "";
     if (body) body.value = "";
+    setImageStatus("Sin imagen seleccionada.");
     document.querySelectorAll(".ra-recipient-chip").forEach((node) => {
       node.classList.remove("is-selected");
       node.setAttribute("aria-pressed", "false");
     });
   }
 
-  function setFormValues({ title, imageUrl, bodyMarkdown, recipientPlayerIds } = {}) {
+  function setFormValues({ title, imageRef, bodyMarkdown, recipientPlayerIds, tags } = {}) {
     const titleInput = document.getElementById("ra-title-input");
-    const imageInput = document.getElementById("ra-image-input");
+    const tagsInput = document.getElementById("ra-tags-input");
+    const imageFileInput = document.getElementById("ra-image-file-input");
+    const imageRefInput = document.getElementById("ra-image-ref-input");
     const bodyInput = document.getElementById("ra-body-input");
     if (titleInput) titleInput.value = String(title || "");
-    if (imageInput) imageInput.value = String(imageUrl || "");
+    if (tagsInput) tagsInput.value = (Array.isArray(tags) ? tags : []).join(", ");
+    if (imageFileInput) imageFileInput.value = "";
+    if (imageRefInput) imageRefInput.value = String(imageRef || "").trim();
     if (bodyInput) bodyInput.value = String(bodyMarkdown || "");
+    setImageStatus(
+      imageRefInput?.value ? "Imagen actual guardada." : "Sin imagen seleccionada.",
+      imageRefInput?.value ? "ok" : "neutral",
+    );
 
     const selected = new Set((recipientPlayerIds || []).map((id) => String(id)));
     document.querySelectorAll(".ra-recipient-chip").forEach((node) => {
@@ -74,6 +87,15 @@
     const isEdit = mode === "edit";
     if (titleEl) titleEl.textContent = isEdit ? "Editar Revelación" : "Crear Revelación";
     if (saveBtn) saveBtn.textContent = isEdit ? "Guardar Cambios" : "Guardar Revelación";
+  }
+
+  function setImageStatus(message, tone = "neutral") {
+    const el = document.getElementById("ra-image-status");
+    if (!el) return;
+    el.textContent = message || "";
+    el.classList.remove("ok", "error");
+    if (tone === "ok") el.classList.add("ok");
+    if (tone === "error") el.classList.add("error");
   }
 
   function renderRecipients(participants) {
@@ -147,13 +169,16 @@
           .replace(/\s+/g, " ")
           .trim()
           .slice(0, 180);
+        const tagsHtml = (item.tags || []).length
+          ? `<div class="ra-tags-row">${item.tags.map(t => `<span class="ra-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+          : "";
 
         return `
           <article class="ra-card" data-handout-id="${escapeHtml(item.id)}">
             <div class="ra-card-image-wrap">
               ${
-                item.image_url
-                  ? `<img class="ra-card-image" src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.title || "Revelación")}">`
+                item.image_signed_url
+                  ? `<img class="ra-card-image" src="${escapeHtml(item.image_signed_url)}" alt="${escapeHtml(item.title || "Revelación")}">`
                   : `<div class="ra-card-image ra-card-image--empty">Sin imagen</div>`
               }
             </div>
@@ -161,6 +186,7 @@
               <h3>${escapeHtml(item.title || "Revelación")}</h3>
             </div>
             <p class="ra-meta">${escapeHtml(created)}</p>
+            ${tagsHtml}
             <p class="ra-associated-line"><strong>Jugadores:</strong> ${escapeHtml(associatedNames.join(", ") || "Sin destinatarios")}</p>
             <p class="ra-preview">${escapeHtml(bodyPreview || "Sin descripción.")}</p>
             <div class="ra-delivery-list">${deliveriesHtml}</div>
@@ -195,10 +221,14 @@
         const deliveredAt = row.delivered_at
           ? new Date(row.delivered_at).toLocaleString("es-AR")
           : "Ahora";
+        const tagsHtml = (handout.tags || []).length
+          ? `<div class="ra-tags-row">${handout.tags.map(t => `<span class="ra-tag">${escapeHtml(t)}</span>`).join("")}</div>`
+          : "";
         return `
           <article class="ra-card ra-card--clickable" data-delivery-id="${escapeHtml(row.id)}">
-            <h3>${title}</h3>
+            <div class="ra-card-head"><h3>${title}</h3></div>
             <p class="ra-meta">Asociada: ${escapeHtml(deliveredAt)}</p>
+            ${tagsHtml}
           </article>
         `;
       })
@@ -224,6 +254,10 @@
     }
   }
 
+  function getSearchQuery() {
+    return document.getElementById("ra-search")?.value?.trim() || "";
+  }
+
   ns.view = {
     setHeader,
     setAccessMode,
@@ -231,9 +265,11 @@
     clearForm,
     setFormValues,
     setFormMode,
+    setImageStatus,
     renderRecipients,
     renderNarratorList,
     renderPlayerList,
     openReader,
+    getSearchQuery,
   };
 })(window);

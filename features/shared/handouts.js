@@ -1,8 +1,182 @@
 (function initSharedRevelations(global) {
   const root = (global.ABNShared = global.ABNShared || {});
+  const REVELATIONS_BUCKET_ID = "revelations-private";
+  const PRIVATE_IMAGE_REF_PREFIX = "abn-private://";
+  const SIGNED_URL_TTL_SECONDS = 60 * 60;
+  const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+  const CHRONICLE_STORAGE_LIMIT_REACHED_CODE = "chronicle_storage_limit_reached";
+  const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
+    "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
 
   function getSupabase() {
     return global.supabase || null;
+  }
+
+  function buildObjectPath({ chronicleId, fileName }) {
+    const safeChronicleId = String(chronicleId || "").trim().toLowerCase();
+    const dot = fileName.lastIndexOf(".");
+    const ext = dot > -1 ? fileName.slice(dot + 1).toLowerCase() : "bin";
+    const safeExt = ext.replace(/[^a-z0-9]/g, "") || "bin";
+    const randomPart = Math.random().toString(36).slice(2, 10);
+    const timestamp = Date.now();
+    return `chronicle/${safeChronicleId}/revelations/${timestamp}-${randomPart}.${safeExt}`;
+  }
+
+  function buildPrivateImageRef(bucketId, objectPath) {
+    return `${PRIVATE_IMAGE_REF_PREFIX}${bucketId}/${objectPath}`;
+  }
+
+  function parsePrivateImageRef(imageRef) {
+    const raw = String(imageRef || "").trim();
+    if (!raw.startsWith(PRIVATE_IMAGE_REF_PREFIX)) return null;
+    const suffix = raw.slice(PRIVATE_IMAGE_REF_PREFIX.length);
+    const slash = suffix.indexOf("/");
+    if (slash <= 0) return null;
+    const bucketId = suffix.slice(0, slash);
+    const objectPath = suffix.slice(slash + 1);
+    if (!bucketId || !objectPath) return null;
+    return { bucketId, objectPath };
+  }
+
+  function isSupportedImage(file) {
+    if (!file) return false;
+    const type = String(file.type || "").toLowerCase();
+    return (
+      type === "image/png" ||
+      type === "image/jpeg" ||
+      type === "image/webp" ||
+      type === "image/gif" ||
+      type === "image/avif"
+    );
+  }
+
+  function isBucketNotFoundError(error) {
+    const msg = String(error?.message || "").toLowerCase();
+    return msg.includes("bucket not found") || msg.includes("not found");
+  }
+
+  async function ensureRevelationsBucket() {
+    const supabase = getSupabase();
+    if (!supabase) return { bucketId: REVELATIONS_BUCKET_ID, error: null };
+    const { data, error } = await supabase.rpc("ensure_revelations_storage_bucket");
+    if (error) return { bucketId: REVELATIONS_BUCKET_ID, error };
+    return { bucketId: String(data || REVELATIONS_BUCKET_ID), error: null };
+  }
+
+  async function uploadHandoutImage({ chronicleId, file }) {
+    const supabase = getSupabase();
+    if (!supabase || !chronicleId) {
+      return { imageRef: null, error: new Error("Contexto incompleto para subir imagen.") };
+    }
+    if (!file) {
+      return { imageRef: null, error: new Error("Selecciona una imagen para subir.") };
+    }
+    if (!isSupportedImage(file)) {
+      return {
+        imageRef: null,
+        error: new Error("Formato no soportado. Usa PNG, JPG, WEBP, GIF o AVIF."),
+      };
+    }
+    if (Number(file.size || 0) > MAX_IMAGE_SIZE_BYTES) {
+      return { imageRef: null, error: new Error("La imagen supera el límite de 10 MB.") };
+    }
+
+    const { data: quotaData, error: quotaError } = await supabase.rpc(
+      "check_chronicle_storage_quota",
+      {
+        p_chronicle_id: chronicleId,
+        p_incoming_bytes: Number(file.size || 0),
+      },
+    );
+    if (quotaError) {
+      return {
+        imageRef: null,
+        error: new Error(`No se pudo validar cuota de almacenamiento: ${quotaError.message}`),
+      };
+    }
+    if (quotaData?.error) {
+      if (quotaData.error === "not_authorized") {
+        return {
+          imageRef: null,
+          error: new Error("No tenés permisos en esta crónica para subir imágenes."),
+        };
+      }
+      return {
+        imageRef: null,
+        error: new Error(`No se pudo validar cuota (${quotaData.error}).`),
+      };
+    }
+    if (quotaData && quotaData.allowed === false) {
+      const quotaExceededError = new Error(CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE);
+      quotaExceededError.code = CHRONICLE_STORAGE_LIMIT_REACHED_CODE;
+      return {
+        imageRef: null,
+        error: quotaExceededError,
+      };
+    }
+
+    const fileName = String(file.name || "revelation-image").trim() || "revelation-image";
+    const objectPath = buildObjectPath({ chronicleId, fileName });
+    const ensured = await ensureRevelationsBucket();
+
+    let { error: uploadError } = await supabase.storage
+      .from(ensured.bucketId)
+      .upload(objectPath, file, {
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+
+    if (uploadError && isBucketNotFoundError(uploadError)) {
+      await ensureRevelationsBucket();
+      const retry = await supabase.storage.from(ensured.bucketId).upload(objectPath, file, {
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+      uploadError = retry.error || null;
+    }
+
+    if (uploadError) return { imageRef: null, error: uploadError };
+
+    return {
+      imageRef: buildPrivateImageRef(ensured.bucketId, objectPath),
+      error: null,
+    };
+  }
+
+  async function deleteHandoutImage(imageRef) {
+    const supabase = getSupabase();
+    if (!supabase) return { error: null };
+    const parsed = parsePrivateImageRef(imageRef);
+    if (!parsed) return { error: null };
+
+    const { error } = await supabase.storage.from(parsed.bucketId).remove([parsed.objectPath]);
+    return { error: error || null };
+  }
+
+  async function resolveImageSignedUrl(imageRef) {
+    const supabase = getSupabase();
+    const parsed = parsePrivateImageRef(imageRef);
+    if (!supabase || !parsed) return "";
+
+    const { data, error } = await supabase.storage
+      .from(parsed.bucketId)
+      .createSignedUrl(parsed.objectPath, SIGNED_URL_TTL_SECONDS);
+    if (error) {
+      console.warn("Revelaciones: no se pudo firmar URL de imagen:", error.message);
+      return "";
+    }
+    return String(data?.signedUrl || "");
+  }
+
+  async function withSignedImageUrls(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return [];
+    return Promise.all(
+      list.map(async (row) => ({
+        ...row,
+        image_signed_url: await resolveImageSignedUrl(row?.image_url),
+      })),
+    );
   }
 
   async function getCurrentPlayerByUserId(userId) {
@@ -37,8 +211,9 @@
     createdByPlayerId,
     title,
     bodyMarkdown,
-    imageUrl,
+    imageRef,
     recipientPlayerIds,
+    tags,
   }) {
     const supabase = getSupabase();
     if (!supabase || !chronicleId || !createdByPlayerId) {
@@ -56,9 +231,9 @@
     const recipients = Array.from(
       new Set((recipientPlayerIds || []).map((id) => String(id || "").trim()).filter(Boolean)),
     );
-    if (!recipients.length) {
-      return { handout: null, error: new Error("Selecciona al menos un destinatario.") };
-    }
+    const cleanTags = (Array.isArray(tags) ? tags : [])
+      .map((t) => String(t || "").trim())
+      .filter(Boolean);
 
     const { data: revelation, error: revelationError } = await supabase
       .from("revelations")
@@ -66,10 +241,11 @@
         chronicle_id: chronicleId,
         title: cleanTitle,
         body_markdown: cleanBody,
-        image_url: String(imageUrl || "").trim() || null,
+        image_url: String(imageRef || "").trim() || null,
         created_by_player_id: createdByPlayerId,
+        tags: cleanTags,
       })
-      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id")
+      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id, tags")
       .maybeSingle();
 
     if (revelationError || !revelation) {
@@ -79,15 +255,17 @@
       };
     }
 
-    const assocPayload = recipients.map((playerId) => ({
-      revelation_id: revelation.id,
-      player_id: playerId,
-    }));
-    const { error: assocError } = await supabase
-      .from("revelation_players")
-      .insert(assocPayload);
-    if (assocError) {
-      return { handout: null, error: assocError };
+    if (recipients.length) {
+      const assocPayload = recipients.map((playerId) => ({
+        revelation_id: revelation.id,
+        player_id: playerId,
+      }));
+      const { error: assocError } = await supabase
+        .from("revelation_players")
+        .insert(assocPayload);
+      if (assocError) {
+        return { handout: null, error: assocError };
+      }
     }
 
     return { handout: revelation, error: null };
@@ -97,8 +275,9 @@
     revelationId,
     title,
     bodyMarkdown,
-    imageUrl,
+    imageRef,
     recipientPlayerIds,
+    tags,
   }) {
     const supabase = getSupabase();
     if (!supabase || !revelationId) {
@@ -120,15 +299,33 @@
       return { handout: null, error: new Error("Selecciona al menos un destinatario.") };
     }
 
+    const { data: currentRevelation, error: currentError } = await supabase
+      .from("revelations")
+      .select("id, image_url")
+      .eq("id", revelationId)
+      .maybeSingle();
+    if (currentError || !currentRevelation) {
+      return {
+        handout: null,
+        error: currentError || new Error("No se pudo cargar revelación actual."),
+      };
+    }
+
+    const nextImageRef = String(imageRef || "").trim() || null;
+    const cleanTags = (Array.isArray(tags) ? tags : [])
+      .map((t) => String(t || "").trim())
+      .filter(Boolean);
+
     const { data: revelation, error: revelationError } = await supabase
       .from("revelations")
       .update({
         title: cleanTitle,
         body_markdown: cleanBody,
-        image_url: String(imageUrl || "").trim() || null,
+        image_url: nextImageRef,
+        tags: cleanTags,
       })
       .eq("id", revelationId)
-      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id")
+      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id, tags")
       .maybeSingle();
 
     if (revelationError || !revelation) {
@@ -181,6 +378,11 @@
       }
     }
 
+    const previousImageRef = String(currentRevelation.image_url || "").trim();
+    if (previousImageRef && previousImageRef !== nextImageRef) {
+      await deleteHandoutImage(previousImageRef);
+    }
+
     return { handout: revelation, error: null };
   }
 
@@ -190,7 +392,7 @@
 
     const { data: revelations, error: revError } = await supabase
       .from("revelations")
-      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id")
+      .select("id, chronicle_id, title, body_markdown, image_url, created_at, created_by_player_id, tags")
       .eq("chronicle_id", chronicleId)
       .order("created_at", { ascending: false });
     if (revError) {
@@ -198,7 +400,8 @@
       return [];
     }
 
-    const ids = (revelations || []).map((r) => r.id).filter(Boolean);
+    const rowsWithSigned = await withSignedImageUrls(revelations || []);
+    const ids = rowsWithSigned.map((r) => r.id).filter(Boolean);
     if (!ids.length) return [];
 
     const { data: assoc, error: assocError } = await supabase
@@ -208,7 +411,7 @@
       .order("associated_at", { ascending: true });
     if (assocError) {
       console.warn("Revelaciones: no se pudieron cargar asociaciones:", assocError.message);
-      return revelations || [];
+      return rowsWithSigned;
     }
 
     const byRevelation = new Map();
@@ -222,7 +425,7 @@
       });
     });
 
-    return (revelations || []).map((rev) => ({
+    return rowsWithSigned.map((rev) => ({
       ...rev,
       deliveries: byRevelation.get(rev.id) || [],
     }));
@@ -241,10 +444,20 @@
   async function deleteHandout(revelationId) {
     const supabase = getSupabase();
     if (!supabase || !revelationId) return { error: null };
+
+    const { data: existing } = await supabase
+      .from("revelations")
+      .select("id, image_url")
+      .eq("id", revelationId)
+      .maybeSingle();
+
     const { error } = await supabase
       .from("revelations")
       .delete()
       .eq("id", revelationId);
+    if (!error && existing?.image_url) {
+      await deleteHandoutImage(existing.image_url);
+    }
     return { error: error || null };
   }
 
@@ -255,7 +468,7 @@
     const { data, error } = await supabase
       .from("revelation_players")
       .select(
-        "id, revelation_id, player_id, associated_at, handout:revelations(id, chronicle_id, title, body_markdown, image_url, created_at)"
+        "id, revelation_id, player_id, associated_at, handout:revelations(id, chronicle_id, title, body_markdown, image_url, created_at, tags)"
       )
       .eq("player_id", playerId)
       .order("associated_at", { ascending: false });
@@ -272,8 +485,21 @@
       status: "associated",
       handout: row.handout || null,
     }));
-    if (!chronicleId) return rows;
-    return rows.filter((row) => row?.handout?.chronicle_id === chronicleId);
+    const rowsWithSigned = await Promise.all(
+      rows.map(async (row) => {
+        const handout = row.handout || null;
+        if (!handout) return row;
+        return {
+          ...row,
+          handout: {
+            ...handout,
+            image_signed_url: await resolveImageSignedUrl(handout.image_url),
+          },
+        };
+      }),
+    );
+    if (!chronicleId) return rowsWithSigned;
+    return rowsWithSigned.filter((row) => row?.handout?.chronicle_id === chronicleId);
   }
 
   async function markDeliveryOpened(_deliveryId, _playerId) {
@@ -317,6 +543,8 @@
   root.handouts = {
     getCurrentPlayerByUserId,
     getChronicleParticipants,
+    uploadHandoutImage,
+    deleteHandoutImage,
     createHandout,
     updateHandout,
     listHandoutsByChronicle,

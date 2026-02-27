@@ -2,6 +2,9 @@
   const ns = (global.ABNRevelationsArchive = global.ABNRevelationsArchive || {});
   const service = () => ns.service;
   const view = () => ns.view;
+  const CHRONICLE_STORAGE_LIMIT_REACHED_CODE = "chronicle_storage_limit_reached";
+  const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
+    "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
 
   const state = {
     chronicleId: null,
@@ -9,6 +12,7 @@
     isNarrator: false,
     narratorHandouts: [],
     playerDeliveries: [],
+    searchQuery: "",
     handoutModal: null,
     readerModal: null,
     realtimeChannel: null,
@@ -16,6 +20,27 @@
     availableRecipientCharacters: [],
     listenersBound: false,
   };
+
+  function filterHandouts(handouts, query) {
+    if (!query) return handouts;
+    const q = query.toLowerCase();
+    return handouts.filter((item) =>
+      (item.title || "").toLowerCase().includes(q) ||
+      (item.tags || []).some((t) => t.toLowerCase().includes(q))
+    );
+  }
+
+  function filterDeliveries(deliveries, query) {
+    if (!query) return deliveries;
+    const q = query.toLowerCase();
+    return deliveries.filter((row) => {
+      const handout = row.handout || {};
+      return (
+        (handout.title || "").toLowerCase().includes(q) ||
+        (handout.tags || []).some((t) => t.toLowerCase().includes(q))
+      );
+    });
+  }
 
   function selectedRecipients() {
     return Array.from(
@@ -33,6 +58,15 @@
 
   function findDeliveryById(deliveryId) {
     return state.playerDeliveries.find((item) => item.id === deliveryId) || null;
+  }
+
+  async function showStorageLimitReachedModal() {
+    const showModal = global.ABNShared?.modal?.showChronicleStorageLimitReached;
+    if (typeof showModal === "function") {
+      await showModal();
+      return;
+    }
+    alert(CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE);
   }
 
   function bindModals() {
@@ -70,9 +104,10 @@
     view().setFormMode("edit");
     view().setFormValues({
       title: handout.title || "",
-      imageUrl: handout.image_url || "",
+      imageRef: handout.image_url || "",
       bodyMarkdown: handout.body_markdown || "",
       recipientPlayerIds: (handout.deliveries || []).map((d) => d.recipient_player_id),
+      tags: handout.tags || [],
     });
     view().setMessage("");
     state.handoutModal?.open?.();
@@ -107,7 +142,7 @@
 
     state.narratorHandouts = effectiveHandouts || [];
     view().renderRecipients(state.availableRecipientCharacters);
-    view().renderNarratorList(state.narratorHandouts);
+    view().renderNarratorList(filterHandouts(state.narratorHandouts, state.searchQuery));
   }
 
   async function loadPlayerData() {
@@ -116,20 +151,50 @@
       state.currentPlayerId,
       state.chronicleId,
     );
-    view().renderPlayerList(state.playerDeliveries);
+    view().renderPlayerList(filterDeliveries(state.playerDeliveries, state.searchQuery));
   }
 
   async function submitNarratorForm(event) {
     event.preventDefault();
     const title = document.getElementById("ra-title-input")?.value || "";
     const bodyMarkdown = document.getElementById("ra-body-input")?.value || "";
-    const imageUrl = document.getElementById("ra-image-input")?.value || "";
+    const imageRefInput = document.getElementById("ra-image-ref-input");
+    const imageFileInput = document.getElementById("ra-image-file-input");
+    const selectedFile = imageFileInput?.files?.[0] || null;
+
+    let imageRef = String(imageRefInput?.value || "").trim();
+    let uploadedImageRef = null;
+
+    if (selectedFile) {
+      view().setImageStatus(`Subiendo ${selectedFile.name}...`);
+      const uploadRes = await service().uploadHandoutImage({
+        chronicleId: state.chronicleId,
+        file: selectedFile,
+      });
+      if (uploadRes.error || !uploadRes.imageRef) {
+        if (uploadRes.error?.code === CHRONICLE_STORAGE_LIMIT_REACHED_CODE) {
+          await showStorageLimitReachedModal();
+        }
+        view().setImageStatus("No se pudo subir la imagen.", "error");
+        view().setMessage(uploadRes.error?.message || "No se pudo subir la imagen.", "error");
+        return;
+      }
+      uploadedImageRef = uploadRes.imageRef;
+      imageRef = uploadedImageRef;
+      if (imageRefInput) imageRefInput.value = imageRef;
+      if (imageFileInput) imageFileInput.value = "";
+      view().setImageStatus("Imagen cargada y lista para guardar.", "ok");
+    }
+
+    const tagsRaw = document.getElementById("ra-tags-input")?.value || "";
+    const tags = tagsRaw.split(",").map((t) => t.trim()).filter(Boolean);
 
     const payload = {
       title,
       bodyMarkdown,
-      imageUrl,
+      imageRef,
       recipientPlayerIds: selectedRecipients(),
+      tags,
     };
 
     const { error } = state.editingHandoutId
@@ -141,6 +206,9 @@
         });
 
     if (error) {
+      if (uploadedImageRef) {
+        await service().deleteHandoutImage(uploadedImageRef);
+      }
       view().setMessage(error.message || "No se pudo guardar revelación.", "error");
       return;
     }
@@ -202,7 +270,7 @@
     view().openReader({
       title: row.handout.title,
       bodyMarkdown: row.handout.body_markdown,
-      imageUrl: row.handout.image_url,
+      imageUrl: row.handout.image_signed_url,
     });
     state.readerModal?.open?.();
   }
@@ -230,9 +298,41 @@
       chip.setAttribute("aria-pressed", next ? "true" : "false");
     });
 
+    document.getElementById("ra-image-file-input")?.addEventListener("change", (event) => {
+      const file = event.target?.files?.[0] || null;
+      if (file) {
+        view().setImageStatus(`Archivo seleccionado: ${file.name}`);
+        return;
+      }
+      const hasSavedImage = Boolean(
+        String(document.getElementById("ra-image-ref-input")?.value || "").trim(),
+      );
+      view().setImageStatus(
+        hasSavedImage ? "Imagen actual guardada." : "Sin imagen seleccionada.",
+        hasSavedImage ? "ok" : "neutral",
+      );
+    });
+
+    document.getElementById("ra-image-clear")?.addEventListener("click", () => {
+      const imageFileInput = document.getElementById("ra-image-file-input");
+      const imageRefInput = document.getElementById("ra-image-ref-input");
+      if (imageFileInput) imageFileInput.value = "";
+      if (imageRefInput) imageRefInput.value = "";
+      view().setImageStatus("La imagen se eliminará al guardar.", "error");
+    });
+
     document.getElementById("ra-clear")?.addEventListener("click", () => {
       view().clearForm();
       view().setMessage("");
+    });
+
+    document.getElementById("ra-search")?.addEventListener("input", (e) => {
+      state.searchQuery = (e.target.value || "").trim();
+      if (state.isNarrator) {
+        view().renderNarratorList(filterHandouts(state.narratorHandouts, state.searchQuery));
+      } else {
+        view().renderPlayerList(filterDeliveries(state.playerDeliveries, state.searchQuery));
+      }
     });
 
     document.getElementById("ra-form")?.addEventListener("submit", submitNarratorForm);
@@ -329,6 +429,7 @@
     state.isNarrator = false;
     state.narratorHandouts = [];
     state.playerDeliveries = [];
+    state.searchQuery = "";
   }
 
   ns.controller = {

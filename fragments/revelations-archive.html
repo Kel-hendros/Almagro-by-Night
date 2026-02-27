@@ -12,29 +12,25 @@
         </div>
     </header>
 
-    <section id="ra-narrator-panel" class="ra-panel hidden">
-        <div class="ra-panel-head">
-            <h2>Gestionar revelaciones</h2>
-            <div class="ra-panel-head-actions">
-                <span class="ra-counter">Narrador</span>
-                <button id="ra-open-create" type="button" class="btn btn--primary">Crear Revelación</button>
-            </div>
-        </div>
+    <div class="ra-search-wrap">
+        <i data-lucide="search" class="ra-search-icon"></i>
+        <input type="text" id="ra-search" class="ra-search" placeholder="Buscar por nombre o tag...">
+    </div>
 
+    <div id="ra-narrator-panel" class="hidden">
+        <div class="ra-toolbar">
+            <button id="ra-open-create" type="button" class="btn btn--primary">Crear Revelación</button>
+        </div>
         <div id="ra-narrator-list" class="ra-list">
             <p class="muted">Cargando revelaciones...</p>
         </div>
-    </section>
+    </div>
 
-    <section id="ra-player-panel" class="ra-panel hidden">
-        <div class="ra-panel-head">
-            <h2>Tus revelaciones</h2>
-            <span id="ra-player-count" class="ra-counter">0</span>
-        </div>
+    <div id="ra-player-panel" class="hidden">
         <div id="ra-player-list" class="ra-list">
             <p class="muted">Cargando revelaciones...</p>
         </div>
-    </section>
+    </div>
 
     <div id="ra-handout-modal" class="app-modal-overlay">
         <div class="app-modal ra-handout-modal">
@@ -52,8 +48,17 @@
                         <input id="ra-title-input" class="app-input" type="text" maxlength="120" placeholder="Ej: Carta encontrada en el Elysium">
                     </label>
                     <label class="ra-field">
-                        <span>Imagen (URL opcional)</span>
-                        <input id="ra-image-input" class="app-input" type="url" placeholder="https://...">
+                        <span>Tags (separados por coma)</span>
+                        <input id="ra-tags-input" class="app-input" type="text" placeholder="Ej: elysium, carta, pista">
+                    </label>
+                    <label class="ra-field">
+                        <span>Imagen (opcional)</span>
+                        <input id="ra-image-file-input" class="app-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif">
+                        <input id="ra-image-ref-input" type="hidden">
+                        <div class="ra-image-actions">
+                            <button id="ra-image-clear" type="button" class="btn btn--ghost">Quitar Imagen</button>
+                            <span id="ra-image-status" class="ra-image-status">Sin imagen seleccionada.</span>
+                        </div>
                     </label>
                 </div>
                 <label class="ra-field">

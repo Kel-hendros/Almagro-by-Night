@@ -30,38 +30,46 @@
   flex-wrap: wrap;
 }
 
-.ra-panel {
-  border: 1px solid var(--theme-border-divider);
-  background: var(--theme-bg-surface);
-  border-radius: 12px;
-  padding: 14px;
-}
-
-.ra-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.ra-panel-head-actions {
+.ra-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 10px;
 }
 
-.ra-panel-head h2 {
-  margin: 0;
-  font-size: 1rem;
+.ra-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.ra-counter {
-  padding: 4px 8px;
+.ra-search-icon {
+  position: absolute;
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  color: var(--theme-text-tertiary);
+  pointer-events: none;
+}
+
+.ra-search {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px 0 34px;
   border: 1px solid var(--theme-border-divider);
-  border-radius: 999px;
-  font-size: 0.74rem;
-  color: var(--theme-text-secondary);
+  border-radius: 10px;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-primary);
+  font-size: 0.82rem;
+  font-family: inherit;
 }
+
+.ra-search:focus {
+  border-color: var(--theme-accent);
+  outline: none;
+}
+
+/* .ra-tags-row and .ra-tag are in chronicles.css (globally loaded) */
 
 .ra-form {
   display: grid;
@@ -83,6 +91,26 @@
 .ra-field > span {
   font-size: 0.74rem;
   color: var(--theme-text-secondary);
+}
+
+.ra-image-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ra-image-status {
+  font-size: 0.74rem;
+  color: var(--theme-text-secondary);
+}
+
+.ra-image-status.ok {
+  color: var(--theme-success, #4caf50);
+}
+
+.ra-image-status.error {
+  color: var(--theme-accent);
 }
 
 .ra-recipients {

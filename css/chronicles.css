@@ -1264,6 +1264,48 @@ p.chronicle-description {
     gap: 10px;
 }
 
+.cd-storage-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cd-storage-metric {
+    font-family: var(--cd-font-display);
+    font-size: 20px;
+    line-height: 1;
+    color: var(--cd-text-primary);
+}
+
+.cd-storage-progress-wrap {
+    width: 100%;
+}
+
+.cd-storage-progress-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--cd-bg-elevated);
+    overflow: hidden;
+    border: 1px solid var(--cd-border-divider);
+}
+
+.cd-storage-progress-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--cd-accent) 0%, color-mix(in srgb, var(--cd-accent) 70%, #ffffff) 100%);
+    transition: width 0.25s ease;
+}
+
+.cd-storage-note {
+    margin: 0;
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    color: var(--cd-text-secondary);
+}
+
 .cd-skeleton-card {
     background: var(--cd-bg-surface);
     border: 1px solid var(--cd-border-divider);
@@ -1728,13 +1770,7 @@ p.chronicle-description {
 
 /* --- Diario Tab --- */
 
-.cd-diario-head-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 10px;
-}
-
-/* Sub-tabs (Sesiones / Mis Notas — mobile only) */
+/* Sub-tabs (Sesiones / Mis Notas / Revelaciones) */
 .cd-diario-tabs {
     display: flex;
     border-bottom: 1px solid var(--cd-border-divider);
@@ -1792,7 +1828,20 @@ p.chronicle-description {
     display: none;
 }
 
-/* Section labels (desktop only, hidden on mobile) */
+/* Mobile: revelaciones hidden by default */
+.cd-diario-col[data-dcol="revelaciones"] {
+    display: none;
+}
+
+.cd-diario-col[data-dcol="revelaciones"].active-dcol {
+    display: flex;
+}
+
+.cd-diario-col[data-dcol="revelaciones"].hidden-dcol {
+    display: none;
+}
+
+/* Section labels (hidden — tabs serve as labels) */
 .cd-diario-label {
     display: none;
     font-family: var(--cd-font-primary);
@@ -1812,6 +1861,110 @@ p.chronicle-description {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+/* Revelación form — recipients & image */
+.cd-revelacion-recipients {
+    border: 1px solid var(--cd-border-divider);
+    border-radius: 8px;
+    padding: 8px;
+    max-height: 170px;
+    overflow: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cd-revelacion-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--cd-border-divider);
+    background: var(--cd-bg-elevated);
+    color: var(--cd-text-primary);
+    border-radius: 999px;
+    padding: 4px 10px 4px 4px;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    white-space: nowrap;
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+}
+
+.cd-revelacion-chip:hover {
+    border-color: color-mix(in srgb, var(--cd-accent) 40%, var(--cd-border-divider));
+}
+
+.cd-revelacion-chip.is-selected {
+    border-color: color-mix(in srgb, var(--cd-accent) 60%, var(--cd-border-divider));
+    background: color-mix(in srgb, var(--cd-accent) 12%, var(--cd-bg-elevated));
+}
+
+.cd-revelacion-chip-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--cd-border-divider);
+    background: var(--cd-bg-surface);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.cd-revelacion-chip-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cd-revelacion-chip-fallback {
+    font-size: 0.72rem;
+    color: var(--cd-text-secondary);
+    font-weight: 600;
+}
+
+.cd-revelacion-image-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cd-revelacion-image-status {
+    font-size: 11px;
+    color: var(--cd-text-secondary);
+}
+
+.cd-revelacion-image-status.uploading {
+    color: var(--cd-status-warning);
+}
+
+.cd-revelacion-image-status.ok {
+    color: var(--cd-status-success);
+}
+
+.cd-revelacion-image-status.ok::before {
+    content: "✓ ";
+}
+
+.cd-revelacion-image-status.error {
+    color: var(--cd-accent);
+}
+
+.cd-revelacion-msg {
+    font-size: 11px;
+    color: var(--cd-text-secondary);
+}
+
+.cd-revelacion-msg.ok {
+    color: var(--cd-status-success);
+}
+
+.cd-revelacion-msg.error {
+    color: var(--cd-accent);
 }
 
 /* Session recap card */
@@ -2208,34 +2361,9 @@ p.chronicle-description {
         width: 430px;
     }
 
-    /* Diario: desktop layout */
-    .cd-diario-tabs {
-        display: none;
-    }
-
-    .cd-diario-columns {
-        flex-direction: row;
-        gap: 28px;
-    }
-
+    /* Diario: desktop — tabs stay visible, single column layout */
     .cd-diario-col {
-        flex: 1;
         min-width: 0;
-    }
-
-    /* Both columns always visible on desktop */
-    .cd-diario-col[data-dcol="notas"],
-    .cd-diario-col[data-dcol="notas"].active-dcol {
-        display: flex;
-    }
-
-    .cd-diario-col[data-dcol="sesiones"],
-    .cd-diario-col[data-dcol="sesiones"].hidden-dcol {
-        display: flex;
-    }
-
-    .cd-diario-label {
-        display: block;
     }
 
     /* Desktop card spacing adjustments */
@@ -2746,4 +2874,21 @@ p.chronicle-description {
     .cd-recap-form-header {
         padding: 32px 20px 16px;
     }
+}
+
+/* ── Revelation tag chips (shared with revelations-archive) ── */
+
+.ra-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 10px 0;
+}
+
+.ra-tag {
+    font-size: 0.66rem;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--theme-border-divider);
+    color: var(--theme-text-secondary);
 }
