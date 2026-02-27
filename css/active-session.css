@@ -188,6 +188,10 @@
   border-color: color-mix(in srgb, var(--theme-accent) 55%, var(--theme-border-divider));
 }
 
+.as-delivery-chip.associated {
+  border-color: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-border-divider));
+}
+
 .as-delivery-chip.opened {
   border-color: color-mix(in srgb, var(--theme-success, #4caf50) 50%, var(--theme-border-divider));
 }

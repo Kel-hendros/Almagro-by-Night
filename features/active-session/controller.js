@@ -136,7 +136,10 @@
       state.chronicleId,
     );
     const filtered = participants.filter(
-      (row) => row?.player?.id && row.player.id !== state.currentPlayerId,
+      (row) =>
+        row?.player?.id &&
+        row.player.id !== state.currentPlayerId &&
+        String(row.role || "").toLowerCase() === "player",
     );
     view().renderHandoutRecipients(filtered);
   }

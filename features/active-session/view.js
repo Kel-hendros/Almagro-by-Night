@@ -160,11 +160,17 @@
         const deliveriesHtml = deliveries.length
           ? deliveries
               .map((delivery) => {
-                const opened = delivery.status === "opened";
+                const status = String(delivery.status || "associated").toLowerCase();
+                const isOpened = status === "opened";
+                const statusLabel = isOpened
+                  ? "abierto"
+                  : status === "associated"
+                    ? "asociado"
+                    : "pendiente";
                 return `
-                  <span class="as-delivery-chip ${opened ? "opened" : "pending"}">
+                  <span class="as-delivery-chip ${isOpened ? "opened" : status === "associated" ? "associated" : "pending"}">
                     ${escapeHtml(delivery.recipient?.name || "Jugador")}
-                    <small>${opened ? "abierto" : "pendiente"}</small>
+                    <small>${statusLabel}</small>
                     <button type="button" class="as-delivery-remove" data-delivery-id="${escapeHtml(
                       delivery.id,
                     )}" title="Quitar asociación">×</button>
