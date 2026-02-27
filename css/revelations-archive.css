@@ -95,10 +95,55 @@
   gap: 6px;
 }
 
-.ra-recipient-item {
-  display: flex;
+.ra-recipient-chip {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-elevated);
+  color: var(--theme-text-primary);
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.ra-recipient-chip:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, var(--theme-border-divider));
+}
+
+.ra-recipient-chip.is-selected {
+  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border-divider));
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-bg-elevated));
+}
+
+.ra-recipient-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.ra-recipient-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ra-recipient-avatar-fallback {
+  font-size: 0.72rem;
+  color: var(--theme-text-secondary);
+  font-weight: 600;
+}
+
+.ra-recipient-name {
   font-size: 0.8rem;
 }
 

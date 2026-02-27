@@ -13,13 +13,18 @@
     readerModal: null,
     realtimeChannel: null,
     editingHandoutId: null,
+    availableRecipientCharacters: [],
     listenersBound: false,
   };
 
   function selectedRecipients() {
-    return Array.from(document.querySelectorAll(".ra-recipient-check:checked"))
-      .map((node) => node.value)
-      .filter(Boolean);
+    return Array.from(
+      new Set(
+        Array.from(document.querySelectorAll(".ra-recipient-chip.is-selected"))
+          .map((node) => node.dataset.playerId || "")
+          .filter(Boolean),
+      ),
+    );
   }
 
   function findHandoutById(handoutId) {
@@ -41,7 +46,12 @@
     });
   }
 
-  function openCreateModal() {
+  async function openCreateModal() {
+    state.availableRecipientCharacters = await service().getRecipientCharacters(
+      state.chronicleId,
+      state.currentPlayerId,
+    );
+    view().renderRecipients(state.availableRecipientCharacters);
     state.editingHandoutId = null;
     view().setFormMode("create");
     view().clearForm();
@@ -49,8 +59,13 @@
     state.handoutModal?.open?.();
   }
 
-  function openEditModal(handout) {
+  async function openEditModal(handout) {
     if (!handout) return;
+    state.availableRecipientCharacters = await service().getRecipientCharacters(
+      state.chronicleId,
+      state.currentPlayerId,
+    );
+    view().renderRecipients(state.availableRecipientCharacters);
     state.editingHandoutId = handout.id;
     view().setFormMode("edit");
     view().setFormValues({
@@ -65,12 +80,33 @@
 
   async function loadNarratorData() {
     if (!state.chronicleId) return;
-    const [recipients, handouts] = await Promise.all([
-      service().getRecipients(state.chronicleId, state.currentPlayerId),
+    const [recipientCharacters, handouts] = await Promise.all([
+      service().getRecipientCharacters(state.chronicleId, state.currentPlayerId),
       service().listHandoutsByChronicle(state.chronicleId),
     ]);
-    state.narratorHandouts = handouts || [];
-    view().renderRecipients(recipients);
+    state.availableRecipientCharacters = recipientCharacters || [];
+
+    const allowedPlayerIds = new Set(
+      state.availableRecipientCharacters.map((row) => String(row.player_id || "")).filter(Boolean),
+    );
+    const staleDeliveryIds = [];
+    (handouts || []).forEach((handout) => {
+      (handout.deliveries || []).forEach((delivery) => {
+        const pid = String(delivery?.recipient_player_id || "");
+        if (pid && !allowedPlayerIds.has(pid)) staleDeliveryIds.push(delivery.id);
+      });
+    });
+
+    if (staleDeliveryIds.length) {
+      await Promise.all(staleDeliveryIds.map((deliveryId) => service().revokeDelivery(deliveryId)));
+    }
+
+    const effectiveHandouts = staleDeliveryIds.length
+      ? await service().listHandoutsByChronicle(state.chronicleId)
+      : handouts;
+
+    state.narratorHandouts = effectiveHandouts || [];
+    view().renderRecipients(state.availableRecipientCharacters);
     view().renderNarratorList(state.narratorHandouts);
   }
 
@@ -153,7 +189,7 @@
 
     const handout = findHandoutById(card.dataset.handoutId);
     if (!handout) return;
-    openEditModal(handout);
+    await openEditModal(handout);
   }
 
   async function handlePlayerListClick(event) {
@@ -182,8 +218,16 @@
       window.location.hash = `active-session?id=${encodeURIComponent(state.chronicleId)}`;
     });
 
-    document.getElementById("ra-open-create")?.addEventListener("click", () => {
-      openCreateModal();
+    document.getElementById("ra-open-create")?.addEventListener("click", async () => {
+      await openCreateModal();
+    });
+
+    document.getElementById("ra-recipients")?.addEventListener("click", (event) => {
+      const chip = event.target.closest(".ra-recipient-chip");
+      if (!chip) return;
+      const next = !chip.classList.contains("is-selected");
+      chip.classList.toggle("is-selected", next);
+      chip.setAttribute("aria-pressed", next ? "true" : "false");
     });
 
     document.getElementById("ra-clear")?.addEventListener("click", () => {
@@ -279,6 +323,7 @@
     state.readerModal?.destroy?.();
     state.readerModal = null;
     state.editingHandoutId = null;
+    state.availableRecipientCharacters = [];
     state.chronicleId = null;
     state.currentPlayerId = null;
     state.isNarrator = false;

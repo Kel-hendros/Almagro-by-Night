@@ -46,8 +46,9 @@
     if (title) title.value = "";
     if (image) image.value = "";
     if (body) body.value = "";
-    document.querySelectorAll(".ra-recipient-check").forEach((node) => {
-      node.checked = false;
+    document.querySelectorAll(".ra-recipient-chip").forEach((node) => {
+      node.classList.remove("is-selected");
+      node.setAttribute("aria-pressed", "false");
     });
   }
 
@@ -60,8 +61,10 @@
     if (bodyInput) bodyInput.value = String(bodyMarkdown || "");
 
     const selected = new Set((recipientPlayerIds || []).map((id) => String(id)));
-    document.querySelectorAll(".ra-recipient-check").forEach((node) => {
-      node.checked = selected.has(String(node.value || ""));
+    document.querySelectorAll(".ra-recipient-chip").forEach((node) => {
+      const isSelected = selected.has(String(node.dataset.playerId || ""));
+      node.classList.toggle("is-selected", isSelected);
+      node.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
   }
 
@@ -78,17 +81,27 @@
     if (!host) return;
     const rows = Array.isArray(participants) ? participants : [];
     if (!rows.length) {
-      host.innerHTML = '<p class="muted">No hay jugadores disponibles.</p>';
+      host.innerHTML = '<p class="muted">No hay personajes disponibles en esta crónica.</p>';
       return;
     }
     host.innerHTML = rows
       .map((row) => {
-        const player = row.player || {};
+        const avatarUrl = String(row.avatar_url || "").trim();
+        const avatar = avatarUrl
+          ? `<img class="ra-recipient-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(row.character_name || "Personaje")}">`
+          : `<span class="ra-recipient-avatar-fallback">${escapeHtml((row.character_name || "?").charAt(0).toUpperCase())}</span>`;
         return `
-          <label class="ra-recipient-item">
-            <input type="checkbox" class="ra-recipient-check" value="${escapeHtml(player.id)}">
-            <span>${escapeHtml(player.name || "Jugador")}</span>
-          </label>
+          <button
+            type="button"
+            class="ra-recipient-chip"
+            data-player-id="${escapeHtml(row.player_id)}"
+            data-character-id="${escapeHtml(row.character_sheet_id)}"
+            aria-pressed="false"
+            title="${escapeHtml(row.character_name || "Personaje")}"
+          >
+            <span class="ra-recipient-avatar">${avatar}</span>
+            <span class="ra-recipient-name">${escapeHtml(row.character_name || "Personaje")}</span>
+          </button>
         `;
       })
       .join("");
