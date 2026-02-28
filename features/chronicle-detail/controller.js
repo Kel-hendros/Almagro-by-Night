@@ -70,10 +70,7 @@
     chronicleId: null,
     currentPlayerId: null,
     isNarrator: false,
-    editingHandoutId: null,
-    formModal: null,
     listenersBound: false,
-    uploading: false,
   };
 
   async function loadRevelacionesList(chronicleId, currentPlayerId, isNarrator) {
@@ -123,6 +120,7 @@
 
       const card = document.createElement("div");
       card.className = "cd-recap-card";
+      card.dataset.handoutId = rev.id;
       card.innerHTML = `
         <div class="cd-recap-info">
           <span class="cd-recap-title">${escapeHtml(rev.title)}</span>
@@ -151,6 +149,11 @@
 
       const card = document.createElement("div");
       card.className = "cd-recap-card";
+      card.dataset.deliveryId = del.id;
+      card.dataset.handoutTitle = handout.title || "";
+      card.dataset.handoutBody = handout.body_markdown || "";
+      card.dataset.handoutImage = handout.image_signed_url || "";
+      card.dataset.handoutTags = JSON.stringify(handout.tags || []);
       card.innerHTML = `
         <div class="cd-recap-info">
           <span class="cd-recap-title">${escapeHtml(handout.title || "Sin título")}</span>
@@ -163,262 +166,80 @@
     });
   }
 
-  function renderRevelacionRecipients(participants) {
-    const host = document.getElementById("revelacion-form-recipients");
-    if (!host) return;
-    const rows = Array.isArray(participants) ? participants : [];
-    if (!rows.length) {
-      host.innerHTML = '<span class="cd-card-muted">No hay personajes disponibles en esta crónica.</span>';
-      return;
-    }
-    host.innerHTML = rows
-      .map((row) => {
-        const avatarUrl = String(row.avatar_url || "").trim();
-        const avatar = avatarUrl
-          ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(row.character_name || "")}">`
-          : `<span class="cd-revelacion-chip-fallback">${escapeHtml((row.character_name || "?").charAt(0).toUpperCase())}</span>`;
-        return `
-          <button
-            type="button"
-            class="cd-revelacion-chip"
-            data-player-id="${escapeHtml(row.player_id)}"
-            aria-pressed="false"
-            title="${escapeHtml(row.character_name || "Personaje")}"
-          >
-            <span class="cd-revelacion-chip-avatar">${avatar}</span>
-            <span>${escapeHtml(row.character_name || "Personaje")}</span>
-          </button>
-        `;
-      })
-      .join("");
+  function revelationScreen() {
+    return global.ABNShared?.revelationScreen || null;
   }
 
-  function getSelectedRecipientIds() {
-    return Array.from(
-      new Set(
-        Array.from(document.querySelectorAll(".cd-revelacion-chip.is-selected"))
-          .map((node) => node.dataset.playerId || "")
-          .filter(Boolean),
-      ),
-    );
-  }
+  function handleRevelacionesListClick(event) {
+    const rs = revelationScreen();
+    if (!rs) return;
 
-  function setRevelacionImageStatus(message, tone) {
-    const el = document.getElementById("revelacion-form-image-status");
-    if (!el) return;
-    el.textContent = message || "";
-    el.classList.remove("ok", "error", "uploading");
-    if (tone === "ok") el.classList.add("ok");
-    if (tone === "error") el.classList.add("error");
-    if (tone === "uploading") el.classList.add("uploading");
-  }
-
-  function setRevelacionMsg(message, tone) {
-    const el = document.getElementById("revelacion-form-msg");
-    if (!el) return;
-    el.textContent = message || "";
-    el.classList.remove("ok", "error");
-    if (tone === "ok") el.classList.add("ok");
-    if (tone === "error") el.classList.add("error");
-  }
-
-  function setRevelacionSaveBtnEnabled(enabled) {
-    const btn = document.getElementById("revelacion-form-save");
-    if (!btn) return;
-    btn.disabled = !enabled;
-  }
-
-  function clearRevelacionForm() {
-    const title = document.getElementById("revelacion-form-title");
-    const imageFile = document.getElementById("revelacion-form-image");
-    const imageRef = document.getElementById("revelacion-form-image-ref");
-    const body = document.getElementById("revelacion-form-body");
-    if (title) title.value = "";
-    if (imageFile) imageFile.value = "";
-    if (imageRef) imageRef.value = "";
-    if (body) body.value = "";
-    setRevelacionImageStatus("Sin imagen seleccionada.");
-    setRevelacionMsg("");
-    setRevelacionSaveBtnEnabled(true);
-    revelacionState.uploading = false;
-    document.querySelectorAll(".cd-revelacion-chip").forEach((node) => {
-      node.classList.remove("is-selected");
-      node.setAttribute("aria-pressed", "false");
-    });
-  }
-
-  async function getRecipientCharacters(chronicleId, currentPlayerId) {
-    const sb = global.supabase;
-    if (!sb || !chronicleId) return [];
-
-    const { data: ccRows, error: ccError } = await sb
-      .from("chronicle_characters")
-      .select("character_sheet:character_sheets(id, name, user_id, data, avatar_url)")
-      .eq("chronicle_id", chronicleId);
-    if (ccError) return [];
-
-    const sheets = (ccRows || [])
-      .map((row) => row.character_sheet)
-      .filter((s) => s?.id && s?.user_id);
-    if (!sheets.length) return [];
-
-    const userIds = Array.from(new Set(sheets.map((s) => String(s.user_id))));
-    const { data: players, error: pErr } = await sb
-      .from("players")
-      .select("id, name, user_id")
-      .in("user_id", userIds);
-    if (pErr) return [];
-
-    const playerByUserId = new Map();
-    (players || []).forEach((p) => {
-      if (p?.user_id) playerByUserId.set(String(p.user_id), p);
-    });
-
-    return sheets
-      .map((sheet) => {
-        const player = playerByUserId.get(String(sheet.user_id));
-        if (!player?.id || player.id === currentPlayerId) return null;
-        const data = sheet.data || {};
-        return {
-          character_sheet_id: sheet.id,
-          character_name: sheet.name || "Personaje",
-          avatar_url: data.avatarThumbUrl || sheet.avatar_url || data.avatar_url || "",
-          player_id: player.id,
-          player_name: player.name || "Jugador",
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(a.character_name).localeCompare(String(b.character_name), "es"));
-  }
-
-  async function openRevelacionCreateModal() {
-    const recipients = await getRecipientCharacters(
-      revelacionState.chronicleId,
-      revelacionState.currentPlayerId,
-    );
-    renderRevelacionRecipients(recipients);
-
-    revelacionState.editingHandoutId = null;
-    const heading = document.getElementById("revelacion-form-heading");
-    const saveBtn = document.getElementById("revelacion-form-save");
-    if (heading) heading.textContent = "Crear Revelación";
-    if (saveBtn) saveBtn.textContent = "Guardar Revelación";
-    clearRevelacionForm();
-
-    revelacionState.formModal?.open?.();
-    document.getElementById("revelacion-form-title")?.focus();
-  }
-
-  async function uploadRevelacionImage(file) {
-    if (!file) return;
-    const handoutsApi = global.ABNShared?.handouts;
-    if (!handoutsApi) return;
-
-    revelacionState.uploading = true;
-    setRevelacionSaveBtnEnabled(false);
-    setRevelacionImageStatus(`Subiendo ${file.name}...`, "uploading");
-
-    const uploadRes = await handoutsApi.uploadHandoutImage({
-      chronicleId: revelacionState.chronicleId,
-      file,
-    });
-
-    revelacionState.uploading = false;
-
-    if (uploadRes.error || !uploadRes.imageRef) {
-      setRevelacionImageStatus("No se pudo subir la imagen.", "error");
-      setRevelacionSaveBtnEnabled(true);
+    // Narrator card click → open edit
+    const narratorCard = event.target.closest("[data-handout-id]");
+    if (narratorCard?.dataset.handoutId && revelacionState.isNarrator) {
+      const handoutsApi = global.ABNShared?.handouts;
+      if (!handoutsApi) return;
+      handoutsApi.listHandoutsByChronicle(revelacionState.chronicleId).then((handouts) => {
+        const handout = (handouts || []).find((h) => h.id === narratorCard.dataset.handoutId);
+        if (!handout) return;
+        rs.openEdit({
+          chronicleId: revelacionState.chronicleId,
+          currentPlayerId: revelacionState.currentPlayerId,
+          handout,
+          onSaved: () => loadRevelacionesList(
+            revelacionState.chronicleId,
+            revelacionState.currentPlayerId,
+            revelacionState.isNarrator,
+          ),
+        });
+      });
       return;
     }
 
-    const imageRefInput = document.getElementById("revelacion-form-image-ref");
-    if (imageRefInput) imageRefInput.value = uploadRes.imageRef;
-    setRevelacionImageStatus("Imagen subida", "ok");
-    setRevelacionSaveBtnEnabled(true);
-  }
-
-  async function submitRevelacionForm() {
-    const handoutsApi = global.ABNShared?.handouts;
-    if (!handoutsApi || revelacionState.uploading) return;
-
-    const title = document.getElementById("revelacion-form-title")?.value || "";
-    const bodyMarkdown = document.getElementById("revelacion-form-body")?.value || "";
-    const imageRef = String(document.getElementById("revelacion-form-image-ref")?.value || "").trim();
-
-    const { error } = await handoutsApi.createHandout({
-      chronicleId: revelacionState.chronicleId,
-      createdByPlayerId: revelacionState.currentPlayerId,
-      title,
-      bodyMarkdown,
-      imageRef,
-      recipientPlayerIds: getSelectedRecipientIds(),
-    });
-
-    if (error) {
-      setRevelacionMsg(error.message || "No se pudo guardar revelación.", "error");
-      return;
+    // Player card click → open view
+    const playerCard = event.target.closest("[data-delivery-id]");
+    if (playerCard?.dataset.deliveryId) {
+      let tags = [];
+      try { tags = JSON.parse(playerCard.dataset.handoutTags || "[]"); } catch (_e) {}
+      rs.openView({
+        title: playerCard.dataset.handoutTitle || "",
+        bodyMarkdown: playerCard.dataset.handoutBody || "",
+        imageUrl: playerCard.dataset.handoutImage || "",
+        tags,
+      });
     }
-
-    revelacionState.formModal?.close?.();
-    await loadRevelacionesList(
-      revelacionState.chronicleId,
-      revelacionState.currentPlayerId,
-      revelacionState.isNarrator,
-    );
   }
 
-  function bindRevelacionFormListeners() {
+  function bindRevelacionListeners() {
     if (revelacionState.listenersBound) return;
 
-    document.getElementById("cd-add-revelacion")?.addEventListener("click", openRevelacionCreateModal);
-
-    document.getElementById("revelacion-form-save")?.addEventListener("click", submitRevelacionForm);
-
-    document.getElementById("revelacion-form-recipients")?.addEventListener("click", (event) => {
-      const chip = event.target.closest(".cd-revelacion-chip");
-      if (!chip) return;
-      const next = !chip.classList.contains("is-selected");
-      chip.classList.toggle("is-selected", next);
-      chip.setAttribute("aria-pressed", next ? "true" : "false");
+    document.getElementById("cd-add-revelacion")?.addEventListener("click", () => {
+      revelationScreen()?.openCreate({
+        chronicleId: revelacionState.chronicleId,
+        currentPlayerId: revelacionState.currentPlayerId,
+        onSaved: () => loadRevelacionesList(
+          revelacionState.chronicleId,
+          revelacionState.currentPlayerId,
+          revelacionState.isNarrator,
+        ),
+      });
     });
 
-    document.getElementById("revelacion-form-image")?.addEventListener("change", (event) => {
-      const file = event.target?.files?.[0] || null;
-      if (file) {
-        uploadRevelacionImage(file);
-        return;
-      }
-      const hasSaved = Boolean(
-        String(document.getElementById("revelacion-form-image-ref")?.value || "").trim(),
-      );
-      setRevelacionImageStatus(
-        hasSaved ? "Imagen subida" : "Sin imagen seleccionada.",
-        hasSaved ? "ok" : undefined,
-      );
-    });
-
-    document.getElementById("revelacion-form-image-clear")?.addEventListener("click", () => {
-      const imageFileInput = document.getElementById("revelacion-form-image");
-      const imageRefInput = document.getElementById("revelacion-form-image-ref");
-      if (imageFileInput) imageFileInput.value = "";
-      if (imageRefInput) imageRefInput.value = "";
-      setRevelacionImageStatus("Sin imagen seleccionada.");
-    });
+    document.getElementById("cd-revelaciones-list")?.addEventListener("click", handleRevelacionesListClick);
 
     revelacionState.listenersBound = true;
   }
 
-  function initRevelaciones(chronicleId, currentPlayerId, isNarrator, revelacionFormModal) {
+  function initRevelaciones(chronicleId, currentPlayerId, isNarrator) {
     revelacionState.chronicleId = chronicleId;
     revelacionState.currentPlayerId = currentPlayerId;
     revelacionState.isNarrator = isNarrator;
-    revelacionState.formModal = revelacionFormModal;
 
     if (isNarrator) {
       document.getElementById("cd-add-revelacion")?.classList.remove("hidden");
     }
 
-    bindRevelacionFormListeners();
+    bindRevelacionListeners();
     loadRevelacionesList(chronicleId, currentPlayerId, isNarrator);
   }
 
@@ -582,10 +403,6 @@
         overlay: "modal-note-form",
         closeButtons: ["#note-form-close", "#note-form-cancel"],
     });
-    const revelacionFormModal = createModalController({
-        overlay: "modal-revelacion-form",
-        closeButtons: ["#revelacion-form-close", "#revelacion-form-cancel"],
-    });
 
     const participantsApi = (await ns.participants?.init({
         chronicleId,
@@ -665,7 +482,7 @@
     });
 
     // ── Revelaciones tab ──
-    initRevelaciones(chronicleId, currentPlayer.id, isNarrator, revelacionFormModal);
+    initRevelaciones(chronicleId, currentPlayer.id, isNarrator);
 
     await ns.mesa?.init({
         chronicleId,

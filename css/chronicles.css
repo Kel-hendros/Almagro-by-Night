@@ -610,7 +610,7 @@ p.chronicle-description {
 .chronicle-character-remove-btn {
     background: transparent;
     border: none;
-    color: #e74c3c;
+    color: var(--color-danger);
     cursor: pointer;
     padding: 0.25rem;
     display: flex;
@@ -807,7 +807,7 @@ p.chronicle-description {
     --cd-status-success: var(--theme-success);
     --cd-status-success-bg: var(--theme-success-soft);
     --cd-status-warning: var(--theme-warning);
-    --cd-danger: #C62828;
+    --cd-danger: var(--color-danger);
     --cd-font-primary: var(--app-font-body);
     --cd-font-display: var(--app-font-heading);
     font-size-adjust: var(--app-font-size-adjust, none);
@@ -1863,110 +1863,6 @@ p.chronicle-description {
     gap: 12px;
 }
 
-/* Revelación form — recipients & image */
-.cd-revelacion-recipients {
-    border: 1px solid var(--cd-border-divider);
-    border-radius: 8px;
-    padding: 8px;
-    max-height: 170px;
-    overflow: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.cd-revelacion-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid var(--cd-border-divider);
-    background: var(--cd-bg-elevated);
-    color: var(--cd-text-primary);
-    border-radius: 999px;
-    padding: 4px 10px 4px 4px;
-    cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
-    white-space: nowrap;
-    font-family: var(--cd-font-primary);
-    font-size: 13px;
-}
-
-.cd-revelacion-chip:hover {
-    border-color: color-mix(in srgb, var(--cd-accent) 40%, var(--cd-border-divider));
-}
-
-.cd-revelacion-chip.is-selected {
-    border-color: color-mix(in srgb, var(--cd-accent) 60%, var(--cd-border-divider));
-    background: color-mix(in srgb, var(--cd-accent) 12%, var(--cd-bg-elevated));
-}
-
-.cd-revelacion-chip-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    overflow: hidden;
-    border: 1px solid var(--cd-border-divider);
-    background: var(--cd-bg-surface);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-}
-
-.cd-revelacion-chip-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.cd-revelacion-chip-fallback {
-    font-size: 0.72rem;
-    color: var(--cd-text-secondary);
-    font-weight: 600;
-}
-
-.cd-revelacion-image-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.cd-revelacion-image-status {
-    font-size: 11px;
-    color: var(--cd-text-secondary);
-}
-
-.cd-revelacion-image-status.uploading {
-    color: var(--cd-status-warning);
-}
-
-.cd-revelacion-image-status.ok {
-    color: var(--cd-status-success);
-}
-
-.cd-revelacion-image-status.ok::before {
-    content: "✓ ";
-}
-
-.cd-revelacion-image-status.error {
-    color: var(--cd-accent);
-}
-
-.cd-revelacion-msg {
-    font-size: 11px;
-    color: var(--cd-text-secondary);
-}
-
-.cd-revelacion-msg.ok {
-    color: var(--cd-status-success);
-}
-
-.cd-revelacion-msg.error {
-    color: var(--cd-accent);
-}
-
 /* Session recap card */
 .cd-recap-card {
     display: flex;
@@ -2720,8 +2616,8 @@ p.chronicle-description {
     width: 100%;
     height: 44px;
     padding: 0 14px;
-    background: var(--cd-bg-surface);
-    border: 1px solid var(--cd-text-tertiary);
+    background: var(--cd-bg-elevated);
+    border: none;
     border-radius: 10px;
     font-family: var(--cd-font-primary);
     font-size: 14px;
@@ -2732,7 +2628,7 @@ p.chronicle-description {
 }
 
 .cd-form-input:focus {
-    border-color: var(--cd-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 30%, transparent);
 }
 
 .cd-form-input::placeholder {
@@ -2742,8 +2638,8 @@ p.chronicle-description {
 .cd-form-textarea {
     width: 100%;
     padding: 12px 14px;
-    background: var(--cd-bg-surface);
-    border: 1px solid var(--cd-text-tertiary);
+    background: var(--cd-bg-elevated);
+    border: none;
     border-radius: 10px;
     font-family: var(--cd-font-primary);
     font-size: 14px;
@@ -2756,7 +2652,7 @@ p.chronicle-description {
 }
 
 .cd-form-textarea:focus {
-    border-color: var(--cd-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 30%, transparent);
 }
 
 .cd-form-textarea::placeholder {

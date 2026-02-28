@@ -57,8 +57,8 @@
 }
 
 .btn--danger {
-    background: #c62828;
-    border-color: #c62828;
+    background: var(--color-danger);
+    border-color: var(--color-danger);
     color: #ffffff;
 }
 
@@ -105,14 +105,14 @@
 }
 
 .btn-icon--danger {
-    border-color: #c62828;
-    background: #c62828;
+    border-color: var(--color-danger);
+    background: var(--color-danger);
     color: #ffffff;
 }
 
 .btn-icon--danger:hover {
-    border-color: #ad1f1f;
-    background: #ad1f1f;
+    border-color: var(--color-danger-soft);
+    background: var(--color-danger-soft);
     color: #ffffff;
 }
 
@@ -173,8 +173,8 @@
 .app-input {
     width: 100%;
     padding: 0.6rem 0.8rem;
-    border: 1px solid var(--theme-border-divider);
-    border-radius: 8px;
+    border: none;
+    border-radius: 10px;
     background: var(--theme-bg-elevated);
     color: var(--theme-text-primary);
     font-family: var(--app-font-body);
@@ -184,7 +184,7 @@
 
 .app-input:focus {
     outline: none;
-    border-color: var(--theme-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 30%, transparent);
 }
 
 .app-input--code {

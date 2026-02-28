@@ -7,7 +7,6 @@
     playerId: null,
     deliveries: [],
     modal: null,
-    readerModal: null,
     realtimeChannel: null,
     bound: false,
   };
@@ -50,26 +49,6 @@
       .join("");
   }
 
-  function renderReader(row) {
-    const handout = row?.handout || {};
-    const titleEl = document.getElementById("acs-handout-reader-title");
-    const bodyEl = document.getElementById("acs-handout-reader-content");
-    const imageEl = document.getElementById("acs-handout-reader-image");
-    if (!titleEl || !bodyEl || !imageEl) return;
-
-    titleEl.textContent = handout.title || "Revelación";
-    bodyEl.innerHTML = global.renderMarkdown(handout.body_markdown || "");
-
-    const url = String(handout.image_signed_url || "").trim();
-    if (url) {
-      imageEl.src = url;
-      imageEl.classList.remove("hidden");
-    } else {
-      imageEl.src = "";
-      imageEl.classList.add("hidden");
-    }
-  }
-
   async function loadPending() {
     if (!state.playerId) return;
     const handoutsApi = global.ABNShared?.handouts;
@@ -86,10 +65,18 @@
     const handoutsApi = global.ABNShared?.handouts;
     if (!handoutsApi || !deliveryId) return;
     const row = state.deliveries.find((item) => item.id === deliveryId);
-    if (!row) return;
+    if (!row?.handout) return;
 
-    renderReader(row);
-    state.readerModal?.open?.();
+    const rs = global.ABNShared?.revelationScreen;
+    if (rs) {
+      rs.openView({
+        title: row.handout.title,
+        bodyMarkdown: row.handout.body_markdown,
+        imageUrl: row.handout.image_signed_url,
+        tags: row.handout.tags,
+      });
+    }
+
     await handoutsApi.markDeliveryOpened(deliveryId, state.playerId);
     await loadPending();
   }
@@ -128,10 +115,6 @@
       overlay: "acs-handouts-modal",
       closeButtons: ["#acs-handouts-close"],
     });
-    state.readerModal = global.ABNShared?.modal?.createController({
-      overlay: "acs-handout-reader-modal",
-      closeButtons: ["#acs-handout-reader-close"],
-    });
 
     bindEvents();
     await loadPending();
@@ -151,9 +134,7 @@
     state.playerId = null;
     state.chronicleId = null;
     state.modal?.destroy?.();
-    state.readerModal?.destroy?.();
     state.modal = null;
-    state.readerModal = null;
     state.bound = false;
   }
 

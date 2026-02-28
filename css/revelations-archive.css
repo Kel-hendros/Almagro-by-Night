@@ -3,6 +3,7 @@
   padding: 16px 20px;
   display: grid;
   gap: 14px;
+  align-content: start;
   color: var(--theme-text-primary);
 }
 
@@ -56,151 +57,17 @@
   width: 100%;
   height: 42px;
   padding: 0 12px 0 34px;
-  border: 1px solid var(--theme-border-divider);
+  border: none;
   border-radius: 10px;
-  background: var(--theme-bg-surface);
+  background: var(--theme-bg-elevated);
   color: var(--theme-text-primary);
   font-size: 0.82rem;
   font-family: inherit;
 }
 
 .ra-search:focus {
-  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 30%, transparent);
   outline: none;
-}
-
-/* .ra-tags-row and .ra-tag are in chronicles.css (globally loaded) */
-
-.ra-form {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.ra-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.ra-field {
-  display: grid;
-  gap: 6px;
-}
-
-.ra-field > span {
-  font-size: 0.74rem;
-  color: var(--theme-text-secondary);
-}
-
-.ra-image-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.ra-image-status {
-  font-size: 0.74rem;
-  color: var(--theme-text-secondary);
-}
-
-.ra-image-status.ok {
-  color: var(--theme-success, #4caf50);
-}
-
-.ra-image-status.error {
-  color: var(--theme-accent);
-}
-
-.ra-recipients {
-  border: 1px solid var(--theme-border-divider);
-  border-radius: 8px;
-  padding: 8px;
-  max-height: 170px;
-  overflow: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, max-content));
-  justify-content: start;
-  align-items: start;
-  gap: 6px;
-}
-
-.ra-recipient-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--theme-border-divider);
-  background: var(--theme-bg-elevated);
-  color: var(--theme-text-primary);
-  border-radius: 999px;
-  padding: 4px 10px 4px 4px;
-  cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
-  width: auto;
-  justify-self: start;
-  white-space: nowrap;
-  flex-wrap: nowrap;
-}
-
-.ra-recipient-chip:hover {
-  border-color: color-mix(in srgb, var(--theme-accent) 40%, var(--theme-border-divider));
-}
-
-.ra-recipient-chip.is-selected {
-  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border-divider));
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-bg-elevated));
-}
-
-.ra-recipient-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid var(--theme-border-divider);
-  background: var(--theme-bg-surface);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-}
-
-.ra-recipient-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.ra-recipient-avatar-fallback {
-  font-size: 0.72rem;
-  color: var(--theme-text-secondary);
-  font-weight: 600;
-}
-
-.ra-recipient-name {
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.ra-form-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.ra-msg {
-  font-size: 0.74rem;
-  color: var(--theme-text-secondary);
-}
-
-.ra-msg.ok {
-  color: var(--theme-success, #4caf50);
-}
-
-.ra-msg.error {
-  color: var(--theme-accent);
 }
 
 .ra-list {
@@ -325,34 +192,6 @@
   padding: 0 10px 10px;
 }
 
-.ra-handout-modal {
-  width: min(860px, 96vw);
-  max-height: min(88vh, 980px);
-}
-
-.ra-reader-modal {
-  width: min(840px, 94vw);
-  max-height: min(86vh, 900px);
-}
-
-.ra-reader-body {
-  display: grid;
-  gap: 12px;
-  overflow: auto;
-}
-
-.ra-reader-image {
-  width: 100%;
-  max-height: 320px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--theme-border-divider);
-}
-
-.ra-reader-content {
-  color: var(--theme-text-primary);
-}
-
 @media (max-width: 1260px) {
   #ra-narrator-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -360,10 +199,6 @@
 }
 
 @media (max-width: 820px) {
-  .ra-grid {
-    grid-template-columns: 1fr;
-  }
-
   #ra-narrator-list {
     grid-template-columns: 1fr;
   }

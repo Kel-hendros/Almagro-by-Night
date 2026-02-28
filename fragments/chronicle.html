@@ -398,47 +398,6 @@
             </div>
         </div>
     </div>
-    <!-- Modal: Revelación Form (Create/Edit) -->
-    <div id="modal-revelacion-form" class="cd-modal-overlay cd-recap-overlay">
-        <div class="cd-recap-form">
-            <div class="cd-recap-form-header">
-                <h3 id="revelacion-form-heading" class="cd-modal-title">Crear Revelación</h3>
-                <button class="btn-icon cd-banner-btn" id="revelacion-form-close" type="button" title="Cerrar">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="cd-recap-form-body">
-                <div class="cd-form-group">
-                    <label class="cd-form-label" for="revelacion-form-title">Titulo</label>
-                    <input type="text" id="revelacion-form-title" class="cd-form-input" maxlength="120" placeholder="Ej: Carta encontrada en el Elysium">
-                </div>
-                <div class="cd-form-group">
-                    <label class="cd-form-label" for="revelacion-form-image">Imagen <span class="cd-form-hint">(opcional)</span></label>
-                    <input type="file" id="revelacion-form-image" class="cd-form-input" accept="image/png,image/jpeg,image/webp,image/gif,image/avif">
-                    <input type="hidden" id="revelacion-form-image-ref">
-                    <div class="cd-revelacion-image-row">
-                        <button type="button" id="revelacion-form-image-clear" class="btn btn--ghost">Quitar Imagen</button>
-                        <span id="revelacion-form-image-status" class="cd-revelacion-image-status">Sin imagen seleccionada.</span>
-                    </div>
-                </div>
-                <div class="cd-form-group cd-form-group--grow">
-                    <label class="cd-form-label" for="revelacion-form-body">Descripción <span class="cd-form-hint">(soporta Markdown)</span></label>
-                    <textarea id="revelacion-form-body" class="cd-form-textarea cd-form-textarea--grow" placeholder="Describe la revelación..."></textarea>
-                </div>
-                <div class="cd-form-group">
-                    <label class="cd-form-label">Destinatarios</label>
-                    <div id="revelacion-form-recipients" class="cd-revelacion-recipients">
-                        <span class="cd-card-muted">Cargando jugadores...</span>
-                    </div>
-                </div>
-                <span id="revelacion-form-msg" class="cd-revelacion-msg"></span>
-            </div>
-            <div class="cd-recap-form-footer">
-                <button id="revelacion-form-cancel" class="btn btn--ghost cd-recap-nav-btn cd-recap-nav-btn--ghost" type="button">Cancelar</button>
-                <button id="revelacion-form-save" class="btn btn--primary cd-recap-nav-btn cd-recap-nav-btn--primary" type="button">Guardar Revelación</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script src="features/chronicle-detail/service.js"></script>

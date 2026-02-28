@@ -30,105 +30,6 @@
       ?.classList.toggle("hidden", !isNarrator);
   }
 
-  function setMessage(message, tone = "neutral") {
-    const el = document.getElementById("ra-modal-msg");
-    if (!el) return;
-    el.textContent = message || "";
-    el.classList.remove("ok", "error");
-    if (tone === "ok") el.classList.add("ok");
-    if (tone === "error") el.classList.add("error");
-  }
-
-  function clearForm() {
-    const title = document.getElementById("ra-title-input");
-    const tagsInput = document.getElementById("ra-tags-input");
-    const imageFile = document.getElementById("ra-image-file-input");
-    const imageRef = document.getElementById("ra-image-ref-input");
-    const body = document.getElementById("ra-body-input");
-    if (title) title.value = "";
-    if (tagsInput) tagsInput.value = "";
-    if (imageFile) imageFile.value = "";
-    if (imageRef) imageRef.value = "";
-    if (body) body.value = "";
-    setImageStatus("Sin imagen seleccionada.");
-    document.querySelectorAll(".ra-recipient-chip").forEach((node) => {
-      node.classList.remove("is-selected");
-      node.setAttribute("aria-pressed", "false");
-    });
-  }
-
-  function setFormValues({ title, imageRef, bodyMarkdown, recipientPlayerIds, tags } = {}) {
-    const titleInput = document.getElementById("ra-title-input");
-    const tagsInput = document.getElementById("ra-tags-input");
-    const imageFileInput = document.getElementById("ra-image-file-input");
-    const imageRefInput = document.getElementById("ra-image-ref-input");
-    const bodyInput = document.getElementById("ra-body-input");
-    if (titleInput) titleInput.value = String(title || "");
-    if (tagsInput) tagsInput.value = (Array.isArray(tags) ? tags : []).join(", ");
-    if (imageFileInput) imageFileInput.value = "";
-    if (imageRefInput) imageRefInput.value = String(imageRef || "").trim();
-    if (bodyInput) bodyInput.value = String(bodyMarkdown || "");
-    setImageStatus(
-      imageRefInput?.value ? "Imagen actual guardada." : "Sin imagen seleccionada.",
-      imageRefInput?.value ? "ok" : "neutral",
-    );
-
-    const selected = new Set((recipientPlayerIds || []).map((id) => String(id)));
-    document.querySelectorAll(".ra-recipient-chip").forEach((node) => {
-      const isSelected = selected.has(String(node.dataset.playerId || ""));
-      node.classList.toggle("is-selected", isSelected);
-      node.setAttribute("aria-pressed", isSelected ? "true" : "false");
-    });
-  }
-
-  function setFormMode(mode) {
-    const titleEl = document.getElementById("ra-handout-modal-title");
-    const saveBtn = document.getElementById("ra-save");
-    const isEdit = mode === "edit";
-    if (titleEl) titleEl.textContent = isEdit ? "Editar Revelación" : "Crear Revelación";
-    if (saveBtn) saveBtn.textContent = isEdit ? "Guardar Cambios" : "Guardar Revelación";
-  }
-
-  function setImageStatus(message, tone = "neutral") {
-    const el = document.getElementById("ra-image-status");
-    if (!el) return;
-    el.textContent = message || "";
-    el.classList.remove("ok", "error");
-    if (tone === "ok") el.classList.add("ok");
-    if (tone === "error") el.classList.add("error");
-  }
-
-  function renderRecipients(participants) {
-    const host = document.getElementById("ra-recipients");
-    if (!host) return;
-    const rows = Array.isArray(participants) ? participants : [];
-    if (!rows.length) {
-      host.innerHTML = '<p class="muted">No hay personajes disponibles en esta crónica.</p>';
-      return;
-    }
-    host.innerHTML = rows
-      .map((row) => {
-        const avatarUrl = String(row.avatar_url || "").trim();
-        const avatar = avatarUrl
-          ? `<img class="ra-recipient-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(row.character_name || "Personaje")}">`
-          : `<span class="ra-recipient-avatar-fallback">${escapeHtml((row.character_name || "?").charAt(0).toUpperCase())}</span>`;
-        return `
-          <button
-            type="button"
-            class="ra-recipient-chip"
-            data-player-id="${escapeHtml(row.player_id)}"
-            data-character-id="${escapeHtml(row.character_sheet_id)}"
-            aria-pressed="false"
-            title="${escapeHtml(row.character_name || "Personaje")}"
-          >
-            <span class="ra-recipient-avatar">${avatar}</span>
-            <span class="ra-recipient-name">${escapeHtml(row.character_name || "Personaje")}</span>
-          </button>
-        `;
-      })
-      .join("");
-  }
-
   function renderNarratorList(handouts) {
     const host = document.getElementById("ra-narrator-list");
     if (!host) return;
@@ -235,25 +136,6 @@
       .join("");
   }
 
-  function openReader({ title, bodyMarkdown, imageUrl }) {
-    const titleEl = document.getElementById("ra-reader-title");
-    const bodyEl = document.getElementById("ra-reader-content");
-    const imageEl = document.getElementById("ra-reader-image");
-    if (!titleEl || !bodyEl || !imageEl) return;
-
-    titleEl.textContent = title || "Revelación";
-    bodyEl.innerHTML = global.renderMarkdown(bodyMarkdown || "");
-
-    const url = String(imageUrl || "").trim();
-    if (url) {
-      imageEl.src = url;
-      imageEl.classList.remove("hidden");
-    } else {
-      imageEl.src = "";
-      imageEl.classList.add("hidden");
-    }
-  }
-
   function getSearchQuery() {
     return document.getElementById("ra-search")?.value?.trim() || "";
   }
@@ -261,15 +143,8 @@
   ns.view = {
     setHeader,
     setAccessMode,
-    setMessage,
-    clearForm,
-    setFormValues,
-    setFormMode,
-    setImageStatus,
-    renderRecipients,
     renderNarratorList,
     renderPlayerList,
-    openReader,
     getSearchQuery,
   };
 })(window);

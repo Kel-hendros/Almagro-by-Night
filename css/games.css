@@ -200,8 +200,8 @@
 }
 
 .player-actions button.danger:hover {
-    border-color: #ad1f1f;
-    background: #ad1f1f;
+    border-color: var(--color-danger-soft);
+    background: var(--color-danger-soft);
 }
 
 @media (max-width: 600px) {

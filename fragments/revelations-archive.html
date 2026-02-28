@@ -32,68 +32,6 @@
         </div>
     </div>
 
-    <div id="ra-handout-modal" class="app-modal-overlay">
-        <div class="app-modal ra-handout-modal">
-            <div class="app-modal-header">
-                <h2 id="ra-handout-modal-title" class="app-modal-title">Crear Revelación</h2>
-                <button id="ra-handout-close" class="btn-modal-close" type="button" aria-label="Cerrar">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-
-            <form id="ra-form" class="ra-form">
-                <div class="ra-grid">
-                    <label class="ra-field">
-                        <span>Titulo</span>
-                        <input id="ra-title-input" class="app-input" type="text" maxlength="120" placeholder="Ej: Carta encontrada en el Elysium">
-                    </label>
-                    <label class="ra-field">
-                        <span>Tags (separados por coma)</span>
-                        <input id="ra-tags-input" class="app-input" type="text" placeholder="Ej: elysium, carta, pista">
-                    </label>
-                    <label class="ra-field">
-                        <span>Imagen (opcional)</span>
-                        <input id="ra-image-file-input" class="app-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif">
-                        <input id="ra-image-ref-input" type="hidden">
-                        <div class="ra-image-actions">
-                            <button id="ra-image-clear" type="button" class="btn btn--ghost">Quitar Imagen</button>
-                            <span id="ra-image-status" class="ra-image-status">Sin imagen seleccionada.</span>
-                        </div>
-                    </label>
-                </div>
-                <label class="ra-field">
-                    <span>Descripción (Markdown)</span>
-                    <textarea id="ra-body-input" class="app-input" rows="4" placeholder="Describe la revelación..."></textarea>
-                </label>
-                <div class="ra-field">
-                    <span>Destinatarios</span>
-                    <div id="ra-recipients" class="ra-recipients">
-                        <p class="muted">Cargando jugadores...</p>
-                    </div>
-                </div>
-                <div class="ra-form-actions">
-                    <button id="ra-save" type="submit" class="btn btn--primary">Guardar Revelación</button>
-                    <button id="ra-clear" type="button" class="btn btn--ghost">Limpiar</button>
-                    <span id="ra-modal-msg" class="ra-msg"></span>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="ra-reader-modal" class="app-modal-overlay">
-        <div class="app-modal ra-reader-modal">
-            <div class="app-modal-header">
-                <h2 id="ra-reader-title" class="app-modal-title">Revelación</h2>
-                <button id="ra-reader-close" class="btn-modal-close" type="button" aria-label="Cerrar">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="ra-reader-body">
-                <img id="ra-reader-image" class="ra-reader-image hidden" alt="">
-                <div id="ra-reader-content" class="ra-reader-content"></div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script src="features/revelations-archive/service.js"></script>

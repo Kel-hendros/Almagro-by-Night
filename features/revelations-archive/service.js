@@ -72,58 +72,6 @@
     return data || null;
   }
 
-  async function getRecipientCharacters(chronicleId, currentPlayerId) {
-    if (!chronicleId || !global.supabase) return [];
-
-    const { data: ccRows, error: ccError } = await global.supabase
-      .from("chronicle_characters")
-      .select("character_sheet:character_sheets(id, name, user_id, data, avatar_url)")
-      .eq("chronicle_id", chronicleId);
-    if (ccError) {
-      console.warn("Revelaciones: personajes de crónica no disponibles:", ccError.message);
-      return [];
-    }
-
-    const sheets = (ccRows || [])
-      .map((row) => row.character_sheet)
-      .filter((sheet) => sheet?.id && sheet?.user_id);
-    if (!sheets.length) return [];
-
-    const userIds = Array.from(new Set(sheets.map((sheet) => String(sheet.user_id))));
-    if (!userIds.length) return [];
-
-    const { data: players, error: playersError } = await global.supabase
-      .from("players")
-      .select("id, name, user_id")
-      .in("user_id", userIds);
-    if (playersError) {
-      console.warn("Revelaciones: jugadores de personajes no disponibles:", playersError.message);
-      return [];
-    }
-
-    const playerByUserId = new Map();
-    (players || []).forEach((player) => {
-      if (player?.user_id) playerByUserId.set(String(player.user_id), player);
-    });
-
-    return sheets
-      .map((sheet) => {
-        const player = playerByUserId.get(String(sheet.user_id));
-        if (!player?.id || player.id === currentPlayerId) return null;
-        const data = sheet.data || {};
-        return {
-          character_sheet_id: sheet.id,
-          character_name: sheet.name || "Personaje",
-          avatar_url: data.avatarThumbUrl || sheet.avatar_url || data.avatar_url || "",
-          player_id: player.id,
-          player_name: player.name || "Jugador",
-          user_id: sheet.user_id,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(a.character_name).localeCompare(String(b.character_name), "es"));
-  }
-
   async function createHandout(payload) {
     return global.ABNShared?.handouts?.createHandout?.(payload) || { handout: null, error: null };
   }
@@ -178,7 +126,6 @@
     getChronicle,
     getParticipation,
     getParticipationByUserId,
-    getRecipientCharacters,
     createHandout,
     updateHandout,
     uploadHandoutImage,

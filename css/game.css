@@ -11,7 +11,7 @@
     --color-dark: #1a1a1a;
     --color-dark-transparent: rgba(26, 26, 26, 0.8);
     --color-cream: #f5f1e8;
-    --color-red-accent: #e63946;
+    --color-red-accent: var(--color-danger);
     --color-dark-light: #191919;
 }
 

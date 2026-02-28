@@ -2,9 +2,6 @@
   const ns = (global.ABNRevelationsArchive = global.ABNRevelationsArchive || {});
   const service = () => ns.service;
   const view = () => ns.view;
-  const CHRONICLE_STORAGE_LIMIT_REACHED_CODE = "chronicle_storage_limit_reached";
-  const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
-    "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
 
   const state = {
     chronicleId: null,
@@ -13,10 +10,7 @@
     narratorHandouts: [],
     playerDeliveries: [],
     searchQuery: "",
-    handoutModal: null,
-    readerModal: null,
     realtimeChannel: null,
-    editingHandoutId: null,
     availableRecipientCharacters: [],
     listenersBound: false,
   };
@@ -42,16 +36,6 @@
     });
   }
 
-  function selectedRecipients() {
-    return Array.from(
-      new Set(
-        Array.from(document.querySelectorAll(".ra-recipient-chip.is-selected"))
-          .map((node) => node.dataset.playerId || "")
-          .filter(Boolean),
-      ),
-    );
-  }
-
   function findHandoutById(handoutId) {
     return state.narratorHandouts.find((item) => item.id === handoutId) || null;
   }
@@ -60,63 +44,17 @@
     return state.playerDeliveries.find((item) => item.id === deliveryId) || null;
   }
 
-  async function showStorageLimitReachedModal() {
-    const showModal = global.ABNShared?.modal?.showChronicleStorageLimitReached;
-    if (typeof showModal === "function") {
-      await showModal();
-      return;
-    }
-    alert(CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE);
-  }
-
-  function bindModals() {
-    state.handoutModal = global.ABNShared?.modal?.createController?.({
-      overlay: "ra-handout-modal",
-      closeButtons: ["#ra-handout-close"],
-    });
-    state.readerModal = global.ABNShared?.modal?.createController?.({
-      overlay: "ra-reader-modal",
-      closeButtons: ["#ra-reader-close"],
-    });
-  }
-
-  async function openCreateModal() {
-    state.availableRecipientCharacters = await service().getRecipientCharacters(
-      state.chronicleId,
-      state.currentPlayerId,
-    );
-    view().renderRecipients(state.availableRecipientCharacters);
-    state.editingHandoutId = null;
-    view().setFormMode("create");
-    view().clearForm();
-    view().setMessage("");
-    state.handoutModal?.open?.();
-  }
-
-  async function openEditModal(handout) {
-    if (!handout) return;
-    state.availableRecipientCharacters = await service().getRecipientCharacters(
-      state.chronicleId,
-      state.currentPlayerId,
-    );
-    view().renderRecipients(state.availableRecipientCharacters);
-    state.editingHandoutId = handout.id;
-    view().setFormMode("edit");
-    view().setFormValues({
-      title: handout.title || "",
-      imageRef: handout.image_url || "",
-      bodyMarkdown: handout.body_markdown || "",
-      recipientPlayerIds: (handout.deliveries || []).map((d) => d.recipient_player_id),
-      tags: handout.tags || [],
-    });
-    view().setMessage("");
-    state.handoutModal?.open?.();
+  function revelationScreen() {
+    return global.ABNShared?.revelationScreen || null;
   }
 
   async function loadNarratorData() {
     if (!state.chronicleId) return;
+    const api = global.ABNShared?.handouts;
+    if (!api) return;
+
     const [recipientCharacters, handouts] = await Promise.all([
-      service().getRecipientCharacters(state.chronicleId, state.currentPlayerId),
+      api.getRecipientCharacters(state.chronicleId, state.currentPlayerId),
       service().listHandoutsByChronicle(state.chronicleId),
     ]);
     state.availableRecipientCharacters = recipientCharacters || [];
@@ -141,7 +79,6 @@
       : handouts;
 
     state.narratorHandouts = effectiveHandouts || [];
-    view().renderRecipients(state.availableRecipientCharacters);
     view().renderNarratorList(filterHandouts(state.narratorHandouts, state.searchQuery));
   }
 
@@ -154,71 +91,8 @@
     view().renderPlayerList(filterDeliveries(state.playerDeliveries, state.searchQuery));
   }
 
-  async function submitNarratorForm(event) {
-    event.preventDefault();
-    const title = document.getElementById("ra-title-input")?.value || "";
-    const bodyMarkdown = document.getElementById("ra-body-input")?.value || "";
-    const imageRefInput = document.getElementById("ra-image-ref-input");
-    const imageFileInput = document.getElementById("ra-image-file-input");
-    const selectedFile = imageFileInput?.files?.[0] || null;
-
-    let imageRef = String(imageRefInput?.value || "").trim();
-    let uploadedImageRef = null;
-
-    if (selectedFile) {
-      view().setImageStatus(`Subiendo ${selectedFile.name}...`);
-      const uploadRes = await service().uploadHandoutImage({
-        chronicleId: state.chronicleId,
-        file: selectedFile,
-      });
-      if (uploadRes.error || !uploadRes.imageRef) {
-        if (uploadRes.error?.code === CHRONICLE_STORAGE_LIMIT_REACHED_CODE) {
-          await showStorageLimitReachedModal();
-        }
-        view().setImageStatus("No se pudo subir la imagen.", "error");
-        view().setMessage(uploadRes.error?.message || "No se pudo subir la imagen.", "error");
-        return;
-      }
-      uploadedImageRef = uploadRes.imageRef;
-      imageRef = uploadedImageRef;
-      if (imageRefInput) imageRefInput.value = imageRef;
-      if (imageFileInput) imageFileInput.value = "";
-      view().setImageStatus("Imagen cargada y lista para guardar.", "ok");
-    }
-
-    const tagsRaw = document.getElementById("ra-tags-input")?.value || "";
-    const tags = tagsRaw.split(",").map((t) => t.trim()).filter(Boolean);
-
-    const payload = {
-      title,
-      bodyMarkdown,
-      imageRef,
-      recipientPlayerIds: selectedRecipients(),
-      tags,
-    };
-
-    const { error } = state.editingHandoutId
-      ? await service().updateHandout({ revelationId: state.editingHandoutId, ...payload })
-      : await service().createHandout({
-          chronicleId: state.chronicleId,
-          createdByPlayerId: state.currentPlayerId,
-          ...payload,
-        });
-
-    if (error) {
-      if (uploadedImageRef) {
-        await service().deleteHandoutImage(uploadedImageRef);
-      }
-      view().setMessage(error.message || "No se pudo guardar revelación.", "error");
-      return;
-    }
-
-    view().setMessage(
-      state.editingHandoutId ? "Revelación actualizada." : "Revelación guardada y asociada.",
-      "ok",
-    );
-    await loadNarratorData();
-    state.handoutModal?.close?.();
+  function onSavedCallback() {
+    loadNarratorData();
   }
 
   async function handleNarratorListClick(event) {
@@ -257,7 +131,13 @@
 
     const handout = findHandoutById(card.dataset.handoutId);
     if (!handout) return;
-    await openEditModal(handout);
+
+    revelationScreen()?.openEdit({
+      chronicleId: state.chronicleId,
+      currentPlayerId: state.currentPlayerId,
+      handout,
+      onSaved: onSavedCallback,
+    });
   }
 
   async function handlePlayerListClick(event) {
@@ -267,12 +147,12 @@
     const row = findDeliveryById(card.dataset.deliveryId);
     if (!row?.handout) return;
 
-    view().openReader({
+    revelationScreen()?.openView({
       title: row.handout.title,
       bodyMarkdown: row.handout.body_markdown,
       imageUrl: row.handout.image_signed_url,
+      tags: row.handout.tags,
     });
-    state.readerModal?.open?.();
   }
 
   function bindActions() {
@@ -287,43 +167,11 @@
     });
 
     document.getElementById("ra-open-create")?.addEventListener("click", async () => {
-      await openCreateModal();
-    });
-
-    document.getElementById("ra-recipients")?.addEventListener("click", (event) => {
-      const chip = event.target.closest(".ra-recipient-chip");
-      if (!chip) return;
-      const next = !chip.classList.contains("is-selected");
-      chip.classList.toggle("is-selected", next);
-      chip.setAttribute("aria-pressed", next ? "true" : "false");
-    });
-
-    document.getElementById("ra-image-file-input")?.addEventListener("change", (event) => {
-      const file = event.target?.files?.[0] || null;
-      if (file) {
-        view().setImageStatus(`Archivo seleccionado: ${file.name}`);
-        return;
-      }
-      const hasSavedImage = Boolean(
-        String(document.getElementById("ra-image-ref-input")?.value || "").trim(),
-      );
-      view().setImageStatus(
-        hasSavedImage ? "Imagen actual guardada." : "Sin imagen seleccionada.",
-        hasSavedImage ? "ok" : "neutral",
-      );
-    });
-
-    document.getElementById("ra-image-clear")?.addEventListener("click", () => {
-      const imageFileInput = document.getElementById("ra-image-file-input");
-      const imageRefInput = document.getElementById("ra-image-ref-input");
-      if (imageFileInput) imageFileInput.value = "";
-      if (imageRefInput) imageRefInput.value = "";
-      view().setImageStatus("La imagen se eliminará al guardar.", "error");
-    });
-
-    document.getElementById("ra-clear")?.addEventListener("click", () => {
-      view().clearForm();
-      view().setMessage("");
+      revelationScreen()?.openCreate({
+        chronicleId: state.chronicleId,
+        currentPlayerId: state.currentPlayerId,
+        onSaved: onSavedCallback,
+      });
     });
 
     document.getElementById("ra-search")?.addEventListener("input", (e) => {
@@ -335,7 +183,6 @@
       }
     });
 
-    document.getElementById("ra-form")?.addEventListener("submit", submitNarratorForm);
     document
       .getElementById("ra-narrator-list")
       ?.addEventListener("click", handleNarratorListClick);
@@ -346,7 +193,6 @@
 
   function unbindActions() {
     if (!state.listenersBound) return;
-    document.getElementById("ra-form")?.removeEventListener("submit", submitNarratorForm);
     document
       .getElementById("ra-narrator-list")
       ?.removeEventListener("click", handleNarratorListClick);
@@ -396,7 +242,6 @@
     view().setHeader({ chronicleName: chronicle.name, isNarrator: state.isNarrator });
     view().setAccessMode({ isNarrator: state.isNarrator });
 
-    bindModals();
     bindActions();
 
     if (state.isNarrator) {
@@ -418,11 +263,6 @@
     unbindActions();
     service().unsubscribeChannel(state.realtimeChannel);
     state.realtimeChannel = null;
-    state.handoutModal?.destroy?.();
-    state.handoutModal = null;
-    state.readerModal?.destroy?.();
-    state.readerModal = null;
-    state.editingHandoutId = null;
     state.availableRecipientCharacters = [];
     state.chronicleId = null;
     state.currentPlayerId = null;

@@ -52,7 +52,7 @@
     --color-cream: #e3d8c3;
     --color-cream-muted: #68645c;
     --color-red: #8c1c1c;
-    --color-red-accent: #ad3838;
+    --color-red-accent: var(--color-danger);
     --color-red-muted: #321515;
     --color-dark: #121212;
     --color-dark-alt: #1f1b24;
