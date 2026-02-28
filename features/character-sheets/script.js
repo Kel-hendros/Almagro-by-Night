@@ -356,6 +356,11 @@ function loadCharacterFromJSON(characterData) {
 
   safeLoad("Discord Webhook", () => loadDiscordWebhookFromJSON(characterData));
 
+  safeLoad("3D Dice", () => {
+    const diceBox3d = window.ABNSheetDiceBox3D;
+    if (diceBox3d) diceBox3d.loadFromCharacterData(characterData);
+  });
+
   // Update Ghoul Visuals if function exists
   if (window.updateGhoulVisuals && characterData.selectedGhoul) {
     window.updateGhoulVisuals(characterData.selectedGhoul);
@@ -489,6 +494,10 @@ function getCharacterData() {
   const discordConfig = getDiscordConfig();
   characterData.discordWebhookUrl = discordConfig.webhookUrl;
   characterData.discordWebhookEnabled = discordConfig.enabled;
+
+  // Add 3D dice preference
+  const diceBox3d = window.ABNSheetDiceBox3D;
+  if (diceBox3d) characterData.diceBox3dEnabled = diceBox3d.getSettingForSave();
 
   return JSON.stringify(characterData);
 }
@@ -1257,6 +1266,22 @@ if (diceSystemModule) {
     modifyBlood,
     renderWillpowerTrack,
     save: saveCharacterData,
+    getDiceValues: (count) => {
+      const diceBox3d = window.ABNSheetDiceBox3D;
+      if (diceBox3d && diceBox3d.isEnabled()) return diceBox3d.rollD10s(count);
+      return null;
+    },
+  });
+}
+
+const diceBox3dToggle = document.getElementById("dice-box-3d-toggle");
+if (diceBox3dToggle) {
+  diceBox3dToggle.addEventListener("change", () => {
+    const diceBox3d = window.ABNSheetDiceBox3D;
+    if (diceBox3d) {
+      diceBox3d.setEnabled(diceBox3dToggle.checked);
+      saveCharacterData();
+    }
   });
 }
 

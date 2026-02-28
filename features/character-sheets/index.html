@@ -1027,6 +1027,18 @@
                 <button id="download-json-btn" class="theme-export-btn" type="button">Exportar JSON</button>
                 <button id="upload-json-btn" class="theme-export-btn" type="button">Importar JSON</button>
             </div>
+
+            <div class="theme-section-block">
+                <h3 class="theme-section-label">Dados 3D</h3>
+                <div class="dice-box-3d-setting">
+                    <span class="dice-box-3d-label">Tirar dados 3D animados</span>
+                    <label class="discord-webhook-toggle" for="dice-box-3d-toggle" title="Activar dados 3D">
+                        <input id="dice-box-3d-toggle" type="checkbox">
+                        <span class="discord-webhook-toggle-ui" aria-hidden="true"></span>
+                    </label>
+                </div>
+                <p class="dice-box-3d-hint">Los dados 3D se muestran antes del resultado. El cálculo VtM no cambia.</p>
+            </div>
         </div>
     </div>
 
@@ -1209,6 +1221,7 @@
     <script src="modules/disciplines.js"></script>
     <script src="modules/dice-system.js"></script>
     <script src="modules/dice-ui.js"></script>
+    <script src="modules/dice-box-3d.js"></script>
     <script src="modules/backgrounds.js"></script>
     <script src="modules/xp.js"></script>
     <script src="modules/traits-rituals.js"></script>

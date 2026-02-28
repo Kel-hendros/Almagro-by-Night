@@ -10,6 +10,7 @@
     modifyBlood: null,
     renderWillpowerTrack: null,
     save: null,
+    getDiceValues: null,
   };
 
   const state = {
@@ -17,6 +18,7 @@
     diceHistoryModalController: null,
     rollContextName: "",
     onRollComplete: null,
+    lastRollWas3D: false,
   };
 
   const DICE_HISTORY_MAX = 20;
@@ -56,6 +58,8 @@
         ? nextDeps.renderWillpowerTrack
         : null;
     deps.save = typeof nextDeps.save === "function" ? nextDeps.save : null;
+    deps.getDiceValues =
+      typeof nextDeps.getDiceValues === "function" ? nextDeps.getDiceValues : null;
   }
 
   function getFinalPoolSize() {
@@ -98,6 +102,28 @@
 
   function persist() {
     if (deps.save) deps.save();
+  }
+
+  async function generateDiceValues(count) {
+    if (deps.getDiceValues) {
+      try {
+        const values = await deps.getDiceValues(count);
+        if (
+          Array.isArray(values) &&
+          values.length === count &&
+          values.every((v) => typeof v === "number" && v >= 1 && v <= 10)
+        ) {
+          state.lastRollWas3D = true;
+          return values;
+        }
+      } catch (_e) {}
+    }
+    state.lastRollWas3D = false;
+    const values = [];
+    for (let i = 0; i < count; i += 1) {
+      values.push(Math.floor(Math.random() * 10) + 1);
+    }
+    return values;
   }
 
   function broadcastRollToParent(data) {
@@ -324,7 +350,7 @@
     });
   }
 
-  function rollTheDice() {
+  async function rollTheDice() {
     const difficulty = Number(document.querySelector("#difficulty")?.value || 6);
     const willpower = !!document.querySelector("#willpower")?.checked;
     const specialty = !!document.querySelector("#specialty")?.checked;
@@ -358,13 +384,12 @@
     let successes = 0;
     let botches = 0;
     let color = "";
-    const rolls = [];
 
     const finalPoolSize = getFinalPoolSize();
+    const rolls = await generateDiceValues(finalPoolSize);
 
-    for (let i = 0; i < finalPoolSize; i += 1) {
-      const roll = Math.floor(Math.random() * 10) + 1;
-      rolls.push(roll);
+    for (let i = 0; i < rolls.length; i += 1) {
+      const roll = rolls[i];
       if (specialty && roll === 10) {
         successes += 2;
       } else if (roll >= difficulty) {
@@ -517,72 +542,82 @@
       }
     }
 
-    const APPEAR_DELAY = 100;
-    const APPEAR_ANIM = 550;
-    const REVEAL_PAUSE = 250;
-    const REVEAL_DELAY = 70;
-    const CANCEL_PAUSE = 350;
-    const CANCEL_DELAY = 120;
-    const RESULT_PAUSE = 300;
+    if (state.lastRollWas3D) {
+      // 3D dice already showed the roll — reveal chips instantly as summary
+      allChips.forEach((item) => {
+        item.element.className = item.finalClass;
+      });
+      resultContainer.classList.remove("rolling");
+      resultContainer.classList.add(stateClass);
+      resultElement.textContent = resultText;
+    } else {
+      const APPEAR_DELAY = 100;
+      const APPEAR_ANIM = 550;
+      const REVEAL_PAUSE = 250;
+      const REVEAL_DELAY = 70;
+      const CANCEL_PAUSE = 350;
+      const CANCEL_DELAY = 120;
+      const RESULT_PAUSE = 300;
 
-    allChips.forEach((item, idx) => {
-      const delay = item.isBonus ? (idx - 1) * APPEAR_DELAY : idx * APPEAR_DELAY;
-      setTimeout(() => {
-        item.element.classList.remove("dice-unrevealed");
-        item.element.classList.add("dice-appearing");
-      }, Math.max(0, delay));
-    });
-
-    const lastAppearTime = (allChips.length - 1) * APPEAR_DELAY + APPEAR_ANIM + REVEAL_PAUSE;
-    let runningCount = 0;
-    function updateLiveCounter(count) {
-      const n = Math.max(0, count);
-      resultElement.textContent = `${n} ${n === 1 ? "Éxito" : "Éxitos"}`;
-    }
-
-    setTimeout(() => {
       allChips.forEach((item, idx) => {
-        const delay = item.isBonus ? (idx - 1) * REVEAL_DELAY : idx * REVEAL_DELAY;
+        const delay = item.isBonus ? (idx - 1) * APPEAR_DELAY : idx * APPEAR_DELAY;
         setTimeout(() => {
-          item.element.className = item.revealClass;
-          item.element.classList.add("dice-revealed");
-          if (item.revealClass.includes("success")) {
-            runningCount += 1;
-            updateLiveCounter(runningCount);
-          }
+          item.element.classList.remove("dice-unrevealed");
+          item.element.classList.add("dice-appearing");
         }, Math.max(0, delay));
       });
 
-      const lastRevealTime = (allChips.length - 1) * REVEAL_DELAY + CANCEL_PAUSE;
-      const chipsToCancel = allChips.filter((c) => c.willCancel);
+      const lastAppearTime = (allChips.length - 1) * APPEAR_DELAY + APPEAR_ANIM + REVEAL_PAUSE;
+      let runningCount = 0;
+      function updateLiveCounter(count) {
+        const n = Math.max(0, count);
+        resultElement.textContent = `${n} ${n === 1 ? "Éxito" : "Éxitos"}`;
+      }
 
-      if (chipsToCancel.length > 0) {
-        setTimeout(() => {
-          chipsToCancel.forEach((item, idx) => {
-            setTimeout(() => {
-              item.element.className = item.finalClass.replace(" cancelled", "");
-              item.element.classList.add("dice-cancel-hit");
-              runningCount -= 1;
+      setTimeout(() => {
+        allChips.forEach((item, idx) => {
+          const delay = item.isBonus ? (idx - 1) * REVEAL_DELAY : idx * REVEAL_DELAY;
+          setTimeout(() => {
+            item.element.className = item.revealClass;
+            item.element.classList.add("dice-revealed");
+            if (item.revealClass.includes("success")) {
+              runningCount += 1;
               updateLiveCounter(runningCount);
-            }, idx * CANCEL_DELAY);
-          });
+            }
+          }, Math.max(0, delay));
+        });
 
-          const lastCancelTime =
-            (chipsToCancel.length - 1) * CANCEL_DELAY + RESULT_PAUSE + 350;
+        const lastRevealTime = (allChips.length - 1) * REVEAL_DELAY + CANCEL_PAUSE;
+        const chipsToCancel = allChips.filter((c) => c.willCancel);
+
+        if (chipsToCancel.length > 0) {
+          setTimeout(() => {
+            chipsToCancel.forEach((item, idx) => {
+              setTimeout(() => {
+                item.element.className = item.finalClass.replace(" cancelled", "");
+                item.element.classList.add("dice-cancel-hit");
+                runningCount -= 1;
+                updateLiveCounter(runningCount);
+              }, idx * CANCEL_DELAY);
+            });
+
+            const lastCancelTime =
+              (chipsToCancel.length - 1) * CANCEL_DELAY + RESULT_PAUSE + 350;
+            setTimeout(() => {
+              resultContainer.classList.remove("rolling");
+              resultContainer.classList.add(stateClass);
+              resultElement.textContent = resultText;
+            }, lastCancelTime);
+          }, lastRevealTime);
+        } else {
           setTimeout(() => {
             resultContainer.classList.remove("rolling");
             resultContainer.classList.add(stateClass);
             resultElement.textContent = resultText;
-          }, lastCancelTime);
-        }, lastRevealTime);
-      } else {
-        setTimeout(() => {
-          resultContainer.classList.remove("rolling");
-          resultContainer.classList.add(stateClass);
-          resultElement.textContent = resultText;
-        }, lastRevealTime);
-      }
-    }, lastAppearTime);
+          }, lastRevealTime);
+        }
+      }, lastAppearTime);
+    }
 
     const potenciaPs = potenciaSuccess > 0 ? Array(potenciaSuccess).fill("P") : [];
     const discordRolls = [...potenciaPs, ...rolls];
@@ -654,23 +689,27 @@
     if (state.onRollComplete) {
       const cb = state.onRollComplete;
       state.onRollComplete = null;
-      const chipCount = allChips.length;
-      const cancelCount = Math.min(botches, successSlots.length);
-      const totalAnimTime =
-        chipCount * 100 +
-        550 +
-        250 +
-        chipCount * 70 +
-        350 +
-        (cancelCount > 0 ? cancelCount * 120 + 700 : 0) +
-        400;
-      setTimeout(() => cb(global.lastRollResult), totalAnimTime);
+      if (state.lastRollWas3D) {
+        cb(global.lastRollResult);
+      } else {
+        const chipCount = allChips.length;
+        const cancelCount = Math.min(botches, successSlots.length);
+        const totalAnimTime =
+          chipCount * 100 +
+          550 +
+          250 +
+          chipCount * 70 +
+          350 +
+          (cancelCount > 0 ? cancelCount * 120 + 700 : 0) +
+          400;
+        setTimeout(() => cb(global.lastRollResult), totalAnimTime);
+      }
     }
 
     uncheckWillpowerAndSpecialty();
   }
 
-  function rollInitiative() {
+  async function rollInitiative() {
     const destreza = parseInt(document.getElementById("destreza-value")?.value || "0", 10);
     const astucia = parseInt(document.getElementById("astucia-value")?.value || "0", 10);
 
@@ -688,7 +727,8 @@
       10
     );
 
-    const d10 = Math.floor(Math.random() * 10) + 1;
+    const d10Values = await generateDiceValues(1);
+    const d10 = d10Values[0];
     const totalDestreza = destreza + boostVal + celBonus;
     const total = Math.max(0, d10 + totalDestreza + astucia + damagePenalty);
 
