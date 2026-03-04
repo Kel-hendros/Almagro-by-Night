@@ -623,7 +623,7 @@ button.gameButton {
     padding: 0 14px;
     height: 40px;
     background: var(--theme-accent);
-    color: var(--theme-text-primary);
+    color: var(--theme-text-on-accent);
     border: 1px solid var(--theme-accent);
     border-radius: 10px;
     font-family: var(--app-font-body);

@@ -61,7 +61,7 @@
   border-radius: 10px;
   background: var(--theme-bg-elevated);
   color: var(--theme-text-primary);
-  font-size: 0.82rem;
+  font-size: 13px;
   font-family: inherit;
 }
 
@@ -106,11 +106,21 @@
 }
 
 .ra-card-head {
-  padding: 10px 10px 0;
+  padding: 10px 10px 4px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+}
+
+.ra-card-head .btn-icon--danger {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ra-card:hover .ra-card-head .btn-icon--danger {
+  opacity: 1;
 }
 
 .ra-meta {
@@ -127,11 +137,34 @@
   color: var(--theme-text-secondary);
 }
 
+.ra-card-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px 10px;
+}
+
+.ra-recipient-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border-divider);
+  font-size: 0.7rem;
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+}
+
+.ra-recipient-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
 .ra-delivery-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 0 10px 10px;
 }
 
 .ra-delivery-chip {
@@ -171,26 +204,6 @@
   display: block;
 }
 
-.ra-card-image--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--theme-text-tertiary);
-  font-size: 0.75rem;
-}
-
-.ra-associated-line {
-  margin: 6px 0 8px;
-  padding: 0 10px;
-  font-size: 0.74rem;
-  color: var(--theme-text-secondary);
-}
-
-.ra-card-actions {
-  display: flex;
-  gap: 8px;
-  padding: 0 10px 10px;
-}
 
 @media (max-width: 1260px) {
   #ra-narrator-list {

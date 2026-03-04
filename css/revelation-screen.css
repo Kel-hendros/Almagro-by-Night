@@ -8,6 +8,21 @@
   width: calc(100% - var(--sidebar-current-width, var(--sidebar-width-expanded)));
   height: 100%;
   display: none;
+
+  /* Provide --cd-* aliases so cd-recap-reader-* classes resolve
+     (the overlay lives outside .chronicle-detail where these are defined) */
+  --cd-bg-primary: var(--theme-bg-primary);
+  --cd-bg-surface: var(--theme-bg-surface);
+  --cd-bg-elevated: var(--theme-bg-elevated);
+  --cd-border-divider: var(--theme-border-divider);
+  --cd-text-primary: var(--theme-text-primary);
+  --cd-text-secondary: var(--theme-text-secondary);
+  --cd-text-tertiary: var(--theme-text-tertiary);
+  --cd-accent: var(--theme-accent);
+  --cd-font-primary: var(--app-font-body);
+  --cd-font-display: var(--app-font-heading);
+  --cd-radius-card: 16px;
+  --cd-radius-pill: 24px;
 }
 
 .rs-overlay.active {
@@ -29,7 +44,7 @@
   display: flex;
 }
 
-/* ── Header ── */
+/* ── Header (form screen) ── */
 
 .rs-header {
   display: flex;
@@ -40,27 +55,6 @@
   flex-shrink: 0;
 }
 
-.rs-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  color: var(--theme-text-secondary);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.82rem;
-  padding: 4px 0;
-}
-
-.rs-back-btn:hover {
-  color: var(--theme-text-primary);
-}
-
-.rs-back-btn svg {
-  width: 16px;
-  height: 16px;
-}
 
 .rs-title {
   margin: 0;
@@ -75,8 +69,7 @@
   padding: 20px;
 }
 
-.rs-form-wrap,
-.rs-view-wrap {
+.rs-form-wrap {
   max-width: 720px;
   margin: 0 auto;
   display: flex;
@@ -136,11 +129,6 @@
   border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border-divider));
 }
 
-.rs-input[type="file"] {
-  padding: 8px 12px;
-  height: auto;
-}
-
 .rs-textarea {
   min-height: 140px;
   padding: 10px 12px;
@@ -156,6 +144,64 @@
 .rs-textarea:focus {
   outline: none;
   border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border-divider));
+}
+
+/* ── Upload area ── */
+
+.rs-upload-area {
+  position: relative;
+  border: 2px dashed var(--theme-border-divider);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rs-upload-area:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border-divider));
+}
+
+.rs-upload-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.rs-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--theme-text-tertiary);
+  padding: 24px;
+  pointer-events: none;
+}
+
+.rs-upload-placeholder svg {
+  width: 28px;
+  height: 28px;
+}
+
+.rs-upload-placeholder span {
+  font-size: 0.8rem;
+}
+
+.rs-upload-preview {
+  width: 100%;
+}
+
+.rs-preview-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
 }
 
 /* ── Image row ── */
@@ -270,18 +316,55 @@
   color: var(--theme-accent);
 }
 
-/* ── View mode ── */
+/* ═══════════════════════════════════════════════
+   View mode — reuses .cd-recap-reader-* from chronicles.css
+   ═══════════════════════════════════════════════ */
 
-.rs-view-title {
-  margin: 0 0 4px;
-  font-size: 1.4rem;
+.rs-screen--view {
+  overflow: hidden;
 }
+
+/* Body: add gap for image-detail + card spacing, center content */
+.rs-view-body {
+  gap: 12px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Description section (always visible, fills remaining space) ── */
+
+.rs-desc-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cd-border-divider);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--cd-bg-surface);
+}
+
+.rs-desc-header {
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--cd-text-secondary);
+  border-bottom: 1px solid var(--cd-border-divider);
+}
+
+.rs-desc-body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* ── Tags (revelation-specific) ── */
 
 .rs-view-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 8px;
 }
 
 .rs-tag {
@@ -289,27 +372,69 @@
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.68rem;
-  background: var(--theme-bg-elevated);
-  color: var(--theme-text-secondary);
-  border: 1px solid var(--theme-border-divider);
+  background: var(--cd-bg-elevated);
+  color: var(--cd-text-secondary);
+  border: 1px solid var(--cd-border-divider);
 }
+
+/* ── Collapsible detail sections ── */
+
+.rs-detail-section {
+  border: 1px solid var(--cd-border-divider);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--cd-bg-surface);
+}
+
+.rs-detail-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--cd-text-secondary);
+  user-select: none;
+  list-style: none;
+}
+
+.rs-detail-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rs-detail-summary::marker {
+  display: none;
+  content: "";
+}
+
+.rs-detail-summary svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.rs-detail-chevron {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.rs-detail-section[open] > .rs-detail-summary .rs-detail-chevron {
+  transform: rotate(180deg);
+}
+
+.rs-detail-content {
+  padding: 0 16px 16px;
+}
+
+/* ── Image inside detail ── */
 
 .rs-view-image {
   width: 100%;
   max-height: 400px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--theme-border-divider);
-  margin-bottom: 12px;
-}
-
-.rs-view-content {
-  color: var(--theme-text-primary);
-  line-height: 1.6;
-}
-
-.rs-view-content p {
-  margin: 0 0 0.8em;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
 }
 
 /* ── Responsive ── */

@@ -37,8 +37,11 @@
             <i class="fa-solid fa-users-gear ghoul-change-btn" id="ghoul-change-btn" title="Cambiar Ghoul"></i>
         </div>
         <div class="ghoul-body">
-            <input type="text" id="ghoul-search-input" class="ghoul-search-input"
-                placeholder="Buscar en la base de datos..." autocomplete="off">
+            <div class="ghoul-search-wrap">
+                <i data-lucide="search" class="ghoul-search-icon"></i>
+                <input type="text" id="ghoul-search-input" class="ghoul-search-input"
+                    placeholder="Buscar en la base de datos..." autocomplete="off">
+            </div>
             <ul id="ghoul-results" class="ghoul-results"></ul>
         </div>
     </div>
@@ -618,7 +621,7 @@
                     <div class="dock-tab-page" data-page="1">
                         <button class="dock-tab" data-panel="panel-trasfondos">Trasfondos</button>
                         <button class="dock-tab" data-panel="panel-rituales">Rituales</button>
-                        <div class="dock-tab-placeholder"></div>
+                        <button class="dock-tab" data-panel="panel-revelaciones">Revelaciones</button>
                         <div class="dock-tab-placeholder"></div>
                         <div class="dock-tab-placeholder"></div>
                         <div class="dock-tab-placeholder"></div>
@@ -838,6 +841,15 @@
                                 </div>
                             </form>
                             <div id="ritual-list" class="background-list"></div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: REVELACIONES -->
+                    <section class="dock-panel" id="panel-revelaciones">
+                        <div class="revelaciones-pane">
+                            <div id="revelaciones-list" class="revelaciones-list">
+                                <p class="muted">Cargando...</p>
+                            </div>
                         </div>
                     </section>
 
@@ -1198,6 +1210,19 @@
         </div>
     </div>
 
+    <div id="revelacion-toast" class="revelacion-toast hidden">
+        <div class="revelacion-toast-body">
+            <span class="revelacion-toast-icon">&#128220;</span>
+            <div class="revelacion-toast-text">
+                <strong id="revelacion-toast-title">Nueva revelación</strong>
+            </div>
+        </div>
+        <div class="revelacion-toast-actions">
+            <button type="button" id="revelacion-toast-view" class="btn btn--sm">Ver</button>
+            <button type="button" id="revelacion-toast-dismiss" class="btn btn--ghost btn--sm">Cerrar</button>
+        </div>
+    </div>
+
     <script src="disciplineRepository.js"></script>
     <script src="sendasRepository.js"></script>
     <script src="pathRepository.js"></script>
@@ -1228,6 +1253,7 @@
     <script src="modules/notes.js"></script>
     <script src="modules/saved-rolls.js"></script>
     <script src="modules/attacks.js"></script>
+    <script src="modules/revelaciones.js"></script>
     <script src="modules/dock.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script.js"></script>

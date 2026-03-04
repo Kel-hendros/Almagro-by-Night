@@ -38,7 +38,7 @@
     overlay.innerHTML = `
       <div class="rs-screen rs-screen--form" id="rs-form-screen">
         <header class="rs-header">
-          <button type="button" class="rs-back-btn" id="rs-form-back">
+          <button type="button" class="btn btn--ghost" id="rs-form-back">
             <i data-lucide="arrow-left"></i>
             <span>Volver</span>
           </button>
@@ -55,8 +55,18 @@
               <input id="rs-tags-input" class="rs-input" type="text" placeholder="Ej: elysium, carta, pista">
             </div>
             <div class="rs-form-group">
-              <label class="rs-label" for="rs-image-file">Imagen <span class="rs-hint">(opcional)</span></label>
-              <input id="rs-image-file" class="rs-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif">
+              <label class="rs-label">Imagen <span class="rs-hint">(opcional)</span></label>
+              <div class="rs-upload-area" id="rs-upload-area">
+                <input id="rs-image-file" class="rs-upload-input" type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/avif">
+                <div class="rs-upload-placeholder" id="rs-upload-placeholder">
+                  <i data-lucide="image-plus"></i>
+                  <span>Seleccionar imagen</span>
+                </div>
+                <div class="rs-upload-preview hidden" id="rs-upload-preview">
+                  <img id="rs-preview-img" class="rs-preview-img" alt="Preview">
+                </div>
+              </div>
               <input id="rs-image-ref" type="hidden">
               <div class="rs-image-row">
                 <button type="button" id="rs-image-clear" class="btn btn--ghost">Quitar Imagen</button>
@@ -83,24 +93,44 @@
       </div>
 
       <div class="rs-screen rs-screen--view" id="rs-view-screen">
-        <header class="rs-header">
-          <button type="button" class="rs-back-btn" id="rs-view-back">
-            <i data-lucide="arrow-left"></i>
-            <span>Volver</span>
-          </button>
-        </header>
-        <div class="rs-body">
-          <div class="rs-view-wrap">
-            <h1 class="rs-view-title" id="rs-view-title"></h1>
-            <div class="rs-view-tags" id="rs-view-tags"></div>
-            <img id="rs-view-image" class="rs-view-image hidden" alt="">
-            <div id="rs-view-content" class="rs-view-content"></div>
+        <div class="cd-recap-reader-header">
+          <div class="cd-recap-reader-toolbar">
+            <button type="button" class="btn btn--ghost cd-recap-back-btn" id="rs-view-back">
+              <i data-lucide="arrow-left"></i>
+              <span>Volver</span>
+            </button>
+            <div class="cd-recap-reader-actions">
+              <button type="button" class="btn-icon hidden" id="rs-view-edit" aria-label="Editar">
+                <i data-lucide="pencil"></i>
+              </button>
+            </div>
+          </div>
+          <div class="cd-recap-reader-title-wrap">
+            <h2 id="rs-view-title" class="cd-recap-reader-title"></h2>
+            <div id="rs-view-tags" class="rs-view-tags"></div>
+          </div>
+        </div>
+        <div class="cd-recap-reader-body rs-view-body">
+          <details id="rs-detail-image" class="rs-detail-section">
+            <summary class="rs-detail-summary">
+              <span>Imagen</span>
+              <i data-lucide="chevron-down" class="rs-detail-chevron"></i>
+            </summary>
+            <div class="rs-detail-content">
+              <img id="rs-view-image" class="rs-view-image" alt="">
+            </div>
+          </details>
+          <div class="rs-desc-section">
+            <div class="rs-desc-header">Descripcion</div>
+            <div class="rs-desc-body">
+              <div id="rs-view-content" class="cd-recap-reader-text"></div>
+            </div>
           </div>
         </div>
       </div>
     `;
 
-    document.body.appendChild(overlay);
+    (document.querySelector(".app") || document.body).appendChild(overlay);
     formScreen = overlay.querySelector("#rs-form-screen");
     viewScreen = overlay.querySelector("#rs-view-screen");
 
@@ -119,6 +149,7 @@
     overlay.querySelector("#rs-form-back")?.addEventListener("click", close);
     overlay.querySelector("#rs-form-cancel")?.addEventListener("click", close);
     overlay.querySelector("#rs-view-back")?.addEventListener("click", close);
+    overlay.querySelector("#rs-view-edit")?.addEventListener("click", handleEditFromView);
     overlay.querySelector("#rs-form-save")?.addEventListener("click", handleSave);
 
     overlay.querySelector("#rs-recipients")?.addEventListener("click", (e) => {
@@ -131,11 +162,24 @@
 
     overlay.querySelector("#rs-image-file")?.addEventListener("change", (e) => {
       const file = e.target?.files?.[0] || null;
+      const placeholder = overlay.querySelector("#rs-upload-placeholder");
+      const preview = overlay.querySelector("#rs-upload-preview");
+      const previewImg = overlay.querySelector("#rs-preview-img");
+
       if (file) {
         setImageStatus(`Archivo seleccionado: ${file.name}`);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (previewImg) previewImg.src = ev.target.result;
+          if (placeholder) placeholder.classList.add("hidden");
+          if (preview) preview.classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
         return;
       }
       const hasSaved = Boolean(String(overlay.querySelector("#rs-image-ref")?.value || "").trim());
+      if (placeholder) placeholder.classList.toggle("hidden", hasSaved);
+      if (preview) preview.classList.toggle("hidden", !hasSaved);
       setImageStatus(
         hasSaved ? "Imagen actual guardada." : "Sin imagen seleccionada.",
         hasSaved ? "ok" : "neutral",
@@ -147,6 +191,7 @@
       const imageRef = overlay.querySelector("#rs-image-ref");
       if (imageFile) imageFile.value = "";
       if (imageRef) imageRef.value = "";
+      resetUploadPreview();
       setImageStatus("La imagen se eliminara al guardar.", "error");
     });
 
@@ -156,6 +201,32 @@
 
   function onKeyDown(e) {
     if (e.key === "Escape" && isOpen()) close();
+  }
+
+  // ── Upload preview helpers ──
+
+  function resetUploadPreview() {
+    const placeholder = overlay?.querySelector("#rs-upload-placeholder");
+    const preview = overlay?.querySelector("#rs-upload-preview");
+    const previewImg = overlay?.querySelector("#rs-preview-img");
+    if (placeholder) placeholder.classList.remove("hidden");
+    if (preview) preview.classList.add("hidden");
+    if (previewImg) previewImg.src = "";
+  }
+
+  function showUploadPreview(src) {
+    const placeholder = overlay?.querySelector("#rs-upload-placeholder");
+    const preview = overlay?.querySelector("#rs-upload-preview");
+    const previewImg = overlay?.querySelector("#rs-preview-img");
+    if (previewImg) previewImg.src = src;
+    if (placeholder) placeholder.classList.add("hidden");
+    if (preview) preview.classList.remove("hidden");
+  }
+
+  function handleEditFromView() {
+    if (typeof currentCallbacks.onEdit === "function") {
+      currentCallbacks.onEdit();
+    }
   }
 
   // ── Form helpers ──
@@ -171,6 +242,7 @@
     if (imageFile) imageFile.value = "";
     if (imageRef) imageRef.value = "";
     if (body) body.value = "";
+    resetUploadPreview();
     setImageStatus("Sin imagen seleccionada.");
     setFormMsg("");
     overlay.querySelectorAll(".rs-recipient-chip").forEach((node) => {
@@ -179,7 +251,7 @@
     });
   }
 
-  function populateForm({ title, imageRef, bodyMarkdown, recipientPlayerIds, tags }) {
+  async function populateForm({ title, imageRef, bodyMarkdown, recipientPlayerIds, tags }) {
     const titleInput = overlay.querySelector("#rs-title-input");
     const tagsInput = overlay.querySelector("#rs-tags-input");
     const imageFileInput = overlay.querySelector("#rs-image-file");
@@ -196,6 +268,17 @@
       imageRefInput?.value ? "Imagen actual guardada." : "Sin imagen seleccionada.",
       imageRefInput?.value ? "ok" : "neutral",
     );
+
+    // Show existing image preview when editing
+    if (imageRefInput?.value) {
+      const api = handouts();
+      if (api?.resolveImageSignedUrl) {
+        const signedUrl = await api.resolveImageSignedUrl(imageRefInput.value);
+        if (signedUrl) showUploadPreview(signedUrl);
+      }
+    } else {
+      resetUploadPreview();
+    }
 
     const selected = new Set((recipientPlayerIds || []).map((id) => String(id)));
     overlay.querySelectorAll(".rs-recipient-chip").forEach((node) => {
@@ -399,7 +482,7 @@
       renderRecipients(recipients);
     }
 
-    populateForm({
+    await populateForm({
       title: handout.title || "",
       imageRef: handout.image_url || "",
       bodyMarkdown: handout.body_markdown || "",
@@ -410,14 +493,18 @@
     overlay.querySelector("#rs-title-input")?.focus();
   }
 
-  function openView({ title, bodyMarkdown, imageUrl, tags, onClosed } = {}) {
+  function openView({ title, bodyMarkdown, imageUrl, tags, onEdit, onClosed } = {}) {
     showOverlay();
     showScreen(viewScreen);
 
-    currentCallbacks = { onSaved: null, onClosed: onClosed || null };
+    currentCallbacks = { onSaved: null, onEdit: onEdit || null, onClosed: onClosed || null };
+
+    const editBtn = overlay.querySelector("#rs-view-edit");
+    if (editBtn) editBtn.classList.toggle("hidden", !onEdit);
 
     const titleEl = overlay.querySelector("#rs-view-title");
     const tagsEl = overlay.querySelector("#rs-view-tags");
+    const imageDetail = overlay.querySelector("#rs-detail-image");
     const imageEl = overlay.querySelector("#rs-view-image");
     const contentEl = overlay.querySelector("#rs-view-content");
 
@@ -431,13 +518,16 @@
     }
 
     const url = String(imageUrl || "").trim();
-    if (imageEl) {
-      if (url) {
-        imageEl.src = url;
-        imageEl.classList.remove("hidden");
+    const hasImage = Boolean(url);
+
+    if (imageDetail) {
+      if (hasImage) {
+        imageDetail.classList.remove("hidden");
+        imageDetail.open = true;
+        if (imageEl) imageEl.src = url;
       } else {
-        imageEl.src = "";
-        imageEl.classList.add("hidden");
+        imageDetail.classList.add("hidden");
+        imageDetail.open = false;
       }
     }
 
@@ -454,7 +544,7 @@
     if (typeof currentCallbacks.onClosed === "function") {
       currentCallbacks.onClosed();
     }
-    currentCallbacks = { onSaved: null, onClosed: null };
+    currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
   }
 
   function isOpen() {

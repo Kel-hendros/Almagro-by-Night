@@ -76,30 +76,35 @@
 
         return `
           <article class="ra-card" data-handout-id="${escapeHtml(item.id)}">
-            <div class="ra-card-image-wrap">
-              ${
-                item.image_signed_url
-                  ? `<img class="ra-card-image" src="${escapeHtml(item.image_signed_url)}" alt="${escapeHtml(item.title || "Revelación")}">`
-                  : `<div class="ra-card-image ra-card-image--empty">Sin imagen</div>`
-              }
-            </div>
+            ${item.image_signed_url
+              ? `<div class="ra-card-image-wrap">
+                   <img class="ra-card-image" src="${escapeHtml(item.image_signed_url)}" alt="${escapeHtml(item.title || "Revelación")}">
+                 </div>`
+              : ""
+            }
             <div class="ra-card-head">
               <h3>${escapeHtml(item.title || "Revelación")}</h3>
+              <button type="button" class="btn-icon btn-icon--danger ra-delete-handout"
+                data-handout-id="${escapeHtml(item.id)}" title="Eliminar revelación">
+                <i data-lucide="trash-2"></i>
+              </button>
             </div>
             <p class="ra-meta">${escapeHtml(created)}</p>
             ${tagsHtml}
-            <p class="ra-associated-line"><strong>Jugadores:</strong> ${escapeHtml(associatedNames.join(", ") || "Sin destinatarios")}</p>
             <p class="ra-preview">${escapeHtml(bodyPreview || "Sin descripción.")}</p>
-            <div class="ra-delivery-list">${deliveriesHtml}</div>
-            <div class="ra-card-actions">
-              <button type="button" class="btn btn--danger ra-delete-handout" data-handout-id="${escapeHtml(
-                item.id,
-              )}">Eliminar</button>
+            <div class="ra-card-footer">
+              <span class="ra-recipient-badge">
+                <i data-lucide="users"></i>
+                <span>${deliveries.length}</span>
+              </span>
+              <div class="ra-delivery-list">${deliveriesHtml}</div>
             </div>
           </article>
         `;
       })
       .join("");
+
+    if (global.lucide) lucide.createIcons({ nodes: [host] });
   }
 
   function renderPlayerList(deliveries) {

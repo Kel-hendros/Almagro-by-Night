@@ -76,6 +76,9 @@ body[data-theme] {
 	--ui-accent-subtle: var(--theme-accent-soft);
 	--dot: var(--theme-accent);
 	--dot-strong: color-mix(in srgb, var(--theme-accent) 68%, #ffffff);
+	--dice-success: var(--theme-success, #6e9e6e);
+	--dice-fail-tone: var(--theme-info, #4a90c4);
+	--dice-botch: var(--theme-danger, #c62828);
 	--blood-1: #d48b7a;
 	--blood-2: #c41e3a;
 	--blood-3: #7b5ea7;
@@ -4134,24 +4137,24 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 }
 
 .dice-result.success {
-	border-color: rgba(47, 221, 116, 0.45);
+	border-color: color-mix(in srgb, var(--dice-success) 45%, transparent);
 	background: linear-gradient(180deg,
-			rgba(47, 221, 116, 0.12),
-			rgba(47, 221, 116, 0.05));
+			color-mix(in srgb, var(--dice-success) 14%, transparent),
+			color-mix(in srgb, var(--dice-success) 5%, transparent));
 }
 
 .dice-result.fail {
-	border-color: rgba(117, 188, 198, 0.45);
+	border-color: color-mix(in srgb, var(--dice-fail-tone) 45%, transparent);
 	background: linear-gradient(180deg,
-			rgba(117, 188, 198, 0.10),
-			rgba(117, 188, 198, 0.04));
+			color-mix(in srgb, var(--dice-fail-tone) 12%, transparent),
+			color-mix(in srgb, var(--dice-fail-tone) 4%, transparent));
 }
 
 .dice-result.botch {
-	border-color: rgba(255, 79, 79, 0.45);
+	border-color: color-mix(in srgb, var(--dice-botch) 45%, transparent);
 	background: linear-gradient(180deg,
-			rgba(255, 79, 79, 0.12),
-			rgba(255, 79, 79, 0.05));
+			color-mix(in srgb, var(--dice-botch) 14%, transparent),
+			color-mix(in srgb, var(--dice-botch) 5%, transparent));
 }
 
 .dice-result.wakeup {
@@ -4212,31 +4215,37 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 }
 
 .dice-result-die.success {
-	color: #102814;
-	border-color: #2fdd74;
-	background: linear-gradient(180deg, #51e68c, #26c866);
+	color: color-mix(in srgb, var(--dice-success) 18%, #000000);
+	border-color: color-mix(in srgb, var(--dice-success) 72%, #000000);
+	background: linear-gradient(180deg,
+			color-mix(in srgb, var(--dice-success) 68%, #ffffff),
+			color-mix(in srgb, var(--dice-success) 78%, #000000));
 }
 
 .dice-result-die.fail {
-	color: #10323b;
-	border-color: #75bcc6;
-	background: linear-gradient(180deg, #9ad5dd, #69afb9);
+	color: color-mix(in srgb, var(--dice-fail-tone) 18%, #000000);
+	border-color: color-mix(in srgb, var(--dice-fail-tone) 72%, #000000);
+	background: linear-gradient(180deg,
+			color-mix(in srgb, var(--dice-fail-tone) 68%, #ffffff),
+			color-mix(in srgb, var(--dice-fail-tone) 78%, #000000));
 }
 
 .dice-result-die.botch {
-	color: #3f0808;
-	border-color: #ff4f4f;
-	background: linear-gradient(180deg, #ff7a7a, #f04141);
+	color: color-mix(in srgb, var(--dice-botch) 18%, #000000);
+	border-color: color-mix(in srgb, var(--dice-botch) 72%, #000000);
+	background: linear-gradient(180deg,
+			color-mix(in srgb, var(--dice-botch) 68%, #ffffff),
+			color-mix(in srgb, var(--dice-botch) 78%, #000000));
 }
 
 .dice-result-die.potencia-chip {
 	font-size: 0;
-	color: #102814;
+	color: color-mix(in srgb, var(--dice-success) 18%, #000000);
 }
 
 .dice-result-die.potencia-chip iconify-icon {
 	font-size: 20px;
-	color: #102814;
+	color: color-mix(in srgb, var(--dice-success) 18%, #000000);
 }
 
 /* Éxito cancelado por un 1 */
@@ -4254,7 +4263,7 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 
 .dice-result-die.specialty-bonus iconify-icon {
 	font-size: 18px;
-	color: #102814;
+	color: color-mix(in srgb, var(--dice-success) 18%, #000000);
 }
 
 /* ---- Animación de tirada de dados ---- */
@@ -4381,18 +4390,24 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 }
 
 .dice-history-item.success {
-	border-color: rgba(47, 221, 116, 0.42);
-	background: linear-gradient(180deg, rgba(47, 221, 116, 0.2), rgba(47, 221, 116, 0.11));
+	border-color: color-mix(in srgb, var(--dice-success) 45%, transparent);
+	background: linear-gradient(180deg,
+			color-mix(in srgb, var(--dice-success) 20%, transparent),
+			color-mix(in srgb, var(--dice-success) 10%, transparent));
 }
 
 .dice-history-item.fail {
-	border-color: rgba(117, 188, 198, 0.44);
-	background: linear-gradient(180deg, rgba(117, 188, 198, 0.2), rgba(117, 188, 198, 0.1));
+	border-color: color-mix(in srgb, var(--dice-fail-tone) 45%, transparent);
+	background: linear-gradient(180deg,
+			color-mix(in srgb, var(--dice-fail-tone) 20%, transparent),
+			color-mix(in srgb, var(--dice-fail-tone) 10%, transparent));
 }
 
 .dice-history-item.botch {
-	border-color: rgba(255, 79, 79, 0.45);
-	background: linear-gradient(180deg, rgba(255, 122, 122, 0.26), rgba(240, 65, 65, 0.16));
+	border-color: color-mix(in srgb, var(--dice-botch) 45%, transparent);
+	background: linear-gradient(180deg,
+			color-mix(in srgb, var(--dice-botch) 24%, transparent),
+			color-mix(in srgb, var(--dice-botch) 14%, transparent));
 }
 
 .dice-history-time {
@@ -5032,4 +5047,163 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 	.dice-result-summary {
 		font-size: 1.05rem;
 	}
+}
+
+/* ================================================
+   REVELACIONES (DOCK PANEL)
+   ================================================ */
+
+.revelaciones-pane {
+	display: grid;
+	gap: 8px;
+}
+
+.revelaciones-list {
+	display: grid;
+	gap: 6px;
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.revelaciones-item {
+	display: grid;
+	gap: 4px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: var(--bg-card);
+	border-left: 3px solid transparent;
+	cursor: pointer;
+	transition: border-color 0.15s, background 0.15s;
+}
+
+.revelaciones-item:hover {
+	border-left-color: var(--accent);
+	background: var(--ui-accent-subtle);
+}
+
+.revelaciones-item-content {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.revelaciones-item-title {
+	font-size: 0.85rem;
+	color: var(--fg);
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.revelaciones-item-date {
+	font-size: 0.7rem;
+	color: var(--muted);
+	flex-shrink: 0;
+}
+
+.revelaciones-item-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.revelaciones-tag {
+	font-size: 0.65rem;
+	padding: 1px 6px;
+	border-radius: 4px;
+	background: var(--ui-accent-subtle);
+	color: var(--muted);
+}
+
+/* ================================================
+   REVELACION TOAST
+   ================================================ */
+
+.revelacion-toast {
+	position: fixed;
+	bottom: 16px;
+	right: 16px;
+	z-index: 9999;
+	display: grid;
+	gap: 8px;
+	width: 280px;
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: var(--bg-card);
+	border: 1px solid var(--line);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	animation: toast-slide-in 0.3s ease-out;
+}
+
+.revelacion-toast.hidden {
+	display: none;
+}
+
+@keyframes toast-slide-in {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.revelacion-toast-body {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.revelacion-toast-icon {
+	font-size: 1.4rem;
+	flex-shrink: 0;
+}
+
+.revelacion-toast-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.revelacion-toast-text strong {
+	display: block;
+	font-size: 0.82rem;
+	color: var(--fg);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.revelacion-toast-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+}
+
+.revelacion-toast-actions .btn--sm {
+	font-size: 0.75rem;
+	padding: 4px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--accent);
+	background: var(--accent);
+	color: #fff;
+	cursor: pointer;
+}
+
+.revelacion-toast-actions .btn--ghost {
+	background: transparent;
+	border-color: var(--line);
+	color: var(--muted);
+}
+
+.revelacion-toast-actions .btn--ghost:hover {
+	background: var(--ui-accent-subtle);
+}
+
+.revelacion-toast-actions .btn--sm:hover {
+	opacity: 0.85;
 }

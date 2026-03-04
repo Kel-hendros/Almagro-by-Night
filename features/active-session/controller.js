@@ -11,6 +11,7 @@
     encounterBridge: null,
     backBtnHandler: null,
     openArchiveBtnHandler: null,
+    createRevelacionBtnHandler: null,
   };
 
   function mountEncounterOverlay() {
@@ -50,6 +51,19 @@
       };
       openArchiveBtn.addEventListener("click", state.openArchiveBtnHandler);
     }
+
+    const createRevBtn = document.getElementById("as-create-revelacion");
+    if (createRevBtn) {
+      state.createRevelacionBtnHandler = () => {
+        const rs = global.ABNShared?.revelationScreen;
+        if (!rs) return;
+        rs.openCreate({
+          chronicleId: state.chronicleId,
+          currentPlayerId: state.currentPlayerId,
+        });
+      };
+      createRevBtn.addEventListener("click", state.createRevelacionBtnHandler);
+    }
   }
 
   function unbindUIActions() {
@@ -64,6 +78,12 @@
       openArchiveBtn.removeEventListener("click", state.openArchiveBtnHandler);
     }
     state.openArchiveBtnHandler = null;
+
+    const createRevBtn = document.getElementById("as-create-revelacion");
+    if (createRevBtn && state.createRevelacionBtnHandler) {
+      createRevBtn.removeEventListener("click", state.createRevelacionBtnHandler);
+    }
+    state.createRevelacionBtnHandler = null;
   }
 
   async function initPage() {

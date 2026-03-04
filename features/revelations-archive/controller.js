@@ -132,11 +132,22 @@
     const handout = findHandoutById(card.dataset.handoutId);
     if (!handout) return;
 
-    revelationScreen()?.openEdit({
-      chronicleId: state.chronicleId,
-      currentPlayerId: state.currentPlayerId,
-      handout,
-      onSaved: onSavedCallback,
+    const rs = revelationScreen();
+    if (!rs) return;
+    rs.openView({
+      title: handout.title || "",
+      bodyMarkdown: handout.body_markdown || "",
+      imageUrl: handout.image_signed_url || "",
+      tags: handout.tags || [],
+      onEdit: () => {
+        rs.close();
+        rs.openEdit({
+          chronicleId: state.chronicleId,
+          currentPlayerId: state.currentPlayerId,
+          handout,
+          onSaved: onSavedCallback,
+        });
+      },
     });
   }
 

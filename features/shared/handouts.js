@@ -577,7 +577,7 @@
     return sheets
       .map((sheet) => {
         const player = playerByUserId.get(String(sheet.user_id));
-        if (!player?.id || player.id === excludePlayerId) return null;
+        if (!player?.id) return null;
         const data = sheet.data || {};
         return {
           character_sheet_id: sheet.id,
@@ -608,5 +608,6 @@
     markDeliveryOpened,
     subscribeDeliveriesForPlayer,
     unsubscribeChannel,
+    resolveImageSignedUrl,
   };
 })(window);

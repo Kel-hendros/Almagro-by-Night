@@ -182,15 +182,25 @@
       handoutsApi.listHandoutsByChronicle(revelacionState.chronicleId).then((handouts) => {
         const handout = (handouts || []).find((h) => h.id === narratorCard.dataset.handoutId);
         if (!handout) return;
-        rs.openEdit({
-          chronicleId: revelacionState.chronicleId,
-          currentPlayerId: revelacionState.currentPlayerId,
-          handout,
-          onSaved: () => loadRevelacionesList(
-            revelacionState.chronicleId,
-            revelacionState.currentPlayerId,
-            revelacionState.isNarrator,
-          ),
+        const onSaved = () => loadRevelacionesList(
+          revelacionState.chronicleId,
+          revelacionState.currentPlayerId,
+          revelacionState.isNarrator,
+        );
+        rs.openView({
+          title: handout.title || "",
+          bodyMarkdown: handout.body_markdown || "",
+          imageUrl: handout.image_signed_url || "",
+          tags: handout.tags || [],
+          onEdit: () => {
+            rs.close();
+            rs.openEdit({
+              chronicleId: revelacionState.chronicleId,
+              currentPlayerId: revelacionState.currentPlayerId,
+              handout,
+              onSaved,
+            });
+          },
         });
       });
       return;

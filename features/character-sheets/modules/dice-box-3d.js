@@ -3,11 +3,13 @@
     "https://cdn.jsdelivr.net/npm/@3d-dice/dice-box@1.1.4/dist/";
   const CDN_URL = CDN_PKG + "dice-box.es.min.js";
   const CDN_ASSETS = CDN_PKG + "assets/";
+  const DEFAULT_THEME_COLOR = "#C62828";
 
   let enabled = false;
   let diceBox = null;
   let loading = false;
   let container = null;
+  let currentThemeColor = null;
 
   function isEnabled() {
     return enabled;
@@ -25,8 +27,26 @@
     return container;
   }
 
+  function readThemeColor() {
+    if (!global.document) return DEFAULT_THEME_COLOR;
+
+    const roots = [document.documentElement, document.body].filter(Boolean);
+    const vars = ["--theme-accent", "--color-accent", "--accent"];
+
+    for (const root of roots) {
+      const styles = global.getComputedStyle(root);
+      for (const cssVar of vars) {
+        const value = styles.getPropertyValue(cssVar)?.trim();
+        if (value) return value;
+      }
+    }
+
+    return DEFAULT_THEME_COLOR;
+  }
+
   async function loadDiceBox() {
-    if (diceBox) return diceBox;
+    const themeColor = readThemeColor();
+    if (diceBox && currentThemeColor === themeColor) return diceBox;
     if (loading) {
       return new Promise((resolve) => {
         const check = setInterval(() => {
@@ -41,13 +61,20 @@
     loading = true;
     try {
       ensureContainer();
+      if (diceBox && currentThemeColor !== themeColor) {
+        try {
+          diceBox.clear();
+        } catch (_e) {}
+        diceBox = null;
+        if (container) container.innerHTML = "";
+      }
       const mod = await import(CDN_URL);
       const DiceBox = mod.default || mod.DiceBox;
       diceBox = new DiceBox({
         container: "#dice-box-3d-container",
         assetPath: CDN_ASSETS,
         origin: "",
-        themeColor: "#C62828",
+        themeColor,
         scale: 4,
         settleTimeout: 5000,
         gravity: 2,
@@ -57,12 +84,14 @@
         lightIntensity: 1,
       });
       await diceBox.init();
+      currentThemeColor = themeColor;
       loading = false;
       return diceBox;
     } catch (e) {
       console.error("[DiceBox3D] Failed to load:", e);
       loading = false;
       diceBox = null;
+      currentThemeColor = null;
       return null;
     }
   }

@@ -33,7 +33,7 @@
 .btn--primary {
     background: var(--theme-accent);
     border-color: var(--theme-accent);
-    color: var(--theme-text-primary);
+    color: var(--theme-text-on-accent);
 }
 
 .btn--primary:hover {
@@ -43,7 +43,7 @@
 .btn--secondary {
     background: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-bg-elevated));
     border-color: var(--theme-accent);
-    color: var(--theme-text-primary);
+    color: var(--theme-text-on-accent);
 }
 
 .btn--secondary:hover {
@@ -111,9 +111,7 @@
 }
 
 .btn-icon--danger:hover {
-    border-color: var(--color-danger-soft);
-    background: var(--color-danger-soft);
-    color: #ffffff;
+    opacity: 0.75;
 }
 
 .app-modal-overlay {

@@ -399,6 +399,12 @@ if (sheetLoaderModule) {
       currentAvatarPosition = sheet?.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
       loadCharacterFromJSON(sheet.data);
       updateAll();
+
+      // Inicializar revelaciones con la chronicle del personaje
+      const revChronicleId = sheet.chronicle_id || localStorage.getItem("currentChronicleId");
+      if (window.ABNSheetRevelaciones && revChronicleId) {
+        window.ABNSheetRevelaciones.init(revChronicleId);
+      }
     },
     onSheetNotFound: () => {
       alert("No se encontró la hoja de personaje.");
