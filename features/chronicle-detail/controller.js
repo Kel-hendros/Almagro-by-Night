@@ -397,22 +397,6 @@
         overlay: "modal-char-picker",
         closeButtons: ["#char-picker-close"],
     });
-    const recapReaderModal = createModalController({
-        overlay: "modal-recap-reader",
-        closeButtons: ["#recap-reader-close"],
-    });
-    const recapFormModal = createModalController({
-        overlay: "modal-recap-form",
-        closeButtons: ["#recap-form-close", "#recap-form-cancel"],
-    });
-    const noteReaderModal = createModalController({
-        overlay: "modal-note-reader",
-        closeButtons: ["#note-reader-close"],
-    });
-    const noteFormModal = createModalController({
-        overlay: "modal-note-form",
-        closeButtons: ["#note-form-close", "#note-form-cancel"],
-    });
 
     const participantsApi = (await ns.participants?.init({
         chronicleId,
@@ -478,17 +462,12 @@
         isNarrator,
         initialRecapId: recapIdFromQuery,
         previewLines: summaryApi.previewLines || ns.summary?.previewLines,
-        recapReaderModal,
-        recapFormModal,
         onLastSessionRefresh: summaryApi.refreshLastSessionCard,
     });
 
     await ns.notes?.init({
         chronicleId,
-        sessionUserId: session.user.id,
-        myChars,
-        noteReaderModal,
-        noteFormModal,
+        currentPlayerId: currentPlayer.id,
     });
 
     // ── Revelaciones tab ──

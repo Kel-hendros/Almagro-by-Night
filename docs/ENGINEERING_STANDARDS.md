@@ -88,6 +88,59 @@ Regla de promoción:
 - Evitar hardcodes hex/rgba cuando exista token semántico equivalente.
 - CSS de feature: solo estilos propios de la pantalla, no redefinir base components.
 
+### 4.1 Global Document Screen (source of truth)
+
+Objetivo: toda entidad “documento” (hoy: `note`, `recap`, `revelation`; mañana: `equipment`, `npc`, etc.) se renderiza en un único contenedor global reutilizable.
+
+Fuente de verdad:
+- Lógica: `features/shared/document-screen.js`
+- Estilos base: `css/document-screen.css`
+
+Contrato de uso:
+- Abrir siempre mediante `ABNShared.documentScreen.open({...})`.
+- Pasar `docType` explícito (`note`, `recap`, `revelation`, etc.) para variaciones por tipo.
+- Reutilizar primitives globales para contenido/form.
+Primitives globales:
+- `doc-view-body`, `doc-view-card`, `doc-markdown`
+- `doc-form-body`, `doc-form-wrap`, `doc-form-group`, `doc-form-row`, `doc-form-input`, `doc-form-textarea`
+- `doc-nav`, `doc-chip`, `doc-switch`
+
+Reglas obligatorias:
+- No definir estilos de lectura/edición de documentos dentro de CSS de feature (`character-sheets/style.css`, `chronicles.css`, etc.).
+- No duplicar tipografía markdown (`h1/h2/h3/p/code/pre/lists`) por pantalla; se define una sola vez en `doc-markdown`.
+- Si un `docType` necesita un comportamiento visual especial, agregarlo en `css/document-screen.css` scopeado por `data-doc-type` (ej: `.ds-overlay[data-doc-type="revelation"] ...`), no en CSS local.
+- Los módulos de feature deben adaptarse al contrato del contenedor (data + acciones), no reinventar estructura visual base.
+
+### 4.2 Global Note Screen (source of truth)
+
+Objetivo: estandarizar apertura, lectura, edición y archivado de notas sin divergencias por contexto.
+
+Fuente de verdad:
+- Lógica shared: `features/shared/note-screen.js`
+- Shell visual: `features/shared/document-screen.js`
+
+Contrato de uso:
+- Abrir lectura con `ABNShared.noteScreen.openViewer({...})`.
+- Abrir creación/edición con `ABNShared.noteScreen.openForm({...})`.
+- No crear viewers/forms alternativos en módulos de feature.
+
+Responsabilidad shared:
+- Render de vista y formulario de nota.
+- Botonera global (cerrar, editar, eliminar, archivar, guardar/cancelar).
+- Estado de guardado (`saving`) y deshabilitado de acciones.
+- Render markdown en lectura.
+- Toggle archivar/desarchivar sin cerrar la nota.
+- Persistencia estándar de `chronicle_notes` por `persistence.type = "chronicle-note"`.
+
+Responsabilidad de contexto:
+- Listar/filtrar notas y abrir la seleccionada.
+- Pasar `persistence` (`supabase`, `chronicleId`, `playerId`).
+- Resolver navegación local (`sequence`, `onNavigate`) cuando aplique.
+- Refrescar listas y controlar retorno local (`onSaved`, `onCancel`).
+
+Regla de consistencia:
+- Si una mejora aplica a notas en 2+ pantallas, se implementa en `note-screen`/`document-screen` y no en CSS/JS local de feature.
+
 ## 5) JavaScript Guidelines
 
 - No colgar APIs nuevas en `window` salvo bootstrap requerido por router.

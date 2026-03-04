@@ -4,13 +4,13 @@
   position: fixed;
   z-index: 1100;
   top: 0;
-  left: var(--sidebar-current-width, var(--sidebar-width-expanded));
-  width: calc(100% - var(--sidebar-current-width, var(--sidebar-width-expanded)));
+  left: var(--sidebar-current-width, var(--sidebar-width-expanded, 0px));
+  width: calc(100% - var(--sidebar-current-width, var(--sidebar-width-expanded, 0px)));
   height: 100%;
   display: none;
 
-  /* Provide --cd-* aliases so cd-recap-reader-* classes resolve
-     (the overlay lives outside .chronicle-detail where these are defined) */
+  /* Provide --cd-* aliases for revelation sections that use --cd tokens.
+     The overlay lives outside .chronicle-detail. */
   --cd-bg-primary: var(--theme-bg-primary);
   --cd-bg-surface: var(--theme-bg-surface);
   --cd-bg-elevated: var(--theme-bg-elevated);
@@ -317,7 +317,7 @@
 }
 
 /* ═══════════════════════════════════════════════
-   View mode — reuses .cd-recap-reader-* from chronicles.css
+   View mode
    ═══════════════════════════════════════════════ */
 
 .rs-screen--view {
@@ -326,10 +326,13 @@
 
 /* Body: add gap for image-detail + card spacing, center content */
 .rs-view-body {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  max-width: 760px;
   width: 100%;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  min-height: 100%;
   box-sizing: border-box;
 }
 

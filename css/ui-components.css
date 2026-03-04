@@ -104,6 +104,16 @@
     color: var(--theme-accent);
 }
 
+.btn-icon--primary {
+    border-color: var(--theme-accent);
+    background: var(--theme-accent);
+    color: #ffffff;
+}
+
+.btn-icon--primary:hover {
+    opacity: 0.88;
+}
+
 .btn-icon--danger {
     border-color: var(--color-danger);
     background: var(--color-danger);

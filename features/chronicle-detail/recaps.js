@@ -15,6 +15,10 @@
     return meta;
   }
 
+  function documentScreen() {
+    return global.ABNShared?.documentScreen || null;
+  }
+
   async function init(config) {
     const {
       chronicleId,
@@ -22,8 +26,6 @@
       isNarrator,
       initialRecapId,
       previewLines,
-      recapReaderModal,
-      recapFormModal,
       onLastSessionRefresh,
     } = config;
 
@@ -36,23 +38,6 @@
     const sesionesList = document.getElementById("cd-sesiones-list");
     const sesionesMoreBtn = document.getElementById("cd-sesiones-more");
     const addRecapBtn = document.getElementById("cd-add-recap");
-
-    const readerOverlay = document.getElementById("modal-recap-reader");
-    const readerTitle = document.getElementById("recap-reader-title");
-    const readerMeta = document.getElementById("recap-reader-meta");
-    const readerText = document.getElementById("recap-reader-text");
-    const readerActions = document.getElementById("recap-reader-actions");
-    const readerShare = document.getElementById("recap-reader-share");
-    const readerPrev = document.getElementById("recap-reader-prev");
-    const readerNext = document.getElementById("recap-reader-next");
-
-    const formOverlay = document.getElementById("modal-recap-form");
-    const formHeading = document.getElementById("recap-form-heading");
-    const formTitle = document.getElementById("recap-form-title");
-    const formNumber = document.getElementById("recap-form-number");
-    const formDate = document.getElementById("recap-form-date");
-    const formBody = document.getElementById("recap-form-body");
-    const formSave = document.getElementById("recap-form-save");
 
     if (!sesionesList || !sesionesMoreBtn || !addRecapBtn) return;
 
@@ -79,7 +64,9 @@
           ${truncated ? `<p class="cd-recap-body">${escapeHtml(truncated)}</p>` : ""}
         </div>
       `;
-      card.addEventListener("click", () => openRecapReader(recap.id));
+      card.addEventListener("click", () => {
+        void openRecapReader(recap.id);
+      });
       return card;
     }
 
@@ -121,12 +108,6 @@
       recapOffset += recaps.length;
     }
 
-    function updateReaderNav() {
-      const idx = allLoadedRecaps.findIndex((r) => r.id === currentReaderRecapId);
-      if (readerPrev) readerPrev.disabled = idx >= allLoadedRecaps.length - 1;
-      if (readerNext) readerNext.disabled = idx <= 0;
-    }
-
     function getRecapShareUrl(recapId) {
       const hash = `chronicle?id=${encodeURIComponent(chronicleId)}&recap=${encodeURIComponent(recapId)}`;
       return `${window.location.origin}${window.location.pathname}#${hash}`;
@@ -148,6 +129,9 @@
     }
 
     async function openRecapReader(recapId) {
+      const ds = documentScreen();
+      if (!ds) return;
+
       let recap = allLoadedRecaps.find((r) => r.id === recapId);
       if (!recap) {
         const { data, error } = await supabase
@@ -163,59 +147,247 @@
       if (!recap) return;
 
       currentReaderRecapId = recapId;
-      readerTitle.textContent = recap.title;
-      readerMeta.textContent = formatRecapMeta(recap);
-      readerText.innerHTML = renderMarkdown(recap.body || "");
+
+      const actions = [
+        {
+          id: "share",
+          kind: "icon",
+          icon: "share-2",
+          title: "Compartir",
+          ariaLabel: "Compartir",
+          onClick: () => {
+            void shareRecap(recap.id);
+          },
+        },
+      ];
 
       if (isNarrator) {
-        readerActions.classList.remove("hidden");
-      } else {
-        readerActions.classList.add("hidden");
+        actions.push(
+          {
+            id: "edit",
+            kind: "icon",
+            icon: "pencil",
+            title: "Editar",
+            ariaLabel: "Editar",
+            onClick: () => {
+              openRecapForm(recap);
+            },
+          },
+          {
+            id: "delete",
+            kind: "icon",
+            icon: "trash-2",
+            title: "Eliminar",
+            ariaLabel: "Eliminar",
+            danger: true,
+            onClick: async () => {
+              if (!confirm("¿Eliminar este recuento de sesión? Esta acción no se puede deshacer.")) {
+                return;
+              }
+              const { error } = await supabase
+                .from("session_recaps")
+                .delete()
+                .eq("id", recap.id);
+              if (error) {
+                alert("Error al eliminar: " + error.message);
+                return;
+              }
+              ds.close();
+              recapOffset = 0;
+              await loadRecaps(false);
+              await refreshLastSessionCard();
+            },
+          },
+        );
       }
 
-      updateReaderNav();
-      recapReaderModal.open();
+      const idx = allLoadedRecaps.findIndex((r) => r.id === recap.id);
+      const canGoPrev = idx < allLoadedRecaps.length - 1 && idx !== -1;
+      const canGoNext = idx > 0;
+      const footerActions = [
+        {
+          id: "prev",
+          kind: "button",
+          variant: canGoPrev ? "primary" : "ghost",
+          label: "Anterior",
+          disabled: !canGoPrev,
+          onClick: () => {
+            if (canGoPrev) {
+              void openRecapReader(allLoadedRecaps[idx + 1].id);
+            }
+          },
+        },
+        {
+          id: "next",
+          kind: "button",
+          variant: canGoNext ? "primary" : "ghost",
+          label: "Siguiente",
+          disabled: !canGoNext,
+          onClick: () => {
+            if (canGoNext) {
+              void openRecapReader(allLoadedRecaps[idx - 1].id);
+            }
+          },
+        },
+      ];
+
+      ds.open({
+        docType: "recap",
+        title: recap.title,
+        subtitle: formatRecapMeta(recap),
+        actions,
+        footerActions,
+        bodyClass: "doc-view-body",
+        renderBody: (body) => {
+          const card = document.createElement("div");
+          card.className = "doc-view-card";
+          card.innerHTML = `<div class="doc-markdown">${renderMarkdown(recap.body || "")}</div>`;
+          body.appendChild(card);
+        },
+        onClosed: () => {
+          currentReaderRecapId = null;
+        },
+      });
+
       if (window.lucide) {
-        lucide.createIcons({ nodes: [readerOverlay] });
+        window.lucide.createIcons();
       }
     }
 
-    function closeRecapReader() {
-      recapReaderModal.close();
-      currentReaderRecapId = null;
+    function recapFormMarkup(recap) {
+      const maxNum =
+        allLoadedRecaps.length > 0
+          ? Math.max(...allLoadedRecaps.map((row) => row.session_number || 0))
+          : 0;
+
+      const title = recap?.title || "";
+      const number = recap?.session_number || maxNum + 1;
+      const date = recap?.session_date || new Date().toISOString().split("T")[0];
+      const body = recap?.body || "";
+
+      return `
+        <div class="doc-form-wrap">
+          <div class="doc-form-group">
+            <label class="doc-form-label" for="cd-recap-form-title">Título</label>
+            <input type="text" id="cd-recap-form-title" class="doc-form-input" placeholder="Ej: Encuentro en el Barolo" value="${escapeHtml(title)}">
+          </div>
+          <div class="doc-form-row">
+            <div class="doc-form-col doc-form-group">
+              <label class="doc-form-label" for="cd-recap-form-number">Sesión Nº</label>
+              <input type="number" id="cd-recap-form-number" class="doc-form-input" min="1" value="${escapeHtml(number)}">
+            </div>
+            <div class="doc-form-col doc-form-group">
+              <label class="doc-form-label" for="cd-recap-form-date">Fecha</label>
+              <input type="date" id="cd-recap-form-date" class="doc-form-input" value="${escapeHtml(date)}">
+            </div>
+          </div>
+          <div class="doc-form-group doc-form-group--grow">
+            <label class="doc-form-label" for="cd-recap-form-body">Crónica <span class="doc-form-hint">(soporta Markdown)</span></label>
+            <textarea id="cd-recap-form-body" class="doc-form-textarea" placeholder="Relato de la sesión...">${escapeHtml(body)}</textarea>
+          </div>
+        </div>
+      `;
+    }
+
+    function readRecapFormValues() {
+      const title = document.getElementById("cd-recap-form-title")?.value.trim() || "";
+      const number = parseInt(document.getElementById("cd-recap-form-number")?.value || "", 10);
+      const date = document.getElementById("cd-recap-form-date")?.value || "";
+      const body = document.getElementById("cd-recap-form-body")?.value.trim() || "";
+      return { title, number, date, body };
     }
 
     function openRecapForm(recap) {
-      if (recap) {
-        editingRecapId = recap.id;
-        formHeading.textContent = "Editar Recuento";
-        formTitle.value = recap.title || "";
-        formNumber.value = recap.session_number || "";
-        formDate.value = recap.session_date || "";
-        formBody.value = recap.body || "";
-      } else {
-        editingRecapId = null;
-        formHeading.textContent = "Nuevo Recuento";
-        const maxNum =
-          allLoadedRecaps.length > 0
-            ? Math.max(...allLoadedRecaps.map((r) => r.session_number))
-            : 0;
-        formTitle.value = "";
-        formNumber.value = maxNum + 1;
-        formDate.value = new Date().toISOString().split("T")[0];
-        formBody.value = "";
+      const ds = documentScreen();
+      if (!ds) return;
+
+      editingRecapId = recap?.id || null;
+      const heading = editingRecapId ? "Editar Recuento" : "Nuevo Recuento";
+
+      let formApi = null;
+      let saving = false;
+
+      function syncSaveAction() {
+        formApi?.updateAction("save", {
+          label: saving ? "Guardando..." : "Guardar",
+          disabled: saving,
+        });
       }
 
-      recapFormModal.open();
-      formTitle.focus();
-      if (window.lucide) {
-        lucide.createIcons({ nodes: [formOverlay] });
-      }
-    }
+      async function persistRecapForm() {
+        if (saving) return;
 
-    function closeRecapForm() {
-      recapFormModal.close();
-      editingRecapId = null;
+        const { title, number, date, body } = readRecapFormValues();
+        if (!title) {
+          alert("El título es obligatorio.");
+          return;
+        }
+        if (!number || number < 1) {
+          alert("Número de sesión inválido.");
+          return;
+        }
+
+        const payload = {
+          chronicle_id: chronicleId,
+          session_number: number,
+          title,
+          body: body || null,
+          session_date: date || null,
+          created_by: currentPlayerId,
+        };
+
+        saving = true;
+        syncSaveAction();
+
+        let error;
+        if (editingRecapId) {
+          const { created_by, ...updatePayload } = payload;
+          ({ error } = await supabase
+            .from("session_recaps")
+            .update(updatePayload)
+            .eq("id", editingRecapId));
+        } else {
+          ({ error } = await supabase.from("session_recaps").insert(payload));
+        }
+
+        saving = false;
+        syncSaveAction();
+
+        if (error) {
+          alert("Error al guardar: " + error.message);
+          return;
+        }
+
+        formApi?.close();
+        recapOffset = 0;
+        await loadRecaps(false);
+        await refreshLastSessionCard();
+      }
+
+      formApi = ds.open({
+        docType: "recap",
+        title: heading,
+        actions: [
+          {
+            id: "save",
+            kind: "button",
+            variant: "primary",
+            label: "Guardar",
+            onClick: () => {
+              void persistRecapForm();
+            },
+          },
+        ],
+        bodyClass: "doc-form-body",
+        renderBody: (body) => {
+          body.innerHTML = recapFormMarkup(recap || null);
+        },
+        onClosed: () => {
+          editingRecapId = null;
+        },
+      });
+
+      document.getElementById("cd-recap-form-title")?.focus();
     }
 
     async function refreshLastSessionCard() {
@@ -224,110 +396,13 @@
       }
     }
 
-    async function persistRecapForm() {
-      const title = formTitle.value.trim();
-      const sessionNum = parseInt(formNumber.value, 10);
-      if (!title) {
-        alert("El título es obligatorio.");
-        return;
-      }
-      if (!sessionNum || sessionNum < 1) {
-        alert("Número de sesión inválido.");
-        return;
-      }
-
-      const payload = {
-        chronicle_id: chronicleId,
-        session_number: sessionNum,
-        title,
-        body: formBody.value.trim() || null,
-        session_date: formDate.value || null,
-        created_by: currentPlayerId,
-      };
-
-      formSave.disabled = true;
-      formSave.textContent = "Guardando...";
-
-      let error;
-      if (editingRecapId) {
-        const { created_by, ...updatePayload } = payload;
-        ({ error } = await supabase
-          .from("session_recaps")
-          .update(updatePayload)
-          .eq("id", editingRecapId));
-      } else {
-        ({ error } = await supabase.from("session_recaps").insert(payload));
-      }
-
-      formSave.disabled = false;
-      formSave.textContent = "Guardar";
-
-      if (error) {
-        alert("Error al guardar: " + error.message);
-        return;
-      }
-
-      closeRecapForm();
-      recapOffset = 0;
-      await loadRecaps(false);
-      await refreshLastSessionCard();
-    }
-
-    sesionesMoreBtn?.addEventListener("click", () => loadRecaps(true));
-    addRecapBtn?.addEventListener("click", () => openRecapForm(null));
-
-    readerPrev?.addEventListener("click", () => {
-      const idx = allLoadedRecaps.findIndex((r) => r.id === currentReaderRecapId);
-      if (idx < allLoadedRecaps.length - 1) {
-        void openRecapReader(allLoadedRecaps[idx + 1].id);
-      }
+    sesionesMoreBtn?.addEventListener("click", () => {
+      void loadRecaps(true);
     });
 
-    readerNext?.addEventListener("click", () => {
-      const idx = allLoadedRecaps.findIndex((r) => r.id === currentReaderRecapId);
-      if (idx > 0) {
-        void openRecapReader(allLoadedRecaps[idx - 1].id);
-      }
+    addRecapBtn?.addEventListener("click", () => {
+      openRecapForm(null);
     });
-
-    readerShare?.addEventListener("click", () => {
-      if (!currentReaderRecapId) return;
-      void shareRecap(currentReaderRecapId);
-    });
-
-    const editBtn = document.getElementById("recap-reader-edit");
-    if (editBtn) {
-      editBtn.addEventListener("click", () => {
-        const recap = allLoadedRecaps.find((r) => r.id === currentReaderRecapId);
-        if (!recap) return;
-        closeRecapReader();
-        openRecapForm(recap);
-      });
-    }
-
-    const deleteBtn = document.getElementById("recap-reader-delete");
-    if (deleteBtn) {
-      deleteBtn.addEventListener("click", async () => {
-        if (!confirm("¿Eliminar este recuento de sesión? Esta acción no se puede deshacer.")) {
-          return;
-        }
-        const { error } = await supabase
-          .from("session_recaps")
-          .delete()
-          .eq("id", currentReaderRecapId);
-        if (error) {
-          alert("Error al eliminar: " + error.message);
-          return;
-        }
-
-        closeRecapReader();
-        recapOffset = 0;
-        await loadRecaps(false);
-        await refreshLastSessionCard();
-      });
-    }
-
-    formSave?.addEventListener("click", persistRecapForm);
 
     const onSummaryOpenRecap = (event) => {
       const detail = event?.detail || {};
@@ -335,6 +410,7 @@
       if (!detail.recapId) return;
       void openRecapReader(detail.recapId);
     };
+
     ns.__summaryOpenRecapHandler = onSummaryOpenRecap;
     window.addEventListener("abn:chronicle-open-recap", onSummaryOpenRecap);
 

@@ -2,12 +2,17 @@
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
 
   function stripMarkdown(text) {
-    return (text || "")
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/\*(.*?)\*/g, "$1")
-      .replace(/#{1,6}\s/g, "")
+    const shared = noteScreen();
+    if (typeof shared?.toPlainText === "function") {
+      return shared.toPlainText(text);
+    }
+    return String(text || "")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/`([^`]+)`/g, "$1");
+      .replace(/[*_~`>#-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function formatRelativeDate(isoStr) {
@@ -22,14 +27,24 @@
     return `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
   }
 
+  function noteScreen() {
+    return global.ABNShared?.noteScreen || null;
+  }
+
+  function normalizeNoteRow(row) {
+    return {
+      id: row.id,
+      title: row.title || "Sin título",
+      body: row.body_markdown || "",
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      archived: Boolean(row.is_archived),
+      createdAt: row.created_at || new Date().toISOString(),
+      updatedAt: row.updated_at || row.created_at || new Date().toISOString(),
+    };
+  }
+
   async function init(config) {
-    const {
-      chronicleId,
-      sessionUserId,
-      myChars,
-      noteReaderModal,
-      noteFormModal,
-    } = config;
+    const { chronicleId, currentPlayerId } = config;
 
     const NOTES_PAGE = 5;
     let notesShown = 0;
@@ -39,9 +54,6 @@
     let showingArchived = false;
 
     let currentReaderNoteId = null;
-    let editingNoteId = null;
-    let editingNoteSheetId = null;
-    let noteFormCharIdx = 0;
 
     const notasList = document.getElementById("cd-notas-list");
     const notasMoreBtn = document.getElementById("cd-notas-more");
@@ -49,87 +61,51 @@
     const notesSearchInput = document.getElementById("cd-notes-search");
     const notesArchiveToggle = document.getElementById("cd-notes-archive-toggle");
 
-    const noteReaderOverlay = document.getElementById("modal-note-reader");
-    const noteReaderTitle = document.getElementById("note-reader-title");
-    const noteReaderChar = document.getElementById("note-reader-char");
-    const noteReaderTags = document.getElementById("note-reader-tags");
-    const noteReaderText = document.getElementById("note-reader-text");
-    const noteReaderPrev = document.getElementById("note-reader-prev");
-    const noteReaderNext = document.getElementById("note-reader-next");
-    const noteReaderArchived = document.getElementById("note-reader-archived");
-
-    const noteFormOverlay = document.getElementById("modal-note-form");
-    const noteFormHeading = document.getElementById("note-form-heading");
-    const noteFormTitle = document.getElementById("note-form-title");
-    const noteFormTags = document.getElementById("note-form-tags");
-    const noteFormBody = document.getElementById("note-form-body");
-    const noteFormSave = document.getElementById("note-form-save");
-    const noteFormCharChip = document.getElementById("note-form-char-chip");
-    const noteFormCharName = document.getElementById("note-form-char-name");
-    const noteFormArchiveRow = document.getElementById("note-form-archive-row");
-    const noteFormArchived = document.getElementById("note-form-archived");
-
     if (!notasList || !notasMoreBtn || !addNoteBtn) return;
-
-    function collectNotes() {
-      allNotes = [];
-      myChars.forEach((sheet) => {
-        const notes = (sheet.data?.notes || []).filter((n) =>
-          showingArchived ? !!n.archived : !n.archived
-        );
-        notes.forEach((note) => {
-          allNotes.push({
-            ...note,
-            characterName: sheet.name,
-            sheetId: sheet.id,
-          });
-        });
-      });
-      allNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
 
     function renderNoteCard(note) {
       const plain = stripMarkdown(note.body);
-      const truncated =
-        plain.length > 150 ? plain.substring(0, 150) + "…" : plain;
+      const truncated = plain.length > 150 ? plain.substring(0, 150) + "…" : plain;
       const tagsHtml =
         note.tags && note.tags.length
           ? `<div class="cd-note-tags-row">${note.tags
-              .map((t) => `<span class="cd-note-tag">${escapeHtml(t)}</span>`)
+              .map((tag) => `<span class="cd-note-tag">${escapeHtml(tag)}</span>`)
               .join("")}</div>`
           : "";
 
       const card = document.createElement("div");
       card.className = "cd-note-card";
       card.dataset.noteId = note.id;
-      card.dataset.sheetId = note.sheetId;
       card.innerHTML = `
         <div class="cd-note-header">
           <span class="cd-note-title">${escapeHtml(note.title)}</span>
-          <span class="cd-note-char-badge">${escapeHtml(note.characterName)}</span>
         </div>
         ${tagsHtml}
         ${truncated ? `<p class="cd-note-body">${escapeHtml(truncated)}</p>` : ""}
-        <span class="cd-note-date">${formatRelativeDate(
-          note.updatedAt || note.createdAt
-        )}</span>
+        <span class="cd-note-date">${formatRelativeDate(note.updatedAt || note.createdAt)}</span>
       `;
-      card.addEventListener("click", () => openNoteReader(note.id));
+      card.addEventListener("click", () => {
+        void openNoteReader(note.id);
+      });
       return card;
     }
 
     function filterNotes() {
+      const byArchive = allNotes.filter((note) =>
+        showingArchived ? !!note.archived : !note.archived,
+      );
+
       if (!notesQuery) {
-        filteredNotes = allNotes;
+        filteredNotes = byArchive;
         return;
       }
+
       const q = notesQuery.toLowerCase();
-      filteredNotes = allNotes.filter(
-        (n) =>
-          (n.title && n.title.toLowerCase().includes(q)) ||
-          (n.body && n.body.toLowerCase().includes(q)) ||
-          (n.characterName && n.characterName.toLowerCase().includes(q)) ||
-          (n.tags && n.tags.some((t) => t.toLowerCase().includes(q)))
+      filteredNotes = byArchive.filter(
+        (note) =>
+          (note.title && note.title.toLowerCase().includes(q)) ||
+          (note.body && note.body.toLowerCase().includes(q)) ||
+          (note.tags && note.tags.some((tag) => tag.toLowerCase().includes(q))),
       );
     }
 
@@ -148,8 +124,8 @@
         const emptyMsg = notesQuery
           ? "Sin resultados."
           : showingArchived
-          ? "No hay notas archivadas."
-          : "No hay notas todavía.";
+            ? "No hay notas archivadas."
+            : "No hay notas todavía.";
         notasList.innerHTML = `<span class="cd-card-muted">${emptyMsg}</span>`;
         notasMoreBtn.classList.add("hidden");
         return;
@@ -157,191 +133,125 @@
       showNotes();
     }
 
-    function updateNoteReaderNav() {
-      const idx = allNotes.findIndex((n) => n.id === currentReaderNoteId);
-      if (noteReaderPrev) noteReaderPrev.disabled = idx >= allNotes.length - 1;
-      if (noteReaderNext) noteReaderNext.disabled = idx <= 0;
-    }
-
-    function openNoteReader(noteId) {
-      const note = allNotes.find((n) => n.id === noteId);
-      if (!note) return;
-      currentReaderNoteId = noteId;
-
-      noteReaderTitle.textContent = note.title;
-      noteReaderChar.textContent = note.characterName;
-      noteReaderArchived.checked = !!note.archived;
-
-      noteReaderTags.innerHTML = "";
-      if (note.tags && note.tags.length) {
-        note.tags.forEach((tag) => {
-          const pill = document.createElement("span");
-          pill.className = "cd-note-tag";
-          pill.textContent = tag;
-          noteReaderTags.appendChild(pill);
-        });
-      }
-
-      noteReaderText.innerHTML = renderMarkdown(note.body || "");
-      updateNoteReaderNav();
-      noteReaderModal.open();
-      if (window.lucide) {
-        lucide.createIcons({ nodes: [noteReaderOverlay] });
-      }
-    }
-
-    function closeNoteReader() {
-      noteReaderModal.close();
-      currentReaderNoteId = null;
-    }
-
-    function updateCharChip() {
-      if (!myChars.length) return;
-      const sheet = myChars[noteFormCharIdx];
-      noteFormCharName.textContent = sheet.name;
-      editingNoteSheetId = sheet.id;
-
-      if (myChars.length > 1) {
-        noteFormCharChip.classList.add("clickable");
-      } else {
-        noteFormCharChip.classList.remove("clickable");
-      }
-    }
-
-    function openNoteForm(note) {
-      if (note) {
-        editingNoteId = note.id;
-        editingNoteSheetId = note.sheetId;
-        noteFormHeading.textContent = "Editar Nota";
-        noteFormTitle.value = note.title || "";
-        noteFormTags.value = (note.tags || []).join(", ");
-        noteFormBody.value = note.body || "";
-        noteFormArchived.checked = !!note.archived;
-        noteFormArchiveRow.classList.remove("hidden");
-
-        const charIdx = myChars.findIndex((c) => c.id === note.sheetId);
-        noteFormCharIdx = charIdx >= 0 ? charIdx : 0;
-      } else {
-        editingNoteId = null;
-        noteFormHeading.textContent = "Nueva Nota";
-        noteFormTitle.value = "";
-        noteFormTags.value = "";
-        noteFormBody.value = "";
-        noteFormArchived.checked = false;
-        noteFormArchiveRow.classList.add("hidden");
-        noteFormCharIdx = 0;
-      }
-
-      updateCharChip();
-      noteFormModal.open();
-      noteFormTitle.focus();
-      if (window.lucide) {
-        lucide.createIcons({ nodes: [noteFormOverlay] });
-      }
-    }
-
-    function closeNoteForm() {
-      noteFormModal.close();
-      editingNoteId = null;
-      editingNoteSheetId = null;
-    }
-
     async function refreshNotes() {
-      const { data: freshChars } = await supabase
-        .from("chronicle_characters")
-        .select(
-          "character_sheet_id, character_sheet:character_sheets(id, name, data, avatar_url, user_id)"
-        )
-        .eq("chronicle_id", chronicleId);
+      const { data, error } = await supabase
+        .from("chronicle_notes")
+        .select("id, title, body_markdown, tags, is_archived, created_at, updated_at")
+        .eq("chronicle_id", chronicleId)
+        .eq("player_id", currentPlayerId)
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false });
 
-      myChars.length = 0;
-      (freshChars || []).forEach((row) => {
-        const sheet = row.character_sheet;
-        if (sheet && sheet.user_id === sessionUserId) {
-          myChars.push(sheet);
-        }
-      });
+      if (error) {
+        console.error("chronicle-detail.notes.refreshNotes:", error);
+        notasList.innerHTML = '<span class="cd-card-muted">Error al cargar notas</span>';
+        notasMoreBtn.classList.add("hidden");
+        return;
+      }
 
-      collectNotes();
+      allNotes = (data || []).map(normalizeNoteRow);
       renderNotesList();
     }
 
-    async function persistNoteForm() {
-      const title = noteFormTitle.value.trim();
-      if (!title) {
-        alert("El título es obligatorio.");
-        return;
+    async function setNoteArchived(note, archivedValue) {
+      const { error } = await supabase
+        .from("chronicle_notes")
+        .update({
+          is_archived: archivedValue,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", note.id)
+        .eq("chronicle_id", chronicleId)
+        .eq("player_id", currentPlayerId);
+
+      if (error) {
+        alert("Error al guardar: " + error.message);
+        return false;
       }
-      if (!editingNoteSheetId) {
-        alert("No hay personaje seleccionado.");
-        return;
+      return true;
+    }
+
+    async function deleteNote(note) {
+      const { error } = await supabase
+        .from("chronicle_notes")
+        .delete()
+        .eq("id", note.id)
+        .eq("chronicle_id", chronicleId)
+        .eq("player_id", currentPlayerId);
+
+      if (error) {
+        alert("Error al eliminar: " + error.message);
+        return false;
       }
+      return true;
+    }
 
-      const tagsRaw = noteFormTags.value.trim();
-      const tags = tagsRaw
-        ? tagsRaw
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : [];
-      const body = noteFormBody.value.trim() || "";
+    async function openNoteReader(noteId) {
+      const sharedNotes = noteScreen();
+      if (!sharedNotes) return;
 
-      noteFormSave.disabled = true;
-      noteFormSave.textContent = "Guardando...";
+      const note = allNotes.find((row) => row.id === noteId);
+      if (!note) return;
 
-      const { data: sheet, error: readErr } = await supabase
-        .from("character_sheets")
-        .select("data")
-        .eq("id", editingNoteSheetId)
-        .maybeSingle();
+      currentReaderNoteId = noteId;
+      sharedNotes.openViewer({
+        note,
+        title: note.title,
+        subtitle: () => formatRelativeDate(note.updatedAt || note.createdAt),
+        tags: note.tags || [],
+        sequence: filteredNotes,
+        onNavigate: (nextId) => {
+          if (!nextId) return;
+          void openNoteReader(nextId);
+        },
+        onEdit: () => {
+          openNoteForm(note);
+        },
+        onToggleArchive: async (row, nextArchived) => {
+          const ok = await setNoteArchived(row, nextArchived);
+          if (!ok) return;
+          await refreshNotes();
+          return true;
+        },
+        onDelete: async (row) => {
+          if (!confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.")) return;
+          const ok = await deleteNote(row);
+          if (!ok) return;
+          global.ABNShared?.documentScreen?.close?.();
+          await refreshNotes();
+        },
+        onClosed: () => {
+          currentReaderNoteId = null;
+        },
+      });
+    }
 
-      if (readErr || !sheet) {
-        alert(
-          "Error al leer el personaje: " + (readErr?.message || "no encontrado")
-        );
-        noteFormSave.disabled = false;
-        noteFormSave.textContent = "Guardar";
-        return;
-      }
+    function openNoteForm(note) {
+      const sharedNotes = noteScreen();
+      if (!sharedNotes) return;
 
-      const sheetData = sheet.data || {};
-      const notes = sheetData.notes || [];
-
-      if (editingNoteId) {
-        const target = notes.find((n) => n.id === editingNoteId);
-        if (target) {
-          target.title = title;
-          target.body = body;
-          target.tags = tags;
-          target.archived = noteFormArchived.checked;
-          target.updatedAt = new Date().toISOString();
-        }
-      } else {
-        notes.push({
-          id: Date.now(),
-          title,
-          body,
-          tags,
-          createdAt: new Date().toISOString(),
-          archived: false,
-        });
-      }
-
-      const { error: writeErr } = await supabase
-        .from("character_sheets")
-        .update({ data: { ...sheetData, notes } })
-        .eq("id", editingNoteSheetId);
-
-      noteFormSave.disabled = false;
-      noteFormSave.textContent = "Guardar";
-
-      if (writeErr) {
-        alert("Error al guardar: " + writeErr.message);
-        return;
-      }
-
-      closeNoteForm();
-      await refreshNotes();
+      sharedNotes.openForm({
+        note,
+        title: note ? "Editar Nota" : "Nueva Nota",
+        persistence: {
+          type: "chronicle-note",
+          supabase,
+          chronicleId,
+          playerId: currentPlayerId,
+          errorMessagePrefix: "Error al guardar",
+        },
+        onSaved: async ({ noteId }) => {
+          await refreshNotes();
+          if (noteId) {
+            void openNoteReader(noteId);
+          }
+        },
+        onCancel: (currentNote) => {
+          if (currentNote?.id) {
+            void openNoteReader(currentNote.id);
+          }
+        },
+      });
     }
 
     if (notesSearchInput) {
@@ -355,7 +265,6 @@
       notesArchiveToggle.addEventListener("click", () => {
         showingArchived = !showingArchived;
         notesArchiveToggle.classList.toggle("active", showingArchived);
-        collectNotes();
         renderNotesList();
       });
     }
@@ -364,135 +273,11 @@
       notasMoreBtn.addEventListener("click", showNotes);
     }
 
-    noteReaderPrev.addEventListener("click", () => {
-      const idx = allNotes.findIndex((n) => n.id === currentReaderNoteId);
-      if (idx < allNotes.length - 1) {
-        openNoteReader(allNotes[idx + 1].id);
-      }
-    });
-
-    noteReaderNext.addEventListener("click", () => {
-      const idx = allNotes.findIndex((n) => n.id === currentReaderNoteId);
-      if (idx > 0) {
-        openNoteReader(allNotes[idx - 1].id);
-      }
-    });
-
-    const noteEditBtn = document.getElementById("note-reader-edit");
-    if (noteEditBtn) {
-      noteEditBtn.addEventListener("click", () => {
-        const note = allNotes.find((n) => n.id === currentReaderNoteId);
-        if (!note) return;
-        closeNoteReader();
-        openNoteForm(note);
-      });
-    }
-
-    noteReaderArchived?.addEventListener("change", async () => {
-      const note = allNotes.find((n) => n.id === currentReaderNoteId);
-      if (!note) return;
-
-      const newVal = noteReaderArchived.checked;
-      noteReaderArchived.disabled = true;
-
-      const { data: sheet, error: readErr } = await supabase
-        .from("character_sheets")
-        .select("data")
-        .eq("id", note.sheetId)
-        .maybeSingle();
-
-      if (readErr || !sheet) {
-        noteReaderArchived.checked = !newVal;
-        noteReaderArchived.disabled = false;
-        return;
-      }
-
-      const sheetData = sheet.data || {};
-      const notes = sheetData.notes || [];
-      const target = notes.find((n) => n.id === note.id);
-      if (target) {
-        target.archived = newVal;
-      }
-
-      const { error: writeErr } = await supabase
-        .from("character_sheets")
-        .update({ data: { ...sheetData, notes } })
-        .eq("id", note.sheetId);
-
-      noteReaderArchived.disabled = false;
-
-      if (writeErr) {
-        noteReaderArchived.checked = !newVal;
-        return;
-      }
-
-      closeNoteReader();
-      await refreshNotes();
-    });
-
-    const noteDeleteBtn = document.getElementById("note-reader-delete");
-    if (noteDeleteBtn) {
-      noteDeleteBtn.addEventListener("click", async () => {
-        if (!confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.")) {
-          return;
-        }
-
-        const note = allNotes.find((n) => n.id === currentReaderNoteId);
-        if (!note) return;
-
-        const { data: sheet, error: readErr } = await supabase
-          .from("character_sheets")
-          .select("data")
-          .eq("id", note.sheetId)
-          .maybeSingle();
-
-        if (readErr || !sheet) {
-          alert(
-            "Error al leer el personaje: " + (readErr?.message || "no encontrado")
-          );
-          return;
-        }
-
-        const sheetData = sheet.data || {};
-        const notes = sheetData.notes || [];
-        const target = notes.find((n) => n.id === note.id);
-        if (target) {
-          target.archived = true;
-        }
-
-        const { error: writeErr } = await supabase
-          .from("character_sheets")
-          .update({ data: { ...sheetData, notes } })
-          .eq("id", note.sheetId);
-
-        if (writeErr) {
-          alert("Error al eliminar: " + writeErr.message);
-          return;
-        }
-
-        closeNoteReader();
-        await refreshNotes();
-      });
-    }
-
-    noteFormCharChip?.addEventListener("click", () => {
-      if (myChars.length <= 1) return;
-      noteFormCharIdx = (noteFormCharIdx + 1) % myChars.length;
-      updateCharChip();
-    });
-
-    noteFormSave?.addEventListener("click", persistNoteForm);
-
     addNoteBtn.addEventListener("click", () => {
-      if (!myChars.length) {
-        alert("Necesitás tener un personaje en esta crónica para crear notas.");
-        return;
-      }
       openNoteForm(null);
     });
 
-    collectNotes();
-    renderNotesList();
+    await refreshNotes();
 
     return {
       refreshNotes,

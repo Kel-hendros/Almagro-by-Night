@@ -67,3 +67,9 @@ Nota:
 1. Montar `encounter-overlay` en Active Session.
 2. Añadir bridge de estado de encuentro compartido.
 3. Mover chips de stats a renderer por sistema (`systems/v20` primero).
+
+## Nota transversal (referencia)
+La arquitectura global de Notas/Document Screen vive en:
+- `docs/ENGINEERING_STANDARDS.md` (sección 4.1 y 4.2).
+
+Este documento de `active-session` no debe duplicar esas reglas; solo consumirlas.

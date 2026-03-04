@@ -323,7 +323,7 @@ function loadCharacterFromJSON(characterData) {
     }
   });
   // Each loader is isolated so an error in one system never prevents
-  // later systems (merits, defects, notes, etc.) from loading.
+  // later systems (merits, defects, rolls, etc.) from loading.
   const safeLoad = (label, fn) => {
     try { fn(); } catch (e) { console.error(`[Load] Error in ${label}:`, e); }
   };
@@ -349,8 +349,6 @@ function loadCharacterFromJSON(characterData) {
   safeLoad("Attacks", () => loadAttacksFromJSON(characterData));
 
   safeLoad("XP Arcs", () => loadXpArcsFromJSON(characterData));
-
-  safeLoad("Notes", () => loadNotesFromJSON(characterData));
 
   safeLoad("Saved Rolls", () => loadSavedRollsFromJSON(characterData));
 
@@ -391,7 +389,7 @@ if (sheetLoaderModule) {
     onSheetIdMissing: () => {
       window.location.href = "../../index.html#character-sheets";
     },
-    onSheetLoaded: ({ id, sheet }) => {
+    onSheetLoaded: ({ id, sheet, user }) => {
       currentSheetId = id;
       currentAvatarOriginalUrl = sheet?.data?.avatarOriginalUrl || sheet?.avatar_url || null;
       currentAvatarThumbUrl = sheet?.data?.avatarThumbUrl || sheet?.avatar_url || null;
@@ -404,6 +402,16 @@ if (sheetLoaderModule) {
       const revChronicleId = sheet.chronicle_id || localStorage.getItem("currentChronicleId");
       if (window.ABNSheetRevelaciones && revChronicleId) {
         window.ABNSheetRevelaciones.init(revChronicleId);
+      }
+
+      const notesApi = window.ABNSheetNotes;
+      if (notesApi) {
+        notesApi.setContext({
+          sheetId: id,
+          chronicleId: revChronicleId || null,
+          userId: user?.id || null,
+        });
+        void notesApi.refresh?.();
       }
     },
     onSheetNotFound: () => {
@@ -474,9 +482,6 @@ function getCharacterData() {
 
   // Add XP arcs data
   characterData.xpArcs = getXpArcsData();
-
-  // Add notes data
-  characterData.notes = getNotesData();
 
   // Add saved rolls data
   characterData.savedRolls = getSavedRollsData();
@@ -1102,8 +1107,8 @@ fileInput?.addEventListener("change", (e) => {
     const json = event.target.result;
     const characterData = JSON.parse(json);
 
-    // Use the full loader so new-format data (merits, defects, notes,
-    // disciplines, backgrounds, XP arcs, saved rolls, etc.) is restored.
+    // Use the full loader so modern data (merits, defects, disciplines,
+    // backgrounds, XP arcs, saved rolls, etc.) is restored.
     loadCharacterFromJSON(characterData);
 
     // Persist imported data to Supabase immediately
@@ -1730,45 +1735,16 @@ loadRitualsFromJSON({});
 const notesModule = window.ABNSheetNotes;
 if (notesModule) {
   notesModule.configure({
-    save: saveCharacterData,
+    supabaseClient: window.supabase,
   });
 }
 
-function noteFormatDate(dateStr) {
-  return notesModule ? notesModule.noteFormatDate(dateStr) : "";
-}
-
-function noteParseTags(raw) {
-  return notesModule ? notesModule.noteParseTags(raw) : [];
-}
-
-function noteResetForm() {
-  notesModule?.noteResetForm();
-}
-
-function noteOpenEditForm(note) {
-  notesModule?.noteOpenEditForm(note);
-}
-
-function renderNotes() {
-  notesModule?.renderNotes();
-}
-
 function initNotes() {
-  notesModule?.init();
-}
-
-function getNotesData() {
-  return notesModule ? notesModule.serialize() : [];
-}
-
-function loadNotesFromJSON(characterData) {
-  notesModule?.loadFromCharacterData(characterData);
+  void notesModule?.init();
 }
 
 // Initialize on load
 initNotes();
-renderNotes();
 
 // ====== SAVED ROLLS (TIRADAS RÁPIDAS) ====== //
 

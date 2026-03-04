@@ -20,6 +20,7 @@
     <script src="https://cdn.jsdelivr.net/npm/js-yaml/dist/js-yaml.min.js"></script>
     <link rel="stylesheet" href="../../css/ui-components.css">
     <link rel="stylesheet" href="../../css/modal-close.css">
+    <link rel="stylesheet" href="../../css/document-screen.css">
     <link rel="stylesheet" href="../../css/ghoul.css">
     <script src="../../js/ghoul.js" defer></script>
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -803,16 +804,6 @@
                             <input id="note-search" class="discipline-repo-search note-search" type="text"
                                 placeholder="Buscar por título, cuerpo o tag..." autocomplete="off">
 
-                            <form id="note-form" class="background-form hidden">
-                                <input id="note-title" type="text" placeholder="Título" autocomplete="off">
-                                <textarea id="note-body" rows="4" placeholder="Cuerpo de la nota"></textarea>
-                                <input id="note-tags" type="text" placeholder="Tags separados por coma (ej: caza, eliseo, boons)">
-                                <div class="form-actions">
-                                    <button id="note-save-btn" type="submit" class="background-save-btn">Guardar nota</button>
-                                    <button id="note-cancel-btn" type="button" class="form-cancel-btn">Cancelar</button>
-                                </div>
-                            </form>
-
                             <div class="note-tabs">
                                 <button class="note-tab active" data-note-tab="active" type="button">Activas</button>
                                 <button class="note-tab" data-note-tab="archived" type="button">Archivadas</button>
@@ -1228,6 +1219,8 @@
     <script src="pathRepository.js"></script>
     <script src="bootstrap.js"></script>
     <script src="../../features/shared/modal.js"></script>
+    <script src="../../features/shared/document-screen.js"></script>
+    <script src="../../features/shared/note-screen.js"></script>
     <script src="modules/theme-discord.js"></script>
     <script src="modules/clan-header.js"></script>
     <script src="modules/attribute-boost.js"></script>

@@ -1208,8 +1208,7 @@ h3 {
 	margin-top: 8px;
 }
 
-.quick-actions button,
-.dock-tab {
+.quick-actions button {
 	border: 1px solid var(--line);
 	color: var(--muted);
 	background: var(--ui-surface);
@@ -1369,8 +1368,7 @@ h3 {
 	color: var(--muted);
 }
 
-.quick-actions button:hover,
-.dock-tab:hover {
+.quick-actions button:hover {
 	background: var(--ui-accent-subtle);
 }
 
@@ -2211,10 +2209,29 @@ ul li.active {
 	min-height: 32px;
 }
 
+.dock-tab {
+	border: 1px solid var(--theme-border-divider, var(--ui-border));
+	color: var(--theme-text-tertiary, var(--ui-text));
+	background: var(--theme-bg-surface, var(--bg-soft));
+	border-radius: 10px;
+	padding: 8px 10px;
+	font-size: 0.85rem;
+	font-weight: 400;
+	cursor: pointer;
+	transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.dock-tab:hover {
+	border-color: var(--theme-border-primary, var(--ui-border-strong));
+	background: var(--theme-bg-elevated, var(--ui-surface-hover));
+	color: var(--theme-text-secondary, var(--muted));
+}
+
 .dock-tab.active {
-	border-color: var(--ui-border-strong);
-	background: var(--ui-accent-subtle);
-	color: var(--accent);
+	border-color: var(--accent);
+	background: var(--accent);
+	color: var(--theme-text-on-accent, var(--text));
+	font-weight: 500;
 }
 
 .dock-content {
@@ -3776,6 +3793,18 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 	padding: 8px 10px;
 	display: grid;
 	gap: 6px;
+	cursor: pointer;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.note-card:hover {
+	border-color: var(--accent);
+	background: var(--ui-surface-hover);
+}
+
+.note-card:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .note-header {
@@ -3817,39 +3846,6 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 	border-radius: 999px;
 	padding: 2px 8px;
 	background: var(--ui-surface);
-}
-
-.note-actions {
-	display: flex;
-	gap: 8px;
-	align-items: center;
-	justify-content: flex-end;
-}
-
-.note-action-btn {
-	border: 1px solid var(--ui-border);
-	border-radius: 7px;
-	background: var(--ui-surface);
-	color: var(--muted);
-	font-size: 0.72rem;
-	padding: 3px 8px;
-	cursor: pointer;
-}
-
-.note-action-btn:hover {
-	background: var(--ui-accent-subtle);
-}
-
-.note-action-btn--icon {
-	width: 24px;
-	height: 24px;
-	padding: 0;
-}
-
-.edit-delete-buttons {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
 }
 
 /* ================================================
@@ -5055,42 +5051,35 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 
 .revelaciones-pane {
 	display: grid;
-	gap: 8px;
+	gap: 10px;
 }
 
 .revelaciones-list {
 	display: grid;
-	gap: 6px;
-	max-height: 60vh;
-	overflow-y: auto;
-}
-
-.revelaciones-item {
-	display: grid;
-	gap: 4px;
-	padding: 8px 10px;
-	border-radius: 6px;
-	background: var(--bg-card);
-	border-left: 3px solid transparent;
-	cursor: pointer;
-	transition: border-color 0.15s, background 0.15s;
-}
-
-.revelaciones-item:hover {
-	border-left-color: var(--accent);
-	background: var(--ui-accent-subtle);
-}
-
-.revelaciones-item-content {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
 	gap: 8px;
 }
 
+.revelaciones-item {
+	border: 1px solid var(--ui-border);
+	border-radius: 10px;
+	background: var(--ui-surface);
+	padding: 8px 10px;
+	display: grid;
+	gap: 6px;
+	cursor: pointer;
+}
+
+.revelaciones-item-content {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+	align-items: baseline;
+}
+
 .revelaciones-item-title {
-	font-size: 0.85rem;
-	color: var(--fg);
+	font-size: 0.88rem;
+	font-weight: normal;
+	color: var(--text);
 	flex: 1;
 	min-width: 0;
 	overflow: hidden;
@@ -5099,7 +5088,7 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 }
 
 .revelaciones-item-date {
-	font-size: 0.7rem;
+	font-size: 0.72rem;
 	color: var(--muted);
 	flex-shrink: 0;
 }
@@ -5107,15 +5096,16 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 .revelaciones-item-tags {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: 6px;
 }
 
 .revelaciones-tag {
-	font-size: 0.65rem;
-	padding: 1px 6px;
-	border-radius: 4px;
-	background: var(--ui-accent-subtle);
-	color: var(--muted);
+	font-size: 0.7rem;
+	color: var(--accent-strong);
+	border: 1px solid var(--ui-border);
+	border-radius: 999px;
+	padding: 2px 8px;
+	background: var(--ui-surface);
 }
 
 /* ================================================
