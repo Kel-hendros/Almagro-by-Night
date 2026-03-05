@@ -4,7 +4,6 @@
   const SIGNED_URL_TTL = 60 * 60;
   const TOAST_AUTO_DISMISS_MS = 20000;
   const REFRESH_POLL_MS = 10000;
-  const PARENT_TOAST_ACK_TIMEOUT_MS = 250;
 
   const state = {
     chronicleId: null,
@@ -153,6 +152,16 @@
 
   function openViewer(row) {
     const h = row.handout || {};
+    const parentInbox = global.parent?.ABNActiveCharacterSheet?.handoutsInbox;
+    if (global.parent && global.parent !== global && parentInbox?.openRevelationView) {
+      parentInbox.openRevelationView({
+        title: h.title || "",
+        bodyMarkdown: h.body_markdown || "",
+        imageUrl: h.image_signed_url || "",
+        tags: h.tags || [],
+      });
+      return;
+    }
     parent.postMessage(
       {
         type: "abn-open-revelation-view",
@@ -165,49 +174,23 @@
     );
   }
 
-  function notifyParentToast(row) {
+  function showParentToast(row) {
     const h = row.handout || {};
-    const requestId = `rev-toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-    return new Promise((resolve) => {
-      let settled = false;
-
-      const finish = (value) => {
-        if (settled) return;
-        settled = true;
-        global.removeEventListener("message", onAck);
-        clearTimeout(timeoutId);
-        resolve(value);
-      };
-
-      const onAck = (event) => {
-        if (event.data?.type !== "abn-revelation-toast-ack") return;
-        if (event.data?.requestId !== requestId) return;
-        finish(true);
-      };
-
-      const timeoutId = global.setTimeout(() => {
-        finish(false);
-      }, PARENT_TOAST_ACK_TIMEOUT_MS);
-
-      global.addEventListener("message", onAck);
-
-      try {
-        parent.postMessage(
-          {
-            type: "abn-revelation-toast-show",
-            requestId,
-            title: h.title || "Nueva revelación",
-            bodyMarkdown: h.body_markdown || "",
-            imageUrl: h.image_signed_url || "",
-            tags: h.tags || [],
-          },
-          "*"
-        );
-      } catch (_error) {
-        finish(false);
-      }
-    });
+    const parentInbox = global.parent?.ABNActiveCharacterSheet?.handoutsInbox;
+    if (
+      global.parent &&
+      global.parent !== global &&
+      typeof parentInbox?.showToast === "function"
+    ) {
+      parentInbox.showToast({
+        title: h.title || "Nueva revelación",
+        bodyMarkdown: h.body_markdown || "",
+        imageUrl: h.image_signed_url || "",
+        tags: h.tags || [],
+      });
+      return true;
+    }
+    return false;
   }
 
   function showLocalToast(row) {
@@ -244,10 +227,7 @@
   }
 
   async function showToast(row) {
-    if (global.parent && global.parent !== global) {
-      const handledByParent = await notifyParentToast(row);
-      if (handledByParent) return;
-    }
+    if (showParentToast(row)) return;
     showLocalToast(row);
   }
 

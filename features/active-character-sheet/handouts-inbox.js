@@ -127,5 +127,7 @@
   ns.handoutsInbox = {
     init,
     destroy,
+    showToast,
+    openRevelationView,
   };
 })(window);
