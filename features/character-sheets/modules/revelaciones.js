@@ -4,6 +4,7 @@
   const SIGNED_URL_TTL = 60 * 60;
   const TOAST_AUTO_DISMISS_MS = 20000;
   const REFRESH_POLL_MS = 10000;
+  const PARENT_TOAST_ACK_TIMEOUT_MS = 250;
 
   const state = {
     chronicleId: null,
@@ -166,28 +167,50 @@
 
   function notifyParentToast(row) {
     const h = row.handout || {};
-    try {
-      parent.postMessage(
-        {
-          type: "abn-revelation-toast-show",
-          title: h.title || "Nueva revelación",
-          bodyMarkdown: h.body_markdown || "",
-          imageUrl: h.image_signed_url || "",
-          tags: h.tags || [],
-        },
-        "*"
-      );
-      return true;
-    } catch (_error) {
-      return false;
-    }
+    const requestId = `rev-toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        global.removeEventListener("message", onAck);
+        clearTimeout(timeoutId);
+        resolve(value);
+      };
+
+      const onAck = (event) => {
+        if (event.data?.type !== "abn-revelation-toast-ack") return;
+        if (event.data?.requestId !== requestId) return;
+        finish(true);
+      };
+
+      const timeoutId = global.setTimeout(() => {
+        finish(false);
+      }, PARENT_TOAST_ACK_TIMEOUT_MS);
+
+      global.addEventListener("message", onAck);
+
+      try {
+        parent.postMessage(
+          {
+            type: "abn-revelation-toast-show",
+            requestId,
+            title: h.title || "Nueva revelación",
+            bodyMarkdown: h.body_markdown || "",
+            imageUrl: h.image_signed_url || "",
+            tags: h.tags || [],
+          },
+          "*"
+        );
+      } catch (_error) {
+        finish(false);
+      }
+    });
   }
 
-  function showToast(row) {
-    if (global.parent && global.parent !== global && notifyParentToast(row)) {
-      return;
-    }
-
+  function showLocalToast(row) {
     const toast = document.getElementById("revelacion-toast");
     const titleEl = document.getElementById("revelacion-toast-title");
     const viewBtn = document.getElementById("revelacion-toast-view");
@@ -220,6 +243,14 @@
     state.toastTimer = global.setTimeout(hideToast, TOAST_AUTO_DISMISS_MS);
   }
 
+  async function showToast(row) {
+    if (global.parent && global.parent !== global) {
+      const handledByParent = await notifyParentToast(row);
+      if (handledByParent) return;
+    }
+    showLocalToast(row);
+  }
+
   function applyDeliveries(deliveries, { notify = false } = {}) {
     const previousIds = state.lastKnownIds;
     state.deliveries = Array.isArray(deliveries) ? deliveries : [];
@@ -229,7 +260,7 @@
       ? state.deliveries.filter((delivery) => !previousIds.has(delivery.id))
       : [];
     if (newRows.length) {
-      showToast(newRows[0]);
+      void showToast(newRows[0]);
     }
 
     state.lastKnownIds = new Set(state.deliveries.map((delivery) => delivery.id));

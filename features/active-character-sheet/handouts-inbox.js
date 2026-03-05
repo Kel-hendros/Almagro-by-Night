@@ -89,6 +89,15 @@
       return;
     }
     if (event.data?.type === "abn-revelation-toast-show") {
+      try {
+        event.source?.postMessage?.(
+          {
+            type: "abn-revelation-toast-ack",
+            requestId: event.data.requestId || "",
+          },
+          event.origin && event.origin !== "null" ? event.origin : "*"
+        );
+      } catch (_error) {}
       showToast(event.data);
     }
   }
