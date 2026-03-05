@@ -3,6 +3,7 @@
   const PRIVATE_REF_PREFIX = "abn-private://";
   const SIGNED_URL_TTL = 60 * 60;
   const TOAST_AUTO_DISMISS_MS = 20000;
+  const REFRESH_POLL_MS = 10000;
 
   const state = {
     chronicleId: null,
@@ -11,10 +12,18 @@
     lastKnownIds: new Set(),
     realtimeChannel: null,
     toastTimer: null,
+    pollTimer: null,
+    refreshInFlight: false,
+    onVisibilityChange: null,
+    onFocus: null,
   };
 
   function getSupabase() {
     return global.supabase || null;
+  }
+
+  function getHandoutsApi() {
+    return global.ABNShared?.handouts || null;
   }
 
   function escapeHtml(value) {
@@ -49,6 +58,14 @@
   }
 
   async function fetchDeliveries() {
+    const handoutsApi = getHandoutsApi();
+    if (handoutsApi?.listPendingDeliveries && state.playerId) {
+      return handoutsApi.listPendingDeliveries({
+        playerId: state.playerId,
+        chronicleId: state.chronicleId,
+      });
+    }
+
     const supabase = getSupabase();
     if (!supabase || !state.playerId) return [];
 
@@ -69,7 +86,7 @@
       (row) => row.handout && row.handout.chronicle_id === state.chronicleId
     );
 
-    const withSigned = await Promise.all(
+    return Promise.all(
       rows.map(async (row) => ({
         ...row,
         handout: {
@@ -78,8 +95,6 @@
         },
       }))
     );
-
-    return withSigned;
   }
 
   function formatDate(dateStr) {
@@ -108,7 +123,7 @@
       .map((row) => {
         const h = row.handout || {};
         const title = escapeHtml(h.title || "Revelación");
-        const date = escapeHtml(formatDate(row.associated_at || h.created_at));
+        const date = escapeHtml(formatDate(row.associated_at || row.delivered_at || h.created_at));
         const tags = Array.isArray(h.tags) ? h.tags : [];
         const tagsHtml = tags.length
           ? `<div class="revelaciones-item-tags">${tags
@@ -129,7 +144,7 @@
     host.querySelectorAll(".revelaciones-item").forEach((el) => {
       el.addEventListener("click", () => {
         const id = el.dataset.deliveryIdx;
-        const row = state.deliveries.find((d) => d.id === id);
+        const row = state.deliveries.find((delivery) => delivery.id === id);
         if (row) openViewer(row);
       });
     });
@@ -154,7 +169,7 @@
     const titleEl = document.getElementById("revelacion-toast-title");
     const viewBtn = document.getElementById("revelacion-toast-view");
     const dismissBtn = document.getElementById("revelacion-toast-dismiss");
-    if (!toast) return;
+    if (!toast || !viewBtn || !dismissBtn) return;
 
     const h = row.handout || {};
     if (titleEl) titleEl.textContent = h.title || "Nueva revelación";
@@ -167,29 +182,120 @@
       toast.classList.add("hidden");
       if (state.toastTimer) clearTimeout(state.toastTimer);
       state.toastTimer = null;
+      viewBtn.onclick = null;
+      dismissBtn.onclick = null;
     };
 
-    const onView = () => {
+    viewBtn.onclick = () => {
       openViewer(row);
       hideToast();
-      viewBtn.removeEventListener("click", onView);
-      dismissBtn.removeEventListener("click", onDismiss);
     };
-    const onDismiss = () => {
+    dismissBtn.onclick = () => {
       hideToast();
-      viewBtn.removeEventListener("click", onView);
-      dismissBtn.removeEventListener("click", onDismiss);
     };
 
-    viewBtn.addEventListener("click", onView);
-    dismissBtn.addEventListener("click", onDismiss);
+    state.toastTimer = global.setTimeout(hideToast, TOAST_AUTO_DISMISS_MS);
+  }
 
-    state.toastTimer = setTimeout(hideToast, TOAST_AUTO_DISMISS_MS);
+  function applyDeliveries(deliveries, { notify = false } = {}) {
+    const previousIds = state.lastKnownIds;
+    state.deliveries = Array.isArray(deliveries) ? deliveries : [];
+    renderList();
+
+    const newRows = notify
+      ? state.deliveries.filter((delivery) => !previousIds.has(delivery.id))
+      : [];
+    if (newRows.length) {
+      showToast(newRows[0]);
+    }
+
+    state.lastKnownIds = new Set(state.deliveries.map((delivery) => delivery.id));
+  }
+
+  async function refreshDeliveries({ notify = false } = {}) {
+    if (!state.playerId || !state.chronicleId || state.refreshInFlight) return;
+    state.refreshInFlight = true;
+    try {
+      const deliveries = await fetchDeliveries();
+      applyDeliveries(deliveries, { notify });
+    } finally {
+      state.refreshInFlight = false;
+    }
+  }
+
+  function unsubscribeRealtime() {
+    if (!state.realtimeChannel) return;
+
+    const handoutsApi = getHandoutsApi();
+    if (handoutsApi?.unsubscribeChannel) {
+      handoutsApi.unsubscribeChannel(state.realtimeChannel);
+      state.realtimeChannel = null;
+      return;
+    }
+
+    const supabase = getSupabase();
+    try {
+      state.realtimeChannel.unsubscribe?.();
+    } catch (_e) {}
+    try {
+      supabase?.removeChannel?.(state.realtimeChannel);
+    } catch (_e) {}
+    state.realtimeChannel = null;
+  }
+
+  function bindRefreshTriggers() {
+    if (!state.onVisibilityChange) {
+      state.onVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          void refreshDeliveries({ notify: true });
+        }
+      };
+      document.addEventListener("visibilitychange", state.onVisibilityChange);
+    }
+
+    if (!state.onFocus) {
+      state.onFocus = () => {
+        void refreshDeliveries({ notify: true });
+      };
+      global.addEventListener("focus", state.onFocus);
+    }
+  }
+
+  function unbindRefreshTriggers() {
+    if (state.onVisibilityChange) {
+      document.removeEventListener("visibilitychange", state.onVisibilityChange);
+      state.onVisibilityChange = null;
+    }
+
+    if (state.onFocus) {
+      global.removeEventListener("focus", state.onFocus);
+      state.onFocus = null;
+    }
+  }
+
+  function startPolling() {
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    state.pollTimer = global.setInterval(() => {
+      void refreshDeliveries({ notify: true });
+    }, REFRESH_POLL_MS);
   }
 
   function subscribe() {
     const supabase = getSupabase();
     if (!supabase || !state.playerId) return;
+
+    unsubscribeRealtime();
+
+    const handoutsApi = getHandoutsApi();
+    if (handoutsApi?.subscribeDeliveriesForPlayer) {
+      state.realtimeChannel = handoutsApi.subscribeDeliveriesForPlayer({
+        playerId: state.playerId,
+        onChange: () => {
+          void refreshDeliveries({ notify: true });
+        },
+      });
+      return;
+    }
 
     state.realtimeChannel = supabase
       .channel(`sheet-revelaciones-${state.playerId}`)
@@ -201,16 +307,8 @@
           table: "revelation_players",
           filter: `player_id=eq.${state.playerId}`,
         },
-        async () => {
-          const prev = state.lastKnownIds;
-          state.deliveries = await fetchDeliveries();
-          renderList();
-
-          const newRows = state.deliveries.filter((d) => !prev.has(d.id));
-          if (newRows.length > 0) {
-            showToast(newRows[0]);
-          }
-          state.lastKnownIds = new Set(state.deliveries.map((d) => d.id));
+        () => {
+          void refreshDeliveries({ notify: true });
         }
       )
       .subscribe();
@@ -218,6 +316,8 @@
 
   async function init(chronicleId) {
     if (!chronicleId) return;
+
+    destroy();
     state.chronicleId = chronicleId;
 
     const supabase = getSupabase();
@@ -237,31 +337,31 @@
 
     state.playerId = player.id;
 
-    state.deliveries = await fetchDeliveries();
-    state.lastKnownIds = new Set(state.deliveries.map((d) => d.id));
-    renderList();
+    await refreshDeliveries();
     subscribe();
+    startPolling();
+    bindRefreshTriggers();
   }
 
   function destroy() {
-    if (state.realtimeChannel) {
-      const supabase = getSupabase();
-      try {
-        state.realtimeChannel.unsubscribe?.();
-      } catch (_e) {}
-      try {
-        supabase?.removeChannel?.(state.realtimeChannel);
-      } catch (_e) {}
-      state.realtimeChannel = null;
-    }
+    unsubscribeRealtime();
+
     if (state.toastTimer) {
       clearTimeout(state.toastTimer);
       state.toastTimer = null;
     }
+    if (state.pollTimer) {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+    }
+
+    unbindRefreshTriggers();
+
     state.deliveries = [];
     state.lastKnownIds.clear();
     state.playerId = null;
     state.chronicleId = null;
+    state.refreshInFlight = false;
   }
 
   global.ABNSheetRevelaciones = {

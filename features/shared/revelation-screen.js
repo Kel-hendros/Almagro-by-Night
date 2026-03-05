@@ -1,18 +1,56 @@
 (function initSharedRevelationScreen(global) {
   const root = (global.ABNShared = global.ABNShared || {});
   const CHRONICLE_STORAGE_LIMIT_REACHED_CODE = "chronicle_storage_limit_reached";
+  const DEFAULT_IMAGE_IMPORT_ERROR =
+    "No se pudo cargar la imagen. Verifica que la URL sea directa o que la imagen esté disponible.";
 
   let currentScreen = null;
   let currentFormHost = null;
   let isSaving = false;
+  let formSessionSeq = 0;
+  let lightboxState = createLightboxState();
 
   let currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
-  let formState = {
-    chronicleId: null,
-    currentPlayerId: null,
-    editingHandoutId: null,
-    existingImageRef: null,
-  };
+  let formState = createEmptyFormState();
+
+  function createEmptyFormState() {
+    return {
+      chronicleId: null,
+      currentPlayerId: null,
+      editingHandoutId: null,
+      existingImageRef: null,
+      draftImageRef: null,
+      imageBusy: false,
+      sessionToken: 0,
+      previewObjectUrl: null,
+    };
+  }
+
+  function createLightboxState() {
+    return {
+      overlay: null,
+      stage: null,
+      image: null,
+      zoomInBtn: null,
+      zoomOutBtn: null,
+      zoomLabel: null,
+      closeBtn: null,
+      isOpen: false,
+      scale: 1,
+      minScale: 1,
+      maxScale: 5,
+      offsetX: 0,
+      offsetY: 0,
+      dragging: false,
+      pointerId: null,
+      dragStartX: 0,
+      dragStartY: 0,
+      dragOriginX: 0,
+      dragOriginY: 0,
+      keyHandler: null,
+      resizeHandler: null,
+    };
+  }
 
   function handouts() {
     return root.handouts || null;
@@ -59,6 +97,14 @@
               <img id="rs-preview-img" class="rs-preview-img" alt="Preview">
             </div>
           </div>
+          <div class="rs-image-tools">
+            <div class="rs-image-url-row">
+              <input id="rs-image-url" class="rs-input" type="url" placeholder="https://ejemplo.com/imagen.jpg">
+              <button type="button" id="rs-image-url-import" class="btn btn--ghost">Cargar URL</button>
+              <button type="button" id="rs-image-paste" class="btn btn--ghost">Pegar Imagen</button>
+            </div>
+            <span class="rs-upload-hint">También puedes pegar una imagen con Ctrl/Cmd+V dentro del editor.</span>
+          </div>
           <input id="rs-image-ref" type="hidden">
           <div class="rs-image-row">
             <button type="button" id="rs-image-clear" class="btn btn--ghost">Quitar Imagen</button>
@@ -97,7 +143,14 @@
                  <i data-lucide="chevron-down" class="rs-detail-chevron"></i>
                </summary>
                <div class="rs-detail-content">
-                 <img src="${escapeHtml(url)}" class="rs-view-image" alt="Imagen de revelación">
+                 <img
+                   src="${escapeHtml(url)}"
+                   class="rs-view-image rs-view-image--interactive"
+                   alt="Imagen de revelación"
+                   title="Abrir imagen"
+                   tabindex="0"
+                   role="button"
+                 >
                </div>
              </details>`
           : ""
@@ -111,19 +164,43 @@
     `;
   }
 
+  function getCurrentImageRef() {
+    return String(getFormEl("#rs-image-ref")?.value || "").trim();
+  }
+
+  function setCurrentImageRef(value) {
+    const input = getFormEl("#rs-image-ref");
+    if (input) input.value = String(value || "").trim();
+  }
+
+  function revokePreviewObjectUrl() {
+    if (!formState.previewObjectUrl || !global.URL?.revokeObjectURL) return;
+    try {
+      global.URL.revokeObjectURL(formState.previewObjectUrl);
+    } catch (_error) {}
+    formState.previewObjectUrl = null;
+  }
+
   function resetUploadPreview() {
     const placeholder = getFormEl("#rs-upload-placeholder");
     const preview = getFormEl("#rs-upload-preview");
     const previewImg = getFormEl("#rs-preview-img");
+    revokePreviewObjectUrl();
     if (placeholder) placeholder.classList.remove("hidden");
     if (preview) preview.classList.add("hidden");
     if (previewImg) previewImg.src = "";
   }
 
-  function showUploadPreview(src) {
+  function showUploadPreview(src, { objectUrl = false } = {}) {
     const placeholder = getFormEl("#rs-upload-placeholder");
     const preview = getFormEl("#rs-upload-preview");
     const previewImg = getFormEl("#rs-preview-img");
+
+    revokePreviewObjectUrl();
+    if (objectUrl) {
+      formState.previewObjectUrl = src;
+    }
+
     if (previewImg) previewImg.src = src;
     if (placeholder) placeholder.classList.add("hidden");
     if (preview) preview.classList.remove("hidden");
@@ -147,20 +224,38 @@
     if (tone === "error") el.classList.add("error");
   }
 
+  function syncImageControls() {
+    const busy = formState.imageBusy;
+    const uploadArea = getFormEl("#rs-upload-area");
+
+    ["#rs-image-file", "#rs-image-url", "#rs-image-url-import", "#rs-image-paste", "#rs-image-clear"]
+      .forEach((selector) => {
+        const node = getFormEl(selector);
+        if (node) node.disabled = busy;
+      });
+
+    uploadArea?.classList.toggle("is-busy", busy);
+  }
+
   function clearForm() {
     const titleInput = getFormEl("#rs-title-input");
     const tagsInput = getFormEl("#rs-tags-input");
     const imageFile = getFormEl("#rs-image-file");
-    const imageRef = getFormEl("#rs-image-ref");
+    const imageUrl = getFormEl("#rs-image-url");
     const body = getFormEl("#rs-body-input");
+
     if (titleInput) titleInput.value = "";
     if (tagsInput) tagsInput.value = "";
     if (imageFile) imageFile.value = "";
-    if (imageRef) imageRef.value = "";
+    if (imageUrl) imageUrl.value = "";
+    setCurrentImageRef("");
     if (body) body.value = "";
+
     resetUploadPreview();
     setImageStatus("Sin imagen seleccionada.");
     setFormMsg("");
+    syncImageControls();
+
     currentFormHost?.querySelectorAll(".rs-recipient-chip").forEach((node) => {
       node.classList.remove("is-selected");
       node.setAttribute("aria-pressed", "false");
@@ -188,7 +283,7 @@
             data-player-id="${escapeHtml(row.player_id)}"
             data-character-id="${escapeHtml(row.character_sheet_id)}"
             aria-pressed="false"
-            title="${escapeHtml(row.character_name || "Personaje")}" 
+            title="${escapeHtml(row.character_name || "Personaje")}"
           >
             <span class="rs-recipient-avatar">${avatar}</span>
             <span class="rs-recipient-name">${escapeHtml(row.character_name || "Personaje")}</span>
@@ -202,25 +297,30 @@
     const titleInput = getFormEl("#rs-title-input");
     const tagsInput = getFormEl("#rs-tags-input");
     const imageFileInput = getFormEl("#rs-image-file");
-    const imageRefInput = getFormEl("#rs-image-ref");
+    const imageUrlInput = getFormEl("#rs-image-url");
     const bodyInput = getFormEl("#rs-body-input");
 
     if (titleInput) titleInput.value = String(title || "");
     if (tagsInput) tagsInput.value = (Array.isArray(tags) ? tags : []).join(", ");
     if (imageFileInput) imageFileInput.value = "";
-    if (imageRefInput) imageRefInput.value = String(imageRef || "").trim();
+    if (imageUrlInput) imageUrlInput.value = "";
+    setCurrentImageRef(String(imageRef || "").trim());
     if (bodyInput) bodyInput.value = String(bodyMarkdown || "");
 
     setImageStatus(
-      imageRefInput?.value ? "Imagen actual guardada." : "Sin imagen seleccionada.",
-      imageRefInput?.value ? "ok" : "neutral",
+      getCurrentImageRef() ? "Imagen actual guardada." : "Sin imagen seleccionada.",
+      getCurrentImageRef() ? "ok" : "neutral"
     );
 
-    if (imageRefInput?.value) {
+    if (getCurrentImageRef()) {
       const api = handouts();
       if (api?.resolveImageSignedUrl) {
-        const signedUrl = await api.resolveImageSignedUrl(imageRefInput.value);
-        if (signedUrl) showUploadPreview(signedUrl);
+        const signedUrl = await api.resolveImageSignedUrl(getCurrentImageRef());
+        if (signedUrl) {
+          showUploadPreview(signedUrl);
+        } else {
+          resetUploadPreview();
+        }
       }
     } else {
       resetUploadPreview();
@@ -240,8 +340,236 @@
       new Set(
         Array.from(currentFormHost.querySelectorAll(".rs-recipient-chip.is-selected"))
           .map((node) => node.dataset.playerId || "")
-          .filter(Boolean),
-      ),
+          .filter(Boolean)
+      )
+    );
+  }
+
+  function getFileExtensionFromMimeType(mimeType) {
+    const normalized = String(mimeType || "").toLowerCase();
+    if (normalized === "image/jpeg") return "jpg";
+    if (normalized === "image/png") return "png";
+    if (normalized === "image/webp") return "webp";
+    if (normalized === "image/gif") return "gif";
+    if (normalized === "image/avif") return "avif";
+    return "bin";
+  }
+
+  function inferMimeTypeFromUrl(url) {
+    const lower = String(url || "").trim().toLowerCase();
+    if (lower.endsWith(".png")) return "image/png";
+    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+    if (lower.endsWith(".webp")) return "image/webp";
+    if (lower.endsWith(".gif")) return "image/gif";
+    if (lower.endsWith(".avif")) return "image/avif";
+    return "";
+  }
+
+  function buildFileName(baseName, mimeType) {
+    const safeBase = String(baseName || "revelation-image")
+      .replace(/[^a-z0-9-_]+/gi, "-")
+      .replace(/^-+|-+$/g, "") || "revelation-image";
+    return `${safeBase}.${getFileExtensionFromMimeType(mimeType)}`;
+  }
+
+  function buildFileFromBlob(blob, { nameHint, mimeType } = {}) {
+    const normalizedType = String(mimeType || blob?.type || "").toLowerCase();
+    return new File([blob], buildFileName(nameHint, normalizedType), {
+      type: normalizedType || "application/octet-stream",
+    });
+  }
+
+  async function deleteImageRefSafe(imageRef) {
+    const api = handouts();
+    const ref = String(imageRef || "").trim();
+    if (!api?.deleteHandoutImage || !ref) return;
+    try {
+      await api.deleteHandoutImage(ref);
+    } catch (error) {
+      console.warn("Revelaciones: no se pudo limpiar imagen temporal:", error);
+    }
+  }
+
+  async function restorePreviewFromCurrentImageRef() {
+    const currentRef = getCurrentImageRef();
+    if (!currentRef) {
+      resetUploadPreview();
+      return;
+    }
+
+    const api = handouts();
+    if (!api?.resolveImageSignedUrl) {
+      resetUploadPreview();
+      return;
+    }
+
+    const signedUrl = await api.resolveImageSignedUrl(currentRef);
+    if (signedUrl) {
+      showUploadPreview(signedUrl);
+      return;
+    }
+
+    resetUploadPreview();
+  }
+
+  async function importImageFile(file, { previewBlob = null, successMessage = "" } = {}) {
+    if (formState.imageBusy) {
+      setFormMsg("Espera a que termine la carga de imagen actual.", "error");
+      return;
+    }
+
+    const api = handouts();
+    if (!api?.uploadHandoutImage) return;
+    if (!file) {
+      setFormMsg("Selecciona o pega una imagen primero.", "error");
+      return;
+    }
+
+    const sessionToken = formState.sessionToken;
+    const previousDraftRef = formState.draftImageRef;
+
+    formState.imageBusy = true;
+    syncImageControls();
+    syncSaveAction();
+    setFormMsg("");
+    setImageStatus(`Subiendo ${file.name || "imagen"}...`);
+
+    const previewSource = previewBlob || file;
+    if (previewSource && typeof global.URL?.createObjectURL === "function") {
+      showUploadPreview(global.URL.createObjectURL(previewSource), { objectUrl: true });
+    }
+
+    const uploadRes = await api.uploadHandoutImage({
+      chronicleId: formState.chronicleId,
+      file,
+    });
+
+    if (sessionToken !== formState.sessionToken) {
+      if (uploadRes?.imageRef) {
+        await deleteImageRefSafe(uploadRes.imageRef);
+      }
+      return;
+    }
+
+    formState.imageBusy = false;
+    syncImageControls();
+    syncSaveAction();
+
+    if (uploadRes.error || !uploadRes.imageRef) {
+      if (uploadRes.error?.code === CHRONICLE_STORAGE_LIMIT_REACHED_CODE) {
+        const showModal = root.modal?.showChronicleStorageLimitReached;
+        if (typeof showModal === "function") await showModal();
+      }
+
+      await restorePreviewFromCurrentImageRef();
+      setImageStatus("No se pudo subir la imagen.", "error");
+      setFormMsg(uploadRes.error?.message || "No se pudo subir la imagen.", "error");
+      return;
+    }
+
+    if (previousDraftRef && previousDraftRef !== uploadRes.imageRef) {
+      await deleteImageRefSafe(previousDraftRef);
+    }
+
+    formState.draftImageRef = uploadRes.imageRef;
+    setCurrentImageRef(uploadRes.imageRef);
+    const fileInput = getFormEl("#rs-image-file");
+    const urlInput = getFormEl("#rs-image-url");
+    if (fileInput) fileInput.value = "";
+    if (urlInput) urlInput.value = "";
+    setImageStatus(successMessage || "Imagen cargada y lista para guardar.", "ok");
+  }
+
+  async function fetchImageFileFromUrl(url) {
+    const cleanUrl = String(url || "").trim();
+    if (!cleanUrl) {
+      throw new Error("Pega una URL de imagen.");
+    }
+
+    let response;
+    try {
+      response = await global.fetch(cleanUrl);
+    } catch (_error) {
+      throw new Error(DEFAULT_IMAGE_IMPORT_ERROR);
+    }
+
+    if (!response.ok) {
+      throw new Error(`No se pudo descargar la imagen (${response.status}).`);
+    }
+
+    const blob = await response.blob();
+    const mimeType = String(blob.type || inferMimeTypeFromUrl(cleanUrl) || "").toLowerCase();
+    if (!mimeType.startsWith("image/")) {
+      throw new Error("La URL no devolvió una imagen válida.");
+    }
+
+    const parsed = (() => {
+      try {
+        return new global.URL(cleanUrl);
+      } catch (_error) {
+        return null;
+      }
+    })();
+    const rawName = parsed?.pathname?.split("/").pop() || "remote-image";
+    const baseName = rawName.replace(/\.[a-z0-9]+$/i, "") || "remote-image";
+
+    return {
+      file: buildFileFromBlob(blob, { nameHint: baseName, mimeType }),
+      previewBlob: blob,
+    };
+  }
+
+  async function readClipboardImage() {
+    if (!global.navigator?.clipboard?.read) {
+      throw new Error("Tu navegador no permite leer imágenes del portapapeles desde este botón.");
+    }
+
+    const items = await global.navigator.clipboard.read();
+    for (const item of items) {
+      const imageType = item.types.find((type) => String(type || "").startsWith("image/"));
+      if (!imageType) continue;
+      const blob = await item.getType(imageType);
+      return {
+        file: buildFileFromBlob(blob, { nameHint: `clipboard-${Date.now()}`, mimeType: imageType }),
+        previewBlob: blob,
+      };
+    }
+
+    throw new Error("No encontré una imagen en el portapapeles.");
+  }
+
+  async function clearCurrentImage() {
+    if (formState.imageBusy) {
+      setFormMsg("Espera a que termine la carga de imagen actual.", "error");
+      return;
+    }
+
+    const currentRef = getCurrentImageRef();
+    const isDraftImage = Boolean(formState.draftImageRef && currentRef === formState.draftImageRef);
+
+    const fileInput = getFormEl("#rs-image-file");
+    const urlInput = getFormEl("#rs-image-url");
+    if (fileInput) fileInput.value = "";
+    if (urlInput) urlInput.value = "";
+
+    if (isDraftImage) {
+      const draftRef = formState.draftImageRef;
+      formState.draftImageRef = null;
+      setCurrentImageRef("");
+      resetUploadPreview();
+      setImageStatus(
+        formState.existingImageRef ? "La imagen se eliminara al guardar." : "Sin imagen seleccionada.",
+        formState.existingImageRef ? "error" : "neutral"
+      );
+      await deleteImageRefSafe(draftRef);
+      return;
+    }
+
+    setCurrentImageRef("");
+    resetUploadPreview();
+    setImageStatus(
+      formState.existingImageRef ? "La imagen se eliminara al guardar." : "Sin imagen seleccionada.",
+      formState.existingImageRef ? "error" : "neutral"
     );
   }
 
@@ -256,100 +584,373 @@
     });
 
     const imageFile = getFormEl("#rs-image-file");
-    imageFile?.addEventListener("change", (event) => {
+    imageFile?.addEventListener("change", async (event) => {
       const file = event.target?.files?.[0] || null;
-      const placeholder = getFormEl("#rs-upload-placeholder");
-      const preview = getFormEl("#rs-upload-preview");
-      const previewImg = getFormEl("#rs-preview-img");
-
-      if (file) {
-        setImageStatus(`Archivo seleccionado: ${file.name}`);
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          if (previewImg) previewImg.src = ev.target.result;
-          if (placeholder) placeholder.classList.add("hidden");
-          if (preview) preview.classList.remove("hidden");
-        };
-        reader.readAsDataURL(file);
+      if (!file) {
+        await restorePreviewFromCurrentImageRef();
+        setImageStatus(
+          getCurrentImageRef() ? "Imagen actual guardada." : "Sin imagen seleccionada.",
+          getCurrentImageRef() ? "ok" : "neutral"
+        );
         return;
       }
 
-      const hasSaved = Boolean(String(getFormEl("#rs-image-ref")?.value || "").trim());
-      if (placeholder) placeholder.classList.toggle("hidden", hasSaved);
-      if (preview) preview.classList.toggle("hidden", !hasSaved);
-      setImageStatus(
-        hasSaved ? "Imagen actual guardada." : "Sin imagen seleccionada.",
-        hasSaved ? "ok" : "neutral",
-      );
+      await importImageFile(file, {
+        previewBlob: file,
+        successMessage: `Imagen cargada desde archivo: ${file.name}`,
+      });
     });
 
-    getFormEl("#rs-image-clear")?.addEventListener("click", () => {
-      const imageRef = getFormEl("#rs-image-ref");
-      if (imageFile) imageFile.value = "";
-      if (imageRef) imageRef.value = "";
-      resetUploadPreview();
-      setImageStatus("La imagen se eliminara al guardar.", "error");
+    getFormEl("#rs-image-url-import")?.addEventListener("click", async () => {
+      if (formState.imageBusy) {
+        setFormMsg("Espera a que termine la carga de imagen actual.", "error");
+        return;
+      }
+
+      const url = getFormEl("#rs-image-url")?.value || "";
+      try {
+        const { file, previewBlob } = await fetchImageFileFromUrl(url);
+        await importImageFile(file, {
+          previewBlob,
+          successMessage: "Imagen cargada desde URL.",
+        });
+      } catch (error) {
+        setFormMsg(error.message || DEFAULT_IMAGE_IMPORT_ERROR, "error");
+      }
+    });
+
+    getFormEl("#rs-image-paste")?.addEventListener("click", async () => {
+      if (formState.imageBusy) {
+        setFormMsg("Espera a que termine la carga de imagen actual.", "error");
+        return;
+      }
+
+      try {
+        const { file, previewBlob } = await readClipboardImage();
+        await importImageFile(file, {
+          previewBlob,
+          successMessage: "Imagen cargada desde el portapapeles.",
+        });
+      } catch (error) {
+        setFormMsg(error.message || "No se pudo leer la imagen del portapapeles.", "error");
+      }
+    });
+
+    currentFormHost?.addEventListener("paste", async (event) => {
+      if (formState.imageBusy) return;
+      const items = Array.from(event.clipboardData?.items || []);
+      const imageItem = items.find((item) => String(item.type || "").startsWith("image/"));
+      if (!imageItem) return;
+
+      const file = imageItem.getAsFile();
+      if (!file) return;
+
+      event.preventDefault();
+      const clipboardFile = buildFileFromBlob(file, {
+        nameHint: `clipboard-${Date.now()}`,
+        mimeType: file.type,
+      });
+
+      await importImageFile(clipboardFile, {
+        previewBlob: file,
+        successMessage: "Imagen cargada desde el portapapeles.",
+      });
+    });
+
+    getFormEl("#rs-image-clear")?.addEventListener("click", async () => {
+      await clearCurrentImage();
     });
   }
 
-  function saveActionConfig() {
-    return {
-      id: "save",
-      kind: "button",
-      variant: "primary",
-      label: isSaving ? "Guardando..." : formState.editingHandoutId ? "Guardar Cambios" : "Guardar Revelacion",
-      disabled: isSaving,
-      onClick: () => handleSave(),
+  function ensureLightboxDom() {
+    if (lightboxState.overlay) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "rs-lightbox-overlay hidden";
+    overlay.innerHTML = `
+      <div class="rs-lightbox-shell" role="dialog" aria-modal="true" aria-label="Imagen ampliada">
+        <div class="rs-lightbox-toolbar">
+          <div class="rs-lightbox-zoom-group">
+            <button type="button" class="btn btn--ghost rs-lightbox-zoom-out" aria-label="Alejar">
+              <i data-lucide="minus"></i>
+            </button>
+            <span class="rs-lightbox-zoom-label">100%</span>
+            <button type="button" class="btn btn--ghost rs-lightbox-zoom-in" aria-label="Acercar">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+          <button type="button" class="btn-modal-close rs-lightbox-close" aria-label="Cerrar imagen">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="rs-lightbox-stage">
+          <img class="rs-lightbox-image" alt="Imagen ampliada">
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    lightboxState.overlay = overlay;
+    lightboxState.stage = overlay.querySelector(".rs-lightbox-stage");
+    lightboxState.image = overlay.querySelector(".rs-lightbox-image");
+    lightboxState.zoomInBtn = overlay.querySelector(".rs-lightbox-zoom-in");
+    lightboxState.zoomOutBtn = overlay.querySelector(".rs-lightbox-zoom-out");
+    lightboxState.zoomLabel = overlay.querySelector(".rs-lightbox-zoom-label");
+    lightboxState.closeBtn = overlay.querySelector(".rs-lightbox-close");
+
+    lightboxState.zoomInBtn?.addEventListener("click", () => setLightboxScale(lightboxState.scale + 0.25));
+    lightboxState.zoomOutBtn?.addEventListener("click", () => setLightboxScale(lightboxState.scale - 0.25));
+    lightboxState.closeBtn?.addEventListener("click", () => closeImageLightbox());
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        closeImageLightbox();
+      }
+    });
+
+    lightboxState.stage?.addEventListener(
+      "wheel",
+      (event) => {
+        if (!lightboxState.isOpen) return;
+        event.preventDefault();
+        const nextScale = lightboxState.scale + (event.deltaY < 0 ? 0.2 : -0.2);
+        setLightboxScale(nextScale);
+      },
+      { passive: false }
+    );
+
+    lightboxState.stage?.addEventListener("pointerdown", onLightboxPointerDown);
+    lightboxState.stage?.addEventListener("pointermove", onLightboxPointerMove);
+    lightboxState.stage?.addEventListener("pointerup", onLightboxPointerUp);
+    lightboxState.stage?.addEventListener("pointercancel", onLightboxPointerUp);
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons({ nodes: [overlay] });
+    }
+  }
+
+  function clampLightboxOffsets() {
+    const stage = lightboxState.stage;
+    const image = lightboxState.image;
+    if (!stage || !image) return;
+
+    const stageRect = stage.getBoundingClientRect();
+    const baseWidth = image.offsetWidth || 0;
+    const baseHeight = image.offsetHeight || 0;
+
+    const maxOffsetX = Math.max(0, (baseWidth * lightboxState.scale - stageRect.width) / 2);
+    const maxOffsetY = Math.max(0, (baseHeight * lightboxState.scale - stageRect.height) / 2);
+
+    lightboxState.offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, lightboxState.offsetX));
+    lightboxState.offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, lightboxState.offsetY));
+  }
+
+  function renderLightboxTransform() {
+    const image = lightboxState.image;
+    if (!image) return;
+
+    clampLightboxOffsets();
+    image.style.transform = `translate(${lightboxState.offsetX}px, ${lightboxState.offsetY}px) scale(${lightboxState.scale})`;
+    image.classList.toggle("is-draggable", lightboxState.scale > 1.01);
+
+    if (lightboxState.zoomLabel) {
+      lightboxState.zoomLabel.textContent = `${Math.round(lightboxState.scale * 100)}%`;
+    }
+    if (lightboxState.zoomOutBtn) {
+      lightboxState.zoomOutBtn.disabled = lightboxState.scale <= lightboxState.minScale;
+    }
+    if (lightboxState.zoomInBtn) {
+      lightboxState.zoomInBtn.disabled = lightboxState.scale >= lightboxState.maxScale;
+    }
+  }
+
+  function resetLightboxView() {
+    lightboxState.scale = 1;
+    lightboxState.offsetX = 0;
+    lightboxState.offsetY = 0;
+    renderLightboxTransform();
+  }
+
+  function setLightboxScale(nextScale) {
+    lightboxState.scale = Math.max(lightboxState.minScale, Math.min(lightboxState.maxScale, nextScale));
+    if (lightboxState.scale <= 1.01) {
+      lightboxState.offsetX = 0;
+      lightboxState.offsetY = 0;
+    }
+    renderLightboxTransform();
+  }
+
+  function onLightboxPointerDown(event) {
+    if (!lightboxState.isOpen || lightboxState.scale <= 1.01) return;
+    if (event.button !== 0) return;
+
+    lightboxState.dragging = true;
+    lightboxState.pointerId = event.pointerId;
+    lightboxState.dragStartX = event.clientX;
+    lightboxState.dragStartY = event.clientY;
+    lightboxState.dragOriginX = lightboxState.offsetX;
+    lightboxState.dragOriginY = lightboxState.offsetY;
+    lightboxState.stage?.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  }
+
+  function onLightboxPointerMove(event) {
+    if (!lightboxState.dragging || event.pointerId !== lightboxState.pointerId) return;
+
+    lightboxState.offsetX = lightboxState.dragOriginX + (event.clientX - lightboxState.dragStartX);
+    lightboxState.offsetY = lightboxState.dragOriginY + (event.clientY - lightboxState.dragStartY);
+    renderLightboxTransform();
+  }
+
+  function onLightboxPointerUp(event) {
+    if (event.pointerId !== lightboxState.pointerId) return;
+
+    lightboxState.dragging = false;
+    lightboxState.pointerId = null;
+    lightboxState.stage?.releasePointerCapture?.(event.pointerId);
+  }
+
+  function closeImageLightbox() {
+    if (!lightboxState.isOpen) return;
+
+    lightboxState.isOpen = false;
+    lightboxState.dragging = false;
+    lightboxState.pointerId = null;
+    lightboxState.overlay?.classList.add("hidden");
+    lightboxState.overlay?.classList.remove("active");
+    if (lightboxState.image) {
+      lightboxState.image.src = "";
+      lightboxState.image.style.transform = "";
+    }
+
+    if (lightboxState.keyHandler) {
+      document.removeEventListener("keydown", lightboxState.keyHandler, true);
+      lightboxState.keyHandler = null;
+    }
+    if (lightboxState.resizeHandler) {
+      global.removeEventListener("resize", lightboxState.resizeHandler);
+      lightboxState.resizeHandler = null;
+    }
+  }
+
+  function openImageLightbox(src) {
+    const imageUrl = String(src || "").trim();
+    if (!imageUrl) return;
+
+    ensureLightboxDom();
+    if (!lightboxState.overlay || !lightboxState.image) return;
+
+    closeImageLightbox();
+
+    lightboxState.isOpen = true;
+    lightboxState.overlay.classList.remove("hidden");
+    lightboxState.overlay.classList.add("active");
+    lightboxState.image.src = imageUrl;
+    lightboxState.image.onload = () => {
+      resetLightboxView();
     };
+
+    lightboxState.keyHandler = (event) => {
+      if (!lightboxState.isOpen) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeImageLightbox();
+      }
+    };
+    document.addEventListener("keydown", lightboxState.keyHandler, true);
+
+    lightboxState.resizeHandler = () => {
+      if (lightboxState.isOpen) {
+        renderLightboxTransform();
+      }
+    };
+    global.addEventListener("resize", lightboxState.resizeHandler);
+  }
+
+  function bindViewImageInteractions() {
+    const image = currentScreen?.getBody?.()?.querySelector(".rs-view-image--interactive");
+    if (!image) return;
+
+    const open = () => openImageLightbox(image.getAttribute("src"));
+    image.addEventListener("click", open);
+    image.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+  }
+
+  function buildFooterActions() {
+    return [
+      {
+        id: "cancel",
+        kind: "button",
+        variant: "ghost",
+        label: "Cancelar",
+        disabled: isSaving || formState.imageBusy,
+        onClick: () => {
+          if (isSaving || formState.imageBusy) return;
+          close();
+        },
+      },
+      {
+        id: "save",
+        kind: "button",
+        variant: "primary",
+        label: isSaving ? "Guardando..." : formState.editingHandoutId ? "Guardar Cambios" : "Guardar Revelacion",
+        disabled: isSaving || formState.imageBusy,
+        onClick: () => handleSave(),
+      },
+    ];
   }
 
   function syncSaveAction() {
-    currentScreen?.setActions([saveActionConfig()]);
+    currentScreen?.setFooterActions(buildFooterActions());
+  }
+
+  async function cleanupDraftImageOnClose(closingState) {
+    if (!closingState?.draftImageRef) return;
+    await deleteImageRefSafe(closingState.draftImageRef);
+  }
+
+  function handleFormClosed(reason) {
+    const closingState = {
+      draftImageRef: formState.draftImageRef,
+      previewObjectUrl: formState.previewObjectUrl,
+    };
+    revokePreviewObjectUrl();
+    currentFormHost = null;
+    currentScreen = null;
+    isSaving = false;
+    closeImageLightbox();
+    formState = createEmptyFormState();
+
+    if (closingState.draftImageRef) {
+      void cleanupDraftImageOnClose(closingState);
+    }
+
+    const onClosedCb = currentCallbacks.onClosed;
+    currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
+    if (typeof onClosedCb === "function") onClosedCb({ reason });
   }
 
   async function handleSave() {
-    if (isSaving) return;
+    if (isSaving || formState.imageBusy) return;
 
     const api = handouts();
     if (!api || !currentScreen) return;
 
     isSaving = true;
     syncSaveAction();
+    setFormMsg("");
 
     const title = getFormEl("#rs-title-input")?.value || "";
     const bodyMarkdown = getFormEl("#rs-body-input")?.value || "";
-    const imageRefInput = getFormEl("#rs-image-ref");
-    const imageFileInput = getFormEl("#rs-image-file");
-    const selectedFile = imageFileInput?.files?.[0] || null;
-
-    let imageRef = String(imageRefInput?.value || "").trim();
-    let uploadedImageRef = null;
-
-    if (selectedFile) {
-      setImageStatus(`Subiendo ${selectedFile.name}...`);
-      const uploadRes = await api.uploadHandoutImage({
-        chronicleId: formState.chronicleId,
-        file: selectedFile,
-      });
-      if (uploadRes.error || !uploadRes.imageRef) {
-        if (uploadRes.error?.code === CHRONICLE_STORAGE_LIMIT_REACHED_CODE) {
-          const showModal = root.modal?.showChronicleStorageLimitReached;
-          if (typeof showModal === "function") await showModal();
-        }
-        setImageStatus("No se pudo subir la imagen.", "error");
-        setFormMsg(uploadRes.error?.message || "No se pudo subir la imagen.", "error");
-        isSaving = false;
-        syncSaveAction();
-        return;
-      }
-      uploadedImageRef = uploadRes.imageRef;
-      imageRef = uploadedImageRef;
-      if (imageRefInput) imageRefInput.value = imageRef;
-      if (imageFileInput) imageFileInput.value = "";
-      setImageStatus("Imagen cargada y lista para guardar.", "ok");
-    }
-
     const tagsRaw = getFormEl("#rs-tags-input")?.value || "";
+    const imageRef = getCurrentImageRef();
     const tags = tagsRaw
       .split(",")
       .map((tag) => tag.trim())
@@ -372,14 +973,14 @@
         });
 
     if (error) {
-      if (uploadedImageRef) {
-        await api.deleteHandoutImage(uploadedImageRef);
-      }
       setFormMsg(error.message || "No se pudo guardar revelacion.", "error");
       isSaving = false;
       syncSaveAction();
       return;
     }
+
+    formState.draftImageRef = null;
+    formState.existingImageRef = imageRef || null;
 
     const onSaved = currentCallbacks.onSaved;
     if (typeof onSaved === "function") {
@@ -395,10 +996,12 @@
     if (!ds) return;
 
     formState = {
+      ...createEmptyFormState(),
       chronicleId,
       currentPlayerId,
       editingHandoutId: null,
       existingImageRef: null,
+      sessionToken: ++formSessionSeq,
     };
     currentCallbacks = { onSaved: onSaved || null, onEdit: null, onClosed: onClosed || null };
 
@@ -406,7 +1009,7 @@
     currentScreen = ds.open({
       docType: "revelation",
       title: "Crear Revelacion",
-      actions: [saveActionConfig()],
+      footerActions: buildFooterActions(),
       bodyClass: "rs-body",
       renderBody: (body) => {
         body.innerHTML = formMarkup();
@@ -414,13 +1017,8 @@
         bindFormListeners();
         clearForm();
       },
-      onClosed: () => {
-        currentFormHost = null;
-        currentScreen = null;
-        isSaving = false;
-        const onClosedCb = currentCallbacks.onClosed;
-        currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
-        if (typeof onClosedCb === "function") onClosedCb();
+      onClosed: ({ reason }) => {
+        handleFormClosed(reason);
       },
     });
 
@@ -442,10 +1040,12 @@
     if (!ds) return;
 
     formState = {
+      ...createEmptyFormState(),
       chronicleId,
       currentPlayerId,
       editingHandoutId: handout.id,
       existingImageRef: handout.image_url || null,
+      sessionToken: ++formSessionSeq,
     };
     currentCallbacks = { onSaved: onSaved || null, onEdit: null, onClosed: onClosed || null };
 
@@ -453,7 +1053,7 @@
     currentScreen = ds.open({
       docType: "revelation",
       title: "Editar Revelacion",
-      actions: [saveActionConfig()],
+      footerActions: buildFooterActions(),
       bodyClass: "rs-body",
       renderBody: (body) => {
         body.innerHTML = formMarkup();
@@ -461,13 +1061,8 @@
         bindFormListeners();
         clearForm();
       },
-      onClosed: () => {
-        currentFormHost = null;
-        currentScreen = null;
-        isSaving = false;
-        const onClosedCb = currentCallbacks.onClosed;
-        currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
-        if (typeof onClosedCb === "function") onClosedCb();
+      onClosed: ({ reason }) => {
+        handleFormClosed(reason);
       },
     });
 
@@ -518,13 +1113,14 @@
       renderBody: (body) => {
         body.innerHTML = viewMarkup({ bodyMarkdown, imageUrl });
       },
-      onClosed: () => {
+      onClosed: ({ reason }) => {
         currentFormHost = null;
         currentScreen = null;
         isSaving = false;
+        closeImageLightbox();
         const onClosedCb = currentCallbacks.onClosed;
         currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
-        if (typeof onClosedCb === "function") onClosedCb();
+        if (typeof onClosedCb === "function") onClosedCb({ reason });
       },
     });
 
@@ -532,10 +1128,12 @@
       const body = currentScreen?.getBody?.();
       if (body) global.lucide.createIcons({ nodes: [body] });
     }
+    bindViewImageInteractions();
   }
 
   function close() {
     if (!currentScreen) return;
+    closeImageLightbox();
     documentScreen()?.close();
   }
 
