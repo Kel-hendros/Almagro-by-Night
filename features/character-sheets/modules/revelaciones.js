@@ -164,7 +164,30 @@
     );
   }
 
+  function notifyParentToast(row) {
+    const h = row.handout || {};
+    try {
+      parent.postMessage(
+        {
+          type: "abn-revelation-toast-show",
+          title: h.title || "Nueva revelación",
+          bodyMarkdown: h.body_markdown || "",
+          imageUrl: h.image_signed_url || "",
+          tags: h.tags || [],
+        },
+        "*"
+      );
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
   function showToast(row) {
+    if (global.parent && global.parent !== global && notifyParentToast(row)) {
+      return;
+    }
+
     const toast = document.getElementById("revelacion-toast");
     const titleEl = document.getElementById("revelacion-toast-title");
     const viewBtn = document.getElementById("revelacion-toast-view");

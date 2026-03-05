@@ -127,3 +127,71 @@
   border: 0;
   display: block;
 }
+
+.acs-revelacion-toast {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 0px) + 16px);
+  left: max(16px, env(safe-area-inset-left, 0px) + 16px);
+  z-index: 120;
+  display: grid;
+  gap: 8px;
+  width: min(280px, calc(100% - 32px));
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: acs-toast-slide-in 0.3s ease-out;
+}
+
+.acs-revelacion-toast.hidden {
+  display: none;
+}
+
+@keyframes acs-toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.acs-revelacion-toast-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acs-revelacion-toast-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.acs-revelacion-toast-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.acs-revelacion-toast-text strong {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--theme-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acs-revelacion-toast-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.acs-revelacion-toast-actions .btn--sm {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+}

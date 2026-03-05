@@ -5114,12 +5114,12 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 
 .revelacion-toast {
 	position: fixed;
-	bottom: 16px;
-	right: 16px;
+	top: max(16px, env(safe-area-inset-top, 0px) + 16px);
+	left: max(16px, env(safe-area-inset-left, 0px) + 16px);
 	z-index: 9999;
 	display: grid;
 	gap: 8px;
-	width: 280px;
+	width: min(280px, calc(100% - 32px));
 	padding: 12px 14px;
 	border-radius: 10px;
 	background: var(--bg-card);
@@ -5135,7 +5135,7 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 @keyframes toast-slide-in {
 	from {
 		opacity: 0;
-		transform: translateY(20px);
+		transform: translateY(-16px);
 	}
 	to {
 		opacity: 1;
