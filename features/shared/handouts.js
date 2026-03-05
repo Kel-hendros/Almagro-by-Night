@@ -446,10 +446,41 @@
     const supabase = getSupabase();
     if (!supabase || !revelationId) return { count: 0, error: null };
 
+    const { data: existingRows, error: existingError } = await supabase
+      .from("revelation_players")
+      .eq("revelation_id", revelationId)
+      .select("id, player_id");
+    if (existingError) {
+      return { count: 0, error: existingError };
+    }
+
+    const rows = Array.isArray(existingRows) ? existingRows : [];
+    if (!rows.length) {
+      return { count: 0, error: null };
+    }
+
+    const idsToDelete = rows.map((row) => row.id).filter(Boolean);
+    if (idsToDelete.length) {
+      const { error: deleteError } = await supabase
+        .from("revelation_players")
+        .delete()
+        .in("id", idsToDelete);
+      if (deleteError) {
+        return { count: 0, error: deleteError };
+      }
+    }
+
+    const toInsert = rows
+      .map((row) => String(row.player_id || "").trim())
+      .filter(Boolean)
+      .map((playerId) => ({
+        revelation_id: revelationId,
+        player_id: playerId,
+      }));
+
     const { data, error } = await supabase
       .from("revelation_players")
-      .update({ associated_at: new Date().toISOString() })
-      .eq("revelation_id", revelationId)
+      .insert(toInsert)
       .select("id");
 
     return {

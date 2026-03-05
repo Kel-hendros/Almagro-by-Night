@@ -148,7 +148,7 @@
     `;
   }
 
-  function viewMarkup({ bodyMarkdown, imageUrl, deliveries }) {
+  function viewMarkup({ bodyMarkdown, imageUrl, deliveries, showDeliveries = false }) {
     const url = String(imageUrl || "").trim();
     const hasImage = Boolean(url);
 
@@ -183,7 +183,7 @@
           <div id="rs-view-content" class="doc-markdown">${contentHtml}</div>
         </div>
       </div>
-      ${Array.isArray(deliveries) ? viewDeliveriesMarkup(deliveries) : ""}
+      ${showDeliveries ? viewDeliveriesMarkup(deliveries) : ""}
     `;
   }
 
@@ -1154,8 +1154,9 @@
     isRevealingAgain = false;
 
     const actions = [];
+    const footerActions = [];
     if (typeof onRevealAgain === "function") {
-      actions.push({
+      footerActions.push({
         id: "reveal-again",
         kind: "button",
         variant: "ghost",
@@ -1182,9 +1183,15 @@
       title: title || "Revelacion",
       tags: Array.isArray(tags) ? tags : [],
       actions,
+      footerActions,
       bodyClass: "doc-view-body rs-view-body",
       renderBody: (body) => {
-        body.innerHTML = viewMarkup({ bodyMarkdown, imageUrl, deliveries });
+        body.innerHTML = viewMarkup({
+          bodyMarkdown,
+          imageUrl,
+          deliveries,
+          showDeliveries: footerActions.length > 0,
+        });
       },
       onClosed: ({ reason }) => {
         currentFormHost = null;
