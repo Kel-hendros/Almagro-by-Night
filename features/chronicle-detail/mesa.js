@@ -9,7 +9,6 @@
     emptyNarratorArchived: "No hay encuentros archivados.",
     emptyPlayer: "No hay encuentros disponibles en juego para tu rol.",
     defaultEncounterName: "Encuentro",
-    openEncounter: "Abrir encuentro",
     createPrompt: "Nombre del nuevo encuentro:",
     creating: "Creando...",
     createError: "No se pudo crear el encuentro.",
@@ -81,6 +80,10 @@
       renderEncounters();
     }
 
+    function openEncounter(encounterId) {
+      window.location.hash = `active-encounter?id=${encodeURIComponent(encounterId)}`;
+    }
+
     function renderEncounters() {
       let encounters = allEncounters;
       if (isNarrator) {
@@ -112,6 +115,12 @@
         const status = normalizeEncounterStatus(encounter.status);
         const card = document.createElement("article");
         card.className = "cd-mesa-card";
+        card.tabIndex = 0;
+        card.setAttribute("role", "button");
+        card.setAttribute(
+          "aria-label",
+          `Abrir ${encounter.name || TEXT.defaultEncounterName}`,
+        );
         const statusControl = isNarrator
           ? `<select class="cd-mesa-status-select ${status}" data-encounter-id="${
               encounter.id
@@ -126,24 +135,34 @@
             )}</h4>
             ${statusControl}
           </div>
-          <div class="cd-mesa-card-actions">
-            <button type="button" class="btn btn--primary cd-mesa-open-btn" data-encounter-id="${encounter.id}">
-              ${TEXT.openEncounter}
-            </button>
-          </div>
         `;
 
+        card.addEventListener("click", () => {
+          openEncounter(encounter.id);
+        });
+
+        card.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          openEncounter(encounter.id);
+        });
+
         card
-          .querySelector(".cd-mesa-open-btn")
-          ?.addEventListener("click", () => {
-            window.location.hash = `active-encounter?id=${encodeURIComponent(
-              encounter.id
-            )}`;
+          .querySelector(".cd-mesa-status-select")
+          ?.addEventListener("click", (event) => {
+            event.stopPropagation();
+          });
+
+        card
+          .querySelector(".cd-mesa-status-select")
+          ?.addEventListener("keydown", (event) => {
+            event.stopPropagation();
           });
 
         card
           .querySelector(".cd-mesa-status-select")
           ?.addEventListener("change", async (event) => {
+            event.stopPropagation();
             const select = event.currentTarget;
             const nextStatus = normalizeEncounterStatus(select.value);
             const previousStatus = status;

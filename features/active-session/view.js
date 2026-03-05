@@ -227,9 +227,74 @@
     });
   }
 
+  function encounterStatusOptionsMarkup(currentStatus) {
+    const normalized =
+      typeof global.ABNActiveSession?.service?.normalizeEncounterStatus === "function"
+        ? global.ABNActiveSession.service.normalizeEncounterStatus(currentStatus)
+        : String(currentStatus || "ready");
+
+    return ["ready", "in_game"]
+      .map((status) => {
+        const selected = status === normalized ? " selected" : "";
+        const label =
+          typeof global.ABNActiveSession?.service?.encounterStatusLabel === "function"
+            ? global.ABNActiveSession.service.encounterStatusLabel(status)
+            : escapeHtml(status);
+        return `<option value="${status}"${selected}>${label}</option>`;
+      })
+      .join("");
+  }
+
+  function renderEncounterList(items) {
+    const host = document.getElementById("as-encounters-list");
+    if (!host) return;
+
+    const rows = Array.isArray(items) ? items : [];
+    if (!rows.length) {
+      host.innerHTML = '<p class="muted">No hay encuentros listos o en juego.</p>';
+      return;
+    }
+
+    host.innerHTML = rows
+      .map((row) => {
+        const normalizedStatus =
+          typeof global.ABNActiveSession?.service?.normalizeEncounterStatus === "function"
+            ? global.ABNActiveSession.service.normalizeEncounterStatus(row.status)
+            : String(row.status || "wip");
+
+        return `
+          <article class="as-encounter-card" data-encounter-id="${escapeHtml(row.id)}">
+            <div class="as-encounter-card-body">
+              <h3 class="as-encounter-title">${escapeHtml(row.name || "Encuentro")}</h3>
+              <select
+                class="as-encounter-status-select ${escapeHtml(normalizedStatus)}"
+                data-encounter-id="${escapeHtml(row.id)}"
+                data-current-status="${escapeHtml(normalizedStatus)}"
+                aria-label="Estado de ${escapeHtml(row.name || "Encuentro")}"
+              >
+                ${encounterStatusOptionsMarkup(normalizedStatus)}
+              </select>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function setEncounterListBusy(isBusy) {
+    const host = document.getElementById("as-encounters-list");
+    if (!host) return;
+    host.classList.toggle("is-busy", Boolean(isBusy));
+    host.querySelectorAll(".as-encounter-status-select").forEach((node) => {
+      node.disabled = Boolean(isBusy);
+    });
+  }
+
   ns.view = {
     setHeader,
     renderRoster,
+    renderEncounterList,
+    setEncounterListBusy,
     renderHandoutRecipients,
     renderHandoutList,
     setHandoutMessage,

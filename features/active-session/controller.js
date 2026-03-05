@@ -7,11 +7,14 @@
     chronicleId: null,
     currentPlayerId: null,
     encounterSnapshot: null,
+    encountersChannel: null,
+    encountersLoading: false,
     overlay: null,
     encounterBridge: null,
     backBtnHandler: null,
     openArchiveBtnHandler: null,
     createRevelacionBtnHandler: null,
+    encounterListChangeHandler: null,
   };
 
   function mountEncounterOverlay() {
@@ -64,6 +67,43 @@
       };
       createRevBtn.addEventListener("click", state.createRevelacionBtnHandler);
     }
+
+    const encountersList = document.getElementById("as-encounters-list");
+    if (encountersList) {
+      state.encounterListChangeHandler = async (event) => {
+        const select = event.target.closest(".as-encounter-status-select");
+        if (!select || state.encountersLoading) return;
+
+        const encounterId = select.dataset.encounterId || "";
+        const nextStatus = service().normalizeEncounterStatus(select.value);
+        const previousStatus = select.dataset.currentStatus || select.value || "";
+        if (!encounterId || !nextStatus) return;
+        if (nextStatus === previousStatus) return;
+
+        state.encountersLoading = true;
+        view().setEncounterListBusy(true);
+
+        const { error } = await service().updateSessionEncounterStatus({
+          encounterId,
+          chronicleId: state.chronicleId,
+          status: nextStatus,
+        });
+
+        if (error) {
+          alert(error.message || "No se pudo actualizar el estado del encuentro.");
+          select.value = previousStatus;
+          state.encountersLoading = false;
+          view().setEncounterListBusy(false);
+          return;
+        }
+
+        await loadEncounters();
+        await reconnectEncounterBridge();
+        state.encountersLoading = false;
+        view().setEncounterListBusy(false);
+      };
+      encountersList.addEventListener("change", state.encounterListChangeHandler);
+    }
   }
 
   function unbindUIActions() {
@@ -84,6 +124,31 @@
       createRevBtn.removeEventListener("click", state.createRevelacionBtnHandler);
     }
     state.createRevelacionBtnHandler = null;
+
+    const encountersList = document.getElementById("as-encounters-list");
+    if (encountersList && state.encounterListChangeHandler) {
+      encountersList.removeEventListener("change", state.encounterListChangeHandler);
+    }
+    state.encounterListChangeHandler = null;
+  }
+
+  async function loadEncounters() {
+    const { data, error } = await service().fetchSessionEncounters(state.chronicleId);
+    if (error) {
+      console.warn("ActiveSession: no se pudieron cargar encuentros:", error.message);
+      view().renderEncounterList([]);
+      return;
+    }
+    view().renderEncounterList(data || []);
+  }
+
+  async function reconnectEncounterBridge() {
+    state.encounterBridge?.destroy?.();
+    state.encounterBridge = service().createEncounterBridge({
+      chronicleId: state.chronicleId,
+      onStateChange: handleEncounterState,
+    });
+    await state.encounterBridge.connect();
   }
 
   async function initPage() {
@@ -136,21 +201,26 @@
 
     const roster = await service().getRosterSummary(state.chronicleId);
     view().renderRoster(roster);
+    await loadEncounters();
 
     mountEncounterOverlay();
     handleEncounterState(null);
     bindUIActions();
 
-    state.encounterBridge = service().createEncounterBridge({
+    await reconnectEncounterBridge();
+    state.encountersChannel = service().subscribeSessionEncounters({
       chronicleId: state.chronicleId,
-      onStateChange: handleEncounterState,
+      onChange: () => {
+        void loadEncounters();
+      },
     });
-    await state.encounterBridge.connect();
   }
 
   function destroyPage() {
     state.encounterBridge?.destroy?.();
     state.encounterBridge = null;
+    service().unsubscribeChannel(state.encountersChannel);
+    state.encountersChannel = null;
 
     unbindUIActions();
 
@@ -159,6 +229,7 @@
     state.overlay = null;
 
     state.encounterSnapshot = null;
+    state.encountersLoading = false;
     state.chronicleId = null;
     state.currentPlayerId = null;
   }

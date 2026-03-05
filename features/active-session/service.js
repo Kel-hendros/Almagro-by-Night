@@ -1,5 +1,11 @@
 (function initActiveSessionService(global) {
   const ns = (global.ABNActiveSession = global.ABNActiveSession || {});
+  const ENCOUNTER_STATUS = {
+    WIP: "wip",
+    READY: "ready",
+    IN_GAME: "in_game",
+    ARCHIVED: "archived",
+  };
 
   function parseIntOrNull(value) {
     const parsed = parseInt(value, 10);
@@ -15,6 +21,30 @@
     if (generation <= 11) return 12;
     if (generation <= 12) return 11;
     return 10;
+  }
+
+  function normalizeEncounterStatus(status) {
+    if (status === "active") return ENCOUNTER_STATUS.IN_GAME;
+    if (
+      status === ENCOUNTER_STATUS.WIP ||
+      status === ENCOUNTER_STATUS.READY ||
+      status === ENCOUNTER_STATUS.IN_GAME ||
+      status === ENCOUNTER_STATUS.ARCHIVED
+    ) {
+      return status;
+    }
+    return ENCOUNTER_STATUS.WIP;
+  }
+
+  function encounterStatusLabel(status) {
+    const normalized = normalizeEncounterStatus(status);
+    const labels = {
+      [ENCOUNTER_STATUS.WIP]: "WIP",
+      [ENCOUNTER_STATUS.READY]: "Listo",
+      [ENCOUNTER_STATUS.IN_GAME]: "En juego",
+      [ENCOUNTER_STATUS.ARCHIVED]: "Archivado",
+    };
+    return labels[normalized] || "WIP";
   }
 
   function extractV20Stats(charData) {
@@ -145,6 +175,105 @@
       fallback.data.system_id = null;
     }
     return fallback;
+  }
+
+  async function fetchSessionEncounters(chronicleId) {
+    if (!chronicleId || !global.supabase) return { data: [], error: null };
+
+    const { data, error } = await global.supabase
+      .from("encounters")
+      .select("id, chronicle_id, name, status, created_at")
+      .eq("chronicle_id", chronicleId)
+      .in("status", [ENCOUNTER_STATUS.READY, ENCOUNTER_STATUS.IN_GAME])
+      .order("created_at", { ascending: false });
+
+    const rows = (data || []).slice().sort((a, b) => {
+      const aStatus = normalizeEncounterStatus(a?.status);
+      const bStatus = normalizeEncounterStatus(b?.status);
+      if (aStatus === ENCOUNTER_STATUS.IN_GAME && bStatus !== ENCOUNTER_STATUS.IN_GAME) return -1;
+      if (aStatus !== ENCOUNTER_STATUS.IN_GAME && bStatus === ENCOUNTER_STATUS.IN_GAME) return 1;
+      const aTime = new Date(a?.created_at || 0).getTime();
+      const bTime = new Date(b?.created_at || 0).getTime();
+      return bTime - aTime;
+    });
+
+    return {
+      data: rows,
+      error: error || null,
+    };
+  }
+
+  async function updateSessionEncounterStatus({ encounterId, chronicleId, status }) {
+    const nextStatus = normalizeEncounterStatus(status);
+    if (!encounterId || !chronicleId || !global.supabase) {
+      return { data: null, error: new Error("Contexto incompleto para actualizar el encuentro.") };
+    }
+    if (![ENCOUNTER_STATUS.READY, ENCOUNTER_STATUS.IN_GAME].includes(nextStatus)) {
+      return { data: null, error: new Error("Estado no permitido desde Sesión Activa.") };
+    }
+
+    if (nextStatus === ENCOUNTER_STATUS.IN_GAME) {
+      const { count, error: countError } = await global.supabase
+        .from("encounters")
+        .select("id", { count: "exact", head: true })
+        .eq("chronicle_id", chronicleId)
+        .eq("status", ENCOUNTER_STATUS.IN_GAME)
+        .neq("id", encounterId);
+
+      if (countError) {
+        return { data: null, error: countError };
+      }
+      if ((count || 0) > 0) {
+        return {
+          data: null,
+          error: new Error(
+            "Ya hay un encuentro en juego en esta crónica. Sácalo de juego antes de activar otro."
+          ),
+        };
+      }
+    }
+
+    const { data, error } = await global.supabase
+      .from("encounters")
+      .update({ status: nextStatus })
+      .eq("id", encounterId)
+      .eq("chronicle_id", chronicleId)
+      .select("id, chronicle_id, name, status, created_at")
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
+  function subscribeSessionEncounters({ chronicleId, onChange }) {
+    if (!chronicleId || !global.supabase) return null;
+    return global.supabase
+      .channel(`active-session-encounters-${chronicleId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "encounters",
+          filter: `chronicle_id=eq.${chronicleId}`,
+        },
+        () => {
+          if (typeof onChange === "function") onChange();
+        }
+      )
+      .subscribe();
+  }
+
+  function unsubscribeChannel(channel) {
+    if (!channel) return;
+    try {
+      channel.unsubscribe?.();
+    } catch (_e) {}
+    try {
+      global.supabase?.removeChannel?.(channel);
+    } catch (_e) {}
   }
 
   async function getRosterSummary(chronicleId) {
@@ -361,6 +490,12 @@
     getParticipation,
     getParticipationByUserId,
     getChronicle,
+    normalizeEncounterStatus,
+    encounterStatusLabel,
+    fetchSessionEncounters,
+    updateSessionEncounterStatus,
+    subscribeSessionEncounters,
+    unsubscribeChannel,
     getRosterSummary,
     createEncounterBridge,
   };
