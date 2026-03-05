@@ -1,3 +1,10 @@
+const ghoulScriptSource =
+  document.currentScript?.src ||
+  Array.from(document.scripts || [])
+    .map((script) => script?.src || "")
+    .find((src) => /\/js\/ghoul\.js(?:\?|#|$)/.test(src)) ||
+  "";
+
 document.addEventListener("DOMContentLoaded", () => {
   const fab = document.getElementById("ghoul-fab");
   const widget = document.getElementById("ghoul-widget");
@@ -24,24 +31,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let knowledgeBaseIndex = [];
 
-  // Dynamic Base Path for multiple pages
-  function getBasePath() {
-    // If we are inside character sheet routes, go back to project root.
-    const path = window.location.pathname.toLowerCase();
-    if (
-      path.includes("/charactersheets/") ||
-      path.includes("/features/character-sheets/")
-    ) {
-      return "../../";
+  function getProjectRootUrl() {
+    if (ghoulScriptSource) {
+      return new URL("../", ghoulScriptSource).href;
     }
-    return "";
+    return new URL("./", window.location.href).href;
+  }
+
+  function resolveProjectUrl(path) {
+    return new URL(String(path || "").replace(/^\//, ""), getProjectRootUrl()).href;
   }
 
   // 1. Fetch Index
   async function fetchIndex() {
     try {
-      const basePath = getBasePath();
-      const response = await fetch(`${basePath}knowledge_base/index.json`);
+      const response = await fetch(resolveProjectUrl("knowledge_base/index.json"));
       if (!response.ok) throw new Error("Failed to load index");
       knowledgeBaseIndex = await response.json();
       console.log("Ghoul: Index loaded", knowledgeBaseIndex);
@@ -155,8 +159,9 @@ document.addEventListener("DOMContentLoaded", () => {
     modalTitle.textContent = "Tu ghoul sabe esto:";
 
     try {
-      const basePath = getBasePath();
-      const response = await fetch(`${basePath}knowledge_base/${item.file}`);
+      const response = await fetch(
+        resolveProjectUrl(`knowledge_base/${item.file}`)
+      );
       if (!response.ok)
         throw new Error(
           `File not found: ${response.status} ${response.statusText}`
@@ -243,9 +248,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     } catch (error) {
       console.error("Error loading article:", error);
-      const basePath = getBasePath();
       // Calculate attempts to explain to user
-      const attemptedUrl = `${basePath}knowledge_base/${item.file}`;
+      const attemptedUrl = resolveProjectUrl(`knowledge_base/${item.file}`);
       modalBody.innerHTML = `
         <div style="padding: 1rem; color: #ff6b6b;">
             <p><strong>Error al cargar el contenido.</strong></p>
@@ -337,9 +341,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function setGhoul(key) {
     const ghoul = GHOULS[key];
     if (!ghoul || !selectedGhoulInput) return;
-    const basePath = getBasePath();
-    const idleUrl = `${basePath}${ghoul.idle}`;
-    const hoverUrl = `${basePath}${ghoul.hover}`;
+    const idleUrl = resolveProjectUrl(ghoul.idle);
+    const hoverUrl = resolveProjectUrl(ghoul.hover);
 
     // Update CSS variables
     document.documentElement.style.setProperty(
@@ -366,14 +369,13 @@ document.addEventListener("DOMContentLoaded", () => {
     ghoulSelectionList.innerHTML = "";
     Object.keys(GHOULS).forEach((key) => {
       const ghoul = GHOULS[key];
-      const basePath = getBasePath();
       const div = document.createElement("div");
       div.className = `ghoul-option ${
         selectedGhoulInput.value === key ? "selected" : ""
       }`;
 
       const img = document.createElement("img");
-      img.src = `${basePath}${ghoul.idle}`;
+      img.src = resolveProjectUrl(ghoul.idle);
 
       const span = document.createElement("span");
       span.textContent = ghoul.name;
