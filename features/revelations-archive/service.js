@@ -105,6 +105,13 @@
     return global.ABNShared?.handouts?.revokeDelivery?.(associationId) || { error: null };
   }
 
+  async function rebroadcastHandout(revelationId) {
+    return global.ABNShared?.handouts?.rebroadcastHandout?.(revelationId) || {
+      count: 0,
+      error: null,
+    };
+  }
+
   async function deleteHandout(revelationId) {
     return global.ABNShared?.handouts?.deleteHandout?.(revelationId) || { error: null };
   }
@@ -133,6 +140,7 @@
     listHandoutsByChronicle,
     listPlayerDeliveries,
     revokeDelivery,
+    rebroadcastHandout,
     deleteHandout,
     subscribeDeliveriesForPlayer,
     unsubscribeChannel,

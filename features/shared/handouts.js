@@ -421,6 +421,7 @@
         id: row.id,
         recipient_player_id: row.player_id,
         recipient: row.player,
+        delivered_at: row.associated_at,
         status: "associated",
       });
     });
@@ -439,6 +440,22 @@
       .delete()
       .eq("id", associationId);
     return { error: error || null };
+  }
+
+  async function rebroadcastHandout(revelationId) {
+    const supabase = getSupabase();
+    if (!supabase || !revelationId) return { count: 0, error: null };
+
+    const { data, error } = await supabase
+      .from("revelation_players")
+      .update({ associated_at: new Date().toISOString() })
+      .eq("revelation_id", revelationId)
+      .select("id");
+
+    return {
+      count: Array.isArray(data) ? data.length : 0,
+      error: error || null,
+    };
   }
 
   async function deleteHandout(revelationId) {
@@ -603,6 +620,7 @@
     updateHandout,
     listHandoutsByChronicle,
     revokeDelivery,
+    rebroadcastHandout,
     deleteHandout,
     listPendingDeliveries,
     markDeliveryOpened,

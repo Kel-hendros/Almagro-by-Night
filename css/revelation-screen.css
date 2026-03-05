@@ -271,6 +271,11 @@
   gap: 6px;
 }
 
+.rs-recipients--readonly {
+  background: var(--theme-bg-surface);
+  min-height: 56px;
+}
+
 .rs-recipient-chip {
   display: flex;
   align-items: center;
@@ -341,6 +346,21 @@
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: 1.2;
+}
+
+.rs-recipient-chip--readonly {
+  cursor: default;
+  padding: 6px 12px;
+}
+
+.rs-recipient-chip--readonly:hover {
+  border-color: var(--theme-border-divider);
+}
+
+.rs-view-recipients-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--theme-text-secondary);
 }
 
 /* ── Message ── */

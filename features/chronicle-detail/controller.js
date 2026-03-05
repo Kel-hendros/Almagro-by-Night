@@ -192,6 +192,34 @@
           bodyMarkdown: handout.body_markdown || "",
           imageUrl: handout.image_signed_url || "",
           tags: handout.tags || [],
+          deliveries: handout.deliveries || [],
+          onRevealAgain: async () => {
+            const { count, error } =
+              (await handoutsApi.rebroadcastHandout?.(handout.id)) || {
+                count: 0,
+                error: new Error("Acción no disponible."),
+              };
+            if (error) {
+              alert(error.message || "No se pudo revelar nuevamente.");
+              return;
+            }
+            if (!count) {
+              await (global.ABNShared?.modal?.alert?.(
+                "Ningún jugador puede ver esta revelación todavía.",
+                { title: "Sin destinatarios" }
+              ) || Promise.resolve());
+              return;
+            }
+            await loadRevelacionesList(
+              revelacionState.chronicleId,
+              revelacionState.currentPlayerId,
+              revelacionState.isNarrator,
+            );
+            await (global.ABNShared?.modal?.alert?.(
+              "La revelación fue enviada otra vez a sus jugadores asociados.",
+              { title: "Revelación reenviada" }
+            ) || Promise.resolve());
+          },
           onEdit: () => {
             rs.close();
             rs.openEdit({

@@ -10,8 +10,9 @@
   let formSessionSeq = 0;
   let lightboxState = createLightboxState();
 
-  let currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
+  let currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onClosed: null };
   let formState = createEmptyFormState();
+  let isRevealingAgain = false;
 
   function createEmptyFormState() {
     return {
@@ -126,7 +127,28 @@
     `;
   }
 
-  function viewMarkup({ bodyMarkdown, imageUrl }) {
+  function viewDeliveriesMarkup(deliveries) {
+    const rows = Array.isArray(deliveries) ? deliveries : [];
+    const chipsHtml = rows.length
+      ? rows
+          .map((delivery) => {
+            const name = delivery?.recipient?.name || "Jugador";
+            return `<span class="rs-recipient-chip rs-recipient-chip--readonly">${escapeHtml(name)}</span>`;
+          })
+          .join("")
+      : '<p class="rs-view-recipients-empty">Ningún jugador puede ver esta revelación.</p>';
+
+    return `
+      <div class="rs-form-group">
+        <div class="rs-desc-header">Jugadores revelados</div>
+        <div class="rs-recipients rs-recipients--readonly">
+          ${chipsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function viewMarkup({ bodyMarkdown, imageUrl, deliveries }) {
     const url = String(imageUrl || "").trim();
     const hasImage = Boolean(url);
 
@@ -161,6 +183,7 @@
           <div id="rs-view-content" class="doc-markdown">${contentHtml}</div>
         </div>
       </div>
+      ${Array.isArray(deliveries) ? viewDeliveriesMarkup(deliveries) : ""}
     `;
   }
 
@@ -911,6 +934,28 @@
     currentScreen?.setFooterActions(buildFooterActions());
   }
 
+  async function handleRevealAgain() {
+    if (isRevealingAgain || typeof currentCallbacks.onRevealAgain !== "function" || !currentScreen) {
+      return;
+    }
+
+    isRevealingAgain = true;
+    currentScreen.updateAction("reveal-again", {
+      disabled: true,
+      label: "Revelando...",
+    });
+
+    try {
+      await currentCallbacks.onRevealAgain();
+    } finally {
+      isRevealingAgain = false;
+      currentScreen?.updateAction("reveal-again", {
+        disabled: false,
+        label: "Revelar de nuevo",
+      });
+    }
+  }
+
   async function cleanupDraftImageOnClose(closingState) {
     if (!closingState?.draftImageRef) return;
     await deleteImageRefSafe(closingState.draftImageRef);
@@ -925,6 +970,7 @@
     currentFormHost = null;
     currentScreen = null;
     isSaving = false;
+    isRevealingAgain = false;
     closeImageLightbox();
     formState = createEmptyFormState();
 
@@ -933,7 +979,7 @@
     }
 
     const onClosedCb = currentCallbacks.onClosed;
-    currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
+    currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onClosed: null };
     if (typeof onClosedCb === "function") onClosedCb({ reason });
   }
 
@@ -1003,7 +1049,7 @@
       existingImageRef: null,
       sessionToken: ++formSessionSeq,
     };
-    currentCallbacks = { onSaved: onSaved || null, onEdit: null, onClosed: onClosed || null };
+    currentCallbacks = { onSaved: onSaved || null, onEdit: null, onRevealAgain: null, onClosed: onClosed || null };
 
     isSaving = false;
     currentScreen = ds.open({
@@ -1047,7 +1093,7 @@
       existingImageRef: handout.image_url || null,
       sessionToken: ++formSessionSeq,
     };
-    currentCallbacks = { onSaved: onSaved || null, onEdit: null, onClosed: onClosed || null };
+    currentCallbacks = { onSaved: onSaved || null, onEdit: null, onRevealAgain: null, onClosed: onClosed || null };
 
     isSaving = false;
     currentScreen = ds.open({
@@ -1086,13 +1132,40 @@
     }
   }
 
-  function openView({ title, bodyMarkdown, imageUrl, tags, onEdit, onClosed } = {}) {
+  function openView({
+    title,
+    bodyMarkdown,
+    imageUrl,
+    tags,
+    deliveries,
+    onEdit,
+    onRevealAgain,
+    onClosed,
+  } = {}) {
     const ds = documentScreen();
     if (!ds) return;
 
-    currentCallbacks = { onSaved: null, onEdit: onEdit || null, onClosed: onClosed || null };
+    currentCallbacks = {
+      onSaved: null,
+      onEdit: onEdit || null,
+      onRevealAgain: onRevealAgain || null,
+      onClosed: onClosed || null,
+    };
+    isRevealingAgain = false;
 
     const actions = [];
+    if (typeof onRevealAgain === "function") {
+      actions.push({
+        id: "reveal-again",
+        kind: "button",
+        variant: "ghost",
+        label: "Revelar de nuevo",
+        disabled: isRevealingAgain || !(Array.isArray(deliveries) && deliveries.length),
+        onClick: () => {
+          void handleRevealAgain();
+        },
+      });
+    }
     if (typeof onEdit === "function") {
       actions.push({
         id: "edit",
@@ -1111,15 +1184,16 @@
       actions,
       bodyClass: "doc-view-body rs-view-body",
       renderBody: (body) => {
-        body.innerHTML = viewMarkup({ bodyMarkdown, imageUrl });
+        body.innerHTML = viewMarkup({ bodyMarkdown, imageUrl, deliveries });
       },
       onClosed: ({ reason }) => {
         currentFormHost = null;
         currentScreen = null;
         isSaving = false;
+        isRevealingAgain = false;
         closeImageLightbox();
         const onClosedCb = currentCallbacks.onClosed;
-        currentCallbacks = { onSaved: null, onEdit: null, onClosed: null };
+        currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onClosed: null };
         if (typeof onClosedCb === "function") onClosedCb({ reason });
       },
     });

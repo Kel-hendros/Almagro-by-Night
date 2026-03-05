@@ -9,7 +9,7 @@
     chronicleId: null,
     playerId: null,
     deliveries: [],
-    lastKnownIds: new Set(),
+    lastKnownDeliveries: new Map(),
     realtimeChannel: null,
     toastTimer: null,
     pollTimer: null,
@@ -108,6 +108,12 @@
     } catch (_e) {
       return "";
     }
+  }
+
+  function getDeliveryTimestamp(row) {
+    const raw = row?.associated_at || row?.delivered_at || row?.handout?.created_at || "";
+    const stamp = raw ? new Date(raw).getTime() : 0;
+    return Number.isFinite(stamp) ? stamp : 0;
   }
 
   function renderList() {
@@ -232,18 +238,24 @@
   }
 
   function applyDeliveries(deliveries, { notify = false } = {}) {
-    const previousIds = state.lastKnownIds;
+    const previousDeliveries = state.lastKnownDeliveries;
     state.deliveries = Array.isArray(deliveries) ? deliveries : [];
     renderList();
 
     const newRows = notify
-      ? state.deliveries.filter((delivery) => !previousIds.has(delivery.id))
+      ? state.deliveries.filter((delivery) => {
+          const previousTimestamp = previousDeliveries.get(delivery.id);
+          if (!previousDeliveries.has(delivery.id)) return true;
+          return getDeliveryTimestamp(delivery) > previousTimestamp;
+        })
       : [];
     if (newRows.length) {
       void showToast(newRows[0]);
     }
 
-    state.lastKnownIds = new Set(state.deliveries.map((delivery) => delivery.id));
+    state.lastKnownDeliveries = new Map(
+      state.deliveries.map((delivery) => [delivery.id, getDeliveryTimestamp(delivery)])
+    );
   }
 
   async function refreshDeliveries({ notify = false } = {}) {
@@ -392,7 +404,7 @@
     unbindRefreshTriggers();
 
     state.deliveries = [];
-    state.lastKnownIds.clear();
+    state.lastKnownDeliveries.clear();
     state.playerId = null;
     state.chronicleId = null;
     state.refreshInFlight = false;
