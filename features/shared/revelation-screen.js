@@ -179,9 +179,29 @@
     `;
   }
 
+  function buildViewSectionMarkup({ id, title, content, isOpen = false }) {
+    return `
+      <section class="rs-view-section${isOpen ? " is-open" : ""}" data-view-section="${escapeHtml(id)}">
+        <button
+          type="button"
+          class="rs-view-section-toggle"
+          data-view-toggle="${escapeHtml(id)}"
+          aria-expanded="${isOpen ? "true" : "false"}"
+        >
+          <span class="rs-view-section-label">${escapeHtml(title)}</span>
+          <span class="rs-view-section-state">${isOpen ? "Ocultar" : "Ver"}</span>
+        </button>
+        <div class="rs-view-section-content">
+          ${content}
+        </div>
+      </section>
+    `;
+  }
+
   function viewMarkup({ bodyMarkdown, imageUrl, deliveries, showDeliveries = false }) {
     const url = String(imageUrl || "").trim();
     const hasImage = Boolean(url);
+    const openSection = hasImage ? "image" : "description";
 
     const contentHtml = global.renderMarkdown
       ? global.renderMarkdown(bodyMarkdown || "")
@@ -190,30 +210,35 @@
     return `
       ${
         hasImage
-          ? `<details id="rs-detail-image" class="rs-detail-section" open>
-               <summary class="rs-detail-summary">
-                 <span>Imagen</span>
-                 <i data-lucide="chevron-down" class="rs-detail-chevron"></i>
-               </summary>
-               <div class="rs-detail-content">
-                 <img
-                   src="${escapeHtml(url)}"
-                   class="rs-view-image rs-view-image--interactive"
-                   alt="Imagen de revelación"
-                   title="Abrir imagen"
-                   tabindex="0"
-                   role="button"
-                 >
-               </div>
-             </details>`
+          ? buildViewSectionMarkup({
+              id: "image",
+              title: "Imagen",
+              isOpen: openSection === "image",
+              content: `
+                <div class="rs-view-image-wrap">
+                  <img
+                    src="${escapeHtml(url)}"
+                    class="rs-view-image rs-view-image--interactive"
+                    alt="Imagen de revelación"
+                    title="Abrir imagen"
+                    tabindex="0"
+                    role="button"
+                  >
+                </div>
+              `,
+            })
           : ""
       }
-      <div class="rs-desc-section">
-        <div class="rs-desc-header">Descripcion</div>
-        <div class="rs-desc-body">
-          <div id="rs-view-content" class="doc-markdown">${contentHtml}</div>
-        </div>
-      </div>
+      ${buildViewSectionMarkup({
+        id: "description",
+        title: "Descripción",
+        isOpen: openSection === "description",
+        content: `
+          <div class="rs-desc-body">
+            <div id="rs-view-content" class="doc-markdown">${contentHtml}</div>
+          </div>
+        `,
+      })}
       ${showDeliveries ? viewDeliveriesMarkup(deliveries) : ""}
     `;
   }
@@ -917,6 +942,35 @@
     });
   }
 
+  function bindViewAccordions() {
+    const body = currentScreen?.getBody?.();
+    if (!body) return;
+
+    const sections = Array.from(body.querySelectorAll("[data-view-section]"));
+    if (!sections.length) return;
+
+    function setOpenSection(sectionId) {
+      sections.forEach((section) => {
+        const isOpen = section.dataset.viewSection === sectionId;
+        section.classList.toggle("is-open", isOpen);
+        const toggle = section.querySelector("[data-view-toggle]");
+        if (toggle) {
+          toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+          const state = toggle.querySelector(".rs-view-section-state");
+          if (state) state.textContent = isOpen ? "Ocultar" : "Ver";
+        }
+      });
+    }
+
+    body.querySelectorAll("[data-view-toggle]").forEach((toggle) => {
+      toggle.addEventListener("click", () => {
+        const sectionId = String(toggle.dataset.viewToggle || "").trim();
+        if (!sectionId) return;
+        setOpenSection(sectionId);
+      });
+    });
+  }
+
   function buildFooterActions() {
     return [
       {
@@ -1221,6 +1275,7 @@
       const body = currentScreen?.getBody?.();
       if (body) global.lucide.createIcons({ nodes: [body] });
     }
+    bindViewAccordions();
     bindViewImageInteractions();
   }
 
