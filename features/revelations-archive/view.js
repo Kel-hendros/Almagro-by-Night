@@ -46,14 +46,14 @@
       .map((item) => {
         const deliveries = Array.isArray(item.deliveries) ? item.deliveries : [];
         const associatedNames = deliveries
-          .map((delivery) => delivery?.recipient?.name || "Jugador")
+          .map((delivery) => delivery?.recipient?.character_name || delivery?.recipient?.name || "Personaje")
           .filter(Boolean);
         const deliveriesHtml = deliveries.length
           ? deliveries
               .map(
                 (delivery) => `
                   <span class="ra-delivery-chip associated">
-                    ${escapeHtml(delivery.recipient?.name || "Jugador")}
+                    ${escapeHtml(delivery.recipient?.character_name || delivery.recipient?.name || "Personaje")}
                     <button type="button" class="ra-delivery-remove" data-delivery-id="${escapeHtml(
                       delivery.id,
                     )}" title="Quitar asociación">×</button>

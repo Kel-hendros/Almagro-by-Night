@@ -129,14 +129,14 @@
         }
         if (!count) {
           await (global.ABNShared?.modal?.alert?.(
-            "Ningún jugador puede ver esta revelación todavía.",
-            { title: "Sin destinatarios" }
+            "Ningún personaje puede ver esta revelación todavía.",
+            { title: "Sin personajes asociados" }
           ) || Promise.resolve());
           return;
         }
         await loadNarratorData();
         await (global.ABNShared?.modal?.alert?.(
-          "La revelación fue enviada otra vez a sus jugadores asociados.",
+          "La revelación fue enviada otra vez a sus personajes asociados.",
           { title: "Revelación reenviada" }
         ) || Promise.resolve());
       },

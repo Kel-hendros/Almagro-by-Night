@@ -127,20 +127,51 @@
     `;
   }
 
+  function buildRecipientChipMarkup(row, { readonly = false, selected = false } = {}) {
+    const characterName = String(
+      row?.character_name || row?.recipient?.character_name || row?.player_name || row?.recipient?.name || "Personaje"
+    ).trim() || "Personaje";
+    const avatarUrl = String(row?.avatar_url || row?.recipient?.avatar_url || "").trim();
+    const avatar = avatarUrl
+      ? `<img class="rs-recipient-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(characterName)}">`
+      : `<span class="rs-recipient-avatar-fallback">${escapeHtml(characterName.charAt(0).toUpperCase())}</span>`;
+
+    if (readonly) {
+      return `
+        <span
+          class="rs-recipient-chip rs-recipient-chip--readonly"
+          title="${escapeHtml(characterName)}"
+        >
+          <span class="rs-recipient-avatar">${avatar}</span>
+          <span class="rs-recipient-name">${escapeHtml(characterName)}</span>
+        </span>
+      `;
+    }
+
+    return `
+      <button
+        type="button"
+        class="rs-recipient-chip${selected ? " is-selected" : ""}"
+        data-player-id="${escapeHtml(row.player_id)}"
+        data-character-id="${escapeHtml(row.character_sheet_id)}"
+        aria-pressed="${selected ? "true" : "false"}"
+        title="${escapeHtml(characterName)}"
+      >
+        <span class="rs-recipient-avatar">${avatar}</span>
+        <span class="rs-recipient-name">${escapeHtml(characterName)}</span>
+      </button>
+    `;
+  }
+
   function viewDeliveriesMarkup(deliveries) {
     const rows = Array.isArray(deliveries) ? deliveries : [];
     const chipsHtml = rows.length
-      ? rows
-          .map((delivery) => {
-            const name = delivery?.recipient?.name || "Jugador";
-            return `<span class="rs-recipient-chip rs-recipient-chip--readonly">${escapeHtml(name)}</span>`;
-          })
-          .join("")
-      : '<p class="rs-view-recipients-empty">Ningún jugador puede ver esta revelación.</p>';
+      ? rows.map((delivery) => buildRecipientChipMarkup(delivery, { readonly: true })).join("")
+      : '<p class="rs-view-recipients-empty">Ningún personaje puede ver esta revelación.</p>';
 
     return `
       <div class="rs-form-group">
-        <div class="rs-desc-header">Jugadores revelados</div>
+        <div class="rs-desc-header">Personajes revelados</div>
         <div class="rs-recipients rs-recipients--readonly">
           ${chipsHtml}
         </div>
@@ -293,27 +324,7 @@
       host.innerHTML = '<p class="muted">No hay personajes disponibles en esta cronica.</p>';
       return;
     }
-    host.innerHTML = rows
-      .map((row) => {
-        const avatarUrl = String(row.avatar_url || "").trim();
-        const avatar = avatarUrl
-          ? `<img class="rs-recipient-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(row.character_name || "Personaje")}">`
-          : `<span class="rs-recipient-avatar-fallback">${escapeHtml((row.character_name || "?").charAt(0).toUpperCase())}</span>`;
-        return `
-          <button
-            type="button"
-            class="rs-recipient-chip"
-            data-player-id="${escapeHtml(row.player_id)}"
-            data-character-id="${escapeHtml(row.character_sheet_id)}"
-            aria-pressed="false"
-            title="${escapeHtml(row.character_name || "Personaje")}"
-          >
-            <span class="rs-recipient-avatar">${avatar}</span>
-            <span class="rs-recipient-name">${escapeHtml(row.character_name || "Personaje")}</span>
-          </button>
-        `;
-      })
-      .join("");
+    host.innerHTML = rows.map((row) => buildRecipientChipMarkup(row)).join("");
   }
 
   async function populateForm({ title, imageRef, bodyMarkdown, recipientPlayerIds, tags }) {

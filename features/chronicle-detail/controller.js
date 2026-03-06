@@ -110,7 +110,7 @@
     revelations.forEach((rev) => {
       const recipientCount = (rev.deliveries || []).length;
       const recipientNames = (rev.deliveries || [])
-        .map((d) => d.recipient?.name || "—")
+        .map((d) => d.recipient?.character_name || d.recipient?.name || "—")
         .join(", ");
       const meta = formatDate(rev.created_at);
       const preview = truncateText(rev.body_markdown);
@@ -124,7 +124,7 @@
       card.innerHTML = `
         <div class="cd-recap-info">
           <span class="cd-recap-title">${escapeHtml(rev.title)}</span>
-          <span class="cd-recap-meta">${meta} · ${recipientCount} destinatario${recipientCount !== 1 ? "s" : ""}${recipientNames ? ": " + escapeHtml(recipientNames) : ""}</span>
+          <span class="cd-recap-meta">${meta} · ${recipientCount} personaje${recipientCount !== 1 ? "s" : ""}${recipientNames ? ": " + escapeHtml(recipientNames) : ""}</span>
           ${tagsHtml}
           ${preview ? `<p class="cd-recap-body">${escapeHtml(preview)}</p>` : ""}
         </div>
@@ -206,8 +206,8 @@
             }
             if (!count) {
               await (global.ABNShared?.modal?.alert?.(
-                "Ningún jugador puede ver esta revelación todavía.",
-                { title: "Sin destinatarios" }
+                "Ningún personaje puede ver esta revelación todavía.",
+                { title: "Sin personajes asociados" }
               ) || Promise.resolve());
               return;
             }
@@ -217,7 +217,7 @@
               revelacionState.isNarrator,
             );
             await (global.ABNShared?.modal?.alert?.(
-              "La revelación fue enviada otra vez a sus jugadores asociados.",
+              "La revelación fue enviada otra vez a sus personajes asociados.",
               { title: "Revelación reenviada" }
             ) || Promise.resolve());
           },

@@ -404,6 +404,14 @@
     const ids = rowsWithSigned.map((r) => r.id).filter(Boolean);
     if (!ids.length) return [];
 
+    const recipientCharacters = await getRecipientCharacters(chronicleId, null);
+    const characterByPlayerId = new Map();
+    (recipientCharacters || []).forEach((row) => {
+      const playerId = String(row?.player_id || "").trim();
+      if (!playerId || characterByPlayerId.has(playerId)) return;
+      characterByPlayerId.set(playerId, row);
+    });
+
     const { data: assoc, error: assocError } = await supabase
       .from("revelation_players")
       .select("id, revelation_id, player_id, associated_at, player:players(id, name)")
@@ -417,6 +425,7 @@
     const byRevelation = new Map();
     (assoc || []).forEach((row) => {
       const player = Array.isArray(row.player) ? row.player[0] || null : row.player || null;
+      const character = characterByPlayerId.get(String(row.player_id || "").trim()) || null;
       if (!byRevelation.has(row.revelation_id)) byRevelation.set(row.revelation_id, []);
       byRevelation.get(row.revelation_id).push({
         id: row.id,
@@ -424,6 +433,9 @@
         recipient: {
           id: player?.id || row.player_id,
           name: player?.name || "Jugador",
+          character_name: character?.character_name || player?.name || "Personaje",
+          character_sheet_id: character?.character_sheet_id || null,
+          avatar_url: character?.avatar_url || "",
         },
         delivered_at: row.associated_at,
         status: "associated",
