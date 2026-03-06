@@ -1138,6 +1138,7 @@
     imageUrl,
     tags,
     deliveries,
+    showDeliveries,
     onEdit,
     onRevealAgain,
     onClosed,
@@ -1190,7 +1191,7 @@
           bodyMarkdown,
           imageUrl,
           deliveries,
-          showDeliveries: footerActions.length > 0,
+          showDeliveries: Boolean(showDeliveries),
         });
       },
       onClosed: ({ reason }) => {

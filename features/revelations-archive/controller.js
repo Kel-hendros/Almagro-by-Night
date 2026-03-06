@@ -58,27 +58,7 @@
       service().listHandoutsByChronicle(state.chronicleId),
     ]);
     state.availableRecipientCharacters = recipientCharacters || [];
-
-    const allowedPlayerIds = new Set(
-      state.availableRecipientCharacters.map((row) => String(row.player_id || "")).filter(Boolean),
-    );
-    const staleDeliveryIds = [];
-    (handouts || []).forEach((handout) => {
-      (handout.deliveries || []).forEach((delivery) => {
-        const pid = String(delivery?.recipient_player_id || "");
-        if (pid && !allowedPlayerIds.has(pid)) staleDeliveryIds.push(delivery.id);
-      });
-    });
-
-    if (staleDeliveryIds.length) {
-      await Promise.all(staleDeliveryIds.map((deliveryId) => service().revokeDelivery(deliveryId)));
-    }
-
-    const effectiveHandouts = staleDeliveryIds.length
-      ? await service().listHandoutsByChronicle(state.chronicleId)
-      : handouts;
-
-    state.narratorHandouts = effectiveHandouts || [];
+    state.narratorHandouts = handouts || [];
     view().renderNarratorList(filterHandouts(state.narratorHandouts, state.searchQuery));
   }
 
@@ -140,6 +120,7 @@
       imageUrl: handout.image_signed_url || "",
       tags: handout.tags || [],
       deliveries: handout.deliveries || [],
+      showDeliveries: true,
       onRevealAgain: async () => {
         const { count, error } = await service().rebroadcastHandout(handout.id);
         if (error) {

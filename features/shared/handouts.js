@@ -406,7 +406,7 @@
 
     const { data: assoc, error: assocError } = await supabase
       .from("revelation_players")
-      .select("id, revelation_id, player_id, associated_at, player:players(name)")
+      .select("id, revelation_id, player_id, associated_at, player:players(id, name)")
       .in("revelation_id", ids)
       .order("associated_at", { ascending: true });
     if (assocError) {
@@ -416,11 +416,15 @@
 
     const byRevelation = new Map();
     (assoc || []).forEach((row) => {
+      const player = Array.isArray(row.player) ? row.player[0] || null : row.player || null;
       if (!byRevelation.has(row.revelation_id)) byRevelation.set(row.revelation_id, []);
       byRevelation.get(row.revelation_id).push({
         id: row.id,
         recipient_player_id: row.player_id,
-        recipient: row.player,
+        recipient: {
+          id: player?.id || row.player_id,
+          name: player?.name || "Jugador",
+        },
         delivered_at: row.associated_at,
         status: "associated",
       });

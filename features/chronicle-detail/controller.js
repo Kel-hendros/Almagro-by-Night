@@ -193,6 +193,7 @@
           imageUrl: handout.image_signed_url || "",
           tags: handout.tags || [],
           deliveries: handout.deliveries || [],
+          showDeliveries: true,
           onRevealAgain: async () => {
             const { count, error } =
               (await handoutsApi.rebroadcastHandout?.(handout.id)) || {
