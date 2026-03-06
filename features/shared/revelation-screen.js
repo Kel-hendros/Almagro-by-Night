@@ -188,8 +188,14 @@
           data-view-toggle="${escapeHtml(id)}"
           aria-expanded="${isOpen ? "true" : "false"}"
         >
-          <span class="rs-view-section-label">${escapeHtml(title)}</span>
-          <span class="rs-view-section-state">${isOpen ? "Ocultar" : "Ver"}</span>
+          <span class="rs-view-section-heading">
+            <span class="rs-view-section-label">${escapeHtml(title)}</span>
+            <span class="rs-view-section-hint">Sección desplegable</span>
+          </span>
+          <span class="rs-view-section-meta">
+            <span class="rs-view-section-state">${isOpen ? "Abierto" : "Cerrado"}</span>
+            <i data-lucide="chevron-down" class="rs-view-section-chevron"></i>
+          </span>
         </button>
         <div class="rs-view-section-content">
           ${content}
@@ -957,7 +963,7 @@
         if (toggle) {
           toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
           const state = toggle.querySelector(".rs-view-section-state");
-          if (state) state.textContent = isOpen ? "Ocultar" : "Ver";
+          if (state) state.textContent = isOpen ? "Abierto" : "Cerrado";
         }
       });
     }

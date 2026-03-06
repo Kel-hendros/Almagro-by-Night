@@ -409,6 +409,11 @@
   border-radius: 14px;
   background: var(--cd-bg-surface);
   overflow: hidden;
+  box-shadow: 0 8px 20px color-mix(in srgb, #000 8%, transparent);
+}
+
+.rs-view-section.is-open {
+  border-color: color-mix(in srgb, var(--cd-accent) 35%, var(--cd-border-divider));
 }
 
 .rs-view-section-toggle {
@@ -417,17 +422,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 18px;
+  min-height: 68px;
+  padding: 16px 18px;
   border: 0;
-  background: color-mix(in srgb, var(--cd-bg-elevated) 72%, var(--cd-bg-surface));
+  background: color-mix(in srgb, var(--cd-bg-elevated) 88%, var(--cd-bg-surface));
   color: var(--cd-text-primary);
   cursor: pointer;
   text-align: left;
   font: inherit;
 }
 
+.rs-view-section.is-open .rs-view-section-toggle {
+  background: color-mix(in srgb, var(--cd-accent) 12%, var(--cd-bg-elevated));
+}
+
 .rs-view-section-toggle:hover {
-  background: color-mix(in srgb, var(--cd-accent) 10%, var(--cd-bg-elevated));
+  background: color-mix(in srgb, var(--cd-accent) 18%, var(--cd-bg-elevated));
 }
 
 .rs-view-section-toggle:focus-visible {
@@ -435,10 +445,29 @@
   outline-offset: -2px;
 }
 
+.rs-view-section-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
 .rs-view-section-label {
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 700;
   color: var(--cd-text-primary);
+}
+
+.rs-view-section-hint {
+  font-size: 0.76rem;
+  color: var(--cd-text-secondary);
+}
+
+.rs-view-section-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
 }
 
 .rs-view-section-state {
@@ -446,6 +475,19 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--cd-text-secondary);
+  font-weight: 700;
+}
+
+.rs-view-section-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--cd-text-secondary);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.rs-view-section.is-open .rs-view-section-chevron {
+  transform: rotate(180deg);
+  color: var(--cd-accent);
 }
 
 .rs-view-section-content {
