@@ -464,8 +464,8 @@
 
     const { data: existingRows, error: existingError } = await supabase
       .from("revelation_players")
-      .eq("revelation_id", revelationId)
-      .select("id, player_id");
+      .select("id, player_id")
+      .eq("revelation_id", revelationId);
     if (existingError) {
       return { count: 0, error: existingError };
     }
