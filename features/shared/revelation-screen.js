@@ -940,7 +940,7 @@
     }
 
     isRevealingAgain = true;
-    currentScreen.updateAction("reveal-again", {
+    currentScreen.updateFooterAction("reveal-again", {
       disabled: true,
       label: "Revelando...",
     });
@@ -949,7 +949,7 @@
       await currentCallbacks.onRevealAgain();
     } finally {
       isRevealingAgain = false;
-      currentScreen?.updateAction("reveal-again", {
+      currentScreen?.updateFooterAction("reveal-again", {
         disabled: false,
         label: "Revelar de nuevo",
       });
