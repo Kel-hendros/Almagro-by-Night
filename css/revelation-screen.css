@@ -8,21 +8,6 @@
   width: calc(100% - var(--sidebar-current-width, var(--sidebar-width-expanded, 0px)));
   height: 100%;
   display: none;
-
-  /* Provide --cd-* aliases for revelation sections that use --cd tokens.
-     The overlay lives outside .chronicle-detail. */
-  --cd-bg-primary: var(--theme-bg-primary);
-  --cd-bg-surface: var(--theme-bg-surface);
-  --cd-bg-elevated: var(--theme-bg-elevated);
-  --cd-border-divider: var(--theme-border-divider);
-  --cd-text-primary: var(--theme-text-primary);
-  --cd-text-secondary: var(--theme-text-secondary);
-  --cd-text-tertiary: var(--theme-text-tertiary);
-  --cd-accent: var(--theme-accent);
-  --cd-font-primary: var(--app-font-body);
-  --cd-font-display: var(--app-font-heading);
-  --cd-radius-card: 16px;
-  --cd-radius-pill: 24px;
 }
 
 .rs-overlay.active {
@@ -388,32 +373,50 @@
   overflow: hidden;
 }
 
-/* Body: add gap for image-detail + card spacing, center content */
+/* Body: accordion on top, deliveries pinned to bottom */
 .rs-view-body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   width: 100%;
-  max-width: 820px;
-  margin: 0 auto;
-  min-height: auto;
-  height: auto;
+  max-width: none;
+  margin: 0;
   box-sizing: border-box;
   padding-bottom: 0;
+  gap: 0;
 }
 
-/* ── View sections ── */
+/* Kill ds-body padding for revelation view — content handles its own */
+.ds-body:has(.rs-view-body) {
+  padding: 0;
+}
+
+.rs-view-body .rs-view-accordion {
+  padding: 14px clamp(18px, 3.2vw, 42px) 0;
+  flex: 1 1 auto;
+}
+
+.rs-view-deliveries {
+  flex-shrink: 0;
+  padding: 12px clamp(18px, 3.2vw, 42px);
+  border-top: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-primary);
+}
+
+/* ── Unified accordion ── */
+
+.rs-view-accordion {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── View sections (inside accordion) ── */
 
 .rs-view-section {
-  border: 1px solid var(--cd-border-divider);
-  border-radius: 14px;
-  background: var(--cd-bg-surface);
   overflow: hidden;
-  box-shadow: 0 8px 20px color-mix(in srgb, #000 8%, transparent);
 }
 
-.rs-view-section.is-open {
-  border-color: color-mix(in srgb, var(--cd-accent) 35%, var(--cd-border-divider));
+.rs-view-section + .rs-view-section {
+  border-top: 1px solid var(--theme-border-divider);
 }
 
 .rs-view-section-toggle {
@@ -422,78 +425,74 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 68px;
-  padding: 16px 18px;
+  padding: 12px 4px;
   border: 0;
-  background: color-mix(in srgb, var(--cd-bg-elevated) 88%, var(--cd-bg-surface));
-  color: var(--cd-text-primary);
+  background: transparent;
+  color: var(--theme-text-primary);
   cursor: pointer;
   text-align: left;
   font: inherit;
+  transition: color 0.15s ease;
 }
 
-.rs-view-section.is-open .rs-view-section-toggle {
-  background: color-mix(in srgb, var(--cd-accent) 12%, var(--cd-bg-elevated));
-}
-
-.rs-view-section-toggle:hover {
-  background: color-mix(in srgb, var(--cd-accent) 18%, var(--cd-bg-elevated));
+.rs-view-section-toggle:hover .rs-view-section-label {
+  color: var(--theme-text-primary);
 }
 
 .rs-view-section-toggle:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--cd-accent) 58%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 58%, transparent);
   outline-offset: -2px;
+  border-radius: 6px;
 }
 
 .rs-view-section-heading {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
-.rs-view-section-label {
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--cd-text-primary);
-}
-
-.rs-view-section-hint {
-  font-size: 0.76rem;
-  color: var(--cd-text-secondary);
-}
-
-.rs-view-section-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+.rs-view-section-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--theme-text-muted);
   flex: 0 0 auto;
+  transition: color 0.15s ease;
 }
 
-.rs-view-section-state {
-  font-size: 0.76rem;
-  letter-spacing: 0.04em;
+.rs-view-section.is-open .rs-view-section-icon {
+  color: var(--theme-accent);
+}
+
+.rs-view-section-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--theme-text-muted);
   text-transform: uppercase;
-  color: var(--cd-text-secondary);
-  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: color 0.15s ease;
+}
+
+.rs-view-section.is-open .rs-view-section-label {
+  color: var(--theme-text-secondary);
 }
 
 .rs-view-section-chevron {
-  width: 18px;
-  height: 18px;
-  color: var(--cd-text-secondary);
+  width: 14px;
+  height: 14px;
+  color: var(--theme-text-muted);
   transition: transform 0.2s ease, color 0.2s ease;
+  flex: 0 0 auto;
 }
 
 .rs-view-section.is-open .rs-view-section-chevron {
   transform: rotate(180deg);
-  color: var(--cd-accent);
+  color: var(--theme-accent);
 }
 
 .rs-view-section-content {
   display: none;
-  padding: 16px 18px 18px;
-  border-top: 1px solid var(--cd-border-divider);
+  padding: 4px 0 8px;
 }
 
 .rs-view-section.is-open .rs-view-section-content {
@@ -504,8 +503,8 @@
   padding: 12px 16px;
   font-size: 0.82rem;
   font-weight: 500;
-  color: var(--cd-text-secondary);
-  border-bottom: 1px solid var(--cd-border-divider);
+  color: var(--theme-text-secondary);
+  border-bottom: 1px solid var(--theme-border-divider);
 }
 
 .rs-desc-body {
@@ -530,9 +529,9 @@
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 0.68rem;
-  background: var(--cd-bg-elevated);
-  color: var(--cd-text-secondary);
-  border: 1px solid var(--cd-border-divider);
+  background: var(--theme-bg-elevated);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-divider);
 }
 
 /* ── View image ── */

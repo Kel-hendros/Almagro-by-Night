@@ -170,7 +170,7 @@
       : '<p class="rs-view-recipients-empty">Ningún personaje puede ver esta revelación.</p>';
 
     return `
-      <div class="rs-form-group">
+      <div class="rs-view-deliveries">
         <div class="rs-desc-header">Personajes revelados</div>
         <div class="rs-recipients rs-recipients--readonly">
           ${chipsHtml}
@@ -179,9 +179,9 @@
     `;
   }
 
-  function buildViewSectionMarkup({ id, title, content, isOpen = false }) {
+  function buildViewSectionMarkup({ id, title, icon, content, isOpen = false }) {
     return `
-      <section class="rs-view-section${isOpen ? " is-open" : ""}" data-view-section="${escapeHtml(id)}">
+      <div class="rs-view-section${isOpen ? " is-open" : ""}" data-view-section="${escapeHtml(id)}">
         <button
           type="button"
           class="rs-view-section-toggle"
@@ -189,18 +189,15 @@
           aria-expanded="${isOpen ? "true" : "false"}"
         >
           <span class="rs-view-section-heading">
+            ${icon ? `<i data-lucide="${escapeHtml(icon)}" class="rs-view-section-icon"></i>` : ""}
             <span class="rs-view-section-label">${escapeHtml(title)}</span>
-            <span class="rs-view-section-hint">Sección desplegable</span>
           </span>
-          <span class="rs-view-section-meta">
-            <span class="rs-view-section-state">${isOpen ? "Abierto" : "Cerrado"}</span>
-            <i data-lucide="chevron-down" class="rs-view-section-chevron"></i>
-          </span>
+          <i data-lucide="chevron-down" class="rs-view-section-chevron"></i>
         </button>
         <div class="rs-view-section-content">
           ${content}
         </div>
-      </section>
+      </div>
     `;
   }
 
@@ -213,38 +210,44 @@
       ? global.renderMarkdown(bodyMarkdown || "")
       : escapeHtml(bodyMarkdown || "");
 
+    const imageSectionHtml = hasImage
+      ? buildViewSectionMarkup({
+          id: "image",
+          title: "Imagen",
+          icon: "image",
+          isOpen: openSection === "image",
+          content: `
+            <div class="rs-view-image-wrap">
+              <img
+                src="${escapeHtml(url)}"
+                class="rs-view-image rs-view-image--interactive"
+                alt="Imagen de revelación"
+                title="Abrir imagen"
+                tabindex="0"
+                role="button"
+              >
+            </div>
+          `,
+        })
+      : "";
+
+    const descriptionSectionHtml = buildViewSectionMarkup({
+      id: "description",
+      title: "Descripción",
+      icon: "scroll-text",
+      isOpen: openSection === "description",
+      content: `
+        <div class="rs-desc-body">
+          <div id="rs-view-content" class="doc-markdown">${contentHtml}</div>
+        </div>
+      `,
+    });
+
     return `
-      ${
-        hasImage
-          ? buildViewSectionMarkup({
-              id: "image",
-              title: "Imagen",
-              isOpen: openSection === "image",
-              content: `
-                <div class="rs-view-image-wrap">
-                  <img
-                    src="${escapeHtml(url)}"
-                    class="rs-view-image rs-view-image--interactive"
-                    alt="Imagen de revelación"
-                    title="Abrir imagen"
-                    tabindex="0"
-                    role="button"
-                  >
-                </div>
-              `,
-            })
-          : ""
-      }
-      ${buildViewSectionMarkup({
-        id: "description",
-        title: "Descripción",
-        isOpen: openSection === "description",
-        content: `
-          <div class="rs-desc-body">
-            <div id="rs-view-content" class="doc-markdown">${contentHtml}</div>
-          </div>
-        `,
-      })}
+      <div class="rs-view-accordion">
+        ${imageSectionHtml}
+        ${descriptionSectionHtml}
+      </div>
       ${showDeliveries ? viewDeliveriesMarkup(deliveries) : ""}
     `;
   }
@@ -962,8 +965,6 @@
         const toggle = section.querySelector("[data-view-toggle]");
         if (toggle) {
           toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-          const state = toggle.querySelector(".rs-view-section-state");
-          if (state) state.textContent = isOpen ? "Abierto" : "Cerrado";
         }
       });
     }
@@ -972,6 +973,16 @@
       toggle.addEventListener("click", () => {
         const sectionId = String(toggle.dataset.viewToggle || "").trim();
         if (!sectionId) return;
+        const isAlreadyOpen = sections.find(
+          (s) => s.dataset.viewSection === sectionId,
+        )?.classList.contains("is-open");
+        if (isAlreadyOpen && sections.length > 1) {
+          const other = sections.find((s) => s.dataset.viewSection !== sectionId);
+          if (other) {
+            setOpenSection(other.dataset.viewSection);
+            return;
+          }
+        }
         setOpenSection(sectionId);
       });
     });
