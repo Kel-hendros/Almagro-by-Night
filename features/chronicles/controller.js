@@ -207,13 +207,30 @@
     if (!grid) return;
     view().renderLoading(grid);
 
-    state.player = await service().fetchCurrentPlayer();
+    state.player = await window.ABNCache.get(
+      "currentPlayer",
+      () => service().fetchCurrentPlayer(),
+      { ttl: "session" }
+    );
     if (!state.player) {
       view().renderUnauthenticated(grid);
       return;
     }
 
     try {
+      // Try single-RPC overview first (1 round trip instead of 3-4)
+      const overview = await service().fetchChroniclesOverview(state.player.id);
+      if (overview) {
+        const { chronicles, participantsMap, charactersMap } = overview;
+        if (!chronicles.length) {
+          view().renderEmpty(grid);
+          return;
+        }
+        view().renderChroniclesGrid(grid, chronicles, participantsMap, charactersMap);
+        return;
+      }
+
+      // Fallback: multi-query path
       const chronicles = await service().fetchChroniclesForPlayer(state.player.id);
       if (!chronicles.length) {
         view().renderEmpty(grid);

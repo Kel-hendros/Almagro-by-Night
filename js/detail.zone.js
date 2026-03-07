@@ -54,25 +54,9 @@ function getFactionMeta(keyword, fallbackName, fallbackColor) {
   };
 }
 
+// Player ID lookup delegated to shared-player.js (window.ABNPlayer)
 async function getCurrentPlayerId() {
-  if (window.__detailPlayerId) return window.__detailPlayerId;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  try {
-    const { data, error } = await supabase
-      .from("players")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (error) throw error;
-    window.__detailPlayerId = data?.id || null;
-  } catch (err) {
-    console.error("No se pudo obtener el player_id:", err);
-    window.__detailPlayerId = null;
-  }
-  return window.__detailPlayerId;
+  return window.ABNPlayer.getId();
 }
 
 function formatShortDate(value) {
@@ -546,49 +530,50 @@ window.DetailView.renderZone = async function (id) {
 
   const description = data.description || "Sin descripción";
   const imageUrl = data.image_url || "images/zone_image_default.png";
-  let locations = [];
-  let zoneStatus = null;
-  let lieutenantData = { zone_lieutenants: [], other_my_lieutenants: [] };
-  try {
-    const { data: locs, error: locErr } = await supabase
-      .from("locations")
-      .select("id, name")
-      .eq("zone_id", id);
-    if (locErr) throw locErr;
-    locations = locs || [];
-  } catch (err) {
-    console.warn(
-      "No se pudieron cargar las locaciones de la zona:",
-      err?.message || err
-    );
-  }
   const currentGameId = window.currentGameId;
+
+  // Check zone status cache first (sync)
+  let cachedZoneStatus = null;
   if (
     window.zoneStatusCache &&
     window.zoneStatusCache.gameId === currentGameId
   ) {
-    zoneStatus =
+    cachedZoneStatus =
       window.zoneStatusCache.data?.find((row) => row.zone_id === id) || null;
   }
-  if (!zoneStatus && currentGameId) {
-    try {
-      const { data: statusRow, error: statusErr } = await supabase
-        .from("zone_status_view")
-        .select("*")
-        .eq("game_id", currentGameId)
-        .eq("zone_id", id)
-        .maybeSingle();
-      if (statusErr) throw statusErr;
-      zoneStatus = statusRow || null;
-    } catch (err) {
-      console.warn("No se pudo obtener zone_status_view:", err?.message || err);
-    }
-  }
-  try {
-    lieutenantData = await fetchLieutenantsForZone(id, window.currentNightDate);
-  } catch (err) {
-    console.warn("No se pudieron cargar los tenientes:", err?.message || err);
-  }
+
+  // Parallel fetch: locations, zone status (if not cached), and lieutenants
+  const [locationsResult, zoneStatusResult, lieutenantData] = await Promise.all([
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("zone_id", id)
+      .then(({ data: locs, error }) => {
+        if (error) console.warn("No se pudieron cargar las locaciones:", error?.message);
+        return locs || [];
+      }),
+    cachedZoneStatus
+      ? Promise.resolve(cachedZoneStatus)
+      : currentGameId
+        ? supabase
+            .from("zone_status_view")
+            .select("*")
+            .eq("game_id", currentGameId)
+            .eq("zone_id", id)
+            .maybeSingle()
+            .then(({ data: row, error }) => {
+              if (error) console.warn("No se pudo obtener zone_status_view:", error?.message);
+              return row || null;
+            })
+        : Promise.resolve(null),
+    fetchLieutenantsForZone(id, window.currentNightDate).catch((err) => {
+      console.warn("No se pudieron cargar los tenientes:", err?.message || err);
+      return { zone_lieutenants: [], other_my_lieutenants: [] };
+    }),
+  ]);
+
+  const locations = locationsResult;
+  const zoneStatus = zoneStatusResult;
 
   const wrapper = document.createElement("div");
   wrapper.className = "detail-wrapper";

@@ -596,39 +596,9 @@ window.refreshAllAndRestore = async function () {
   }
 };
 
-/**
- * Centralized function to fetch and log all initial data needed before rendering:
- * - Raw GeoJSON features for zones and locations
- * - Zone statuses (owner, status, breakdown, percentMap)
- * - Database locations and their states
- */
-async function initializeGameData(gameId, territoryId, datasetUrl) {
-  // 1. Fetch GeoJSON
-  let rawGeoJson = null;
-  try {
-    rawGeoJson = await fetch(datasetUrl).then((res) => res.json());
-    console.log("Initial raw GeoJSON:", rawGeoJson.features);
-  } catch (err) {
-    console.error("Error fetching initial GeoJSON:", err);
-  }
-
-  // 3. Locations in DB for those zones
-  if (rawGeoJson) {
-    const zoneIds = rawGeoJson.features
-      .filter((f) => f.properties.type === "zone")
-      .map((f) => f.properties.feature_id);
-    try {
-      const { data: dbLocations, error: locErr } = await supabase
-        .from("locations")
-        .select("*")
-        .in("zone_id", zoneIds);
-      if (locErr) throw locErr;
-      console.log("Initial DB locations for zones:", dbLocations);
-    } catch (err) {
-      console.error("Error loading initial DB locations:", err);
-    }
-  }
-}
+// initializeGameData() removed — was dead code that duplicated the GeoJSON
+// fetch already performed in map.on('load'). Locations and zone data are
+// loaded where they are actually used.
 
 /**
  * Load all factions participating in a given game, including their colors.
@@ -1087,20 +1057,19 @@ async function initGame() {
 
   let initialTimelineDate = game.start_date;
 
-  // 5) Load factions for this game and keep in memory
-  window.gameFactions = await loadGameFactions(gameId);
   window.currentGameId = gameId;
   window.currentTerritoryId = game.territory_id;
 
-  // 6) Load and render overall game progress
-  await loadGameProgress(gameId, game.territory_id);
-
-  // 7) Load and log all initial game data before map rendering
-  await initializeGameData(
-    gameId,
-    game.territory_id,
-    game.territory.maptiler_dataset_url
-  );
+  // Parallel fetch: factions (cached per session) + game progress
+  const [factions] = await Promise.all([
+    window.ABNCache.get(
+      `factions:${gameId}`,
+      () => loadGameFactions(gameId),
+      { ttl: "session" }
+    ),
+    loadGameProgress(gameId, game.territory_id),
+  ]);
+  window.gameFactions = factions;
 
   // 8) Initialize MapLibre GL map and add layers
   const map = new maplibregl.Map({

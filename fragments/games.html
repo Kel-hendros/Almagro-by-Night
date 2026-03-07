@@ -8,30 +8,38 @@
     </div>
 
     <div id="single-game-card" class="single-game-card">
-        <div class="single-game-header">
-            <div>
-                <h2 id="single-game-name">—</h2>
-                <p id="single-game-meta" class="single-game-meta">Cargando partida...</p>
+        <div id="single-game-skeleton" class="skeleton-group">
+            <div class="skeleton skeleton--title"></div>
+            <div class="skeleton skeleton--line"></div>
+            <div class="skeleton skeleton--line-short"></div>
+            <div class="skeleton skeleton--block" style="height:44px; width:180px; margin-top:8px;"></div>
+        </div>
+        <div id="single-game-content" class="hidden">
+            <div class="single-game-header">
+                <div>
+                    <h2 id="single-game-name"></h2>
+                    <p id="single-game-meta" class="single-game-meta"></p>
+                </div>
+                <div class="single-game-territory">
+                    <span>Territorio</span>
+                    <strong id="single-game-territory"></strong>
+                </div>
             </div>
-            <div class="single-game-territory">
-                <span>Territorio</span>
-                <strong id="single-game-territory">—</strong>
+
+            <div class="single-game-body">
+                <p id="single-game-director"></p>
+                <p class="single-game-id">
+                    ID: <code id="single-game-id-value"></code>
+                </p>
             </div>
-        </div>
 
-        <div class="single-game-body">
-            <p id="single-game-director">Director: —</p>
-            <p class="single-game-id">
-                ID: <code id="single-game-id-value">—</code>
-            </p>
-        </div>
+            <div class="single-game-actions">
+                <button id="enter-game-btn" class="btn btn--primary gameButton primary">Entrar a la partida</button>
+                <button id="copy-game-id-btn" class="btn btn--ghost gameButton secondary hidden">Copiar ID</button>
+            </div>
 
-        <div class="single-game-actions">
-            <button id="enter-game-btn" class="btn btn--primary gameButton primary">Entrar a la partida</button>
-            <button id="copy-game-id-btn" class="btn btn--ghost gameButton secondary hidden">Copiar ID</button>
+            <p id="single-game-status" class="single-game-status muted"></p>
         </div>
-
-        <p id="single-game-status" class="single-game-status muted"></p>
     </div>
 </div>
 

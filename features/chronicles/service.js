@@ -104,6 +104,45 @@
     return map;
   }
 
+  /**
+   * Single-RPC overview: returns chronicles with participants and counts
+   * in one round trip. Falls back to multi-query if RPC fails.
+   */
+  async function fetchChroniclesOverview(playerId) {
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_player_chronicles_overview",
+        { p_player_id: playerId }
+      );
+      if (error) throw error;
+      // Transform RPC result into the shape controller expects
+      const chronicles = (data || []).map((c) => ({
+        ...c,
+        role: c.my_role,
+        creator: { name: c.creator_name },
+      }));
+      const participantsMap = {};
+      const charactersMap = {};
+      chronicles.forEach((c) => {
+        participantsMap[c.id] = (c.participants || []).map((p) => ({
+          chronicle_id: c.id,
+          player_id: p.player_id,
+          role: p.role,
+          player: { id: p.player_id, name: p.player_name },
+        }));
+        // Characters are not included in overview RPC (loaded on demand)
+        charactersMap[c.id] = [];
+      });
+      return { chronicles, participantsMap, charactersMap };
+    } catch (err) {
+      console.warn(
+        "chronicles.service: overview RPC failed, falling back:",
+        err?.message
+      );
+      return null;
+    }
+  }
+
   async function createChronicle({ name, playerId }) {
     const { data: code, error: codeError } = await supabase.rpc(
       "generate_invite_code"
@@ -144,6 +183,7 @@
   ns.service = {
     fetchCurrentPlayer,
     fetchChroniclesForPlayer,
+    fetchChroniclesOverview,
     fetchParticipantsByChronicleIds,
     fetchCharactersByChronicleIds,
     createChronicle,

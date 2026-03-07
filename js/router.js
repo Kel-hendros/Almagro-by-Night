@@ -301,8 +301,8 @@ function updateSidebarResponsiveState() {
   updateSidebarToggleIcon(sidebar);
 }
 
-// 1) Update the sidebar based on session state
-async function updateSidebar() {
+// 1) Update the sidebar based on session state (synchronous — uses currentSession)
+function updateSidebar() {
   const liLogout = document.getElementById("menu-logout");
   const liWelcome = document.getElementById("menu-welcome");
   const liUser = document.getElementById("menu-user");
@@ -311,9 +311,7 @@ async function updateSidebar() {
   const liQuickActions = document.getElementById("menu-quick-actions");
   const spanName = document.getElementById("user-name");
 
-  const {
-    data: { session },
-  } = await window.abnGetSession();
+  const session = currentSession;
   if (session) {
     liWelcome?.classList.add("hidden");
     liUser?.classList.remove("hidden");
@@ -517,10 +515,28 @@ async function loadRoute(force = false) {
   }
 
   const contentEl = document.getElementById("content");
+
+  // Show route-transition loading bar
+  let loadingBar = document.getElementById("route-loading-bar");
+  if (!loadingBar) {
+    loadingBar = document.createElement("div");
+    loadingBar.id = "route-loading-bar";
+    loadingBar.className = "route-loading-bar";
+    document.body.appendChild(loadingBar);
+  }
+  loadingBar.classList.remove("route-loading-bar--done");
+  loadingBar.style.width = "0%";
+  // Force reflow then animate to 70%
+  void loadingBar.offsetWidth;
+  loadingBar.style.width = "70%";
+
   try {
     const res = await fetch(path);
     const html = await res.text();
     contentEl.innerHTML = html;
+
+    // Progress to 90% after fragment loads
+    loadingBar.style.width = "90%";
 
     // Execute scripts in deterministic order to avoid feature bootstrap races.
     await executeFragmentScriptsSequentially(contentEl);
@@ -531,9 +547,13 @@ async function loadRoute(force = false) {
 
     if (window.lucide?.createIcons) lucide.createIcons();
     bindFragmentActions(contentEl);
+
+    // Complete loading bar
+    loadingBar.classList.add("route-loading-bar--done");
   } catch (e) {
     console.error("Router Error:", e);
     contentEl.innerHTML = "<p>Error al cargar la sección.</p>";
+    if (loadingBar) loadingBar.classList.add("route-loading-bar--done");
   }
 
   // Execute any embedded <script> tags in the fragment
@@ -616,9 +636,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   sessionReady = true;
   currentSession = session;
-
-  await updateSidebar();
   __lastUserId = currentSession?.user?.id || null;
+
+  updateSidebar();
   await loadRoute(true);
 
   // Sidebar collapse/expand control
@@ -658,6 +678,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     logoutLink.addEventListener("click", async (e) => {
       e.preventDefault();
       if (confirm("¿Deseas cerrar sesión?")) {
+        // Clear all in-memory caches
+        if (window.ABNCache) window.ABNCache.clear();
+        if (window.ABNPlayer) window.ABNPlayer.clear();
+        if (window.SingleGameStore) window.SingleGameStore.invalidate();
+        window.gameFactions = null;
+        window.zoneStatusCache = null;
+        window.currentGameId = null;
+        window.currentDatasetData = null;
+
         await supabase.auth.signOut();
         window.location.hash = "welcome";
       }
@@ -684,7 +713,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // 5) Handle hash changes
 window.addEventListener("hashchange", async () => {
-  await updateSidebar();
+  updateSidebar();
   await loadRoute(false);
 });
 
@@ -797,15 +826,20 @@ supabase.auth.onAuthStateChange((event, session) => {
 
   if (!sessionReady) return;
 
-  const newUid = session?.user?.id || null;
-  // Only force reroute when the authenticated user changes (login/logout),
-  // not on background token refreshes
-  if (newUid !== __lastUserId) {
-    __lastUserId = newUid;
+  // Supabase fires SIGNED_IN on every token refresh / visibility change,
+  // not just actual logins.  Login routing is already handled by the auth
+  // forms (hash → "chronicles"), so we only need to force-reload on
+  // explicit sign-out (covers cross-tab logout).
+  if (event === "SIGNED_OUT") {
+    __lastUserId = null;
     updateSidebar();
     loadRoute(true);
-  } else {
-    // Token refresh: update UI bits but avoid rerendering the whole view
-    updateSidebar();
+    return;
   }
+
+  // Keep UID in sync for all other events but never destroy the current view
+  if (session?.user?.id) {
+    __lastUserId = session.user.id;
+  }
+  updateSidebar();
 });
