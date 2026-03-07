@@ -75,8 +75,45 @@
     <div class="beta-bg"></div>
 
     <div class="beta-shell">
+        <!-- ==================== SKELETON LOADER ==================== -->
+        <div id="sheet-skeleton" class="sheet-skeleton" aria-hidden="true">
+            <!-- Header skeleton -->
+            <div class="skel-header">
+                <div class="skel-avatar skel-pulse"></div>
+                <div class="skel-identity">
+                    <div class="skel-identity-row">
+                        <div class="skel-field skel-field--wide skel-pulse"></div>
+                        <div class="skel-field skel-pulse"></div>
+                        <div class="skel-field skel-field--narrow skel-pulse"></div>
+                        <div class="skel-field skel-pulse"></div>
+                    </div>
+                    <div class="skel-identity-row">
+                        <div class="skel-field skel-pulse"></div>
+                        <div class="skel-field skel-pulse"></div>
+                        <div class="skel-field skel-pulse"></div>
+                        <div class="skel-field skel-pulse"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 3-column grid skeleton -->
+            <div class="skel-grid">
+                <div class="skel-col skel-col--left">
+                    <div class="skel-card skel-card--tall skel-pulse"></div>
+                    <div class="skel-card skel-pulse"></div>
+                    <div class="skel-card skel-card--short skel-pulse"></div>
+                </div>
+                <div class="skel-col skel-col--center">
+                    <div class="skel-card skel-card--tall skel-pulse"></div>
+                    <div class="skel-card skel-card--tall skel-pulse"></div>
+                </div>
+                <div class="skel-col skel-col--right">
+                    <div class="skel-card skel-card--tabs skel-pulse"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- ==================== HEADER ==================== -->
-        <header class="beta-header">
+        <header class="beta-header sheet-content-hidden">
             <a class="profile-back-link" id="profile-link" href="../../index.html#character-sheets" aria-label="Volver">
                 <input type="hidden" id="header-logo-value" name="logo" value="G">
                 <p id="header-logo-display" class="header-clan-sigil">G</p>
@@ -150,7 +187,7 @@
         </header>
 
         <!-- ==================== MAIN GRID ==================== -->
-        <main class="beta-grid">
+        <main class="beta-grid sheet-content-hidden">
 
             <!-- ========== CORE COLUMN (LEFT) ========== -->
             <aside class="core-column">

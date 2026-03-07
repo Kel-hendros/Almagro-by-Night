@@ -376,6 +376,13 @@ function loadCharacterData() {
   // Left empty or used as fallback
 }
 
+function revealSheet() {
+  const skel = document.getElementById("sheet-skeleton");
+  if (skel) skel.classList.add("hidden");
+  document.querySelector(".beta-header")?.classList.remove("sheet-content-hidden");
+  document.querySelector(".beta-grid")?.classList.remove("sheet-content-hidden");
+}
+
 const sheetLoaderModule = window.ABNSheetLoader;
 if (sheetLoaderModule) {
   sheetLoaderModule.configure({
@@ -384,9 +391,11 @@ if (sheetLoaderModule) {
       document.title = "Cargando...";
     },
     onUserMissing: () => {
+      revealSheet();
       window.location.href = "../../index.html";
     },
     onSheetIdMissing: () => {
+      revealSheet();
       window.location.href = "../../index.html#character-sheets";
     },
     onSheetLoaded: ({ id, sheet, user }) => {
@@ -413,11 +422,14 @@ if (sheetLoaderModule) {
         });
         void notesApi.refresh?.();
       }
+      revealSheet();
     },
     onSheetNotFound: () => {
+      revealSheet();
       alert("No se encontró la hoja de personaje.");
     },
     onError: (error) => {
+      revealSheet();
       console.error(error);
       alert("Error al cargar la hoja de personaje.");
     },

@@ -282,24 +282,13 @@ button,
 }
 
 .content {
-    /* map background for the main area */
-    /* background: url('https://queitmvjucbjoeodsgqk.supabase.co/storage/v1/object/public/maps/almagro.png') no-repeat center center; */
-    background: url('https://queitmvjucbjoeodsgqk.supabase.co/storage/v1/object/public/maps/map-bg-green.jpg') no-repeat center center;
+    background: var(--content-theme-bg-gradient);
+    background-repeat: no-repeat;
     background-size: cover;
-    /* red tint overlay blended with the map */
-    /* background-color: rgba(140, 86, 28, 0.4); */
-    background-blend-mode: multiply;
     flex: 1;
     padding: 0;
     overflow-y: auto;
     outline: none;
-}
-
-.content.content-theme-bg-only {
-    background: var(--content-theme-bg-gradient);
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-blend-mode: normal;
 }
 
 

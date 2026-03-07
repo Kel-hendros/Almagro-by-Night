@@ -4933,6 +4933,128 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 }
 
 /* ================================================
+   SKELETON LOADER
+   ================================================ */
+
+.sheet-content-hidden {
+	visibility: hidden;
+}
+
+.sheet-skeleton {
+	display: contents;
+}
+
+.sheet-skeleton.hidden {
+	display: none;
+}
+
+/* Shimmer pulse animation */
+@keyframes skel-shimmer {
+	0%   { opacity: 0.45; }
+	50%  { opacity: 0.7; }
+	100% { opacity: 0.45; }
+}
+
+.skel-pulse {
+	background: var(--color-bg-raised, #2e2e31);
+	border-radius: 8px;
+	animation: skel-shimmer 1.4s ease-in-out infinite;
+}
+
+/* --- Header skeleton --- */
+.skel-header {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 16px;
+	align-items: start;
+	margin-bottom: 18px;
+}
+
+.skel-avatar {
+	width: 88px;
+	height: 88px;
+	border-radius: 6px;
+}
+
+.skel-identity {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-top: 4px;
+}
+
+.skel-identity-row {
+	display: grid;
+	grid-template-columns: 1.6fr 1fr 0.6fr 1fr;
+	gap: 12px;
+}
+
+.skel-field {
+	height: 36px;
+	border-radius: 4px;
+}
+
+.skel-field--wide  { grid-column: span 1; }
+.skel-field--narrow { grid-column: span 1; }
+
+/* --- 3-column grid skeleton --- */
+.skel-grid {
+	display: grid;
+	grid-template-columns: minmax(235px, 285px) minmax(560px, 1fr) minmax(300px, 390px);
+	gap: 14px;
+	align-items: start;
+	min-height: 0;
+	height: 100%;
+}
+
+.skel-col {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.skel-card {
+	border-radius: 12px;
+	min-height: 120px;
+}
+
+.skel-card--tall  { min-height: 240px; }
+.skel-card--short { min-height: 80px; }
+.skel-card--tabs  { min-height: 100%; }
+
+/* Responsive: match real grid breakpoints */
+@media (max-width: 1250px) {
+	.skel-grid {
+		grid-template-columns: minmax(260px, 320px) 1fr;
+	}
+	.skel-col--right {
+		grid-column: 1 / -1;
+	}
+	.skel-card--tabs {
+		min-height: 200px;
+	}
+}
+
+@media (max-width: 800px) {
+	.skel-header {
+		grid-template-columns: 1fr;
+	}
+	.skel-avatar {
+		width: 88px;
+		height: 88px;
+	}
+	.skel-identity-row {
+		grid-template-columns: 1fr 1fr;
+	}
+	.skel-grid {
+		grid-template-columns: 1fr;
+	}
+	.skel-card--tabs {
+		min-height: 200px;
+	}
+}
+
+/* ================================================
    RESPONSIVE BREAKPOINTS
    ================================================ */
 
