@@ -144,22 +144,8 @@ function setActiveSidebarItem(baseHash) {
   document.getElementById(targetId)?.classList.add("active");
 }
 
-function updateContentBackgroundMode(baseHash) {
-  const contentShell = document.querySelector("main.content");
-  if (!contentShell) return;
-  const useFlatThemeBackground =
-    baseHash === "settings" ||
-    baseHash === "chronicles" ||
-    baseHash === "chronicle" ||
-    baseHash === "active-session" ||
-    baseHash === "revelations-archive" ||
-    baseHash === "character-sheets" ||
-    baseHash === "resource-manager" ||
-    baseHash === "welcome" ||
-    baseHash === "login" ||
-    baseHash === "register" ||
-    baseHash === "user";
-  contentShell.classList.toggle("content-theme-bg-only", useFlatThemeBackground);
+function updateContentBackgroundMode() {
+  // Map background removed — all routes now use theme gradient via .content CSS.
 }
 
 function bindFragmentActions(contentEl) {
