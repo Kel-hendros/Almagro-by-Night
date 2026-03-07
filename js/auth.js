@@ -30,9 +30,10 @@ async function initAuthForms() {
 
   if (!suForm || !liForm) return;
 
-  const {
-    data: { session },
-  } = await window.abnGetSession();
+  // Use the already-resolved session from supabase.auth (synchronous read)
+  // to avoid async delay that causes the login form to flash.
+  const { data: { session: fastSession } } = await supabase.auth.getSession();
+  const session = fastSession;
 
   const homeContainer = document.getElementById("home-container");
   const authContainer = document.getElementById("auth-container");

@@ -59,19 +59,7 @@ window.SingleGameStore = {
   },
 };
 
-async function fetchCurrentPlayerId(userId) {
-  if (!userId) return null;
-  const { data, error } = await supabase
-    .from("players")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error && error.code !== "PGRST116") {
-    console.error("Error fetching player record:", error);
-    return null;
-  }
-  return data?.id || null;
-}
+// Player ID lookup delegated to shared-player.js (window.ABNPlayer)
 
 async function fetchParticipation(gameId, playerId) {
   if (!gameId || !playerId) return null;
@@ -387,33 +375,36 @@ async function loadGames() {
   if (!card) return;
   updateStatus("Cargando información...");
 
-  // Chronicle breadcrumb
-  const chronicleId = localStorage.getItem("currentChronicleId");
-  if (chronicleId) {
-    const breadcrumb = document.getElementById("games-breadcrumb");
-    if (breadcrumb) {
-      const { data: chron } = await supabase
-        .from("chronicles")
-        .select("name")
-        .eq("id", chronicleId)
-        .maybeSingle();
-      if (chron) {
-        breadcrumb.innerHTML = `<a href="#chronicle">${chron.name}</a> &rsaquo; Almagro de Noche`;
-        breadcrumb.style.display = "block";
-      }
-    }
-  }
-
   // Invalidate cache so chronicle filter takes effect
   window.SingleGameStore.invalidate();
+
+  // Parallel fetch: session/player, game data, and chronicle breadcrumb
+  const chronicleId = localStorage.getItem("currentChronicleId");
+  const breadcrumb = chronicleId
+    ? document.getElementById("games-breadcrumb")
+    : null;
+
+  const [playerId, game, chronName] = await Promise.all([
+    window.ABNPlayer.getId(),
+    window.SingleGameStore.fetch(),
+    breadcrumb && chronicleId
+      ? supabase
+          .from("chronicles")
+          .select("name")
+          .eq("id", chronicleId)
+          .maybeSingle()
+          .then(({ data }) => data?.name || null)
+      : Promise.resolve(null),
+  ]);
+
+  if (breadcrumb && chronName) {
+    breadcrumb.innerHTML = `<a href="#chronicle">${chronName}</a> &rsaquo; Almagro de Noche`;
+    breadcrumb.style.display = "block";
+  }
 
   const {
     data: { session },
   } = await window.abnGetSession();
-  const userId = session?.user?.id || null;
-  const playerId = await fetchCurrentPlayerId(userId);
-
-  const game = await window.SingleGameStore.fetch();
   if (!game) {
     updateStatus(
       "No encontramos la partida principal. Asegurate de que exista al menos una fila en `games`."
@@ -425,6 +416,12 @@ async function loadGames() {
     );
     return;
   }
+
+  // Swap skeleton → real content
+  const skeleton = document.getElementById("single-game-skeleton");
+  const content = document.getElementById("single-game-content");
+  if (skeleton) skeleton.classList.add("hidden");
+  if (content) content.classList.remove("hidden");
 
   document.getElementById("single-game-name").textContent = game.name;
   document.getElementById("single-game-meta").textContent =

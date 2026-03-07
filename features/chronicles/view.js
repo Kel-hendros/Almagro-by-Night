@@ -82,7 +82,13 @@
   }
 
   function renderLoading(grid) {
-    grid.innerHTML = '<p class="muted">Cargando crónicas...</p>';
+    // If skeletons are already in the fragment HTML, keep them
+    if (grid.querySelector(".skeleton")) return;
+    grid.innerHTML = `
+      <div class="skeleton skeleton--card" style="height:160px"></div>
+      <div class="skeleton skeleton--card" style="height:160px"></div>
+      <div class="skeleton skeleton--card" style="height:160px"></div>
+    `;
   }
 
   function renderUnauthenticated(grid) {
