@@ -384,6 +384,10 @@
   color: var(--theme-text-on-accent, #fff);
 }
 
+.abn-chip.is-selected .abn-chip-remove {
+  color: color-mix(in srgb, var(--theme-text-on-accent, #fff) 82%, transparent);
+}
+
 .abn-chip--readonly {
   cursor: default;
 }
@@ -457,4 +461,8 @@
 
 .abn-chip-remove:hover {
   color: var(--theme-text-primary);
+}
+
+.abn-chip.is-selected .abn-chip-remove:hover {
+  color: var(--theme-text-on-accent, #fff);
 }

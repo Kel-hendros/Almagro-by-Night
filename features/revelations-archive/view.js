@@ -112,10 +112,6 @@
             ${tagsHtml}
             <p class="ra-preview">${escapeHtml(bodyPreview || "Sin descripción.")}</p>
             <div class="ra-card-footer">
-              <span class="ra-recipient-badge">
-                <i data-lucide="users"></i>
-                <span>${deliveries.length}</span>
-              </span>
               <div class="ra-delivery-list">${deliveriesHtml}</div>
             </div>
           </article>

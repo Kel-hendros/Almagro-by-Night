@@ -338,9 +338,6 @@
     const recipients = Array.from(
       new Set((recipientPlayerIds || []).map((id) => String(id || "").trim()).filter(Boolean)),
     );
-    if (!recipients.length) {
-      return { handout: null, error: new Error("Selecciona al menos un destinatario.") };
-    }
 
     const { data: currentRevelation, error: currentError } = await supabase
       .from("revelations")

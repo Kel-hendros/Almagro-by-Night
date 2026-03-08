@@ -60,60 +60,86 @@
     )}</span>`;
   }
 
-  function renderNarratorCard(item) {
-    const deliveries = Array.isArray(item.deliveries) ? item.deliveries : [];
-    const deliveriesHtml = deliveries.length
-      ? deliveries.map((delivery) => buildRecipientMarkup(delivery)).join("")
-      : '<span class="muted">Sin destinatarios.</span>';
-    const bodyPreview = String(item.body_markdown || "")
+  function normalizeNarratorRow(item) {
+    return {
+      id: item.id,
+      revelation_id: item.id,
+      title: item.title || "Revelación",
+      body_markdown: item.body_markdown || "",
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      image_signed_url: item.image_signed_url || "",
+      created_at: item.created_at || null,
+      delivered_at: null,
+      deliveries: Array.isArray(item.deliveries) ? item.deliveries : [],
+    };
+  }
+
+  function normalizePlayerRow(row) {
+    const handout = row?.handout || {};
+    const revelationId = handout.id || row?.handout_id || row?.revelation_id || null;
+    if (!revelationId) return null;
+
+    return {
+      id: revelationId,
+      revelation_id: revelationId,
+      title: handout.title || "Revelación",
+      body_markdown: handout.body_markdown || "",
+      tags: Array.isArray(handout.tags) ? handout.tags : [],
+      image_signed_url: handout.image_signed_url || "",
+      created_at: handout.created_at || null,
+      delivered_at: row?.delivered_at || null,
+      deliveries: [],
+    };
+  }
+
+  function toPreviewText(markdown) {
+    return String(markdown || "")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 180);
+  }
+
+  function renderCard(row, ctx) {
+    const deliveries = Array.isArray(row.deliveries) ? row.deliveries : [];
+    const deliveriesHtml = deliveries.length
+      ? deliveries.map((delivery) => buildRecipientMarkup(delivery)).join("")
+      : '<span class="muted">Sin destinatarios.</span>';
+    const bodyPreview = toPreviewText(row.body_markdown || "");
+    const meta = ctx.isNarrator
+      ? formatDateTime(row.created_at)
+      : `Asociada: ${formatDateTime(row.delivered_at || row.created_at)}`;
 
     return `
-      <article class="da-card da-card--clickable" data-document-id="${escapeHtml(item.id)}">
-        ${item.image_signed_url
+      <article class="da-card da-card--clickable" data-document-id="${escapeHtml(row.id)}">
+        ${row.image_signed_url
           ? `<div class="da-card-image-wrap">
-               <img class="da-card-image" src="${escapeHtml(item.image_signed_url)}" alt="${escapeHtml(
-                 item.title || "Revelación",
+               <img class="da-card-image" src="${escapeHtml(row.image_signed_url)}" alt="${escapeHtml(
+                 row.title || "Revelación",
                )}">
              </div>`
           : ""}
         <div class="da-card-head">
-          <h3>${escapeHtml(item.title || "Revelación")}</h3>
-          <button
-            type="button"
-            class="btn-icon btn-icon--danger da-card-delete"
-            data-document-id="${escapeHtml(item.id)}"
-            title="Eliminar revelación"
-            aria-label="Eliminar revelación"
-          >
-            <i data-lucide="trash-2"></i>
-          </button>
+          <h3>${escapeHtml(row.title || "Revelación")}</h3>
+          ${ctx.isNarrator
+            ? `<button
+                 type="button"
+                 class="btn-icon btn-icon--danger da-card-delete"
+                 data-document-id="${escapeHtml(row.id)}"
+                 title="Eliminar revelación"
+                 aria-label="Eliminar revelación"
+               >
+                 <i data-lucide="trash-2"></i>
+               </button>`
+            : ""}
         </div>
-        <p class="da-meta">${escapeHtml(formatDateTime(item.created_at))}</p>
-        ${renderTagsMarkup(item.tags)}
+        <p class="da-meta">${escapeHtml(meta)}</p>
+        ${renderTagsMarkup(row.tags)}
         <p class="da-preview">${escapeHtml(bodyPreview || "Sin descripción.")}</p>
-        <div class="da-card-footer">
-          <span class="da-recipient-badge">
-            <i data-lucide="users"></i>
-            <span>${deliveries.length}</span>
-          </span>
-          <div class="da-delivery-list">${deliveriesHtml}</div>
-        </div>
-      </article>
-    `;
-  }
-
-  function renderPlayerCard(row) {
-    const handout = row.handout || {};
-    return `
-      <article class="da-card da-card--clickable" data-document-id="${escapeHtml(row.id)}">
-        <div class="da-card-head">
-          <h3>${escapeHtml(handout.title || "Revelación")}</h3>
-        </div>
-        <p class="da-meta">Asociada: ${escapeHtml(formatDateTime(row.delivered_at))}</p>
-        ${renderTagsMarkup(handout.tags)}
+        ${ctx.isNarrator
+          ? `<div class="da-card-footer">
+               <div class="da-delivery-list">${deliveriesHtml}</div>
+             </div>`
+          : ""}
       </article>
     `;
   }
@@ -123,44 +149,56 @@
     if (!handoutsApi || !ctx.chronicleId) return [];
 
     if (ctx.isNarrator) {
-      return handoutsApi.listHandoutsByChronicle?.(ctx.chronicleId) || [];
+      const rows = await handoutsApi.listHandoutsByChronicle?.(ctx.chronicleId);
+      return (Array.isArray(rows) ? rows : []).map(normalizeNarratorRow);
     }
 
     if (!ctx.currentPlayerId) return [];
-    return (
-      (await handoutsApi.listPendingDeliveries?.({
+    const deliveries = await handoutsApi.listPendingDeliveries?.({
         playerId: ctx.currentPlayerId,
         chronicleId: ctx.chronicleId,
-      })) || []
-    );
+      });
+    return (Array.isArray(deliveries) ? deliveries : []).map(normalizePlayerRow).filter(Boolean);
   }
 
-  function filterRows(rows, query, ctx) {
+  function filterRows(rows, query, _ctx, filters = {}) {
     const source = Array.isArray(rows) ? rows : [];
     const normalizedQuery = String(query || "").trim().toLowerCase();
-    if (!normalizedQuery) return source;
-
-    if (ctx.isNarrator) {
-      return source.filter((item) => {
-        const title = String(item?.title || "").toLowerCase();
-        const tags = Array.isArray(item?.tags) ? item.tags : [];
-        return title.includes(normalizedQuery) || tags.some((tag) => String(tag).toLowerCase().includes(normalizedQuery));
-      });
-    }
+    const selectedTag = String(filters?.selectedTag || "").trim().toLowerCase();
+    if (!normalizedQuery && !selectedTag) return source;
 
     return source.filter((row) => {
-      const handout = row?.handout || {};
-      const title = String(handout.title || "").toLowerCase();
-      const tags = Array.isArray(handout.tags) ? handout.tags : [];
-      return title.includes(normalizedQuery) || tags.some((tag) => String(tag).toLowerCase().includes(normalizedQuery));
+      const title = String(row?.title || "").toLowerCase();
+      const tags = Array.isArray(row?.tags) ? row.tags : [];
+      const matchesQuery =
+        !normalizedQuery ||
+        title.includes(normalizedQuery) ||
+        tags.some((tag) => String(tag).toLowerCase().includes(normalizedQuery));
+      const matchesTag =
+        !selectedTag ||
+        tags.some((tag) => {
+          const normalizedTag = tagSystem()?.createTagKey
+            ? tagSystem().createTagKey(tag)
+            : String(tag || "").trim().toLowerCase();
+          return normalizedTag === selectedTag;
+        });
+
+      return matchesQuery && matchesTag;
     });
   }
 
-  function findNarratorRow(rows, documentId) {
-    return (Array.isArray(rows) ? rows : []).find((row) => String(row?.id) === String(documentId)) || null;
+  function getTagFilterStats(rows, _ctx, filters = {}) {
+    const sharedTags = tagSystem();
+    if (!sharedTags?.collectStats) return [];
+
+    return sharedTags.collectStats(rows, {
+      getTags: (row) => row?.tags,
+      selectedTag: filters?.selectedTag || null,
+      selectedLabel: filters?.selectedTagLabel || "",
+    });
   }
 
-  function findPlayerRow(rows, documentId) {
+  function findRow(rows, documentId) {
     return (Array.isArray(rows) ? rows : []).find((row) => String(row?.id) === String(documentId)) || null;
   }
 
@@ -189,10 +227,10 @@
       const card = event.target.closest("[data-document-id]");
       if (!card?.dataset.documentId) return false;
 
-      const row = findNarratorRow(rows, card.dataset.documentId);
+      const row = findRow(rows, card.dataset.documentId);
       if (!row?.id || !revelationScreen?.showForPlayer) return true;
       revelationScreen.showForPlayer({
-        revelationId: row.id,
+        revelationId: row.revelation_id || row.id,
         onSaved: () => helpers?.refresh?.(),
       });
       return true;
@@ -200,8 +238,8 @@
 
     const card = event.target.closest("[data-document-id]");
     if (!card?.dataset.documentId) return false;
-    const row = findPlayerRow(rows, card.dataset.documentId);
-    const revelationId = row?.handout?.id || null;
+    const row = findRow(rows, card.dataset.documentId);
+    const revelationId = row?.revelation_id || row?.id || null;
     if (!revelationId || !revelationScreen?.showForPlayer) return true;
     revelationScreen.showForPlayer({ revelationId });
     return true;
@@ -244,11 +282,11 @@
     canCreate(ctx) {
       return Boolean(ctx.isNarrator);
     },
-    getPageSize(ctx) {
-      return ctx.isNarrator ? 12 : 20;
+    getPageSize() {
+      return 12;
     },
-    getListLayout(ctx) {
-      return ctx.isNarrator ? "grid" : "stack";
+    getListLayout() {
+      return "grid";
     },
     getEmptyMessage(ctx, { query }) {
       if (query) return "Sin resultados.";
@@ -258,9 +296,8 @@
     },
     fetchRows,
     filterRows,
-    renderCard(row, ctx) {
-      return ctx.isNarrator ? renderNarratorCard(row) : renderPlayerCard(row);
-    },
+    getTagFilterStats,
+    renderCard,
     async openCreate(ctx, helpers) {
       if (!ctx.isNarrator || !ctx.chronicleId) return;
       root.revelationScreen?.openCreate?.({

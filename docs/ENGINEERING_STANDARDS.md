@@ -100,6 +100,7 @@ Contrato de uso:
 - Abrir siempre mediante `ABNShared.documentScreen.open({...})`.
 - Pasar `docType` explícito (`note`, `recap`, `revelation`, etc.) para variaciones por tipo.
 - Reutilizar primitives globales para contenido/form.
+- Los archivos (`document-archive`) funcionan como listado, búsqueda y punto de entrada; las mutaciones del documento ocurren dentro de la vista compartida y/o entrando al modo editar, no inline desde la card del archivo salvo una excepción documentada.
 Primitives globales:
 - `doc-view-body`, `doc-view-card`, `doc-markdown`
 - `doc-form-body`, `doc-form-wrap`, `doc-form-group`, `doc-form-row`, `doc-form-input`, `doc-form-textarea`

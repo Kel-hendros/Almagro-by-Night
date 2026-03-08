@@ -11,9 +11,12 @@
     currentPlayerId: null,
     isNarrator: false,
     rows: [],
+    queryFilteredRows: [],
     filteredRows: [],
     page: 1,
     query: "",
+    selectedTag: null,
+    selectedTagLabel: "",
     subscription: null,
     listenersBound: false,
   };
@@ -53,7 +56,17 @@
     const totalPages = clampPage(Math.ceil(totalRows / pageSize) || 1);
     const offset = (state.page - 1) * pageSize;
     const visibleRows = state.filteredRows.slice(offset, offset + pageSize);
-    const cardsHtml = visibleRows.map((row) => adapter.renderCard?.(row, ctx) || "").join("");
+    const cardsHtml =
+      adapter.renderList?.(visibleRows, ctx, {
+        page: state.page,
+        pageSize,
+        totalRows,
+        totalPages,
+        query: state.query,
+        filteredRows: state.filteredRows,
+        allRows: state.rows,
+      }) ||
+      visibleRows.map((row) => adapter.renderCard?.(row, ctx) || "").join("");
 
     currentView.renderCards({
       cardsHtml,
@@ -66,6 +79,7 @@
       : adapter.getEmptyMessage?.(ctx, { query: state.query }) || "Sin documentos.";
     currentView.setResultsMeta(meta);
     currentView.setPagination({ page: state.page, totalPages });
+    renderTagFilters();
   }
 
   function applyFilters() {
@@ -74,8 +88,57 @@
 
     const ctx = buildAdapterContext();
     const source = Array.isArray(state.rows) ? state.rows : [];
-    const filtered = adapter.filterRows?.(source, state.query, ctx);
+    const queryFiltered = adapter.filterRows?.(source, state.query, ctx, {
+      selectedTag: null,
+      selectedTagLabel: "",
+    });
+    state.queryFilteredRows = Array.isArray(queryFiltered) ? queryFiltered : source;
+
+    const filtered = adapter.filterRows?.(source, state.query, ctx, {
+      selectedTag: state.selectedTag,
+      selectedTagLabel: state.selectedTagLabel,
+    });
     state.filteredRows = Array.isArray(filtered) ? filtered : source;
+  }
+
+  function renderTagFilters() {
+    const adapter = state.adapter;
+    const currentView = view();
+    const tagSystem = global.ABNShared?.tags;
+    if (!currentView?.renderTagFilters) return;
+
+    if (!adapter?.getTagFilterStats || !tagSystem?.renderFilterBar) {
+      currentView.renderTagFilters({ hidden: true });
+      return;
+    }
+
+    const stats = adapter.getTagFilterStats(
+      Array.isArray(state.queryFilteredRows) ? state.queryFilteredRows : [],
+      buildAdapterContext(),
+      {
+        selectedTag: state.selectedTag,
+        selectedTagLabel: state.selectedTagLabel,
+      },
+    );
+
+    currentView.renderTagFilters({
+      stats: Array.isArray(stats) ? stats : [],
+      selectedTag: state.selectedTag,
+      hidden: !Array.isArray(stats) || !stats.length,
+      onToggle: (tagKey, tagLabel) => {
+        if (!tagKey) return;
+        if (state.selectedTag === tagKey) {
+          state.selectedTag = null;
+          state.selectedTagLabel = "";
+        } else {
+          state.selectedTag = tagKey;
+          state.selectedTagLabel = tagLabel || tagKey;
+        }
+        state.page = 1;
+        applyFilters();
+        renderCurrentPage();
+      },
+    });
   }
 
   async function refresh() {
@@ -209,6 +272,7 @@
       return;
     }
     state.adapter = adapter;
+    view().setArchiveType(state.type);
 
     const session = await service().getSession();
     if (!session) {
@@ -228,11 +292,18 @@
 
     state.chronicle = chronicle;
 
-    const participation =
-      (state.currentPlayerId
-        ? await service().getParticipation(state.chronicleId, state.currentPlayerId)
-        : null) ||
-      (await service().getParticipationByUserId(state.chronicleId, session.user.id));
+    const directParticipation = state.currentPlayerId
+      ? await service().getParticipation(state.chronicleId, state.currentPlayerId)
+      : null;
+    const fallbackParticipation = await service().getParticipationByUserId(
+      state.chronicleId,
+      session.user.id,
+    );
+    const participation = directParticipation || fallbackParticipation;
+
+    if (!directParticipation && fallbackParticipation?.player_id) {
+      state.currentPlayerId = fallbackParticipation.player_id;
+    }
 
     state.isNarrator =
       participation?.role === "narrator" ||
@@ -264,6 +335,8 @@
   function destroyPage() {
     stopRealtime();
     unbindActions();
+    view()?.setArchiveType?.(null);
+    view()?.renderTagFilters?.({ hidden: true });
 
     state.type = null;
     state.adapter = null;
@@ -272,9 +345,12 @@
     state.currentPlayerId = null;
     state.isNarrator = false;
     state.rows = [];
+    state.queryFilteredRows = [];
     state.filteredRows = [];
     state.page = 1;
     state.query = "";
+    state.selectedTag = null;
+    state.selectedTagLabel = "";
   }
 
   ns.controller = {

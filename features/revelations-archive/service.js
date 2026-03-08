@@ -18,7 +18,14 @@
   }
 
   async function getCurrentPlayerByUserId(userId) {
-    return global.ABNShared?.handouts?.getCurrentPlayerByUserId?.(userId) || null;
+    if (!userId || !global.supabase) return null;
+    const { data, error } = await global.supabase
+      .from("players")
+      .select("id, name, user_id")
+      .eq("user_id", userId)
+      .limit(1);
+    if (error) return null;
+    return Array.isArray(data) ? data[0] || null : null;
   }
 
   async function getChronicle(chronicleId) {
@@ -52,7 +59,7 @@
     if (!chronicleId || !playerId || !global.supabase) return null;
     const { data, error } = await global.supabase
       .from("chronicle_participants")
-      .select("id, role")
+      .select("role")
       .eq("chronicle_id", chronicleId)
       .eq("player_id", playerId)
       .maybeSingle();
@@ -64,12 +71,11 @@
     if (!chronicleId || !userId || !global.supabase) return null;
     const { data, error } = await global.supabase
       .from("chronicle_participants")
-      .select("id, role, players!inner(user_id)")
+      .select("role, player_id, players!inner(user_id)")
       .eq("chronicle_id", chronicleId)
-      .eq("players.user_id", userId)
-      .maybeSingle();
+      .eq("players.user_id", userId);
     if (error) return null;
-    return data || null;
+    return Array.isArray(data) ? data[0] || null : null;
   }
 
   async function createHandout(payload) {

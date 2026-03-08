@@ -199,11 +199,18 @@
       return;
     }
 
-    const participation =
-      (state.currentPlayerId
-        ? await service().getParticipation(state.chronicleId, state.currentPlayerId)
-        : null) ||
-      (await service().getParticipationByUserId(state.chronicleId, session.user.id));
+    const directParticipation = state.currentPlayerId
+      ? await service().getParticipation(state.chronicleId, state.currentPlayerId)
+      : null;
+    const fallbackParticipation = await service().getParticipationByUserId(
+      state.chronicleId,
+      session.user.id,
+    );
+    const participation = directParticipation || fallbackParticipation;
+
+    if (!directParticipation && fallbackParticipation?.player_id) {
+      state.currentPlayerId = fallbackParticipation.player_id;
+    }
 
     state.isNarrator =
       participation?.role === "narrator" ||

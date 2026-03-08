@@ -8,6 +8,22 @@
     if (subtitleEl) subtitleEl.textContent = subtitle || "";
   }
 
+  function setArchiveType(type) {
+    const normalizedType = String(type || "").trim().toLowerCase();
+    const container = document.querySelector(".document-archive-container");
+    const list = document.getElementById("da-list");
+
+    if (container) {
+      if (normalizedType) container.dataset.archiveType = normalizedType;
+      else delete container.dataset.archiveType;
+    }
+
+    if (list) {
+      if (normalizedType) list.dataset.archiveType = normalizedType;
+      else delete list.dataset.archiveType;
+    }
+  }
+
   function setSearchPlaceholder(value) {
     const input = document.getElementById("da-search");
     if (input) input.placeholder = value || "Buscar...";
@@ -34,6 +50,26 @@
     if (!button) return;
     button.classList.toggle("hidden", !visible);
     button.textContent = label || "Crear";
+  }
+
+  function renderTagFilters({ stats = [], selectedTag = null, onToggle = null, hidden = false } = {}) {
+    const container = document.getElementById("da-tag-filters");
+    const tagSystem = global.ABNShared?.tags;
+    if (!container) return;
+
+    if (hidden || !tagSystem?.renderFilterBar) {
+      container.innerHTML = "";
+      container.classList.add("hidden");
+      return;
+    }
+
+    tagSystem.renderFilterBar({
+      container,
+      stats,
+      selectedTag,
+      onToggle,
+      displayMode: "title",
+    });
   }
 
   function setListLayout(layout) {
@@ -86,9 +122,11 @@
 
   ns.view = {
     setHeader,
+    setArchiveType,
     setSearchPlaceholder,
     setSecondaryBackAction,
     setCreateAction,
+    renderTagFilters,
     renderCards,
     setResultsMeta,
     setPagination,

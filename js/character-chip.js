@@ -5,6 +5,8 @@
 //   ABNCharacterChip.buildChipMarkup(delivery.recipient, { removable: true, removeDataAttr: { key: "data-delivery-id", value: id } });
 
 (function initCharacterChip(global) {
+  const CHIP_NAME_MAX_LENGTH = 15;
+
   function esc(value) {
     return typeof global.escapeHtml === "function"
       ? global.escapeHtml(value)
@@ -36,6 +38,12 @@
     ).trim();
   }
 
+  function truncateDisplayName(name) {
+    const chars = Array.from(String(name || ""));
+    if (chars.length <= CHIP_NAME_MAX_LENGTH) return String(name || "");
+    return `${chars.slice(0, CHIP_NAME_MAX_LENGTH - 1).join("")}.`;
+  }
+
   /**
    * Build HTML markup for a character chip.
    *
@@ -63,6 +71,7 @@
 
     const name = resolveName(character);
     const avatarUrl = resolveAvatarUrl(character);
+    const displayName = truncateDisplayName(name);
 
     // Avatar
     const avatarInner = avatarUrl
@@ -71,7 +80,7 @@
     const avatarHtml = `<span class="abn-chip-avatar">${avatarInner}</span>`;
 
     // Name
-    const nameHtml = `<span class="abn-chip-name">${esc(name)}</span>`;
+    const nameHtml = `<span class="abn-chip-name">${esc(displayName)}</span>`;
 
     // Status label
     const statusHtml = statusLabel

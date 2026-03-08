@@ -21,15 +21,20 @@ Tener un archivo por crónica con revelaciones creadas por narradores y asociada
 ## UX MVP
 1. Active Session (narrador):
 - formulario de creación
-- selector de destinatarios
-- listado de archivo con asociaciones por revelación
-- quitar asociación individual
+- selector de destinatarios en crear/editar
+- listado de archivo con asociaciones por revelación como explorador
+- apertura de la revelación para ver detalle y entrar a editar
 - eliminar revelación completa
 
 2. Active Character Sheet (jugador):
 - botón "Revelaciones" con badge
 - modal "Archivo de Revelaciones"
 - lector de revelación (markdown + imagen)
+
+## Nota de implementación actual
+- El Archivo de Revelaciones no hace edición inline sobre la card.
+- Los cambios de contenido y destinatarios se realizan entrando a la revelación y luego a `Editar`.
+- La lista del archivo queda como superficie de descubrimiento, búsqueda y apertura.
 
 ## Realtime
 - suscripción por jugador a `revelation_players`.

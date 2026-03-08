@@ -78,7 +78,7 @@
 
 #ra-narrator-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
+  align-items: stretch;
 }
 
 #ra-narrator-list .ra-card {
@@ -91,6 +91,9 @@
   border-radius: 10px;
   padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .ra-card--clickable {
@@ -139,27 +142,9 @@
 }
 
 .ra-card-footer {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  margin-top: auto;
   padding: 6px 10px 10px;
-}
-
-.ra-recipient-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--theme-border-divider);
-  font-size: 0.7rem;
-  color: var(--theme-text-secondary);
-  flex-shrink: 0;
-}
-
-.ra-recipient-badge svg {
-  width: 12px;
-  height: 12px;
+  padding-top: 14px;
 }
 
 .ra-delivery-list {
@@ -171,7 +156,8 @@
 
 .ra-card-image-wrap {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: auto;
+  height: clamp(104px, 10vw, 132px);
   background: var(--theme-bg-surface);
   border-bottom: 1px solid var(--theme-border-divider);
 }

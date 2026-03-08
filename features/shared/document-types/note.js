@@ -131,9 +131,6 @@
     const plain = toPlainText(row.body_markdown || "");
     const preview = plain.length > 180 ? `${plain.slice(0, 180)}…` : plain;
     const archivedLabel = row.is_archived ? '<span class="da-inline-badge">Archivada</span>' : "";
-    const ownerMeta = ctx.isNarrator && row.player_name
-      ? ` · ${escapeHtml(row.player_name)}`
-      : "";
 
     return `
       <article class="da-card da-card--clickable" data-document-id="${escapeHtml(row.id)}">
@@ -141,11 +138,76 @@
           <h3>${escapeHtml(row.title || "Sin título")}</h3>
           ${archivedLabel}
         </div>
-        <p class="da-meta">${escapeHtml(formatRelativeDate(row.updated_at || row.created_at))}${ownerMeta}</p>
+        <p class="da-meta">${escapeHtml(formatRelativeDate(row.updated_at || row.created_at))}</p>
         ${renderTagsMarkup(row.tags)}
         ${preview ? `<p class="da-preview">${escapeHtml(preview)}</p>` : ""}
       </article>
     `;
+  }
+
+  function groupRowsByOwner(rows, ctx) {
+    const source = Array.isArray(rows) ? rows : [];
+    const currentPlayerId = String(ctx.currentPlayerId || "");
+    const ownRows = [];
+    const othersMap = new Map();
+
+    source.forEach((row) => {
+      const rowPlayerId = String(row?.player_id || "");
+      if (currentPlayerId && rowPlayerId === currentPlayerId) {
+        ownRows.push(row);
+        return;
+      }
+
+      const key = rowPlayerId || `player:${String(row?.player_name || "").trim().toLowerCase()}`;
+      const current = othersMap.get(key) || {
+        title: String(row?.player_name || "").trim() || "Jugador",
+        rows: [],
+      };
+      current.rows.push(row);
+      othersMap.set(key, current);
+    });
+
+    const otherGroups = Array.from(othersMap.values()).sort((a, b) =>
+      a.title.localeCompare(b.title, "es", { sensitivity: "base" }),
+    );
+
+    return { ownRows, otherGroups };
+  }
+
+  function renderGroupSection(title, rows, ctx, { emptyMessage = "" } = {}) {
+    const list = Array.isArray(rows) ? rows : [];
+    const cardsHtml = list.map((row) => renderCard(row, ctx)).join("");
+
+    return `
+      <section class="da-group" data-group-title="${escapeHtml(title)}">
+        <header class="da-group-header">
+          <h2 class="da-group-title">${escapeHtml(title)}</h2>
+        </header>
+        <div class="da-group-list">
+          ${cardsHtml || `<p class="da-group-empty">${escapeHtml(emptyMessage || "Sin notas.")}</p>`}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderList(rows, ctx, { query } = {}) {
+    const { ownRows, otherGroups } = groupRowsByOwner(rows, ctx);
+    const searching = Boolean(String(query || "").trim());
+    const ownEmptyMessage = searching
+      ? "No hay coincidencias en Mis Notas."
+      : "No hay notas en esta sección.";
+
+    const sections = [
+      renderGroupSection("Mis Notas", ownRows, ctx, { emptyMessage: ownEmptyMessage }),
+    ];
+
+    if (ctx.isNarrator) {
+      otherGroups.forEach((group) => {
+        sections.push(renderGroupSection(group.title, group.rows, ctx));
+      });
+    }
+
+    return `<div class="da-groups">${sections.join("")}</div>`;
   }
 
   async function openCreate(ctx, helpers) {
@@ -211,6 +273,7 @@
     },
     fetchRows,
     filterRows,
+    renderList,
     renderCard,
     openCreate,
     handleListClick,
