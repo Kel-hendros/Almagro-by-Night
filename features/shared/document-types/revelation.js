@@ -50,9 +50,8 @@
   function buildRecipientMarkup(delivery) {
     if (global.ABNCharacterChip?.buildChipMarkup) {
       return global.ABNCharacterChip.buildChipMarkup(delivery.recipient || delivery, {
-        removable: true,
+        readonly: true,
         selected: true,
-        removeDataAttr: { key: "data-delivery-id", value: delivery.id },
       });
     }
 
@@ -171,22 +170,6 @@
     const revelationScreen = root.revelationScreen;
 
     if (ctx.isNarrator) {
-      const revokeBtn = event.target.closest(".abn-chip-remove");
-      if (revokeBtn?.dataset.deliveryId) {
-        const ok = await (root.modal?.confirm?.(
-          "¿Quitar esta revelación del archivo de este jugador?",
-        ) || Promise.resolve(false));
-        if (!ok) return true;
-
-        const { error } = await handoutsApi?.revokeDelivery?.(revokeBtn.dataset.deliveryId);
-        if (error) {
-          global.alert(error.message || "No se pudo quitar la asociación.");
-          return true;
-        }
-        await helpers?.refresh?.();
-        return true;
-      }
-
       const deleteBtn = event.target.closest(".da-card-delete");
       if (deleteBtn?.dataset.documentId) {
         const ok = await (root.modal?.confirm?.(
