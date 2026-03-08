@@ -85,6 +85,10 @@
   gap: 6px;
 }
 
+.rs-tags-editor {
+  min-height: 28px;
+}
+
 .rs-form-group--grow {
   flex: 1;
 }
@@ -462,24 +466,6 @@
 .rs-view-body .doc-markdown {
   flex: 1;
   overflow: visible;
-}
-
-/* ── Tags (revelation-specific) ── */
-
-.rs-view-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.rs-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  background: var(--theme-bg-elevated);
-  color: var(--theme-text-secondary);
-  border: 1px solid var(--theme-border-divider);
 }
 
 /* ── View image ── */

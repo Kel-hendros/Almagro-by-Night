@@ -114,9 +114,7 @@
         .join(", ");
       const meta = formatDate(rev.created_at);
       const preview = truncateText(rev.body_markdown);
-      const tagsHtml = (rev.tags || []).length
-        ? `<div class="ra-tags-row">${rev.tags.map(t => `<span class="ra-tag">${escapeHtml(t)}</span>`).join("")}</div>`
-        : "";
+      const tagsHtml = renderTagsMarkup(rev.tags);
 
       const card = document.createElement("div");
       card.className = "cd-recap-card";
@@ -143,9 +141,7 @@
       const handout = del.handout || {};
       const meta = formatDate(del.delivered_at);
       const preview = truncateText(handout.body_markdown);
-      const tagsHtml = (handout.tags || []).length
-        ? `<div class="ra-tags-row">${handout.tags.map(t => `<span class="ra-tag">${escapeHtml(t)}</span>`).join("")}</div>`
-        : "";
+      const tagsHtml = renderTagsMarkup(handout.tags);
 
       const card = document.createElement("div");
       card.className = "cd-recap-card";
@@ -165,6 +161,30 @@
 
   function revelationScreen() {
     return global.ABNShared?.revelationScreen || null;
+  }
+
+  function tagSystem() {
+    return global.ABNShared?.tags || null;
+  }
+
+  function renderTagsMarkup(tags) {
+    const list = Array.isArray(tags)
+      ? tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [];
+    if (!list.length) return "";
+
+    const sharedTags = tagSystem();
+    const normalized = sharedTags?.dedupe ? sharedTags.dedupe(list) : list;
+
+    return `<div class="ra-tags-row">${normalized
+      .map((tag) => {
+        const label = sharedTags?.formatLabel
+          ? sharedTags.formatLabel(tag, { displayMode: "title" })
+          : tag;
+        const className = sharedTags ? "abn-tag" : "ra-tag";
+        return `<span class="${className}">${escapeHtml(label)}</span>`;
+      })
+      .join("")}</div>`;
   }
 
   function handleRevelacionesListClick(event) {

@@ -5,6 +5,10 @@
     return root.documentScreen || null;
   }
 
+  function tagSystem() {
+    return root.tags || null;
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -15,10 +19,30 @@
   }
 
   function parseTags(raw, { lowercase = false } = {}) {
-    return String(raw || "")
-      .split(",")
-      .map((tag) => (lowercase ? tag.trim().toLowerCase() : tag.trim()))
-      .filter(Boolean);
+    const sharedTags = tagSystem();
+    if (sharedTags?.parse) {
+      if (Array.isArray(raw)) {
+        return sharedTags.dedupe(
+          raw.map((tag) => sharedTags.normalizeTag(tag, { lowercase })).filter(Boolean),
+        );
+      }
+      return sharedTags.parse(raw, { lowercase });
+    }
+
+    if (Array.isArray(raw)) {
+      return [...new Set(
+        raw
+          .map((tag) => (lowercase ? String(tag || "").trim().toLowerCase() : String(tag || "").trim()))
+          .filter(Boolean),
+      )];
+    }
+
+    return [...new Set(
+      String(raw || "")
+        .split(",")
+        .map((tag) => (lowercase ? tag.trim().toLowerCase() : tag.trim()))
+        .filter(Boolean),
+    )];
   }
 
   function renderMarkdown(markdown) {
@@ -67,7 +91,7 @@
     return `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
   }
 
-  function buildFormMarkup({ note }) {
+  function buildFormMarkup({ note, useSharedTagEditor = false }) {
     const title = note?.title || "";
     const tags = Array.isArray(note?.tags) ? note.tags.join(", ") : "";
     const body = note?.body || "";
@@ -79,8 +103,10 @@
           <input type="text" id="shared-note-form-title" class="doc-form-input" maxlength="160" placeholder="Ej: Pistas sobre el Sabbat" value="${escapeHtml(title)}">
         </div>
         <div class="doc-form-group">
-          <label class="doc-form-label" for="shared-note-form-tags">Etiquetas <span class="doc-form-hint">(separadas por coma)</span></label>
-          <input type="text" id="shared-note-form-tags" class="doc-form-input" placeholder="Ej: pistas, sabbat, barrio norte" value="${escapeHtml(tags)}">
+          <label class="doc-form-label"${useSharedTagEditor ? "" : ' for="shared-note-form-tags"'}>Etiquetas${useSharedTagEditor ? "" : ' <span class="doc-form-hint">(separadas por coma)</span>'}</label>
+          ${useSharedTagEditor
+            ? '<div id="shared-note-form-tags-container" class="doc-form-tag-editor"></div>'
+            : `<input type="text" id="shared-note-form-tags" class="doc-form-input" placeholder="Ej: pistas, sabbat, barrio norte" value="${escapeHtml(tags)}">`}
         </div>
         <div class="doc-form-group doc-form-group--grow">
           <label class="doc-form-label" for="shared-note-form-body">Contenido <span class="doc-form-hint">(soporta Markdown)</span></label>
@@ -260,6 +286,11 @@
     const note = options.note || null;
     const title = String(options.title || (note ? "Editar Nota" : "Nueva Nota"));
     const tagsLowercase = Boolean(options.tagsLowercase);
+    const hasSharedTagEditor = Boolean(tagSystem()?.renderEditor);
+    const formState = {
+      tags: parseTags(Array.isArray(note?.tags) ? note.tags : [], { lowercase: tagsLowercase }),
+      tagComposerOpen: false,
+    };
 
     let api = null;
     let saving = false;
@@ -271,6 +302,30 @@
       });
       api?.updateFooterAction("cancel", {
         disabled: saving,
+      });
+    }
+
+    function renderTagsEditor() {
+      const sharedTags = tagSystem();
+      const container = document.getElementById("shared-note-form-tags-container");
+      if (!sharedTags?.renderEditor || !container) return;
+
+      sharedTags.renderEditor({
+        container,
+        tags: formState.tags,
+        composerOpen: formState.tagComposerOpen,
+        editable: true,
+        displayMode: "title",
+        placeholder: "Nuevo tag",
+        onComposerToggle: (isOpen) => {
+          formState.tagComposerOpen = isOpen;
+          renderTagsEditor();
+        },
+        onChange: (nextTags) => {
+          formState.tags = parseTags(nextTags, { lowercase: tagsLowercase });
+          formState.tagComposerOpen = false;
+          renderTagsEditor();
+        },
       });
     }
 
@@ -291,7 +346,9 @@
         noteId: note?.id || null,
         title: nextTitle,
         body,
-        tags: parseTags(tagsRaw, { lowercase: tagsLowercase }),
+        tags: hasSharedTagEditor
+          ? parseTags(formState.tags, { lowercase: tagsLowercase })
+          : parseTags(tagsRaw, { lowercase: tagsLowercase }),
         archived,
       };
 
@@ -361,7 +418,8 @@
       ],
       bodyClass: "doc-form-body",
       renderBody: (bodyHost) => {
-        bodyHost.innerHTML = buildFormMarkup({ note });
+        bodyHost.innerHTML = buildFormMarkup({ note, useSharedTagEditor: hasSharedTagEditor });
+        renderTagsEditor();
       },
     });
 

@@ -24,6 +24,8 @@
       imageBusy: false,
       sessionToken: 0,
       previewObjectUrl: null,
+      tags: [],
+      tagComposerOpen: false,
     };
   }
 
@@ -61,6 +63,41 @@
     return root.documentScreen || null;
   }
 
+  function tagSystem() {
+    return root.tags || null;
+  }
+
+  function parseTags(raw, { lowercase = false } = {}) {
+    const sharedTags = tagSystem();
+    if (sharedTags?.parse) {
+      if (Array.isArray(raw)) {
+        return sharedTags.dedupe(
+          raw.map((tag) => sharedTags.normalizeTag(tag, { lowercase })).filter(Boolean),
+        );
+      }
+      return sharedTags.parse(raw, { lowercase });
+    }
+
+    if (Array.isArray(raw)) {
+      return [...new Set(
+        raw
+          .map((tag) => (lowercase ? String(tag || "").trim().toLowerCase() : String(tag || "").trim()))
+          .filter(Boolean),
+      )];
+    }
+
+    return [...new Set(
+      String(raw || "")
+        .split(",")
+        .map((tag) => (lowercase ? tag.trim().toLowerCase() : tag.trim()))
+        .filter(Boolean),
+    )];
+  }
+
+  function usesSharedTagEditor() {
+    return Boolean(tagSystem()?.renderEditor);
+  }
+
   function escapeHtml(value) {
     if (typeof global.escapeHtml === "function") return global.escapeHtml(value);
     return String(value ?? "")
@@ -83,8 +120,10 @@
           <input id="rs-title-input" class="rs-input" type="text" maxlength="120" placeholder="Ej: Carta encontrada en el Elysium">
         </div>
         <div class="rs-form-group">
-          <label class="rs-label" for="rs-tags-input">Tags <span class="rs-hint">(separados por coma)</span></label>
-          <input id="rs-tags-input" class="rs-input" type="text" placeholder="Ej: elysium, carta, pista">
+          <label class="rs-label"${usesSharedTagEditor() ? "" : ' for="rs-tags-input"'}>Tags${usesSharedTagEditor() ? "" : ' <span class="rs-hint">(separados por coma)</span>'}</label>
+          ${usesSharedTagEditor()
+            ? '<div id="rs-tags-editor" class="rs-tags-editor"></div>'
+            : '<input id="rs-tags-input" class="rs-input" type="text" placeholder="Ej: elysium, carta, pista">'}
         </div>
         <div class="rs-form-group">
           <label class="rs-label">Imagen <span class="rs-hint">(opcional)</span></label>
@@ -320,11 +359,14 @@
     if (imageUrl) imageUrl.value = "";
     setCurrentImageRef("");
     if (body) body.value = "";
+    formState.tags = [];
+    formState.tagComposerOpen = false;
 
     resetUploadPreview();
     setImageStatus("Sin imagen seleccionada.");
     setFormMsg("");
     syncImageControls();
+    renderTagsEditor();
 
     currentFormHost?.querySelectorAll(".abn-chip").forEach((node) => {
       node.classList.remove("is-selected");
@@ -343,6 +385,30 @@
     host.innerHTML = rows.map((row) => buildRecipientChipMarkup(row)).join("");
   }
 
+  function renderTagsEditor() {
+    const sharedTags = tagSystem();
+    const container = getFormEl("#rs-tags-editor");
+    if (!sharedTags?.renderEditor || !container) return;
+
+    sharedTags.renderEditor({
+      container,
+      tags: formState.tags,
+      composerOpen: formState.tagComposerOpen,
+      editable: true,
+      displayMode: "title",
+      placeholder: "Nuevo tag",
+      onComposerToggle: (isOpen) => {
+        formState.tagComposerOpen = isOpen;
+        renderTagsEditor();
+      },
+      onChange: (nextTags) => {
+        formState.tags = parseTags(nextTags);
+        formState.tagComposerOpen = false;
+        renderTagsEditor();
+      },
+    });
+  }
+
   async function populateForm({ title, imageRef, bodyMarkdown, recipientPlayerIds, tags }) {
     const titleInput = getFormEl("#rs-title-input");
     const tagsInput = getFormEl("#rs-tags-input");
@@ -352,10 +418,13 @@
 
     if (titleInput) titleInput.value = String(title || "");
     if (tagsInput) tagsInput.value = (Array.isArray(tags) ? tags : []).join(", ");
+    formState.tags = parseTags(Array.isArray(tags) ? tags : []);
+    formState.tagComposerOpen = false;
     if (imageFileInput) imageFileInput.value = "";
     if (imageUrlInput) imageUrlInput.value = "";
     setCurrentImageRef(String(imageRef || "").trim());
     if (bodyInput) bodyInput.value = String(bodyMarkdown || "");
+    renderTagsEditor();
 
     setImageStatus(
       getCurrentImageRef() ? "Imagen actual guardada." : "Sin imagen seleccionada.",
@@ -1075,10 +1144,7 @@
     const bodyMarkdown = getFormEl("#rs-body-input")?.value || "";
     const tagsRaw = getFormEl("#rs-tags-input")?.value || "";
     const imageRef = getCurrentImageRef();
-    const tags = tagsRaw
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean);
+    const tags = usesSharedTagEditor() ? parseTags(formState.tags) : parseTags(tagsRaw);
 
     const payload = {
       title,

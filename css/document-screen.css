@@ -291,6 +291,10 @@
   gap: 6px;
 }
 
+.doc-form-tag-editor {
+  min-height: 28px;
+}
+
 .doc-form-group--grow {
   min-height: 0;
   flex: 1 1 auto;

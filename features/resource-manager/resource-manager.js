@@ -7,8 +7,18 @@
     user: null,
     currentPlayer: null,
     currentChronicleId: null,
-    templateEdit: { data: {}, type: "npc", tags: [], groups: null },
+    templateFilter: null,
+    templateTagFilter: null,
+    templateTagFilterLabel: "",
+    templateEdit: {
+      data: {},
+      type: "npc",
+      tags: [],
+      groups: null,
+      tagComposerOpen: false,
+    },
     decorEditTags: [],
+    decorEditTagComposerOpen: false,
   };
   const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
     "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
@@ -16,6 +26,28 @@
   let lists = {};
   let modalTemplate = null;
   let currentTemplateMeta = { readonly: false, canDelete: false, name: "" };
+
+  function getTagSystem() {
+    return window.ABNShared?.tags || null;
+  }
+
+  function formatTagLabel(rawTag) {
+    const tagSystem = getTagSystem();
+    if (tagSystem?.formatLabel) {
+      return tagSystem.formatLabel(rawTag, { displayMode: "title" });
+    }
+    return String(rawTag || "").trim();
+  }
+
+  function renderTagMarkup(tags) {
+    if (!Array.isArray(tags) || !tags.length) {
+      return '<span class="ct-decor-no-tags">Sin tags</span>';
+    }
+
+    return tags
+      .map((tag) => `<span class="abn-tag">${escapeHtml(formatTagLabel(tag))}</span>`)
+      .join("");
+  }
 
   // --- Initialization ---
   async function init() {
@@ -83,6 +115,8 @@
   function setupSearch() {
     const searchTemplates = document.getElementById("search-templates");
     const searchDecor = document.getElementById("search-decor");
+    const filterSystem = document.getElementById("filter-templates-system");
+    const filterUser = document.getElementById("filter-templates-user");
 
     if (searchTemplates) {
       searchTemplates.addEventListener("input", () => renderTemplates());
@@ -90,6 +124,17 @@
     if (searchDecor) {
       searchDecor.addEventListener("input", () => renderDecorAssets());
     }
+    if (filterSystem) {
+      filterSystem.addEventListener("click", () => {
+        toggleTemplateFilter("system");
+      });
+    }
+    if (filterUser) {
+      filterUser.addEventListener("click", () => {
+        toggleTemplateFilter("user");
+      });
+    }
+    syncTemplateFilterButtons();
   }
 
   function matchesSearch(query, name, tags) {
@@ -130,14 +175,17 @@
 
   function renderTemplates() {
     if (state.templates.length === 0) {
+      renderTemplateTagFilters([]);
       lists.templates.innerHTML = "<p>No hay plantillas creadas.</p>";
       return;
     }
 
-    const query = (document.getElementById("search-templates")?.value || "").trim();
-    const filtered = state.templates.filter((tpl) =>
-      matchesSearch(query, tpl.name || "", tpl.data?.tags)
+    const scopedTemplates = state.templates.filter((tpl) =>
+      matchesTemplateFilter(tpl) && matchesTemplateSearch(tpl)
     );
+    renderTemplateTagFilters(scopedTemplates);
+
+    const filtered = scopedTemplates.filter((tpl) => matchesTemplateTagFilter(tpl));
 
     if (filtered.length === 0) {
       lists.templates.innerHTML = "<p>Sin resultados para esta búsqueda.</p>";
@@ -165,9 +213,7 @@
       );
 
       const tags = Array.isArray(tpl.data?.tags) ? tpl.data.tags : [];
-      const tagsHtml = tags.length
-        ? tags.map((t) => `<span class="ct-tag-pill">${escapeHtml(t)}</span>`).join("")
-        : '<span class="ct-decor-no-tags">Sin tags</span>';
+      const tagsHtml = renderTagMarkup(tags);
 
       const typeBadge = isSystem
         ? '<span class="ct-template-type ct-template-type--system">Sistema</span>'
@@ -205,6 +251,87 @@
     } else {
       await loadTemplates();
     }
+  }
+
+  function matchesTemplateFilter(tpl) {
+    if (!state.templateFilter) return true;
+    if (state.templateFilter === "system") return !!tpl?.is_system;
+    if (state.templateFilter === "user") return !tpl?.is_system;
+    return true;
+  }
+
+  function matchesTemplateSearch(tpl) {
+    const query = (document.getElementById("search-templates")?.value || "").trim();
+    return matchesSearch(query, tpl?.name || "", tpl?.data?.tags);
+  }
+
+  function matchesTemplateTagFilter(tpl) {
+    if (!state.templateTagFilter) return true;
+    const tags = getNormalizedTemplateTags(tpl);
+    return tags.some((tag) => tag.key === state.templateTagFilter);
+  }
+
+  function toggleTemplateFilter(filterKey) {
+    if (filterKey !== "system" && filterKey !== "user") {
+      return;
+    }
+    state.templateFilter = state.templateFilter === filterKey ? null : filterKey;
+    syncTemplateFilterButtons();
+    renderTemplates();
+  }
+
+  function syncTemplateFilterButtons() {
+    ["system", "user"].forEach((key) => {
+      const button = document.querySelector(`.ct-filter-btn[data-filter="${key}"]`);
+      if (!button) return;
+      const enabled = state.templateFilter === key;
+      button.classList.toggle("is-active", enabled);
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+    });
+  }
+
+  function toggleTemplateTagFilter(tagKey, tagLabel) {
+    if (!tagKey) return;
+    if (state.templateTagFilter === tagKey) {
+      state.templateTagFilter = null;
+      state.templateTagFilterLabel = "";
+    } else {
+      state.templateTagFilter = tagKey;
+      state.templateTagFilterLabel = tagLabel || tagKey;
+    }
+    renderTemplates();
+  }
+
+  function renderTemplateTagFilters(baseTemplates) {
+    const container = document.getElementById("template-tags-filters");
+    const tagSystem = getTagSystem();
+    if (!container || !tagSystem) return;
+
+    const tagStats = tagSystem.collectStats(baseTemplates, {
+      getTags: (tpl) => tpl?.data?.tags,
+      selectedTag: state.templateTagFilter,
+      selectedLabel: state.templateTagFilterLabel,
+    });
+
+    tagSystem.renderFilterBar({
+      container,
+      stats: tagStats,
+      selectedTag: state.templateTagFilter,
+      onToggle: (key, label) => toggleTemplateTagFilter(key, label),
+      displayMode: "title",
+    });
+  }
+
+  function getNormalizedTemplateTags(tpl) {
+    const tagSystem = getTagSystem();
+    if (tagSystem?.getTagObjects) {
+      return tagSystem.getTagObjects(tpl?.data?.tags);
+    }
+
+    const tags = Array.isArray(tpl?.data?.tags) ? tpl.data.tags : [];
+    return tags
+      .map((tag) => ({ key: String(tag || "").trim().toLowerCase(), label: String(tag || "").trim() }))
+      .filter((tag) => tag.key);
   }
 
   // --- TEMPLATE MODAL ---
@@ -269,6 +396,7 @@
 
     // Initialize tags
     state.templateEdit.tags = (tpl && tpl.data && tpl.data.tags) ? [...tpl.data.tags] : [];
+    state.templateEdit.tagComposerOpen = false;
     renderTagsInput();
 
     // Initialize edit data and groups from template or definitions
@@ -294,11 +422,10 @@
     if (typeWrap) {
       typeWrap.innerHTML = "";
 
-      const typeLabel = document.createElement("label");
-      typeLabel.textContent = "Tipo de Plantilla";
-
       const typeSelect = document.createElement("select");
+      typeSelect.id = "tpl-type-select";
       typeSelect.className = "ct-select";
+      typeSelect.setAttribute("aria-label", "Tipo de plantilla");
 
       Object.keys(window.TEMPLATE_DEFINITIONS).forEach((key) => {
         const opt = document.createElement("option");
@@ -322,7 +449,6 @@
         renderTemplateForm(containerEl);
       });
 
-      typeWrap.appendChild(typeLabel);
       typeWrap.appendChild(typeSelect);
     }
 
@@ -413,41 +539,26 @@
 
   function renderTagsInput() {
     const container = document.getElementById("tpl-tags-container");
-    if (!container) return;
+    const tagSystem = getTagSystem();
+    if (!container || !tagSystem) return;
 
-    container.innerHTML = "";
-
-    // Existing tags as pills
-    const pillsWrap = document.createElement("div");
-    pillsWrap.className = "ct-tags-pills";
-    state.templateEdit.tags.forEach((tag, idx) => {
-      const pill = document.createElement("span");
-      pill.className = "ct-tag-pill";
-      pill.innerHTML = `${escapeHtml(tag)} <button type="button" data-idx="${idx}">&times;</button>`;
-      pill.querySelector("button").addEventListener("click", () => {
-        state.templateEdit.tags.splice(idx, 1);
+    tagSystem.renderEditor({
+      container,
+      tags: state.templateEdit.tags,
+      composerOpen: state.templateEdit.tagComposerOpen,
+      editable: true,
+      displayMode: "title",
+      placeholder: "Nuevo tag",
+      onComposerToggle: (isOpen) => {
+        state.templateEdit.tagComposerOpen = isOpen;
         renderTagsInput();
-      });
-      pillsWrap.appendChild(pill);
+      },
+      onChange: (nextTags) => {
+        state.templateEdit.tags = nextTags;
+        state.templateEdit.tagComposerOpen = false;
+        renderTagsInput();
+      },
     });
-    container.appendChild(pillsWrap);
-
-    // Input for new tags
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "Nuevo tag + Enter";
-    input.className = "ct-tag-input";
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const val = input.value.trim().toLowerCase();
-        if (val && !state.templateEdit.tags.includes(val)) {
-          state.templateEdit.tags.push(val);
-          renderTagsInput();
-        }
-      }
-    });
-    container.appendChild(input);
   }
 
   async function saveTemplate() {
@@ -636,9 +747,7 @@
 
       const imgUrl = getAssetPublicUrl(asset.image_path);
       const tags = Array.isArray(asset.tags) ? asset.tags : [];
-      const tagsHtml = tags.length
-        ? tags.map((t) => `<span class="ct-tag-pill">${escapeHtml(t)}</span>`).join("")
-        : '<span class="ct-decor-no-tags">Sin tags</span>';
+      const tagsHtml = renderTagMarkup(tags);
       const isOwner = asset.owner_user_id === state.user?.id;
 
       card.innerHTML = `
@@ -699,6 +808,11 @@
   }
 
   function parseTagList(rawTags) {
+    const tagSystem = getTagSystem();
+    if (tagSystem?.parse) {
+      return tagSystem.parse(rawTags);
+    }
+
     if (Array.isArray(rawTags)) {
       return [...new Set(rawTags.map((t) => String(t || "").trim()).filter(Boolean))];
     }
@@ -830,44 +944,33 @@
     document.getElementById("decor-edit-id").value = asset.id;
     document.getElementById("decor-edit-name").value = asset.name || "";
     state.decorEditTags = Array.isArray(asset.tags) ? [...asset.tags] : [];
+    state.decorEditTagComposerOpen = false;
     renderDecorEditTags();
     modal.classList.remove("hidden");
   }
 
   function renderDecorEditTags() {
     const container = document.getElementById("decor-edit-tags-container");
-    if (!container) return;
-    container.innerHTML = "";
+    const tagSystem = getTagSystem();
+    if (!container || !tagSystem) return;
 
-    const pillsWrap = document.createElement("div");
-    pillsWrap.className = "ct-tags-pills";
-    state.decorEditTags.forEach((tag, idx) => {
-      const pill = document.createElement("span");
-      pill.className = "ct-tag-pill";
-      pill.innerHTML = `${escapeHtml(tag)} <button type="button" data-idx="${idx}">&times;</button>`;
-      pill.querySelector("button").addEventListener("click", () => {
-        state.decorEditTags.splice(idx, 1);
+    tagSystem.renderEditor({
+      container,
+      tags: state.decorEditTags,
+      composerOpen: state.decorEditTagComposerOpen,
+      editable: true,
+      displayMode: "title",
+      placeholder: "Nuevo tag",
+      onComposerToggle: (isOpen) => {
+        state.decorEditTagComposerOpen = isOpen;
         renderDecorEditTags();
-      });
-      pillsWrap.appendChild(pill);
+      },
+      onChange: (nextTags) => {
+        state.decorEditTags = nextTags;
+        state.decorEditTagComposerOpen = false;
+        renderDecorEditTags();
+      },
     });
-    container.appendChild(pillsWrap);
-
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = "Nuevo tag + Enter";
-    input.className = "ct-tag-input";
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const val = input.value.trim().toLowerCase();
-        if (val && !state.decorEditTags.includes(val)) {
-          state.decorEditTags.push(val);
-          renderDecorEditTags();
-        }
-      }
-    });
-    container.appendChild(input);
   }
 
   async function saveDecorEdit() {

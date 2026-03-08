@@ -11,6 +11,30 @@
       .replace(/'/g, "&#039;");
   }
 
+  function tagSystem() {
+    return global.ABNShared?.tags || null;
+  }
+
+  function renderTagsMarkup(tags) {
+    const list = Array.isArray(tags)
+      ? tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [];
+    if (!list.length) return "";
+
+    const sharedTags = tagSystem();
+    const normalized = sharedTags?.dedupe ? sharedTags.dedupe(list) : list;
+
+    return `<div class="ra-tags-row">${normalized
+      .map((tag) => {
+        const label = sharedTags?.formatLabel
+          ? sharedTags.formatLabel(tag, { displayMode: "title" })
+          : tag;
+        const className = sharedTags ? "abn-tag" : "ra-tag";
+        return `<span class="${className}">${escapeHtml(label)}</span>`;
+      })
+      .join("")}</div>`;
+  }
+
   function setHeader({ chronicleName, isNarrator }) {
     const title = document.getElementById("ra-title");
     const subtitle = document.getElementById("ra-subtitle");
@@ -67,9 +91,7 @@
           .replace(/\s+/g, " ")
           .trim()
           .slice(0, 180);
-        const tagsHtml = (item.tags || []).length
-          ? `<div class="ra-tags-row">${item.tags.map(t => `<span class="ra-tag">${escapeHtml(t)}</span>`).join("")}</div>`
-          : "";
+        const tagsHtml = renderTagsMarkup(item.tags);
 
         return `
           <article class="ra-card" data-handout-id="${escapeHtml(item.id)}">
@@ -124,9 +146,7 @@
         const deliveredAt = row.delivered_at
           ? new Date(row.delivered_at).toLocaleString("es-AR")
           : "Ahora";
-        const tagsHtml = (handout.tags || []).length
-          ? `<div class="ra-tags-row">${handout.tags.map(t => `<span class="ra-tag">${escapeHtml(t)}</span>`).join("")}</div>`
-          : "";
+        const tagsHtml = renderTagsMarkup(handout.tags);
         return `
           <article class="ra-card ra-card--clickable" data-delivery-id="${escapeHtml(row.id)}">
             <div class="ra-card-head"><h3>${title}</h3></div>

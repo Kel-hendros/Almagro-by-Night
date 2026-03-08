@@ -31,6 +31,31 @@
     return global.ABNShared?.noteScreen || null;
   }
 
+  function tagSystem() {
+    return global.ABNShared?.tags || null;
+  }
+
+  function renderNoteTags(tags) {
+    const list = Array.isArray(tags)
+      ? tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [];
+
+    if (!list.length) return "";
+
+    const sharedTags = tagSystem();
+    const normalized = sharedTags?.dedupe ? sharedTags.dedupe(list) : list;
+
+    return `<div class="cd-note-tags-row">${normalized
+      .map((tag) => {
+        const label = sharedTags?.formatLabel
+          ? sharedTags.formatLabel(tag, { displayMode: "title" })
+          : tag;
+        const className = sharedTags ? "abn-tag" : "cd-note-tag";
+        return `<span class="${className}">${escapeHtml(label)}</span>`;
+      })
+      .join("")}</div>`;
+  }
+
   function normalizeNoteRow(row) {
     return {
       id: row.id,
@@ -66,12 +91,7 @@
     function renderNoteCard(note) {
       const plain = stripMarkdown(note.body);
       const truncated = plain.length > 150 ? plain.substring(0, 150) + "…" : plain;
-      const tagsHtml =
-        note.tags && note.tags.length
-          ? `<div class="cd-note-tags-row">${note.tags
-              .map((tag) => `<span class="cd-note-tag">${escapeHtml(tag)}</span>`)
-              .join("")}</div>`
-          : "";
+      const tagsHtml = renderNoteTags(note.tags);
 
       const card = document.createElement("div");
       card.className = "cd-note-card";

@@ -16,11 +16,18 @@
 
     <!-- VIEW 1: TEMPLATES -->
     <div id="view-templates" class="app-tab-panel active">
-        <div class="ct-view-header">
+        <div class="ct-view-header ct-view-header--templates">
             <p class="ct-view-subtitle">Define tipos de enemigos reutilizables. Tus plantillas se guardan en la base de datos.</p>
-            <button class="btn btn--primary" id="btn-create-template">+ Nueva Plantilla</button>
+            <div class="ct-templates-toolbar">
+                <input class="app-input ct-search ct-search--templates" type="text" id="search-templates" placeholder="Buscar por nombre o tag...">
+                <div class="ct-template-filters" role="group" aria-label="Filtrar plantillas">
+                    <button type="button" class="ct-filter-btn ct-filter-btn--system" id="filter-templates-system" data-filter="system" aria-pressed="false">Sistema</button>
+                    <button type="button" class="ct-filter-btn" id="filter-templates-user" data-filter="user" aria-pressed="false">Usuario</button>
+                </div>
+                <button class="btn btn--primary" id="btn-create-template">+ Nueva Plantilla</button>
+            </div>
         </div>
-        <input class="app-input ct-search" type="text" id="search-templates" placeholder="Buscar por nombre o tag...">
+        <div id="template-tags-filters" class="ct-tag-filter-row hidden" aria-label="Filtrar por tags"></div>
         <div id="templates-list" class="ct-grid">
             <p>Cargando plantillas...</p>
         </div>
@@ -47,15 +54,14 @@
         <form id="form-template">
             <input type="hidden" id="tpl-id">
 
-            <div class="ct-inline-field">
-                <label class="app-label">Nombre</label>
-                <input class="app-input" type="text" id="tpl-name" placeholder="Ej: Matón Brujah">
+            <div class="ct-template-topline">
+                <label class="app-label ct-template-topline-label" for="tpl-name">Nombre:</label>
+                <input class="app-input" type="text" id="tpl-name" placeholder="Ingresa nombre de la plantilla...">
+                <div id="tpl-type-container" class="ct-template-type-inline"></div>
             </div>
 
-            <div id="tpl-type-container" class="ct-inline-field ct-type-field"></div>
-
-            <div class="ct-inline-field">
-                <label class="app-label">Tags</label>
+            <div class="ct-inline-field ct-inline-field--tags">
+                <label class="app-label">Tags:</label>
                 <div id="tpl-tags-container" class="ct-tags-wrap"></div>
             </div>
 

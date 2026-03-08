@@ -1,0 +1,165 @@
+:root {
+    --abn-tag-font-family: "Courier Prime", monospace;
+    --abn-tag-font-size: 0.76rem;
+    --abn-tag-font-weight: 600;
+    --abn-tag-letter-spacing: 0.02em;
+    --abn-tag-padding-y: 0.18rem;
+    --abn-tag-padding-x: 0.56rem;
+    --abn-tag-radius: 10px;
+    --abn-tag-text-color: var(--theme-accent);
+    --abn-tag-bg: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+    --abn-tag-border: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+    --abn-tag-filter-font-size: 0.8rem;
+    --abn-tag-filter-padding-y: 0.42rem;
+    --abn-tag-filter-padding-x: 0.82rem;
+    --abn-tag-filter-radius: 999px;
+    --abn-tag-filter-text-color: var(--theme-accent);
+    --abn-tag-filter-bg: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-bg-surface));
+    --abn-tag-filter-border: color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border-divider));
+    --abn-tag-filter-active-bg: var(--theme-accent);
+    --abn-tag-filter-active-text: var(--theme-text-on-accent);
+    --abn-tag-filter-active-border: var(--theme-accent);
+}
+
+.abn-tag-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.abn-tag-filter-chip {
+    appearance: none;
+    border: 1px solid var(--abn-tag-filter-border);
+    background: var(--abn-tag-filter-bg);
+    color: var(--abn-tag-filter-text-color);
+    border-radius: var(--abn-tag-filter-radius);
+    padding: var(--abn-tag-filter-padding-y) var(--abn-tag-filter-padding-x);
+    font-family: var(--abn-tag-font-family);
+    font-size: var(--abn-tag-filter-font-size);
+    font-weight: var(--abn-tag-font-weight);
+    letter-spacing: var(--abn-tag-letter-spacing);
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.abn-tag-filter-chip:hover {
+    border-color: var(--theme-accent);
+    background: color-mix(in srgb, var(--theme-accent) 16%, var(--theme-bg-surface));
+}
+
+.abn-tag-filter-chip.is-active {
+    background: var(--abn-tag-filter-active-bg);
+    border-color: var(--abn-tag-filter-active-border);
+    color: var(--abn-tag-filter-active-text);
+}
+
+.abn-tag-filter-chip:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.abn-tag-filter-chip:focus-visible {
+    outline: none;
+    border-color: var(--theme-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 24%, transparent);
+}
+
+.abn-tag-editor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.abn-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+}
+
+.abn-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: var(--abn-tag-padding-y) var(--abn-tag-padding-x);
+    background: var(--abn-tag-bg);
+    border: 1px solid var(--abn-tag-border);
+    border-radius: var(--abn-tag-radius);
+    color: var(--abn-tag-text-color);
+    font-size: var(--abn-tag-font-size);
+    font-weight: var(--abn-tag-font-weight);
+    font-family: var(--abn-tag-font-family);
+    letter-spacing: var(--abn-tag-letter-spacing);
+}
+
+.abn-tag-delete-btn {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    padding: 0;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.abn-tag-delete-btn .lucide {
+    width: 10px;
+    height: 10px;
+}
+
+.abn-tag-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    padding: var(--abn-tag-padding-y) var(--abn-tag-padding-x);
+    border-radius: var(--abn-tag-radius);
+    border: 1px solid var(--abn-tag-border);
+    background: var(--abn-tag-bg);
+    color: var(--abn-tag-text-color);
+    font-family: var(--abn-tag-font-family);
+    font-size: var(--abn-tag-font-size);
+    font-weight: var(--abn-tag-font-weight);
+    letter-spacing: var(--abn-tag-letter-spacing);
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.abn-tag-add-btn:hover {
+    border-color: var(--theme-accent);
+    background: color-mix(in srgb, var(--theme-accent) 16%, var(--theme-bg-surface));
+}
+
+.abn-tag-add-btn:focus-visible {
+    outline: none;
+    border-color: var(--theme-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 24%, transparent);
+}
+
+.abn-tag-composer {
+    display: inline-flex;
+    align-items: center;
+}
+
+.abn-tag-input {
+    width: 148px;
+    min-width: 0;
+    padding: 0.4rem 0.6rem;
+    background: var(--theme-bg-elevated);
+    border: 1px solid var(--theme-border-divider);
+    color: var(--theme-text-primary);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-family: var(--app-font-body);
+}
+
+.abn-tag-input:focus {
+    outline: none;
+    border-color: var(--theme-accent);
+}
+
+.abn-tag-input::placeholder {
+    color: var(--theme-text-tertiary);
+}

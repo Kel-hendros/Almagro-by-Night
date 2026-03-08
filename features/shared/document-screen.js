@@ -113,8 +113,11 @@
 
   function setTags(session, tags) {
     if (!session || !tagsEl) return;
+    const sharedTags = root.tags || null;
     const list = Array.isArray(tags)
-      ? tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      ? (sharedTags?.dedupe ? sharedTags.dedupe(tags) : tags)
+          .map((tag) => String(tag || "").trim())
+          .filter(Boolean)
       : [];
     if (!list.length) {
       tagsEl.innerHTML = "";
@@ -122,7 +125,13 @@
       return;
     }
     tagsEl.innerHTML = list
-      .map((tag) => `<span class="ds-tag">${escapeHtml(tag)}</span>`)
+      .map((tag) => {
+        const label = sharedTags?.formatLabel
+          ? sharedTags.formatLabel(tag, { displayMode: "title" })
+          : tag;
+        const className = sharedTags ? "abn-tag" : "ds-tag";
+        return `<span class="${className}">${escapeHtml(label)}</span>`;
+      })
       .join("");
     tagsEl.classList.remove("hidden");
   }
