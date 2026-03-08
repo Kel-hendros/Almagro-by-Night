@@ -345,3 +345,116 @@
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* ── Character Chip ── */
+
+.abn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-elevated);
+  color: var(--theme-text-primary);
+  border-radius: 999px;
+  padding: 3px 10px 3px 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+  font-family: inherit;
+  font-size: 0.8rem;
+  max-width: 100%;
+}
+
+.abn-chip:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, var(--theme-border-divider));
+}
+
+.abn-chip.is-selected {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme-accent) 35%, transparent);
+}
+
+.abn-chip.is-selected .abn-chip-avatar {
+  border-color: color-mix(in srgb, var(--theme-text-on-accent, #fff) 30%, transparent);
+}
+
+.abn-chip.is-selected .abn-chip-avatar-fallback,
+.abn-chip.is-selected .abn-chip-name {
+  color: var(--theme-text-on-accent, #fff);
+}
+
+.abn-chip--readonly {
+  cursor: default;
+}
+
+.abn-chip--readonly:hover {
+  border-color: var(--theme-border-divider);
+}
+
+/* Status variants */
+.abn-chip--pending {
+  border-color: color-mix(in srgb, var(--theme-accent) 55%, var(--theme-border-divider));
+}
+
+.abn-chip--associated {
+  border-color: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-border-divider));
+}
+
+.abn-chip--opened {
+  border-color: color-mix(in srgb, var(--theme-success, #4caf50) 50%, var(--theme-border-divider));
+}
+
+/* Avatar */
+.abn-chip-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.abn-chip-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.abn-chip-avatar-fallback {
+  font-size: 0.66rem;
+  color: var(--theme-text-secondary);
+  font-weight: 600;
+}
+
+.abn-chip-name {
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.abn-chip-status {
+  opacity: 0.7;
+  font-size: 0.64rem;
+}
+
+.abn-chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--theme-text-tertiary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 2px;
+  margin-left: -2px;
+  transition: color 0.15s;
+}
+
+.abn-chip-remove:hover {
+  color: var(--theme-text-primary);
+}

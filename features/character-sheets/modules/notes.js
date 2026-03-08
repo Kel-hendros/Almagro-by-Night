@@ -324,34 +324,11 @@
 
   function openNoteViewer(noteId) {
     const sharedNotes = noteScreen();
-    const note = findNoteById(noteId);
-    if (!sharedNotes || !note) return;
+    if (!sharedNotes?.showForPlayer) return;
 
-    sharedNotes.openViewer({
-      note,
-      title: note.title || "Nota",
-      subtitle: (currentNote) => buildNoteSubtitle(currentNote),
-      tags: Array.isArray(note.tags) ? note.tags : [],
-      sequence: getCurrentViewerSequence(),
-      onNavigate: (nextId) => {
-        if (!nextId) return;
-        openNoteViewer(nextId);
-      },
-      onEdit: () => openNoteForm(note.id),
-      onToggleArchive: async (row, nextArchived) => {
-        const ok = await archiveNote(row, nextArchived);
-        if (!ok) return;
-        await refresh();
-        return true;
-      },
-      onDelete: async (row) => {
-        const ok = global.confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.");
-        if (!ok) return;
-        const removed = await deleteNote(row);
-        if (!removed) return;
-        await refresh();
-        global.ABNShared?.documentScreen?.close?.();
-      },
+    sharedNotes.showForPlayer({
+      noteId,
+      onSaved: () => refresh(),
     });
   }
 

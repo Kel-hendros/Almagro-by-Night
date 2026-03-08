@@ -55,6 +55,18 @@
       .trim();
   }
 
+  function formatNoteDate(isoStr) {
+    if (!isoStr) return "";
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "Editada hoy";
+    if (diffDays === 1) return "Editada ayer";
+    if (diffDays < 30) return `Editada hace ${diffDays} días`;
+    const mn = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    return `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
   function buildFormMarkup({ note }) {
     const title = note?.title || "";
     const tags = Array.isArray(note?.tags) ? note.tags.join(", ") : "";
@@ -357,10 +369,150 @@
     return api;
   }
 
+  async function showForPlayer({ noteId, onSaved, onClosed } = {}) {
+    if (!noteId) return;
+
+    const supabase = global.supabase;
+    if (!supabase) return;
+
+    const { data, error } = await supabase.rpc("check_note_access", {
+      p_note_id: noteId,
+    });
+
+    if (error) {
+      console.error("check_note_access error:", error.message);
+      await (global.ABNShared?.modal?.alert?.(
+        "No se pudo verificar el acceso a la nota.",
+        { title: "Error" },
+      ) || Promise.resolve());
+      return;
+    }
+
+    const access = data?.access;
+
+    if (access === "denied") {
+      const reason = data?.reason || "unknown";
+      const messages = {
+        not_authenticated: "Debes iniciar sesión para ver notas.",
+        no_player_profile: "No tienes perfil de jugador.",
+        not_found: "Esta nota no existe o fue eliminada.",
+        not_owner: "No tienes acceso a esta nota.",
+        not_participant: "No eres parte de esta crónica.",
+      };
+      await (global.ABNShared?.modal?.alert?.(
+        messages[reason] || "No tienes acceso a esta nota.",
+        { title: "Acceso denegado" },
+      ) || Promise.resolve());
+      return;
+    }
+
+    const noteData = data?.note;
+    if (!noteData) return;
+
+    const note = {
+      id: noteData.id,
+      title: noteData.title || "Sin título",
+      body: noteData.body_markdown || "",
+      tags: Array.isArray(noteData.tags) ? noteData.tags : [],
+      archived: Boolean(noteData.is_archived),
+      createdAt: noteData.created_at,
+      updatedAt: noteData.updated_at,
+    };
+
+    if (access === "narrator") {
+      const ownerName = data.owner_name || "Jugador";
+      openViewer({
+        note,
+        title: note.title,
+        subtitle: `Nota de ${ownerName}`,
+        tags: note.tags,
+        onClosed: () => {
+          if (typeof onClosed === "function") onClosed(note);
+        },
+      });
+      return;
+    }
+
+    if (access === "owner") {
+      const chronicleId = data.chronicle_id;
+      const playerId = data.player_id;
+
+      openViewer({
+        note,
+        title: note.title,
+        subtitle: () => formatNoteDate(note.updatedAt || note.createdAt),
+        tags: note.tags,
+        onEdit: () => {
+          openForm({
+            note,
+            title: "Editar Nota",
+            persistence: {
+              type: "chronicle-note",
+              supabase,
+              chronicleId,
+              playerId,
+              errorMessagePrefix: "Error al guardar",
+            },
+            onSaved: async ({ noteId: savedId }) => {
+              if (typeof onSaved === "function") onSaved();
+              if (savedId) {
+                showForPlayer({ noteId: savedId, onSaved, onClosed });
+              }
+            },
+            onCancel: (currentNote) => {
+              if (currentNote?.id) {
+                showForPlayer({ noteId: currentNote.id, onSaved, onClosed });
+              }
+            },
+          });
+        },
+        onToggleArchive: async (row, nextArchived) => {
+          const { error: archErr } = await supabase
+            .from("chronicle_notes")
+            .update({
+              is_archived: nextArchived,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", note.id);
+
+          if (archErr) {
+            global.alert("Error al archivar: " + archErr.message);
+            return false;
+          }
+          note.archived = nextArchived;
+          if (typeof onSaved === "function") onSaved();
+          return true;
+        },
+        onDelete: async () => {
+          const ok = await (global.ABNShared?.modal?.confirm?.(
+            "¿Eliminar esta nota? Esta acción no se puede deshacer.",
+          ) ?? global.confirm("¿Eliminar esta nota? Esta acción no se puede deshacer."));
+          if (!ok) return;
+
+          const { error: delErr } = await supabase
+            .from("chronicle_notes")
+            .delete()
+            .eq("id", note.id);
+
+          if (delErr) {
+            global.alert("Error al eliminar: " + delErr.message);
+            return;
+          }
+          documentScreen()?.close();
+          if (typeof onSaved === "function") onSaved();
+        },
+        onClosed: () => {
+          if (typeof onClosed === "function") onClosed(note);
+        },
+      });
+    }
+  }
+
   root.noteScreen = {
     openViewer,
     openForm,
     parseTags,
     toPlainText,
+    showForPlayer,
   };
 })(window);

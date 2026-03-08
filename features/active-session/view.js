@@ -167,15 +167,16 @@
                   : status === "associated"
                     ? "asociado"
                     : "pendiente";
-                return `
-                  <span class="as-delivery-chip ${isOpened ? "opened" : status === "associated" ? "associated" : "pending"}">
-                    ${escapeHtml(delivery.recipient?.name || "Jugador")}
-                    <small>${statusLabel}</small>
-                    <button type="button" class="as-delivery-remove" data-delivery-id="${escapeHtml(
-                      delivery.id,
-                    )}" title="Quitar asociación">×</button>
-                  </span>
-                `;
+                return global.ABNCharacterChip
+                  ? global.ABNCharacterChip.buildChipMarkup(delivery.recipient || delivery, {
+                      removable: true,
+                      removeDataAttr: { key: "data-delivery-id", value: delivery.id },
+                      status: isOpened ? "opened" : status === "associated" ? "associated" : "pending",
+                      statusLabel,
+                    })
+                  : `<span class="abn-chip abn-chip--${status}">${escapeHtml(
+                      delivery.recipient?.name || "Jugador",
+                    )}</span>`;
               })
               .join("")
           : '<span class="muted">Sin destinatarios.</span>';

@@ -15,6 +15,7 @@
 
   let lists = {};
   let modalTemplate = null;
+  let currentTemplateMeta = { readonly: false, canDelete: false, name: "" };
 
   // --- Initialization ---
   async function init() {
@@ -154,7 +155,14 @@
     sorted.forEach((tpl) => {
       const card = document.createElement("div");
       const isSystem = !!tpl.is_system;
-      card.className = "ct-card" + (isSystem ? " ct-card--system" : "");
+      card.className =
+        "ct-card ct-card--interactive" + (isSystem ? " ct-card--system" : "");
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute(
+        "aria-label",
+        `${isSystem ? "Ver" : "Editar"} plantilla ${tpl.name || ""}`.trim()
+      );
 
       const tags = Array.isArray(tpl.data?.tags) ? tpl.data.tags : [];
       const tagsHtml = tags.length
@@ -165,45 +173,22 @@
         ? '<span class="ct-template-type ct-template-type--system">Sistema</span>'
         : '<span class="ct-template-type">PNJ</span>';
 
-      const actionsHtml = isSystem
-        ? `<div class="ct-card-actions">
-          <button class="btn btn--ghost btn-view-template" data-id="${tpl.id}">Ver</button>
-        </div>`
-        : `<div class="ct-card-actions">
-          <button class="btn btn--ghost btn-edit-template" data-id="${tpl.id}">Editar</button>
-          <button class="btn btn--danger btn-delete-template" data-id="${tpl.id}">Eliminar</button>
-        </div>`;
-
       card.innerHTML = `
         <div class="ct-card-header">
           <h3>${escapeHtml(tpl.name)}</h3>
           ${typeBadge}
         </div>
         <div class="ct-decor-tags">${tagsHtml}</div>
-        ${actionsHtml}
       `;
 
-      if (isSystem) {
-        card.querySelector(".btn-view-template")?.addEventListener("click", () => {
-          openTemplateModal(tpl, { readonly: true });
-        });
-      } else {
-        card.querySelector(".btn-edit-template")?.addEventListener("click", () => {
-          openTemplateModal(tpl);
-        });
-
-        card
-          .querySelector(".btn-delete-template")
-          ?.addEventListener("click", async () => {
-            if (
-              confirm(
-                `¿Eliminar plantilla "${tpl.name}"? Esta acción no se puede deshacer.`
-              )
-            ) {
-              await deleteTemplate(tpl.id);
-            }
-          });
-      }
+      const openCard = () => openTemplateModal(tpl, { readonly: isSystem });
+      card.addEventListener("click", openCard);
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openCard();
+        }
+      });
 
       lists.templates.appendChild(card);
     });
@@ -240,6 +225,11 @@
 
     // Read-only class toggle
     modalInner.classList.toggle("ct-modal--readonly", readonly);
+    currentTemplateMeta = {
+      readonly,
+      canDelete: !!(tpl && tpl.id && !readonly && !tpl.is_system),
+      name: tpl?.name || "",
+    };
 
     currentTemplateId = tpl ? tpl.id : null;
     document.getElementById("tpl-id").value = currentTemplateId || "";
@@ -258,6 +248,12 @@
     // Show duplicate button only when viewing an existing template
     const dupBtn = document.getElementById("btn-duplicate-template");
     if (dupBtn) dupBtn.classList.toggle("hidden", !tpl);
+
+    const deleteBtn = document.getElementById("btn-delete-template");
+    if (deleteBtn) {
+      deleteBtn.classList.toggle("hidden", !currentTemplateMeta.canDelete);
+      deleteBtn.textContent = "Eliminar";
+    }
 
     // Change cancel button text
     const cancelBtn = document.getElementById("btn-cancel-template");
@@ -540,6 +536,17 @@
 
     // Open as a new editable template (no id = insert on save)
     openTemplateModal(fakeTpl);
+  }
+
+  async function handleDeleteCurrentTemplate() {
+    if (!currentTemplateId || !currentTemplateMeta.canDelete) return;
+    const confirmed = confirm(
+      `¿Eliminar plantilla "${currentTemplateMeta.name}"? Esta acción no se puede deshacer.`
+    );
+    if (!confirmed) return;
+
+    modalTemplate?.classList.add("hidden");
+    await deleteTemplate(currentTemplateId);
   }
 
   // =============================================
@@ -933,6 +940,13 @@
     if (btnDuplicate) {
       btnDuplicate.addEventListener("click", () => {
         duplicateCurrentTemplate();
+      });
+    }
+
+    const btnDelete = document.getElementById("btn-delete-template");
+    if (btnDelete) {
+      btnDelete.addEventListener("click", () => {
+        handleDeleteCurrentTemplate();
       });
     }
   }

@@ -164,10 +164,10 @@
 }
 
 .doc-view-card {
-  border: 1px solid var(--theme-border-divider, var(--ui-border, #4d4d54));
-  border-radius: 12px;
-  background: var(--theme-bg-surface, var(--ui-surface, #27262d));
-  padding: 16px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;

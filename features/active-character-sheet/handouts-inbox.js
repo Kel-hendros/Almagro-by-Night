@@ -51,13 +51,8 @@
 
   function openRevelationView(payload) {
     const rs = global.ABNShared?.revelationScreen;
-    if (!rs) return;
-    rs.openView({
-      title: payload?.title,
-      bodyMarkdown: payload?.bodyMarkdown,
-      imageUrl: payload?.imageUrl,
-      tags: payload?.tags,
-    });
+    if (!rs || !payload?.revelationId) return;
+    rs.showForPlayer({ revelationId: payload.revelationId });
   }
 
   function showToast(payload) {
@@ -73,7 +68,9 @@
     if (toastTimer) clearTimeout(toastTimer);
 
     viewBtn.onclick = () => {
-      openRevelationView(payload);
+      if (payload?.revelationId) {
+        openRevelationView(payload);
+      }
       hideToast();
     };
     dismissBtn.onclick = () => {
@@ -85,7 +82,7 @@
 
   function onMessage(event) {
     if (event.data?.type === "abn-open-revelation-view") {
-      openRevelationView(event.data);
+      openRevelationView({ revelationId: event.data.revelationId });
       return;
     }
     if (event.data?.type === "abn-revelation-toast-show") {
@@ -98,7 +95,10 @@
           event.origin && event.origin !== "null" ? event.origin : "*"
         );
       } catch (_error) {}
-      showToast(event.data);
+      showToast({
+        revelationId: event.data.revelationId,
+        title: event.data.title,
+      });
     }
   }
 

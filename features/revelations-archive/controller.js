@@ -54,7 +54,7 @@
     if (!api) return;
 
     const [recipientCharacters, handouts] = await Promise.all([
-      api.getRecipientCharacters(state.chronicleId, state.currentPlayerId),
+      (api.getCachedRecipientCharacters || api.getRecipientCharacters)(state.chronicleId, state.currentPlayerId),
       service().listHandoutsByChronicle(state.chronicleId),
     ]);
     state.availableRecipientCharacters = recipientCharacters || [];
@@ -76,7 +76,7 @@
   }
 
   async function handleNarratorListClick(event) {
-    const revokeBtn = event.target.closest(".ra-delivery-remove");
+    const revokeBtn = event.target.closest(".abn-chip-remove");
     if (revokeBtn?.dataset.deliveryId) {
       const ok = await global.ABNShared?.modal?.confirm?.(
         "¿Quitar esta revelación del archivo de este jugador?",
@@ -109,46 +109,9 @@
     const card = event.target.closest("[data-handout-id]");
     if (!card?.dataset.handoutId) return;
 
-    const handout = findHandoutById(card.dataset.handoutId);
-    if (!handout) return;
-
-    const rs = revelationScreen();
-    if (!rs) return;
-    rs.openView({
-      title: handout.title || "",
-      bodyMarkdown: handout.body_markdown || "",
-      imageUrl: handout.image_signed_url || "",
-      tags: handout.tags || [],
-      deliveries: handout.deliveries || [],
-      showDeliveries: true,
-      onRevealAgain: async () => {
-        const { count, error } = await service().rebroadcastHandout(handout.id);
-        if (error) {
-          alert(error.message || "No se pudo revelar nuevamente.");
-          return;
-        }
-        if (!count) {
-          await (global.ABNShared?.modal?.alert?.(
-            "Ningún personaje puede ver esta revelación todavía.",
-            { title: "Sin personajes asociados" }
-          ) || Promise.resolve());
-          return;
-        }
-        await loadNarratorData();
-        await (global.ABNShared?.modal?.alert?.(
-          "La revelación fue enviada otra vez a sus personajes asociados.",
-          { title: "Revelación reenviada" }
-        ) || Promise.resolve());
-      },
-      onEdit: () => {
-        rs.close();
-        rs.openEdit({
-          chronicleId: state.chronicleId,
-          currentPlayerId: state.currentPlayerId,
-          handout,
-          onSaved: onSavedCallback,
-        });
-      },
+    revelationScreen()?.showForPlayer({
+      revelationId: card.dataset.handoutId,
+      onSaved: () => loadNarratorData(),
     });
   }
 
@@ -157,14 +120,9 @@
     if (!card?.dataset.deliveryId) return;
 
     const row = findDeliveryById(card.dataset.deliveryId);
-    if (!row?.handout) return;
+    if (!row?.handout?.id) return;
 
-    revelationScreen()?.openView({
-      title: row.handout.title,
-      bodyMarkdown: row.handout.body_markdown,
-      imageUrl: row.handout.image_signed_url,
-      tags: row.handout.tags,
-    });
+    revelationScreen()?.showForPlayer({ revelationId: row.handout.id });
   }
 
   function bindActions() {

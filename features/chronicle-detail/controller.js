@@ -150,10 +150,7 @@
       const card = document.createElement("div");
       card.className = "cd-recap-card";
       card.dataset.deliveryId = del.id;
-      card.dataset.handoutTitle = handout.title || "";
-      card.dataset.handoutBody = handout.body_markdown || "";
-      card.dataset.handoutImage = handout.image_signed_url || "";
-      card.dataset.handoutTags = JSON.stringify(handout.tags || []);
+      card.dataset.revelationId = handout.id || "";
       card.innerHTML = `
         <div class="cd-recap-info">
           <span class="cd-recap-title">${escapeHtml(handout.title || "Sin título")}</span>
@@ -174,78 +171,21 @@
     const rs = revelationScreen();
     if (!rs) return;
 
-    // Narrator card click → open edit
+    const onSaved = () => loadRevelacionesList(
+      revelacionState.chronicleId,
+      revelacionState.currentPlayerId,
+      revelacionState.isNarrator,
+    );
+
     const narratorCard = event.target.closest("[data-handout-id]");
-    if (narratorCard?.dataset.handoutId && revelacionState.isNarrator) {
-      const handoutsApi = global.ABNShared?.handouts;
-      if (!handoutsApi) return;
-      handoutsApi.listHandoutsByChronicle(revelacionState.chronicleId).then((handouts) => {
-        const handout = (handouts || []).find((h) => h.id === narratorCard.dataset.handoutId);
-        if (!handout) return;
-        const onSaved = () => loadRevelacionesList(
-          revelacionState.chronicleId,
-          revelacionState.currentPlayerId,
-          revelacionState.isNarrator,
-        );
-        rs.openView({
-          title: handout.title || "",
-          bodyMarkdown: handout.body_markdown || "",
-          imageUrl: handout.image_signed_url || "",
-          tags: handout.tags || [],
-          deliveries: handout.deliveries || [],
-          showDeliveries: true,
-          onRevealAgain: async () => {
-            const { count, error } =
-              (await handoutsApi.rebroadcastHandout?.(handout.id)) || {
-                count: 0,
-                error: new Error("Acción no disponible."),
-              };
-            if (error) {
-              alert(error.message || "No se pudo revelar nuevamente.");
-              return;
-            }
-            if (!count) {
-              await (global.ABNShared?.modal?.alert?.(
-                "Ningún personaje puede ver esta revelación todavía.",
-                { title: "Sin personajes asociados" }
-              ) || Promise.resolve());
-              return;
-            }
-            await loadRevelacionesList(
-              revelacionState.chronicleId,
-              revelacionState.currentPlayerId,
-              revelacionState.isNarrator,
-            );
-            await (global.ABNShared?.modal?.alert?.(
-              "La revelación fue enviada otra vez a sus personajes asociados.",
-              { title: "Revelación reenviada" }
-            ) || Promise.resolve());
-          },
-          onEdit: () => {
-            rs.close();
-            rs.openEdit({
-              chronicleId: revelacionState.chronicleId,
-              currentPlayerId: revelacionState.currentPlayerId,
-              handout,
-              onSaved,
-            });
-          },
-        });
-      });
+    if (narratorCard?.dataset.handoutId) {
+      rs.showForPlayer({ revelationId: narratorCard.dataset.handoutId, onSaved });
       return;
     }
 
-    // Player card click → open view
     const playerCard = event.target.closest("[data-delivery-id]");
-    if (playerCard?.dataset.deliveryId) {
-      let tags = [];
-      try { tags = JSON.parse(playerCard.dataset.handoutTags || "[]"); } catch (_e) {}
-      rs.openView({
-        title: playerCard.dataset.handoutTitle || "",
-        bodyMarkdown: playerCard.dataset.handoutBody || "",
-        imageUrl: playerCard.dataset.handoutImage || "",
-        tags,
-      });
+    if (playerCard?.dataset.revelationId) {
+      rs.showForPlayer({ revelationId: playerCard.dataset.revelationId });
     }
   }
 

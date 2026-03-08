@@ -3,6 +3,8 @@
   const REVELATIONS_BUCKET_ID = "revelations-private";
   const PRIVATE_IMAGE_REF_PREFIX = "abn-private://";
   const SIGNED_URL_TTL_SECONDS = 60 * 60;
+  const SIGNED_URL_CACHE_TTL = 45 * 60 * 1000;
+  const SURL_PREFIX = "abn-surl:";
   const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
   const CHRONICLE_STORAGE_LIMIT_REACHED_CODE = "chronicle_storage_limit_reached";
   const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
@@ -153,7 +155,48 @@
     return { error: error || null };
   }
 
+  function getPersistedUrl(ref) {
+    try {
+      const raw = sessionStorage.getItem(SURL_PREFIX + ref);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (Date.now() >= entry.exp) {
+        sessionStorage.removeItem(SURL_PREFIX + ref);
+        return null;
+      }
+      return entry.url;
+    } catch { return null; }
+  }
+
+  function persistUrl(ref, url) {
+    try {
+      sessionStorage.setItem(SURL_PREFIX + ref, JSON.stringify({
+        url, exp: Date.now() + SIGNED_URL_CACHE_TTL,
+      }));
+    } catch { /* storage full */ }
+  }
+
   async function resolveImageSignedUrl(imageRef) {
+    const ref = String(imageRef || "").trim();
+    if (!ref) return "";
+
+    const persisted = getPersistedUrl(ref);
+    if (persisted) return persisted;
+
+    const cache = global.ABNCache;
+    const fetcher = async () => {
+      const url = await fetchSignedUrl(ref);
+      if (url) persistUrl(ref, url);
+      return url;
+    };
+
+    if (cache) {
+      return cache.get(`signed-url:${ref}`, fetcher, { ttl: SIGNED_URL_CACHE_TTL });
+    }
+    return fetcher();
+  }
+
+  async function fetchSignedUrl(imageRef) {
     const supabase = getSupabase();
     const parsed = parsePrivateImageRef(imageRef);
     if (!supabase || !parsed) return "";
@@ -404,7 +447,7 @@
     const ids = rowsWithSigned.map((r) => r.id).filter(Boolean);
     if (!ids.length) return [];
 
-    const recipientCharacters = await getRecipientCharacters(chronicleId, null);
+    const recipientCharacters = await getCachedRecipientCharacters(chronicleId, null);
     const characterByPlayerId = new Map();
     (recipientCharacters || []).forEach((row) => {
       const playerId = String(row?.player_id || "").trim();
@@ -656,9 +699,26 @@
       .sort((a, b) => String(a.character_name).localeCompare(String(b.character_name), "es"));
   }
 
+  async function getCachedRecipientCharacters(chronicleId, excludePlayerId) {
+    const cache = global.ABNCache;
+    if (!cache) return getRecipientCharacters(chronicleId, excludePlayerId);
+    const key = `recipient-chars:${chronicleId}`;
+    const all = await cache.get(key, () => getRecipientCharacters(chronicleId, null), {
+      ttl: 2 * 60 * 1000,
+    });
+    if (!excludePlayerId) return all;
+    return all.filter((row) => row.player_id !== excludePlayerId);
+  }
+
+  function invalidateRecipientCharactersCache(chronicleId) {
+    global.ABNCache?.invalidate?.(`recipient-chars:${chronicleId}`);
+  }
+
   // Kept as `handouts` namespace for compatibility with existing callers.
   root.handouts = {
     getRecipientCharacters,
+    getCachedRecipientCharacters,
+    invalidateRecipientCharactersCache,
     getCurrentPlayerByUserId,
     getChronicleParticipants,
     uploadHandoutImage,

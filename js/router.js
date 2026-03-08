@@ -673,6 +673,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.currentGameId = null;
         window.currentDatasetData = null;
 
+        // Clear persisted signed URL cache
+        try {
+          const keys = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const k = sessionStorage.key(i);
+            if (k && k.startsWith("abn-surl:")) keys.push(k);
+          }
+          keys.forEach((k) => sessionStorage.removeItem(k));
+        } catch { /* ignore */ }
+
         await supabase.auth.signOut();
         window.location.hash = "welcome";
       }

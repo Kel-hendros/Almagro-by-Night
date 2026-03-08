@@ -26,7 +26,12 @@
             <div class="cd-meta-row">
                 <span id="chronicle-narrator" class="cd-narrator">Narrador: —</span>
             </div>
-            <p id="chronicle-description" class="cd-description">Sin descripción</p>
+            <div class="cd-desc-row">
+                <p id="chronicle-description" class="cd-description">Sin descripción</p>
+                <button id="cd-open-active-session" class="btn btn--primary cd-active-session-btn hidden" type="button">
+                    Partida Actual
+                </button>
+            </div>
         </div>
 
         <!-- Tab Bar -->
@@ -76,15 +81,6 @@
                 </div>
 
                 <aside class="cd-summary-side">
-                    <div class="cd-section">
-                        <span class="cd-section-label">SESION ACTIVA</span>
-                        <div class="cd-card">
-                            <button id="cd-open-active-session" class="btn btn--primary hidden" type="button">
-                                Abrir Hub de Sesion
-                            </button>
-                        </div>
-                    </div>
-
                     <div class="cd-section">
                         <span class="cd-section-label">CONTADORES</span>
                         <div class="cd-card cd-count-list">

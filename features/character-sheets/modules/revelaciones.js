@@ -2,6 +2,8 @@
   const BUCKET_ID = "revelations-private";
   const PRIVATE_REF_PREFIX = "abn-private://";
   const SIGNED_URL_TTL = 60 * 60;
+  const SIGNED_URL_CACHE_TTL = 45 * 60 * 1000;
+  const SURL_PREFIX = "abn-surl:";
   const TOAST_AUTO_DISMISS_MS = 20000;
   const REFRESH_POLL_MS = 10000;
 
@@ -46,15 +48,45 @@
     return { bucketId, objectPath };
   }
 
+  function getPersistedUrl(ref) {
+    try {
+      const raw = sessionStorage.getItem(SURL_PREFIX + ref);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (Date.now() >= entry.exp) {
+        sessionStorage.removeItem(SURL_PREFIX + ref);
+        return null;
+      }
+      return entry.url;
+    } catch { return null; }
+  }
+
+  function persistUrl(ref, url) {
+    try {
+      sessionStorage.setItem(SURL_PREFIX + ref, JSON.stringify({
+        url, exp: Date.now() + SIGNED_URL_CACHE_TTL,
+      }));
+    } catch { /* storage full */ }
+  }
+
   async function resolveSignedUrl(imageRef) {
+    const ref = String(imageRef || "").trim();
+    if (!ref) return "";
+
+    const persisted = getPersistedUrl(ref);
+    if (persisted) return persisted;
+
     const supabase = getSupabase();
-    const parsed = parsePrivateImageRef(imageRef);
+    const parsed = parsePrivateImageRef(ref);
     if (!supabase || !parsed) return "";
     const { data, error } = await supabase.storage
       .from(parsed.bucketId)
       .createSignedUrl(parsed.objectPath, SIGNED_URL_TTL);
     if (error) return "";
-    return String(data?.signedUrl || "");
+
+    const url = String(data?.signedUrl || "");
+    if (url) persistUrl(ref, url);
+    return url;
   }
 
   async function fetchDeliveries() {
@@ -158,26 +190,15 @@
 
   function openViewer(row) {
     const h = row.handout || {};
+    const revelationId = h.id;
+    if (!revelationId) return;
+
     const parentInbox = global.parent?.ABNActiveCharacterSheet?.handoutsInbox;
     if (global.parent && global.parent !== global && parentInbox?.openRevelationView) {
-      parentInbox.openRevelationView({
-        title: h.title || "",
-        bodyMarkdown: h.body_markdown || "",
-        imageUrl: h.image_signed_url || "",
-        tags: h.tags || [],
-      });
+      parentInbox.openRevelationView({ revelationId });
       return;
     }
-    parent.postMessage(
-      {
-        type: "abn-open-revelation-view",
-        title: h.title || "",
-        bodyMarkdown: h.body_markdown || "",
-        imageUrl: h.image_signed_url || "",
-        tags: h.tags || [],
-      },
-      "*"
-    );
+    parent.postMessage({ type: "abn-open-revelation-view", revelationId }, "*");
   }
 
   function showParentToast(row) {
@@ -189,10 +210,8 @@
       typeof parentInbox?.showToast === "function"
     ) {
       parentInbox.showToast({
+        revelationId: h.id || "",
         title: h.title || "Nueva revelación",
-        bodyMarkdown: h.body_markdown || "",
-        imageUrl: h.image_signed_url || "",
-        tags: h.tags || [],
       });
       return true;
     }
@@ -360,7 +379,7 @@
       .subscribe();
   }
 
-  async function init(chronicleId) {
+  async function init(chronicleId, ownerUserId) {
     if (!chronicleId) return;
 
     destroy();
@@ -369,15 +388,18 @@
     const supabase = getSupabase();
     if (!supabase) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    // Usar el userId del dueño de la hoja, no el usuario autenticado
+    let targetUserId = ownerUserId;
+    if (!targetUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      targetUserId = user.id;
+    }
 
     const { data: player } = await supabase
       .from("players")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", targetUserId)
       .maybeSingle();
     if (!player?.id) return;
 

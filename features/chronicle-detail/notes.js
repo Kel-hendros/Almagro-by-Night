@@ -188,38 +188,12 @@
 
     async function openNoteReader(noteId) {
       const sharedNotes = noteScreen();
-      if (!sharedNotes) return;
-
-      const note = allNotes.find((row) => row.id === noteId);
-      if (!note) return;
+      if (!sharedNotes?.showForPlayer) return;
 
       currentReaderNoteId = noteId;
-      sharedNotes.openViewer({
-        note,
-        title: note.title,
-        subtitle: () => formatRelativeDate(note.updatedAt || note.createdAt),
-        tags: note.tags || [],
-        sequence: filteredNotes,
-        onNavigate: (nextId) => {
-          if (!nextId) return;
-          void openNoteReader(nextId);
-        },
-        onEdit: () => {
-          openNoteForm(note);
-        },
-        onToggleArchive: async (row, nextArchived) => {
-          const ok = await setNoteArchived(row, nextArchived);
-          if (!ok) return;
-          await refreshNotes();
-          return true;
-        },
-        onDelete: async (row) => {
-          if (!confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.")) return;
-          const ok = await deleteNote(row);
-          if (!ok) return;
-          global.ABNShared?.documentScreen?.close?.();
-          await refreshNotes();
-        },
+      sharedNotes.showForPlayer({
+        noteId,
+        onSaved: () => refreshNotes(),
         onClosed: () => {
           currentReaderNoteId = null;
         },

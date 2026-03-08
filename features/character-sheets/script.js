@@ -408,9 +408,11 @@ if (sheetLoaderModule) {
       updateAll();
 
       // Inicializar revelaciones con la chronicle del personaje
+      // Usar el user_id del dueño de la hoja (no el usuario autenticado)
+      const sheetOwnerUserId = sheet.user_id || user?.id || null;
       const revChronicleId = sheet.chronicle_id || localStorage.getItem("currentChronicleId");
       if (window.ABNSheetRevelaciones && revChronicleId) {
-        window.ABNSheetRevelaciones.init(revChronicleId);
+        window.ABNSheetRevelaciones.init(revChronicleId, sheetOwnerUserId);
       }
 
       const notesApi = window.ABNSheetNotes;
@@ -418,7 +420,7 @@ if (sheetLoaderModule) {
         notesApi.setContext({
           sheetId: id,
           chronicleId: revChronicleId || null,
-          userId: user?.id || null,
+          userId: sheetOwnerUserId,
         });
         void notesApi.refresh?.();
       }

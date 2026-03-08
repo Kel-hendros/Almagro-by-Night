@@ -25,9 +25,8 @@
   function setAccessMode({ isNarrator }) {
     document.getElementById("ra-narrator-panel")?.classList.toggle("hidden", !isNarrator);
     document.getElementById("ra-player-panel")?.classList.toggle("hidden", !!isNarrator);
-    document
-      .getElementById("ra-back-active-session")
-      ?.classList.toggle("hidden", !isNarrator);
+    document.getElementById("ra-back-active-session")?.classList.toggle("hidden", !isNarrator);
+    document.getElementById("ra-open-create")?.classList.toggle("hidden", !isNarrator);
   }
 
   function renderNarratorList(handouts) {
@@ -45,20 +44,18 @@
     host.innerHTML = rows
       .map((item) => {
         const deliveries = Array.isArray(item.deliveries) ? item.deliveries : [];
-        const associatedNames = deliveries
-          .map((delivery) => delivery?.recipient?.character_name || delivery?.recipient?.name || "Personaje")
-          .filter(Boolean);
         const deliveriesHtml = deliveries.length
           ? deliveries
-              .map(
-                (delivery) => `
-                  <span class="ra-delivery-chip associated">
-                    ${escapeHtml(delivery.recipient?.character_name || delivery.recipient?.name || "Personaje")}
-                    <button type="button" class="ra-delivery-remove" data-delivery-id="${escapeHtml(
-                      delivery.id,
-                    )}" title="Quitar asociación">×</button>
-                  </span>
-                `,
+              .map((delivery) =>
+                global.ABNCharacterChip
+                  ? global.ABNCharacterChip.buildChipMarkup(delivery.recipient || delivery, {
+                      removable: true,
+                      selected: true,
+                      removeDataAttr: { key: "data-delivery-id", value: delivery.id },
+                    })
+                  : `<span class="abn-chip abn-chip--associated">${escapeHtml(
+                      delivery.recipient?.character_name || delivery.recipient?.name || "Personaje",
+                    )}</span>`,
               )
               .join("")
           : '<span class="muted">Sin destinatarios.</span>';

@@ -10,7 +10,7 @@
   let formSessionSeq = 0;
   let lightboxState = createLightboxState();
 
-  let currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onClosed: null };
+  let currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onDelete: null, onClosed: null };
   let formState = createEmptyFormState();
   let isRevealingAgain = false;
 
@@ -128,45 +128,26 @@
   }
 
   function buildRecipientChipMarkup(row, { readonly = false, selected = false } = {}) {
-    const characterName = String(
-      row?.character_name || row?.recipient?.character_name || row?.player_name || row?.recipient?.name || "Personaje"
-    ).trim() || "Personaje";
-    const avatarUrl = String(row?.avatar_url || row?.recipient?.avatar_url || "").trim();
-    const avatar = avatarUrl
-      ? `<img class="rs-recipient-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(characterName)}">`
-      : `<span class="rs-recipient-avatar-fallback">${escapeHtml(characterName.charAt(0).toUpperCase())}</span>`;
-
-    if (readonly) {
-      return `
-        <span
-          class="rs-recipient-chip rs-recipient-chip--readonly"
-          title="${escapeHtml(characterName)}"
-        >
-          <span class="rs-recipient-avatar">${avatar}</span>
-          <span class="rs-recipient-name">${escapeHtml(characterName)}</span>
-        </span>
-      `;
+    const chip = global.ABNCharacterChip;
+    if (chip) {
+      return chip.buildChipMarkup(row, {
+        readonly,
+        selected,
+        dataAttrs: !readonly ? {
+          "data-player-id": row.player_id,
+          "data-character-id": row.character_sheet_id,
+        } : {},
+      });
     }
-
-    return `
-      <button
-        type="button"
-        class="rs-recipient-chip${selected ? " is-selected" : ""}"
-        data-player-id="${escapeHtml(row.player_id)}"
-        data-character-id="${escapeHtml(row.character_sheet_id)}"
-        aria-pressed="${selected ? "true" : "false"}"
-        title="${escapeHtml(characterName)}"
-      >
-        <span class="rs-recipient-avatar">${avatar}</span>
-        <span class="rs-recipient-name">${escapeHtml(characterName)}</span>
-      </button>
-    `;
+    // Fallback if chip component not loaded
+    const name = String(row?.character_name || row?.player_name || "Personaje").trim();
+    return `<span title="${escapeHtml(name)}">${escapeHtml(name)}</span>`;
   }
 
   function viewDeliveriesMarkup(deliveries) {
     const rows = Array.isArray(deliveries) ? deliveries : [];
     const chipsHtml = rows.length
-      ? rows.map((delivery) => buildRecipientChipMarkup(delivery, { readonly: true })).join("")
+      ? rows.map((delivery) => buildRecipientChipMarkup(delivery, { readonly: true, selected: true })).join("")
       : '<p class="rs-view-recipients-empty">Ningún personaje puede ver esta revelación.</p>';
 
     return `
@@ -214,13 +195,15 @@
       ? buildViewSectionMarkup({
           id: "image",
           title: "Imagen",
-          icon: "image",
           isOpen: openSection === "image",
           content: `
             <div class="rs-view-image-wrap">
+              <div class="rs-image-loader" id="rs-image-loader">
+                <div class="rs-image-loader-spinner"></div>
+              </div>
               <img
                 src="${escapeHtml(url)}"
-                class="rs-view-image rs-view-image--interactive"
+                class="rs-view-image rs-view-image--interactive rs-view-image--loading"
                 alt="Imagen de revelación"
                 title="Abrir imagen"
                 tabindex="0"
@@ -234,7 +217,6 @@
     const descriptionSectionHtml = buildViewSectionMarkup({
       id: "description",
       title: "Descripción",
-      icon: "scroll-text",
       isOpen: openSection === "description",
       content: `
         <div class="rs-desc-body">
@@ -344,7 +326,7 @@
     setFormMsg("");
     syncImageControls();
 
-    currentFormHost?.querySelectorAll(".rs-recipient-chip").forEach((node) => {
+    currentFormHost?.querySelectorAll(".abn-chip").forEach((node) => {
       node.classList.remove("is-selected");
       node.setAttribute("aria-pressed", "false");
     });
@@ -395,7 +377,7 @@
     }
 
     const selected = new Set((recipientPlayerIds || []).map((id) => String(id)));
-    currentFormHost?.querySelectorAll(".rs-recipient-chip").forEach((node) => {
+    currentFormHost?.querySelectorAll(".abn-chip").forEach((node) => {
       const isSel = selected.has(String(node.dataset.playerId || ""));
       node.classList.toggle("is-selected", isSel);
       node.setAttribute("aria-pressed", isSel ? "true" : "false");
@@ -406,7 +388,7 @@
     if (!currentFormHost) return [];
     return Array.from(
       new Set(
-        Array.from(currentFormHost.querySelectorAll(".rs-recipient-chip.is-selected"))
+        Array.from(currentFormHost.querySelectorAll(".abn-chip.is-selected"))
           .map((node) => node.dataset.playerId || "")
           .filter(Boolean)
       )
@@ -644,7 +626,7 @@
   function bindFormListeners() {
     const recipients = getFormEl("#rs-recipients");
     recipients?.addEventListener("click", (event) => {
-      const chip = event.target.closest(".rs-recipient-chip");
+      const chip = event.target.closest(".abn-chip");
       if (!chip) return;
       const next = !chip.classList.contains("is-selected");
       chip.classList.toggle("is-selected", next);
@@ -941,6 +923,20 @@
     const image = currentScreen?.getBody?.()?.querySelector(".rs-view-image--interactive");
     if (!image) return;
 
+    const loader = currentScreen?.getBody?.()?.querySelector("#rs-image-loader");
+
+    function onImageReady() {
+      image.classList.remove("rs-view-image--loading");
+      if (loader) loader.classList.add("hidden");
+    }
+
+    if (image.complete && image.naturalWidth > 0) {
+      onImageReady();
+    } else {
+      image.addEventListener("load", onImageReady, { once: true });
+      image.addEventListener("error", onImageReady, { once: true });
+    }
+
     const open = () => openImageLightbox(image.getAttribute("src"));
     image.addEventListener("click", open);
     image.addEventListener("keydown", (event) => {
@@ -1061,7 +1057,7 @@
     }
 
     const onClosedCb = currentCallbacks.onClosed;
-    currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onClosed: null };
+    currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onDelete: null, onClosed: null };
     if (typeof onClosedCb === "function") onClosedCb({ reason });
   }
 
@@ -1152,7 +1148,7 @@
 
     const api = handouts();
     if (api) {
-      const recipients = await api.getRecipientCharacters(chronicleId, currentPlayerId);
+      const recipients = await (api.getCachedRecipientCharacters || api.getRecipientCharacters)(chronicleId, null);
       renderRecipients(recipients);
     }
 
@@ -1196,7 +1192,7 @@
 
     const api = handouts();
     if (api) {
-      const recipients = await api.getRecipientCharacters(chronicleId, currentPlayerId);
+      const recipients = await (api.getCachedRecipientCharacters || api.getRecipientCharacters)(chronicleId, null);
       renderRecipients(recipients);
     }
 
@@ -1223,6 +1219,7 @@
     showDeliveries,
     onEdit,
     onRevealAgain,
+    onDelete,
     onClosed,
   } = {}) {
     const ds = documentScreen();
@@ -1232,32 +1229,42 @@
       onSaved: null,
       onEdit: onEdit || null,
       onRevealAgain: onRevealAgain || null,
+      onDelete: onDelete || null,
       onClosed: onClosed || null,
     };
     isRevealingAgain = false;
 
     const actions = [];
     const footerActions = [];
+    if (typeof onDelete === "function") {
+      footerActions.push({
+        id: "delete",
+        kind: "button",
+        variant: "ghost",
+        danger: true,
+        label: "Eliminar",
+        onClick: () => onDelete(),
+      });
+    }
+    if (typeof onEdit === "function") {
+      footerActions.push({
+        id: "edit",
+        kind: "button",
+        variant: "secondary",
+        label: "Editar",
+        onClick: () => onEdit(),
+      });
+    }
     if (typeof onRevealAgain === "function") {
       footerActions.push({
         id: "reveal-again",
         kind: "button",
-        variant: "ghost",
+        variant: "primary",
         label: "Revelar de nuevo",
         disabled: isRevealingAgain || !(Array.isArray(deliveries) && deliveries.length),
         onClick: () => {
           void handleRevealAgain();
         },
-      });
-    }
-    if (typeof onEdit === "function") {
-      actions.push({
-        id: "edit",
-        kind: "icon",
-        icon: "pencil",
-        title: "Editar",
-        ariaLabel: "Editar",
-        onClick: () => onEdit(),
       });
     }
 
@@ -1283,7 +1290,7 @@
         isRevealingAgain = false;
         closeImageLightbox();
         const onClosedCb = currentCallbacks.onClosed;
-        currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onClosed: null };
+        currentCallbacks = { onSaved: null, onEdit: null, onRevealAgain: null, onDelete: null, onClosed: null };
         if (typeof onClosedCb === "function") onClosedCb({ reason });
       },
     });
@@ -1306,10 +1313,141 @@
     return Boolean(currentScreen);
   }
 
+  async function showForPlayer({ revelationId, onSaved, onClosed } = {}) {
+    if (!revelationId) return;
+
+    const supabase = global.supabase;
+    if (!supabase) return;
+
+    const api = handouts();
+
+    const { data, error } = await supabase.rpc("check_revelation_access", {
+      p_revelation_id: revelationId,
+    });
+
+    if (error) {
+      console.error("check_revelation_access error:", error.message);
+      await (global.ABNShared?.modal?.alert?.(
+        "No se pudo verificar el acceso a la revelación.",
+        { title: "Error" },
+      ) || Promise.resolve());
+      return;
+    }
+
+    const access = data?.access;
+
+    if (access === "denied") {
+      const reason = data?.reason || "unknown";
+      const messages = {
+        not_authenticated: "Debes iniciar sesión para ver revelaciones.",
+        no_player_profile: "No tienes perfil de jugador.",
+        not_found: "Esta revelación no existe o fue eliminada.",
+        not_revealed: "No tienes acceso a esta revelación.",
+        not_participant: "No eres parte de esta crónica.",
+      };
+      await (global.ABNShared?.modal?.alert?.(
+        messages[reason] || "No tienes acceso a esta revelación.",
+        { title: "Acceso denegado" },
+      ) || Promise.resolve());
+      return;
+    }
+
+    const rev = data?.revelation;
+    if (!rev) return;
+
+    let imageUrl = "";
+    if (rev.image_url && api?.resolveImageSignedUrl) {
+      imageUrl = await api.resolveImageSignedUrl(rev.image_url);
+    }
+
+    if (access === "player") {
+      openView({
+        title: rev.title || "",
+        bodyMarkdown: rev.body_markdown || "",
+        imageUrl,
+        tags: rev.tags || [],
+        onClosed,
+      });
+      return;
+    }
+
+    if (access === "narrator") {
+      const chronicleId = data.chronicle_id;
+      const currentPlayerId = data.player_id;
+      const deliveries = data.deliveries || [];
+
+      openView({
+        title: rev.title || "",
+        bodyMarkdown: rev.body_markdown || "",
+        imageUrl,
+        tags: rev.tags || [],
+        deliveries,
+        showDeliveries: true,
+        onRevealAgain: async () => {
+          if (!api?.rebroadcastHandout) return;
+          const { count, error: rbErr } = await api.rebroadcastHandout(revelationId);
+          if (rbErr) {
+            alert(rbErr.message || "No se pudo revelar nuevamente.");
+            return;
+          }
+          if (!count) {
+            await (global.ABNShared?.modal?.alert?.(
+              "Ningún personaje puede ver esta revelación todavía.",
+              { title: "Sin personajes asociados" },
+            ) || Promise.resolve());
+            return;
+          }
+          if (typeof onSaved === "function") onSaved();
+          await (global.ABNShared?.modal?.alert?.(
+            "La revelación fue enviada otra vez a sus personajes asociados.",
+            { title: "Revelación reenviada" },
+          ) || Promise.resolve());
+        },
+        onEdit: () => {
+          close();
+          const handout = {
+            id: rev.id,
+            chronicle_id: rev.chronicle_id,
+            title: rev.title,
+            body_markdown: rev.body_markdown,
+            image_url: rev.image_url,
+            tags: rev.tags || [],
+            deliveries,
+            created_by_player_id: rev.created_by_player_id,
+            created_at: rev.created_at,
+          };
+          openEdit({
+            chronicleId,
+            currentPlayerId,
+            handout,
+            onSaved,
+            onClosed,
+          });
+        },
+        onDelete: async () => {
+          const ok = await global.ABNShared?.modal?.confirm?.(
+            "¿Eliminar esta revelación? Esta acción no se puede deshacer.",
+          );
+          if (!ok) return;
+          if (!api?.deleteHandout) return;
+          const { error: delErr } = await api.deleteHandout(revelationId);
+          if (delErr) {
+            alert(delErr.message || "No se pudo eliminar la revelación.");
+            return;
+          }
+          close();
+          if (typeof onSaved === "function") onSaved();
+        },
+        onClosed,
+      });
+    }
+  }
+
   root.revelationScreen = {
     openCreate,
     openEdit,
     openView,
+    showForPlayer,
     close,
     isOpen,
   };
