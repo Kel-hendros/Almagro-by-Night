@@ -212,6 +212,12 @@
   function bindRevelacionListeners() {
     if (revelacionState.listenersBound) return;
 
+    document.getElementById("cd-open-revelaciones-archive")?.addEventListener("click", () => {
+      if (!revelacionState.chronicleId) return;
+      window.location.hash =
+        `document-archive?id=${encodeURIComponent(revelacionState.chronicleId)}&type=revelation`;
+    });
+
     document.getElementById("cd-add-revelacion")?.addEventListener("click", () => {
       revelationScreen()?.openCreate({
         chronicleId: revelacionState.chronicleId,

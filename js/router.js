@@ -122,6 +122,7 @@ function setActiveSidebarItem(baseHash) {
     chronicles: "menu-chronicles",
     chronicle: "menu-chronicles",
     "active-session": "menu-chronicles",
+    "document-archive": "menu-chronicles",
     "revelations-archive": "menu-chronicles",
     "character-sheets": "menu-chars",
     "active-character-sheet": "menu-chars",
@@ -353,6 +354,7 @@ const routes = {
   "character-sheets": "fragments/character-sheets.html",
   "active-character-sheet": "fragments/active-character-sheet.html",
   "active-session": "fragments/active-session.html",
+  "document-archive": "fragments/document-archive.html",
   "revelations-archive": "fragments/revelations-archive.html",
   "resource-manager": "fragments/resource-manager.html",
   "active-encounter": "fragments/active-encounter.html",
@@ -424,6 +426,12 @@ async function loadRoute(force = false) {
   // Redirect resolution (compute target hash without causing loops)
   let targetHash = rawHash; // Keep full hash for redirect comparison
 
+  if (baseHash === "revelations-archive") {
+    const params = new URLSearchParams(queryString || "");
+    if (!params.get("type")) params.set("type", "revelation");
+    targetHash = `document-archive?${params.toString()}`;
+  }
+
   // Previously redirected authenticated users from 'welcome' to 'games'.
   // Now we want them to see the home screen on 'welcome'.
   if (
@@ -433,6 +441,7 @@ async function loadRoute(force = false) {
       baseHash === "chronicles" ||
       baseHash === "chronicle" ||
       baseHash === "active-session" ||
+      baseHash === "document-archive" ||
       baseHash === "revelations-archive" ||
       baseHash === "settings" ||
       baseHash === "active-character-sheet")
@@ -486,6 +495,17 @@ async function loadRoute(force = false) {
       window.ABNActiveSession?.controller?.destroyPage?.();
     } catch (error) {
       console.warn("Router: active-session destroy error", error);
+    }
+  }
+
+  if (
+    previousBaseHash === "document-archive" &&
+    (baseHash !== "document-archive" || force || __currentRoute !== targetHash)
+  ) {
+    try {
+      window.ABNDocumentArchive?.controller?.destroyPage?.();
+    } catch (error) {
+      console.warn("Router: document-archive destroy error", error);
     }
   }
 

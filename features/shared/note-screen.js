@@ -454,7 +454,7 @@
         not_authenticated: "Debes iniciar sesión para ver notas.",
         no_player_profile: "No tienes perfil de jugador.",
         not_found: "Esta nota no existe o fue eliminada.",
-        not_owner: "No tienes acceso a esta nota.",
+        not_owner: "No tienes acceso a esta nota o ya no participas en la crónica.",
         not_participant: "No eres parte de esta crónica.",
       };
       await (global.ABNShared?.modal?.alert?.(

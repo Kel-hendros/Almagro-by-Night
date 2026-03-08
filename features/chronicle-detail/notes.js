@@ -83,6 +83,7 @@
     const notasList = document.getElementById("cd-notas-list");
     const notasMoreBtn = document.getElementById("cd-notas-more");
     const addNoteBtn = document.getElementById("cd-add-note");
+    const openArchiveBtn = document.getElementById("cd-open-notes-archive");
     const notesSearchInput = document.getElementById("cd-notes-search");
     const notesArchiveToggle = document.getElementById("cd-notes-archive-toggle");
 
@@ -269,6 +270,10 @@
 
     addNoteBtn.addEventListener("click", () => {
       openNoteForm(null);
+    });
+
+    openArchiveBtn?.addEventListener("click", () => {
+      window.location.hash = `document-archive?id=${encodeURIComponent(chronicleId)}&type=note`;
     });
 
     await refreshNotes();

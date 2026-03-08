@@ -33,6 +33,8 @@ declare
   v_role           text;
   v_is_creator     boolean;
   v_owner_name     text;
+  v_caller_participates boolean;
+  v_owner_participates boolean;
 begin
   -- 1. Auth check
   v_user_id := auth.uid();
@@ -62,8 +64,24 @@ begin
     return jsonb_build_object('access', 'denied', 'reason', 'not_found');
   end if;
 
-  -- 4. Check: is the caller the owner?
-  if v_note_player_id = v_player_id then
+  select exists(
+    select 1
+      from public.chronicle_participants cp
+     where cp.chronicle_id = v_chronicle_id
+       and cp.player_id = v_player_id
+  )
+    into v_caller_participates;
+
+  select exists(
+    select 1
+      from public.chronicle_participants cp
+     where cp.chronicle_id = v_chronicle_id
+       and cp.player_id = v_note_player_id
+  )
+    into v_owner_participates;
+
+  -- 4. Check: is the caller the owner and still participating in the chronicle?
+  if v_note_player_id = v_player_id and v_caller_participates then
     return jsonb_build_object(
       'access',       'owner',
       'note',         jsonb_build_object(
@@ -100,8 +118,8 @@ begin
     end if;
   end if;
 
-  -- 5A. NARRATOR: read-only view + owner info
-  if v_role = 'narrator' then
+  -- 5A. NARRATOR: read-only view + owner info, only for current participants
+  if v_role = 'narrator' and v_owner_participates then
     select coalesce(p.name, 'Jugador') into v_owner_name
       from public.players p
      where p.id = v_note_player_id;
@@ -125,8 +143,8 @@ begin
     );
   end if;
 
-  -- 5B. Player (not owner, not narrator) → denied
-  if v_role = 'player' then
+  -- 5B. Player (not owner, not narrator) or owner outside the chronicle → denied
+  if v_role = 'player' or (v_note_player_id = v_player_id and not v_caller_participates) then
     return jsonb_build_object('access', 'denied', 'reason', 'not_owner');
   end if;
 

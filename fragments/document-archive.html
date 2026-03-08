@@ -1,0 +1,44 @@
+<div class="document-archive-container">
+    <link rel="stylesheet" href="css/document-archive.css">
+
+    <header class="da-header">
+        <div>
+            <h1 id="da-title">Archivo</h1>
+            <p id="da-subtitle" class="da-subtitle"></p>
+        </div>
+        <div class="da-actions">
+            <button id="da-back-secondary" class="btn btn--secondary hidden" type="button"></button>
+            <button id="da-back-chronicle" class="btn btn--ghost" type="button">Volver a Crónica</button>
+        </div>
+    </header>
+
+    <div class="da-search-row">
+        <div class="da-search-wrap">
+            <i data-lucide="search" class="da-search-icon"></i>
+            <input type="text" id="da-search" class="da-search" placeholder="Buscar...">
+        </div>
+        <button id="da-open-create" type="button" class="btn btn--primary hidden">Crear</button>
+    </div>
+
+    <div class="da-results-head">
+        <p id="da-results-meta" class="da-results-meta">Cargando...</p>
+        <div id="da-pagination" class="da-pagination hidden">
+            <button id="da-page-prev" class="btn btn--ghost" type="button">Anterior</button>
+            <span id="da-pagination-label" class="da-pagination-label">Página 1 de 1</span>
+            <button id="da-page-next" class="btn btn--ghost" type="button">Siguiente</button>
+        </div>
+    </div>
+
+    <div id="da-list" class="da-list da-list--stack">
+        <p class="muted">Cargando documentos...</p>
+    </div>
+</div>
+
+<script src="features/shared/document-types/registry.js"></script>
+<script src="features/shared/document-types/note.js"></script>
+<script src="features/shared/document-types/recap.js"></script>
+<script src="features/shared/document-types/revelation.js"></script>
+<script src="features/document-archive/service.js"></script>
+<script src="features/document-archive/view.js"></script>
+<script src="features/document-archive/controller.js"></script>
+<script src="features/document-archive/index.js"></script>

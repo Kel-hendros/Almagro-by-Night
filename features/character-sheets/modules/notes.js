@@ -87,16 +87,18 @@
       list: document.getElementById("note-list"),
       archiveList: document.getElementById("note-archive-list"),
       newBtn: document.getElementById("note-new-btn"),
+      archiveBtn: document.getElementById("note-archive-btn"),
     };
   }
 
   function renderContextMessage(message) {
-    const { list, archiveList, newBtn } = getLists();
+    const { list, archiveList, newBtn, archiveBtn } = getLists();
     if (!list || !archiveList) return;
 
     list.innerHTML = `<p class="discipline-detail-label">${escapeHtml(message)}</p>`;
     archiveList.innerHTML = "";
     if (newBtn) newBtn.disabled = true;
+    if (archiveBtn) archiveBtn.disabled = true;
 
     const activeTab = document.querySelector('[data-note-tab="active"]');
     const archivedTab = document.querySelector('[data-note-tab="archived"]');
@@ -152,10 +154,11 @@
   }
 
   function renderNotes() {
-    const { list, archiveList, newBtn } = getLists();
+    const { list, archiveList, newBtn, archiveBtn } = getLists();
     if (!list || !archiveList) return;
 
     if (newBtn) newBtn.disabled = false;
+    if (archiveBtn) archiveBtn.disabled = !state.context.chronicleId;
 
     const { active, archived } = getFilteredNotesByTab();
 
@@ -367,6 +370,7 @@
     if (state.listenersBound) return;
 
     const newBtn = document.getElementById("note-new-btn");
+    const archiveBtn = document.getElementById("note-archive-btn");
     const searchInput = document.getElementById("note-search");
 
     const noteTabs = document.querySelectorAll(".note-tab");
@@ -378,6 +382,13 @@
 
     newBtn?.addEventListener("click", () => {
       void openNoteForm(null);
+    });
+
+    archiveBtn?.addEventListener("click", () => {
+      if (!state.context.chronicleId) return;
+      window.parent?.location
+        ? (window.parent.location.hash = `document-archive?id=${encodeURIComponent(state.context.chronicleId)}&type=note`)
+        : (window.location.hash = `document-archive?id=${encodeURIComponent(state.context.chronicleId)}&type=note`);
     });
 
     searchInput?.addEventListener("input", renderNotes);

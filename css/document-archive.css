@@ -1,0 +1,252 @@
+.document-archive-container {
+  min-height: 100dvh;
+  padding: 16px 20px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  color: var(--theme-text-primary);
+}
+
+.da-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.da-header h1 {
+  margin: 0;
+}
+
+.da-subtitle {
+  margin: 6px 0 0;
+  color: var(--theme-text-secondary);
+}
+
+.da-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.da-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.da-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.da-search-icon {
+  position: absolute;
+  left: 12px;
+  width: 14px;
+  height: 14px;
+  color: var(--theme-text-tertiary);
+  pointer-events: none;
+}
+
+.da-search {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px 0 34px;
+  border: none;
+  border-radius: 10px;
+  background: var(--theme-bg-elevated);
+  color: var(--theme-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.da-search:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  outline: none;
+}
+
+.da-results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.da-results-meta {
+  margin: 0;
+  color: var(--theme-text-secondary);
+  font-size: 0.88rem;
+}
+
+.da-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.da-pagination-label {
+  color: var(--theme-text-secondary);
+  font-size: 0.8rem;
+}
+
+.da-list {
+  display: grid;
+  gap: 10px;
+}
+
+.da-list--grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+}
+
+.da-list--stack {
+  grid-template-columns: 1fr;
+}
+
+.da-card {
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-elevated);
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.da-card--clickable {
+  cursor: pointer;
+}
+
+.da-card--clickable:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border-divider));
+}
+
+.da-card h3 {
+  margin: 0 0 2px;
+  font-size: 0.92rem;
+}
+
+.da-inline-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border-divider);
+  color: var(--theme-text-secondary);
+  font-size: 0.68rem;
+  flex-shrink: 0;
+}
+
+.da-card-head {
+  padding: 10px 10px 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.da-card-delete {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.da-card:hover .da-card-delete {
+  opacity: 1;
+}
+
+.da-meta {
+  margin: 0;
+  padding: 0 10px;
+  font-size: 0.68rem;
+  color: var(--theme-text-tertiary);
+}
+
+.da-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px 0;
+}
+
+.da-preview {
+  margin: 0;
+  padding: 8px 10px 10px;
+  font-size: 0.8rem;
+  color: var(--theme-text-secondary);
+}
+
+.da-card-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.da-recipient-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border-divider);
+  font-size: 0.7rem;
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+}
+
+.da-recipient-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.da-delivery-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.da-card-image-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--theme-bg-surface);
+  border-bottom: 1px solid var(--theme-border-divider);
+}
+
+.da-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 1260px) {
+  .da-list--grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .document-archive-container {
+    padding: 14px;
+  }
+
+  .da-search-row,
+  .da-results-head {
+    align-items: stretch;
+  }
+
+  .da-pagination {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .da-list--grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -19,6 +19,10 @@
     return global.ABNShared?.documentScreen || null;
   }
 
+  function recapScreen() {
+    return global.ABNShared?.recapScreen || null;
+  }
+
   async function init(config) {
     const {
       chronicleId,
@@ -38,6 +42,7 @@
     const sesionesList = document.getElementById("cd-sesiones-list");
     const sesionesMoreBtn = document.getElementById("cd-sesiones-more");
     const addRecapBtn = document.getElementById("cd-add-recap");
+    const openArchiveBtn = document.getElementById("cd-open-recaps-archive");
 
     if (!sesionesList || !sesionesMoreBtn || !addRecapBtn) return;
 
@@ -108,30 +113,7 @@
       recapOffset += recaps.length;
     }
 
-    function getRecapShareUrl(recapId) {
-      const hash = `chronicle?id=${encodeURIComponent(chronicleId)}&recap=${encodeURIComponent(recapId)}`;
-      return `${window.location.origin}${window.location.pathname}#${hash}`;
-    }
-
-    async function shareRecap(recapId) {
-      if (!recapId) return;
-      const shareUrl = getRecapShareUrl(recapId);
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(shareUrl);
-          alert("Link copiado al portapapeles.");
-          return;
-        }
-      } catch (error) {
-        console.warn("Recaps: clipboard write failed", error);
-      }
-      window.prompt("Copiá este link:", shareUrl);
-    }
-
     async function openRecapReader(recapId) {
-      const ds = documentScreen();
-      if (!ds) return;
-
       let recap = allLoadedRecaps.find((r) => r.id === recapId);
       if (!recap) {
         const { data, error } = await supabase
@@ -147,247 +129,44 @@
       if (!recap) return;
 
       currentReaderRecapId = recapId;
-
-      const actions = [
-        {
-          id: "share",
-          kind: "icon",
-          icon: "share-2",
-          title: "Compartir",
-          ariaLabel: "Compartir",
-          onClick: () => {
-            void shareRecap(recap.id);
-          },
+      await recapScreen()?.showForChronicle?.({
+        chronicleId,
+        currentPlayerId,
+        isNarrator,
+        recapId: recap.id,
+        recap,
+        sequence: allLoadedRecaps,
+        onNavigate: (nextId) => {
+          void openRecapReader(nextId);
         },
-      ];
-
-      if (isNarrator) {
-        actions.push(
-          {
-            id: "edit",
-            kind: "icon",
-            icon: "pencil",
-            title: "Editar",
-            ariaLabel: "Editar",
-            onClick: () => {
-              openRecapForm(recap);
-            },
-          },
-          {
-            id: "delete",
-            kind: "icon",
-            icon: "trash-2",
-            title: "Eliminar",
-            ariaLabel: "Eliminar",
-            danger: true,
-            onClick: async () => {
-              if (!confirm("¿Eliminar este recuento de sesión? Esta acción no se puede deshacer.")) {
-                return;
-              }
-              const { error } = await supabase
-                .from("session_recaps")
-                .delete()
-                .eq("id", recap.id);
-              if (error) {
-                alert("Error al eliminar: " + error.message);
-                return;
-              }
-              ds.close();
-              recapOffset = 0;
-              await loadRecaps(false);
-              await refreshLastSessionCard();
-            },
-          },
-        );
-      }
-
-      const idx = allLoadedRecaps.findIndex((r) => r.id === recap.id);
-      const canGoPrev = idx < allLoadedRecaps.length - 1 && idx !== -1;
-      const canGoNext = idx > 0;
-      const footerActions = [
-        {
-          id: "prev",
-          kind: "button",
-          variant: canGoPrev ? "primary" : "ghost",
-          label: "Anterior",
-          disabled: !canGoPrev,
-          onClick: () => {
-            if (canGoPrev) {
-              void openRecapReader(allLoadedRecaps[idx + 1].id);
-            }
-          },
-        },
-        {
-          id: "next",
-          kind: "button",
-          variant: canGoNext ? "primary" : "ghost",
-          label: "Siguiente",
-          disabled: !canGoNext,
-          onClick: () => {
-            if (canGoNext) {
-              void openRecapReader(allLoadedRecaps[idx - 1].id);
-            }
-          },
-        },
-      ];
-
-      ds.open({
-        docType: "recap",
-        title: recap.title,
-        subtitle: formatRecapMeta(recap),
-        actions,
-        footerActions,
-        bodyClass: "doc-view-body",
-        renderBody: (body) => {
-          const card = document.createElement("div");
-          card.className = "doc-view-card";
-          card.innerHTML = `<div class="doc-markdown">${renderMarkdown(recap.body || "")}</div>`;
-          body.appendChild(card);
+        onSaved: async () => {
+          recapOffset = 0;
+          await loadRecaps(false);
+          await refreshLastSessionCard();
         },
         onClosed: () => {
           currentReaderRecapId = null;
         },
       });
-
-      if (window.lucide) {
-        window.lucide.createIcons();
-      }
-    }
-
-    function recapFormMarkup(recap) {
-      const maxNum =
-        allLoadedRecaps.length > 0
-          ? Math.max(...allLoadedRecaps.map((row) => row.session_number || 0))
-          : 0;
-
-      const title = recap?.title || "";
-      const number = recap?.session_number || maxNum + 1;
-      const date = recap?.session_date || new Date().toISOString().split("T")[0];
-      const body = recap?.body || "";
-
-      return `
-        <div class="doc-form-wrap">
-          <div class="doc-form-group">
-            <label class="doc-form-label" for="cd-recap-form-title">Título</label>
-            <input type="text" id="cd-recap-form-title" class="doc-form-input" placeholder="Ej: Encuentro en el Barolo" value="${escapeHtml(title)}">
-          </div>
-          <div class="doc-form-row">
-            <div class="doc-form-col doc-form-group">
-              <label class="doc-form-label" for="cd-recap-form-number">Sesión Nº</label>
-              <input type="number" id="cd-recap-form-number" class="doc-form-input" min="1" value="${escapeHtml(number)}">
-            </div>
-            <div class="doc-form-col doc-form-group">
-              <label class="doc-form-label" for="cd-recap-form-date">Fecha</label>
-              <input type="date" id="cd-recap-form-date" class="doc-form-input" value="${escapeHtml(date)}">
-            </div>
-          </div>
-          <div class="doc-form-group doc-form-group--grow">
-            <label class="doc-form-label" for="cd-recap-form-body">Crónica <span class="doc-form-hint">(soporta Markdown)</span></label>
-            <textarea id="cd-recap-form-body" class="doc-form-textarea" placeholder="Relato de la sesión...">${escapeHtml(body)}</textarea>
-          </div>
-        </div>
-      `;
-    }
-
-    function readRecapFormValues() {
-      const title = document.getElementById("cd-recap-form-title")?.value.trim() || "";
-      const number = parseInt(document.getElementById("cd-recap-form-number")?.value || "", 10);
-      const date = document.getElementById("cd-recap-form-date")?.value || "";
-      const body = document.getElementById("cd-recap-form-body")?.value.trim() || "";
-      return { title, number, date, body };
     }
 
     function openRecapForm(recap) {
-      const ds = documentScreen();
-      if (!ds) return;
-
       editingRecapId = recap?.id || null;
-      const heading = editingRecapId ? "Editar Recuento" : "Nuevo Recuento";
-
-      let formApi = null;
-      let saving = false;
-
-      function syncSaveAction() {
-        formApi?.updateAction("save", {
-          label: saving ? "Guardando..." : "Guardar",
-          disabled: saving,
-        });
-      }
-
-      async function persistRecapForm() {
-        if (saving) return;
-
-        const { title, number, date, body } = readRecapFormValues();
-        if (!title) {
-          alert("El título es obligatorio.");
-          return;
-        }
-        if (!number || number < 1) {
-          alert("Número de sesión inválido.");
-          return;
-        }
-
-        const payload = {
-          chronicle_id: chronicleId,
-          session_number: number,
-          title,
-          body: body || null,
-          session_date: date || null,
-          created_by: currentPlayerId,
-        };
-
-        saving = true;
-        syncSaveAction();
-
-        let error;
-        if (editingRecapId) {
-          const { created_by, ...updatePayload } = payload;
-          ({ error } = await supabase
-            .from("session_recaps")
-            .update(updatePayload)
-            .eq("id", editingRecapId));
-        } else {
-          ({ error } = await supabase.from("session_recaps").insert(payload));
-        }
-
-        saving = false;
-        syncSaveAction();
-
-        if (error) {
-          alert("Error al guardar: " + error.message);
-          return;
-        }
-
-        formApi?.close();
-        recapOffset = 0;
-        await loadRecaps(false);
-        await refreshLastSessionCard();
-      }
-
-      formApi = ds.open({
-        docType: "recap",
-        title: heading,
-        actions: [
-          {
-            id: "save",
-            kind: "button",
-            variant: "primary",
-            label: "Guardar",
-            onClick: () => {
-              void persistRecapForm();
-            },
-          },
-        ],
-        bodyClass: "doc-form-body",
-        renderBody: (body) => {
-          body.innerHTML = recapFormMarkup(recap || null);
+      recapScreen()?.openForm?.({
+        chronicleId,
+        currentPlayerId,
+        recap,
+        existingRecaps: allLoadedRecaps,
+        onSaved: async () => {
+          editingRecapId = null;
+          recapOffset = 0;
+          await loadRecaps(false);
+          await refreshLastSessionCard();
         },
         onClosed: () => {
           editingRecapId = null;
         },
       });
-
-      document.getElementById("cd-recap-form-title")?.focus();
     }
 
     async function refreshLastSessionCard() {
@@ -402,6 +181,10 @@
 
     addRecapBtn?.addEventListener("click", () => {
       openRecapForm(null);
+    });
+
+    openArchiveBtn?.addEventListener("click", () => {
+      window.location.hash = `document-archive?id=${encodeURIComponent(chronicleId)}&type=recap`;
     });
 
     const onSummaryOpenRecap = (event) => {

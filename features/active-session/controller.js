@@ -50,7 +50,7 @@
     const openArchiveBtn = document.getElementById("as-open-revelations");
     if (openArchiveBtn) {
       state.openArchiveBtnHandler = () => {
-        window.location.hash = `revelations-archive?id=${encodeURIComponent(state.chronicleId)}`;
+        window.location.hash = `document-archive?id=${encodeURIComponent(state.chronicleId)}&type=revelation`;
       };
       openArchiveBtn.addEventListener("click", state.openArchiveBtnHandler);
     }
