@@ -133,9 +133,9 @@
         supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1),
         supabase
           .from("session_recaps")
-          .select("id, session_number, title, body, session_date")
+          .select("id, session_number, title, body, session_date, created_at")
           .eq("chronicle_id", chronicleId)
-          .order("session_number", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
         supabase

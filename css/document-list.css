@@ -1,0 +1,73 @@
+.dl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dl-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid
+    color-mix(in srgb, var(--color-border-subtle, var(--theme-border-divider)) 78%, transparent);
+  background: color-mix(in srgb, var(--color-bg-raised, var(--theme-bg-elevated)) 88%, transparent);
+  color: var(--color-text-primary, var(--theme-text-primary));
+  min-width: 0;
+}
+
+.dl-item--clickable {
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.dl-item--clickable:hover,
+.dl-item--clickable:focus-visible {
+  border-color: color-mix(
+    in srgb,
+    var(--color-accent, var(--theme-accent)) 32%,
+    var(--color-border-subtle, var(--theme-border-divider))
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-bg-raised, var(--theme-bg-elevated)) 90%,
+    var(--color-accent, var(--theme-accent)) 10%
+  );
+  outline: none;
+}
+
+.dl-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dl-item-title {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--app-font-heading, var(--app-font-body));
+  font-size: 0.98rem;
+  line-height: 1.28;
+  color: var(--color-text-primary, var(--theme-text-primary));
+}
+
+.dl-item-meta {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--color-text-muted, var(--theme-text-tertiary));
+}
+
+.dl-item-preview {
+  margin: 0;
+  color: var(--color-text-secondary, var(--theme-text-secondary));
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow: hidden;
+}

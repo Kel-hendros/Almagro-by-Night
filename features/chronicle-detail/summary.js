@@ -1,6 +1,7 @@
 (function initChronicleDetailSummary(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
   const service = () => ns.service;
+  const SUMMARY_RECAP_LIMIT = 1;
 
   function stripMarkdown(text) {
     return (text || "")
@@ -12,9 +13,12 @@
   }
 
   function previewLines(text, maxLines = 3) {
+    const sharedPreview = documentList()?.buildPreviewText?.(text, { maxLines });
+    if (typeof sharedPreview === "string") return sharedPreview;
+
     const plain = stripMarkdown(text || "");
     const lines = plain.split("\n").filter((line) => line.trim());
-    const preview = lines.slice(0, maxLines).join(" ");
+    const preview = lines.slice(0, maxLines).join("\n");
     return lines.length > maxLines ? preview + "…" : preview;
   }
 
@@ -26,6 +30,10 @@
       label += ` — ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
     }
     return label;
+  }
+
+  function documentList() {
+    return global.ABNShared?.documentList || null;
   }
 
   function bytesToMegas(bytes) {
@@ -95,28 +103,53 @@
     function renderLastSessionCard(recap) {
       if (!lastCard) return;
       if (!recap) {
-        lastCard.classList.remove("cd-card-clickable");
+        lastCard.className = "cd-card cd-card--col";
         lastCard.onclick = null;
         lastCard.innerHTML = '<span class="cd-card-muted">Sin sesiones registradas</span>';
         return;
       }
-      const dateStr = formatSessionMeta(recap);
-      const truncated = escapeHtml(previewLines(recap.body));
-      lastCard.innerHTML = `
-        <span class="cd-card-subtitle">${dateStr}</span>
-        <p class="cd-card-body">${truncated}</p>
-      `;
-      lastCard.classList.add("cd-card-clickable");
-      lastCard.onclick = () => {
+      const listApi = documentList();
+      const visibleRecap = listApi?.getRecentRows?.([recap], {
+        limit: SUMMARY_RECAP_LIMIT,
+        getCreatedAt: (row) => row?.created_at,
+      })?.[0] || recap;
+
+      const openRecap = () => {
         window.dispatchEvent(
           new CustomEvent("abn:chronicle-open-recap", {
             detail: {
               chronicleId,
-              recapId: recap.id,
+              recapId: visibleRecap.id,
             },
           }),
         );
       };
+
+      if (!listApi?.createItem) {
+        const dateStr = formatSessionMeta(visibleRecap);
+        const truncated = escapeHtml(previewLines(visibleRecap.body, 5));
+        lastCard.className = "cd-card cd-card--col cd-card-clickable";
+        lastCard.innerHTML = `
+          <span class="cd-card-subtitle">${dateStr}</span>
+          <p class="cd-card-body">${truncated}</p>
+        `;
+        lastCard.onclick = openRecap;
+        return;
+      }
+
+      lastCard.className = "dl-list dl-list--complete";
+      lastCard.onclick = null;
+      lastCard.innerHTML = "";
+      lastCard.appendChild(
+        listApi.createItem({
+          preset: "complete",
+          title: visibleRecap.title || "Recuento",
+          meta: formatSessionMeta(visibleRecap),
+          preview: previewLines(visibleRecap.body, 5),
+          dataAttrs: { "recap-id": visibleRecap.id },
+          onActivate: openRecap,
+        }),
+      );
     }
 
     function renderCurrentCharacterCard() {
@@ -163,10 +196,10 @@
     async function refreshLastSessionCard() {
       const { data: latest } = await supabase
         .from("session_recaps")
-        .select("id, session_number, title, body, session_date")
+        .select("id, session_number, title, body, session_date, created_at")
         .eq("chronicle_id", chronicleId)
-        .order("session_number", { ascending: false })
-        .limit(1)
+        .order("created_at", { ascending: false })
+        .limit(SUMMARY_RECAP_LIMIT)
         .maybeSingle();
       renderLastSessionCard(latest || null);
     }

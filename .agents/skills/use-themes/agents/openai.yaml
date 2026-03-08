@@ -1,0 +1,3 @@
+interface:
+  display_name: "Use Themes"
+  short_description: "Use shared theme tokens, fonts, and global UI components"

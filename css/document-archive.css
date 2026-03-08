@@ -269,6 +269,10 @@
   padding-top: 14px;
 }
 
+.document-archive-container[data-archive-type="recap"] .da-preview {
+  white-space: pre-line;
+}
+
 .da-list > .muted,
 .da-groups > .muted {
   grid-column: 1 / -1;

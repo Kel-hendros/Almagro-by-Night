@@ -19,6 +19,10 @@
     return global.ABNShared?.documentScreen || null;
   }
 
+  function documentList() {
+    return global.ABNShared?.documentList || null;
+  }
+
   function recapScreen() {
     return global.ABNShared?.recapScreen || null;
   }
@@ -29,12 +33,11 @@
       currentPlayerId,
       isNarrator,
       initialRecapId,
+      listLimit,
       previewLines,
       onLastSessionRefresh,
     } = config;
 
-    const RECAP_PAGE = 5;
-    let recapOffset = 0;
     let allLoadedRecaps = [];
     let currentReaderRecapId = null;
     let editingRecapId = null;
@@ -56,61 +59,85 @@
     }
 
     function renderRecapCard(recap) {
-      const meta = formatRecapMeta(recap);
-      const truncated = previewLines(recap.body);
+      const meta = recapScreen()?.formatMeta?.(recap) || formatRecapMeta(recap);
+      const truncated =
+        typeof previewLines === "function" ? previewLines(recap.body, 5) : String(recap.body || "").trim();
+      const listApi = documentList();
 
-      const card = document.createElement("div");
-      card.className = "cd-recap-card";
-      card.dataset.recapId = recap.id;
-      card.innerHTML = `
-        <div class="cd-recap-info">
-          <span class="cd-recap-title">${escapeHtml(recap.title)}</span>
-          <span class="cd-recap-meta">${meta}</span>
-          ${truncated ? `<p class="cd-recap-body">${escapeHtml(truncated)}</p>` : ""}
-        </div>
-      `;
-      card.addEventListener("click", () => {
-        void openRecapReader(recap.id);
+      if (!listApi?.createItem) {
+        const fallback = document.createElement("div");
+        fallback.className = "cd-recap-card";
+        fallback.dataset.recapId = recap.id;
+        fallback.innerHTML = `
+          <div class="cd-recap-info">
+            <span class="cd-recap-title">${escapeHtml(recap.title)}</span>
+            <span class="cd-recap-meta">${meta}</span>
+            ${truncated ? `<p class="cd-recap-body">${escapeHtml(truncated)}</p>` : ""}
+          </div>
+        `;
+        fallback.addEventListener("click", () => {
+          void openRecapReader(recap.id);
+        });
+        return fallback;
+      }
+
+      return listApi.createItem({
+        preset: "complete",
+        title: recap.title || "Recuento",
+        meta,
+        preview: truncated,
+        dataAttrs: { "recap-id": recap.id },
+        onActivate: () => {
+          void openRecapReader(recap.id);
+        },
       });
-      return card;
     }
 
-    async function loadRecaps(append) {
-      const { data: recaps, error } = await supabase
-        .from("session_recaps")
-        .select("id, session_number, title, body, session_date")
-        .eq("chronicle_id", chronicleId)
-        .order("session_number", { ascending: false })
-        .range(recapOffset, recapOffset + RECAP_PAGE - 1);
-
-      if (error) {
-        console.error("Error loading recaps:", error);
-        if (!append) {
-          sesionesList.innerHTML =
-            '<span class="cd-card-muted">Error al cargar sesiones.</span>';
-        }
-        return;
+    function getVisibleRecaps() {
+      const listApi = documentList();
+      if (!listApi?.getRecentRows) {
+        return Array.isArray(allLoadedRecaps) ? allLoadedRecaps.slice(0, 5) : [];
       }
+      return listApi.getRecentRows(allLoadedRecaps, {
+        limit: listLimit,
+        getCreatedAt: (recap) => recap?.created_at,
+      });
+    }
 
-      if (!append) {
-        sesionesList.innerHTML = "";
-        allLoadedRecaps = [];
-      }
-
-      if (!recaps.length && !append) {
+    function renderVisibleRecaps() {
+      const visibleRecaps = getVisibleRecaps();
+      sesionesList.innerHTML = "";
+      if (!visibleRecaps.length) {
         sesionesList.innerHTML =
           '<span class="cd-card-muted">No hay sesiones registradas.</span>';
         sesionesMoreBtn.classList.add("hidden");
         return;
       }
 
-      recaps.forEach((recap) => {
-        allLoadedRecaps.push(recap);
+      documentList()?.applyPreset?.(sesionesList, "complete");
+      visibleRecaps.forEach((recap) => {
         sesionesList.appendChild(renderRecapCard(recap));
       });
+      sesionesMoreBtn.classList.add("hidden");
+    }
 
-      sesionesMoreBtn.classList.toggle("hidden", recaps.length < RECAP_PAGE);
-      recapOffset += recaps.length;
+    async function loadRecaps() {
+      const { data: recaps, error } = await supabase
+        .from("session_recaps")
+        .select("id, session_number, title, body, session_date, created_at")
+        .eq("chronicle_id", chronicleId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading recaps:", error);
+        sesionesList.innerHTML =
+          '<span class="cd-card-muted">Error al cargar sesiones.</span>';
+        sesionesMoreBtn.classList.add("hidden");
+        return;
+      }
+
+      allLoadedRecaps = Array.isArray(recaps) ? recaps : [];
+      renderVisibleRecaps();
     }
 
     async function openRecapReader(recapId) {
@@ -118,13 +145,13 @@
       if (!recap) {
         const { data, error } = await supabase
           .from("session_recaps")
-          .select("id, session_number, title, body, session_date")
+          .select("id, session_number, title, body, session_date, created_at")
           .eq("chronicle_id", chronicleId)
           .eq("id", recapId)
           .maybeSingle();
         if (error || !data) return;
         recap = data;
-        allLoadedRecaps.unshift(recap);
+        allLoadedRecaps = [recap, ...allLoadedRecaps.filter((row) => row.id !== recap.id)];
       }
       if (!recap) return;
 
@@ -140,8 +167,7 @@
           void openRecapReader(nextId);
         },
         onSaved: async () => {
-          recapOffset = 0;
-          await loadRecaps(false);
+          await loadRecaps();
           await refreshLastSessionCard();
         },
         onClosed: () => {
@@ -159,8 +185,7 @@
         existingRecaps: allLoadedRecaps,
         onSaved: async () => {
           editingRecapId = null;
-          recapOffset = 0;
-          await loadRecaps(false);
+          await loadRecaps();
           await refreshLastSessionCard();
         },
         onClosed: () => {
@@ -175,9 +200,7 @@
       }
     }
 
-    sesionesMoreBtn?.addEventListener("click", () => {
-      void loadRecaps(true);
-    });
+    sesionesMoreBtn?.classList.add("hidden");
 
     addRecapBtn?.addEventListener("click", () => {
       openRecapForm(null);
@@ -197,17 +220,14 @@
     ns.__summaryOpenRecapHandler = onSummaryOpenRecap;
     window.addEventListener("abn:chronicle-open-recap", onSummaryOpenRecap);
 
-    await loadRecaps(false);
+    await loadRecaps();
     if (initialRecapId) {
       await openRecapReader(initialRecapId);
     }
 
     return {
       refreshLastSessionCard,
-      reloadRecaps: () => {
-        recapOffset = 0;
-        return loadRecaps(false);
-      },
+      reloadRecaps: () => loadRecaps(),
     };
   }
 

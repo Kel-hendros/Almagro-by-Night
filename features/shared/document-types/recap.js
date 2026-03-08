@@ -15,6 +15,9 @@
   }
 
   function previewLines(text, maxLines = 3) {
+    const sharedPreview = root.documentList?.buildPreviewText?.(text, { maxLines });
+    if (typeof sharedPreview === "string") return sharedPreview;
+
     const plain = String(text || "")
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1")
@@ -22,7 +25,7 @@
       .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
       .replace(/`([^`]+)`/g, "$1");
     const lines = plain.split("\n").filter((line) => line.trim());
-    const preview = lines.slice(0, maxLines).join(" ");
+    const preview = lines.slice(0, maxLines).join("\n");
     return lines.length > maxLines ? `${preview}…` : preview;
   }
 
@@ -60,7 +63,7 @@
 
   function renderCard(row) {
     const meta = recapScreen()?.formatMeta?.(row) || `Sesión ${row.session_number || "—"}`;
-    const preview = previewLines(row.body || "");
+    const preview = previewLines(row.body || "", 5);
 
     return `
       <article class="da-card da-card--clickable" data-document-id="${escapeHtml(row.id)}">

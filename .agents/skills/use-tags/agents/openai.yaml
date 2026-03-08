@@ -1,0 +1,3 @@
+interface:
+  display_name: "Use Tags"
+  short_description: "Use the shared tag system for filters, editors, rendering, and normalization"

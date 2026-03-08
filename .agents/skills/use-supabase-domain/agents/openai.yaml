@@ -1,0 +1,3 @@
+interface:
+  display_name: "Use Supabase Domain"
+  short_description: "Use shared auth, player, and permission patterns"
