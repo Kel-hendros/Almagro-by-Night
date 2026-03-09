@@ -38,6 +38,26 @@
       .join("")}</div>`;
   }
 
+  function renderSharedTagsMarkup(tags) {
+    const list = Array.isArray(tags)
+      ? tags.map((tag) => String(tag || "").trim()).filter(Boolean)
+      : [];
+    if (!list.length) return "";
+
+    const sharedTags = tagSystem();
+    const normalized = sharedTags?.dedupe ? sharedTags.dedupe(list) : list;
+
+    return `<div class="abn-tag-list">${normalized
+      .map((tag) => {
+        const label = sharedTags?.formatLabel
+          ? sharedTags.formatLabel(tag, { displayMode: "title" })
+          : tag;
+        const className = sharedTags ? "abn-tag" : "da-tag";
+        return `<span class="${className}">${escapeHtml(label)}</span>`;
+      })
+      .join("")}</div>`;
+  }
+
   function formatDateTime(value) {
     if (!value) return "—";
     try {
@@ -93,10 +113,42 @@
   }
 
   function toPreviewText(markdown) {
+    if (root.documentList?.buildPreviewText) {
+      return root.documentList.buildPreviewText(markdown, { maxLines: 5 });
+    }
     return String(markdown || "")
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 180);
+  }
+
+  function buildDetailedListItemOptions(row, ctx) {
+    const deliveries = Array.isArray(row?.deliveries) ? row.deliveries : [];
+    const recipients = deliveries
+      .map((delivery) => delivery?.recipient?.character_name || delivery?.recipient?.name || "")
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+    const metaParts = [];
+
+    if (ctx?.isNarrator) {
+      metaParts.push(formatDateTime(row?.created_at));
+      if (recipients.length) metaParts.push(recipients.join(", "));
+    } else {
+      metaParts.push(`Asociada: ${formatDateTime(row?.delivered_at || row?.created_at)}`);
+    }
+
+    return {
+      title: row?.title || "Revelación",
+      meta: metaParts.filter(Boolean).join(" · "),
+      tagsHtml: renderSharedTagsMarkup(row?.tags),
+      preview: toPreviewText(row?.body_markdown || ""),
+      image: row?.image_signed_url
+        ? {
+            src: row.image_signed_url,
+            alt: row.title || "Revelación",
+          }
+        : null,
+    };
   }
 
   function renderCard(row, ctx) {
@@ -294,6 +346,7 @@
         ? "Aún no hay revelaciones en esta crónica."
         : "No hay revelaciones asociadas.";
     },
+    buildDetailedListItemOptions,
     fetchRows,
     filterRows,
     getTagFilterStats,

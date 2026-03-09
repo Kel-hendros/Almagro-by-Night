@@ -32,6 +32,7 @@ Pattern:
 - normalize/dedupe incoming tags
 - format with `formatLabel(..., { displayMode: "title" })`
 - render `.abn-tag`
+- use `.abn-tag-list` as the shared readonly wrapper in list/card contexts
 
 ### Tag editor in forms
 
@@ -77,6 +78,13 @@ This keeps the chip counters honest for the current search result.
 
 - do not mount the editor
 - do not create feature-specific tag chip CSS unless the shared styles are clearly insufficient
+- use `.abn-tag-list` for shared readonly rows instead of archive-only wrappers
+
+### If the tags live inside a shared document list/card
+
+- keep the chip styling global through `.abn-tag` and `.abn-tag-list`
+- let the document surface own spacing around the row
+- do not reuse archive-only wrappers like `.da-tags-row` outside archive cards
 
 ## Fast Search Patterns
 

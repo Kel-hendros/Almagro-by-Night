@@ -1,82 +1,34 @@
 (function initChronicleDetailNotes(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
-
-  function stripMarkdown(text) {
-    const shared = noteScreen();
-    if (typeof shared?.toPlainText === "function") {
-      return shared.toPlainText(text);
-    }
-    return String(text || "")
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/[*_~`>#-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function formatRelativeDate(isoStr) {
-    if (!isoStr) return "";
-    const d = new Date(isoStr);
-    const now = new Date();
-    const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return "Editada hoy";
-    if (diffDays === 1) return "Editada ayer";
-    if (diffDays < 30) return `Editada hace ${diffDays} días`;
-    const mn = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-    return `${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
-  }
+  const NOTES_LIMIT = 5;
 
   function noteScreen() {
     return global.ABNShared?.noteScreen || null;
   }
 
-  function tagSystem() {
-    return global.ABNShared?.tags || null;
+  function noteAdapter() {
+    return global.ABNShared?.documentTypes?.get?.("note") || null;
   }
 
-  function renderNoteTags(tags) {
-    const list = Array.isArray(tags)
-      ? tags.map((tag) => String(tag || "").trim()).filter(Boolean)
-      : [];
-
-    if (!list.length) return "";
-
-    const sharedTags = tagSystem();
-    const normalized = sharedTags?.dedupe ? sharedTags.dedupe(list) : list;
-
-    return `<div class="cd-note-tags-row">${normalized
-      .map((tag) => {
-        const label = sharedTags?.formatLabel
-          ? sharedTags.formatLabel(tag, { displayMode: "title" })
-          : tag;
-        const className = sharedTags ? "abn-tag" : "cd-note-tag";
-        return `<span class="${className}">${escapeHtml(label)}</span>`;
-      })
-      .join("")}</div>`;
+  function documentList() {
+    return global.ABNShared?.documentList || null;
   }
 
-  function normalizeNoteRow(row) {
+  function buildNoteContext(chronicleId, currentPlayerId) {
     return {
-      id: row.id,
-      title: row.title || "Sin título",
-      body: row.body_markdown || "",
-      tags: Array.isArray(row.tags) ? row.tags : [],
-      archived: Boolean(row.is_archived),
-      createdAt: row.created_at || new Date().toISOString(),
-      updatedAt: row.updated_at || row.created_at || new Date().toISOString(),
+      chronicleId,
+      currentPlayerId,
+      isNarrator: false,
+      excludeArchived: true,
     };
   }
 
   async function init(config) {
     const { chronicleId, currentPlayerId } = config;
 
-    const NOTES_PAGE = 5;
-    let notesShown = 0;
     let allNotes = [];
     let filteredNotes = [];
     let notesQuery = "";
-    let showingArchived = false;
 
     let currentReaderNoteId = null;
 
@@ -85,92 +37,71 @@
     const addNoteBtn = document.getElementById("cd-add-note");
     const openArchiveBtn = document.getElementById("cd-open-notes-archive");
     const notesSearchInput = document.getElementById("cd-notes-search");
-    const notesArchiveToggle = document.getElementById("cd-notes-archive-toggle");
 
     if (!notasList || !notasMoreBtn || !addNoteBtn) return;
 
-    function renderNoteCard(note) {
-      const plain = stripMarkdown(note.body);
-      const truncated = plain.length > 150 ? plain.substring(0, 150) + "…" : plain;
-      const tagsHtml = renderNoteTags(note.tags);
-
-      const card = document.createElement("div");
-      card.className = "cd-note-card";
-      card.dataset.noteId = note.id;
-      card.innerHTML = `
-        <div class="cd-note-header">
-          <span class="cd-note-title">${escapeHtml(note.title)}</span>
-        </div>
-        ${tagsHtml}
-        ${truncated ? `<p class="cd-note-body">${escapeHtml(truncated)}</p>` : ""}
-        <span class="cd-note-date">${formatRelativeDate(note.updatedAt || note.createdAt)}</span>
-      `;
-      card.addEventListener("click", () => {
-        void openNoteReader(note.id);
-      });
-      return card;
-    }
-
     function filterNotes() {
-      const byArchive = allNotes.filter((note) =>
-        showingArchived ? !!note.archived : !note.archived,
-      );
-
       if (!notesQuery) {
-        filteredNotes = byArchive;
+        filteredNotes = allNotes;
         return;
       }
 
-      const q = notesQuery.toLowerCase();
-      filteredNotes = byArchive.filter(
-        (note) =>
-          (note.title && note.title.toLowerCase().includes(q)) ||
-          (note.body && note.body.toLowerCase().includes(q)) ||
-          (note.tags && note.tags.some((tag) => tag.toLowerCase().includes(q))),
-      );
-    }
-
-    function showNotes() {
-      const batch = filteredNotes.slice(notesShown, notesShown + NOTES_PAGE);
-      if (!notesShown) notasList.innerHTML = "";
-      batch.forEach((note) => notasList.appendChild(renderNoteCard(note)));
-      notesShown += batch.length;
-      notasMoreBtn.classList.toggle("hidden", notesShown >= filteredNotes.length);
+      const adapter = noteAdapter();
+      filteredNotes = adapter?.filterRows
+        ? adapter.filterRows(allNotes, notesQuery, buildNoteContext(chronicleId, currentPlayerId))
+        : allNotes;
     }
 
     function renderNotesList() {
-      notesShown = 0;
       filterNotes();
       if (!filteredNotes.length) {
-        const emptyMsg = notesQuery
-          ? "Sin resultados."
-          : showingArchived
-            ? "No hay notas archivadas."
-            : "No hay notas todavía.";
+        const emptyMsg = notesQuery ? "Sin resultados." : "No hay notas todavía.";
         notasList.innerHTML = `<span class="cd-card-muted">${emptyMsg}</span>`;
         notasMoreBtn.classList.add("hidden");
         return;
       }
-      showNotes();
-    }
 
-    async function refreshNotes() {
-      const { data, error } = await supabase
-        .from("chronicle_notes")
-        .select("id, title, body_markdown, tags, is_archived, created_at, updated_at")
-        .eq("chronicle_id", chronicleId)
-        .eq("player_id", currentPlayerId)
-        .order("updated_at", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("chronicle-detail.notes.refreshNotes:", error);
-        notasList.innerHTML = '<span class="cd-card-muted">Error al cargar notas</span>';
+      const adapter = noteAdapter();
+      const listApi = documentList();
+      const visibleNotes = filteredNotes.slice(0, NOTES_LIMIT);
+      if (!adapter?.buildDetailedListItemOptions || !listApi?.createItem) {
+        notasList.innerHTML = `<span class="cd-card-muted">No se pudo renderizar la lista de notas.</span>`;
         notasMoreBtn.classList.add("hidden");
         return;
       }
 
-      allNotes = (data || []).map(normalizeNoteRow);
+      listApi.applyPreset?.(notasList, "complete");
+      notasList.innerHTML = "";
+      visibleNotes.forEach((note) => {
+        const itemOptions = adapter.buildDetailedListItemOptions(
+          note,
+          buildNoteContext(chronicleId, currentPlayerId),
+        );
+        notasList.appendChild(
+          listApi.createItem({
+            preset: "complete",
+            variant: "detailed",
+            title: itemOptions.title,
+            meta: itemOptions.meta,
+            tagsHtml: itemOptions.tagsHtml,
+            preview: itemOptions.preview,
+            image: itemOptions.image,
+            dataAttrs: { "document-id": note.id },
+          }),
+        );
+      });
+      notasMoreBtn.classList.add("hidden");
+    }
+
+    async function refreshNotes() {
+      const adapter = noteAdapter();
+      if (!adapter?.fetchRows) {
+        notasList.innerHTML = '<span class="cd-card-muted">No se pudo cargar notas</span>';
+        notasMoreBtn.classList.add("hidden");
+        return;
+      }
+
+      allNotes = await adapter.fetchRows(buildNoteContext(chronicleId, currentPlayerId));
       renderNotesList();
     }
 
@@ -256,17 +187,13 @@
       });
     }
 
-    if (notesArchiveToggle) {
-      notesArchiveToggle.addEventListener("click", () => {
-        showingArchived = !showingArchived;
-        notesArchiveToggle.classList.toggle("active", showingArchived);
-        renderNotesList();
-      });
-    }
+    notasMoreBtn.classList.add("hidden");
 
-    if (notasMoreBtn) {
-      notasMoreBtn.addEventListener("click", showNotes);
-    }
+    notasList.addEventListener("click", (event) => {
+      const card = event.target.closest("[data-document-id]");
+      if (!card?.dataset.documentId) return;
+      void openNoteReader(card.dataset.documentId);
+    });
 
     addNoteBtn.addEventListener("click", () => {
       openNoteForm(null);

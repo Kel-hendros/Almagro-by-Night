@@ -1887,6 +1887,14 @@ p.chronicle-description {
     gap: 12px;
 }
 
+.cd-recaps-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 /* Session recap card */
 .cd-recap-card {
     display: flex;
@@ -2053,31 +2061,6 @@ p.chronicle-description {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 30%, transparent);
 }
 
-/* Notes archive toggle */
-.cd-notes-archive-btn {
-    gap: 5px;
-    height: 42px;
-    padding: 0 12px;
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-.cd-notes-archive-icon {
-    width: 13px;
-    height: 13px;
-}
-
-.cd-notes-archive-btn:hover {
-    border-color: var(--cd-text-secondary);
-    color: var(--cd-text-secondary);
-}
-
-.cd-notes-archive-btn.active {
-    border-color: var(--cd-status-warning);
-    color: var(--cd-status-warning);
-    background: color-mix(in srgb, var(--cd-status-warning) 8%, transparent);
-}
-
 /* Add list item button (+ Nuevo Recuento / + Nueva Nota) */
 .cd-add-list-btn {
     width: 100%;
@@ -2142,6 +2125,15 @@ p.chronicle-description {
 
     .cd-content {
         padding: 16px;
+    }
+
+    .cd-recaps-toolbar {
+        justify-content: flex-start;
+    }
+
+    .cd-recaps-toolbar .cd-add-list-btn--compact {
+        flex: 1 1 100%;
+        width: 100%;
     }
 
     .chronicle-dashboard .chronicle-card-banner {

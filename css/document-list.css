@@ -47,6 +47,14 @@
   gap: 10px;
 }
 
+.dl-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .dl-item-title {
   margin: 0;
   min-width: 0;
@@ -70,4 +78,207 @@
   line-height: 1.6;
   white-space: pre-line;
   overflow: hidden;
+}
+
+.dl-item-tags .abn-tag-list {
+  gap: 0.45rem;
+}
+
+.dl-item--detailed {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.dl-item--detailed .dl-item-title {
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+.dl-item--detailed .dl-item-meta {
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.dl-item--detailed .dl-item-preview {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+}
+
+.dl-item-media {
+  width: 84px;
+  min-width: 84px;
+  align-self: stretch;
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-bg-surface, var(--theme-bg-surface)) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border-subtle, var(--theme-border-divider)) 78%, transparent);
+}
+
+.dl-item-media-image {
+  width: 100%;
+  height: 100%;
+  min-height: 84px;
+  object-fit: cover;
+  display: block;
+}
+
+.dl-item--skeleton {
+  pointer-events: none;
+}
+
+.dl-skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dl-skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--color-bg-raised, var(--theme-bg-elevated)) 84%,
+    var(--color-border-subtle, var(--theme-border-divider))
+  );
+}
+
+.dl-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-text-primary, var(--theme-text-primary)) 12%, transparent) 45%,
+    transparent 100%
+  );
+  animation: dl-skeleton-shimmer 1.15s ease-in-out infinite;
+}
+
+.dl-skeleton--title {
+  width: min(62%, 320px);
+  height: 1rem;
+}
+
+.dl-skeleton--meta {
+  width: 34%;
+  min-width: 140px;
+  height: 0.72rem;
+}
+
+.dl-skeleton--line {
+  width: 100%;
+  height: 0.78rem;
+}
+
+.dl-skeleton--line-short {
+  width: 72%;
+}
+
+@keyframes dl-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-skeleton::after {
+    animation: none;
+  }
+}
+
+.abn-note-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--theme-border-divider);
+  background: var(--theme-bg-elevated);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.abn-note-card--clickable {
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.abn-note-card--clickable:hover,
+.abn-note-card--clickable:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border-divider));
+  background: color-mix(in srgb, var(--theme-bg-elevated) 92%, var(--theme-accent) 8%);
+  outline: none;
+}
+
+.abn-note-card-head {
+  padding: 14px 14px 6px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.abn-note-card-title {
+  margin: 0;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 0.96rem;
+  line-height: 1.35;
+  color: var(--theme-text-primary);
+}
+
+.abn-note-card-meta {
+  margin: 0;
+  padding: 0 14px;
+  overflow-wrap: anywhere;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--theme-text-tertiary);
+}
+
+.abn-note-card-tags .abn-tag-list {
+  padding: 10px 14px 2px;
+  gap: 0.45rem;
+}
+
+.abn-note-card-preview {
+  margin: 0;
+  padding: 10px 14px 14px;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--theme-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .dl-item--detailed {
+    flex-direction: column;
+  }
+
+  .dl-item-media {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dl-item-media-image {
+    min-height: 120px;
+    max-height: 160px;
+  }
 }

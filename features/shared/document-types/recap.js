@@ -33,6 +33,34 @@
     return root.recapScreen || null;
   }
 
+  function buildDetailedListItemOptions(row) {
+    return {
+      title: row?.title || "Recuento",
+      meta: recapScreen()?.formatMeta?.(row) || `Sesión ${row?.session_number || "—"}`,
+      preview: previewLines(row?.body || "", 5),
+    };
+  }
+
+  function renderSharedItem(row) {
+    const meta = recapScreen()?.formatMeta?.(row) || `Sesión ${row.session_number || "—"}`;
+    const preview = previewLines(row.body || "", 5);
+
+    return `
+      <article
+        class="dl-item dl-item--complete dl-item--clickable"
+        data-document-id="${escapeHtml(row.id)}"
+        role="button"
+        tabindex="0"
+      >
+        <div class="dl-item-head">
+          <h3 class="dl-item-title">${escapeHtml(row.title || "Recuento")}</h3>
+        </div>
+        ${meta ? `<p class="dl-item-meta">${escapeHtml(meta)}</p>` : ""}
+        ${preview ? `<p class="dl-item-preview">${escapeHtml(preview)}</p>` : ""}
+      </article>
+    `;
+  }
+
   async function fetchRows(ctx) {
     if (!global.supabase || !ctx.chronicleId) return [];
 
@@ -62,17 +90,16 @@
   }
 
   function renderCard(row) {
-    const meta = recapScreen()?.formatMeta?.(row) || `Sesión ${row.session_number || "—"}`;
-    const preview = previewLines(row.body || "", 5);
+    return renderSharedItem(row);
+  }
 
+  function renderList(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return "";
     return `
-      <article class="da-card da-card--clickable" data-document-id="${escapeHtml(row.id)}">
-        <div class="da-card-head">
-          <h3>${escapeHtml(row.title || "Recuento")}</h3>
-        </div>
-        <p class="da-meta">${escapeHtml(meta)}</p>
-        ${preview ? `<p class="da-preview">${escapeHtml(preview)}</p>` : ""}
-      </article>
+      <div class="dl-list dl-list--complete">
+        ${list.map((row) => renderSharedItem(row)).join("")}
+      </div>
     `;
   }
 
@@ -147,11 +174,19 @@
     getListLayout() {
       return "stack";
     },
+    getLoadingSkeleton() {
+      return {
+        preset: "complete",
+        count: 5,
+      };
+    },
     getEmptyMessage(_ctx, { query }) {
       return query ? "Sin resultados." : "No hay recuentos registrados.";
     },
+    buildDetailedListItemOptions,
     fetchRows,
     filterRows,
+    renderList,
     renderCard,
     openCreate,
     handleListClick,

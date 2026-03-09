@@ -32,6 +32,10 @@
     --app-font-body: "Special Elite", cursive;
     --app-font-heading: "Special Elite", cursive;
     --app-font-size-adjust: none;
+    --auth-title-size: 2.4rem;
+    --auth-subtitle-size: 0.92rem;
+    --auth-copy-size: 1.3rem;
+    --auth-signature-size: 1.3rem;
 
     /* Sidebar sizing */
     --sidebar-width-expanded: 180px;
@@ -221,6 +225,10 @@ body[data-app-font="noir"],
 body[data-font="noir"] {
     --app-font-body: "Courier Prime", monospace;
     --app-font-heading: "Special Elite", cursive;
+    --auth-title-size: 2.1rem;
+    --auth-subtitle-size: 0.88rem;
+    --auth-copy-size: 1.08rem;
+    --auth-signature-size: 1.08rem;
 }
 
 :root[data-app-font="terminal"],
@@ -231,4 +239,8 @@ body[data-font="terminal"],
 body[data-font="phantomas"] {
     --app-font-body: "Space Mono", monospace;
     --app-font-heading: "Share Tech Mono", monospace;
+    --auth-title-size: 2rem;
+    --auth-subtitle-size: 0.86rem;
+    --auth-copy-size: 1rem;
+    --auth-signature-size: 1rem;
 }

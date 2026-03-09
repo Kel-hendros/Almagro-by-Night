@@ -103,15 +103,22 @@
 
   function createItem(options = {}) {
     const normalizedPreset = normalizePreset(options.preset);
+    const variant = String(options.variant || "").trim().toLowerCase() === "detailed"
+      ? "detailed"
+      : "basic";
     const title = String(options.title || "Sin título").trim() || "Sin título";
     const meta = String(options.meta || "").trim();
     const preview = String(options.preview || "").trim();
+    const tagsHtml = String(options.tagsHtml || "").trim();
+    const image = options.image && typeof options.image === "object" ? options.image : null;
+    const imageSrc = String(image?.src || "").trim();
+    const imageAlt = String(image?.alt || title || "").trim();
     const onActivate = typeof options.onActivate === "function" ? options.onActivate : null;
     const dataAttrs =
       options.dataAttrs && typeof options.dataAttrs === "object" ? options.dataAttrs : {};
 
     const item = document.createElement("article");
-    item.className = `dl-item dl-item--${normalizedPreset}`;
+    item.className = `dl-item dl-item--${normalizedPreset} dl-item--${variant}`;
 
     Object.entries(dataAttrs).forEach(([name, value]) => {
       if (value == null) return;
@@ -133,14 +140,56 @@
     }
 
     item.innerHTML = `
-      <div class="dl-item-head">
-        <h3 class="dl-item-title">${escapeHtml(title)}</h3>
+      <div class="dl-item-main">
+        <div class="dl-item-head">
+          <h3 class="dl-item-title">${escapeHtml(title)}</h3>
+        </div>
+        ${meta ? `<p class="dl-item-meta">${escapeHtml(meta)}</p>` : ""}
+        ${tagsHtml ? `<div class="dl-item-tags">${tagsHtml}</div>` : ""}
+        ${preview ? `<p class="dl-item-preview">${escapeHtml(preview)}</p>` : ""}
       </div>
-      ${meta ? `<p class="dl-item-meta">${escapeHtml(meta)}</p>` : ""}
-      ${preview ? `<p class="dl-item-preview">${escapeHtml(preview)}</p>` : ""}
+      ${imageSrc
+        ? `<div class="dl-item-media" aria-hidden="true">
+             <img class="dl-item-media-image" src="${escapeHtml(imageSrc)}" alt="${escapeHtml(imageAlt)}">
+           </div>`
+        : ""}
     `;
 
     return item;
+  }
+
+  function createSkeletonItemMarkup(options = {}) {
+    const normalizedPreset = normalizePreset(options.preset);
+    return `
+      <article class="dl-item dl-item--${normalizedPreset} dl-item--skeleton" aria-hidden="true">
+        <div class="dl-item-head">
+          <span class="dl-skeleton dl-skeleton--title"></span>
+        </div>
+        <span class="dl-skeleton dl-skeleton--meta"></span>
+        <div class="dl-skeleton-stack">
+          <span class="dl-skeleton dl-skeleton--line"></span>
+          <span class="dl-skeleton dl-skeleton--line"></span>
+          <span class="dl-skeleton dl-skeleton--line dl-skeleton--line-short"></span>
+        </div>
+      </article>
+    `;
+  }
+
+  function getSkeletonMarkup(options = {}) {
+    const normalizedPreset = normalizePreset(options.preset);
+    const count = normalizeLimit(options.count);
+    return `
+      <div class="dl-list dl-list--${normalizedPreset}" aria-hidden="true">
+        ${Array.from({ length: count }, () =>
+          createSkeletonItemMarkup({ preset: normalizedPreset })).join("")}
+      </div>
+    `;
+  }
+
+  function renderSkeleton(host, options = {}) {
+    if (!host) return;
+    host.setAttribute("aria-busy", "true");
+    host.innerHTML = getSkeletonMarkup(options);
   }
 
   root.documentList = {
@@ -148,8 +197,11 @@
     applyPreset,
     buildPreviewText,
     createItem,
+    createSkeletonItemMarkup,
     getRecentRows,
+    getSkeletonMarkup,
     normalizeLimit,
+    renderSkeleton,
     stripMarkdownPreservingBreaks,
   };
 })(window);

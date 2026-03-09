@@ -27,6 +27,10 @@
     return global.ABNShared?.recapScreen || null;
   }
 
+  function recapAdapter() {
+    return global.ABNShared?.documentTypes?.get?.("recap") || null;
+  }
+
   async function init(config) {
     const {
       chronicleId,
@@ -59,10 +63,20 @@
     }
 
     function renderRecapCard(recap) {
-      const meta = recapScreen()?.formatMeta?.(recap) || formatRecapMeta(recap);
-      const truncated =
-        typeof previewLines === "function" ? previewLines(recap.body, 5) : String(recap.body || "").trim();
       const listApi = documentList();
+      const adapter = recapAdapter();
+      const itemOptions = adapter?.buildDetailedListItemOptions?.(recap, {
+        chronicleId,
+        currentPlayerId,
+        isNarrator,
+      }) || {
+        title: recap.title || "Recuento",
+        meta: recapScreen()?.formatMeta?.(recap) || formatRecapMeta(recap),
+        preview:
+          typeof previewLines === "function"
+            ? previewLines(recap.body, 5)
+            : String(recap.body || "").trim(),
+      };
 
       if (!listApi?.createItem) {
         const fallback = document.createElement("div");
@@ -70,9 +84,9 @@
         fallback.dataset.recapId = recap.id;
         fallback.innerHTML = `
           <div class="cd-recap-info">
-            <span class="cd-recap-title">${escapeHtml(recap.title)}</span>
-            <span class="cd-recap-meta">${meta}</span>
-            ${truncated ? `<p class="cd-recap-body">${escapeHtml(truncated)}</p>` : ""}
+            <span class="cd-recap-title">${escapeHtml(itemOptions.title || recap.title)}</span>
+            <span class="cd-recap-meta">${escapeHtml(itemOptions.meta || "")}</span>
+            ${itemOptions.preview ? `<p class="cd-recap-body">${escapeHtml(itemOptions.preview)}</p>` : ""}
           </div>
         `;
         fallback.addEventListener("click", () => {
@@ -83,9 +97,12 @@
 
       return listApi.createItem({
         preset: "complete",
-        title: recap.title || "Recuento",
-        meta,
-        preview: truncated,
+        variant: "detailed",
+        title: itemOptions.title,
+        meta: itemOptions.meta,
+        preview: itemOptions.preview,
+        tagsHtml: itemOptions.tagsHtml,
+        image: itemOptions.image,
         dataAttrs: { "recap-id": recap.id },
         onActivate: () => {
           void openRecapReader(recap.id);
@@ -106,6 +123,7 @@
 
     function renderVisibleRecaps() {
       const visibleRecaps = getVisibleRecaps();
+      sesionesList.removeAttribute("aria-busy");
       sesionesList.innerHTML = "";
       if (!visibleRecaps.length) {
         sesionesList.innerHTML =
@@ -121,7 +139,24 @@
       sesionesMoreBtn.classList.add("hidden");
     }
 
+    function renderLoadingState() {
+      const listApi = documentList();
+      if (!listApi?.renderSkeleton) {
+        sesionesList.setAttribute("aria-busy", "true");
+        sesionesList.innerHTML = '<span class="cd-card-muted">Cargando sesiones…</span>';
+        return;
+      }
+      listApi.renderSkeleton(sesionesList, {
+        preset: "complete",
+        count: listLimit || 5,
+      });
+    }
+
     async function loadRecaps() {
+      if (!allLoadedRecaps.length) {
+        renderLoadingState();
+      }
+
       const { data: recaps, error } = await supabase
         .from("session_recaps")
         .select("id, session_number, title, body, session_date, created_at")
@@ -130,6 +165,7 @@
 
       if (error) {
         console.error("Error loading recaps:", error);
+        sesionesList.removeAttribute("aria-busy");
         sesionesList.innerHTML =
           '<span class="cd-card-muted">Error al cargar sesiones.</span>';
         sesionesMoreBtn.classList.add("hidden");

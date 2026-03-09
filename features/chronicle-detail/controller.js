@@ -64,6 +64,14 @@
     }
   }
 
+  function documentList() {
+    return global.ABNShared?.documentList || null;
+  }
+
+  function revelationAdapter() {
+    return global.ABNShared?.documentTypes?.get?.("revelation") || null;
+  }
+
   // ── Revelaciones helpers ──
 
   const revelacionState = {
@@ -106,27 +114,49 @@
       listEl.innerHTML = '<span class="cd-card-muted">Sin revelaciones creadas</span>';
       return;
     }
+    const listApi = documentList();
+    const adapter = revelationAdapter();
+    listApi?.applyPreset?.(listEl, "complete");
     listEl.innerHTML = "";
     revelations.forEach((rev) => {
-      const recipientCount = (rev.deliveries || []).length;
-      const recipientNames = (rev.deliveries || [])
-        .map((d) => d.recipient?.character_name || d.recipient?.name || "—")
-        .join(", ");
-      const meta = formatDate(rev.created_at);
-      const preview = truncateText(rev.body_markdown);
-      const tagsHtml = renderTagsMarkup(rev.tags);
+      const itemOptions = adapter?.buildDetailedListItemOptions?.(rev, { isNarrator: true }) || {
+        title: rev.title || "Revelación",
+        meta: formatDate(rev.created_at),
+        tagsHtml: renderTagsMarkup(rev.tags),
+        preview: truncateText(rev.body_markdown),
+        image: rev.image_signed_url
+          ? {
+              src: rev.image_signed_url,
+              alt: rev.title || "Revelación",
+            }
+          : null,
+      };
 
-      const card = document.createElement("div");
-      card.className = "cd-recap-card";
-      card.dataset.handoutId = rev.id;
-      card.innerHTML = `
-        <div class="cd-recap-info">
-          <span class="cd-recap-title">${escapeHtml(rev.title)}</span>
-          <span class="cd-recap-meta">${meta} · ${recipientCount} personaje${recipientCount !== 1 ? "s" : ""}${recipientNames ? ": " + escapeHtml(recipientNames) : ""}</span>
-          ${tagsHtml}
-          ${preview ? `<p class="cd-recap-body">${escapeHtml(preview)}</p>` : ""}
-        </div>
-      `;
+      const card = listApi?.createItem
+        ? listApi.createItem({
+            preset: "complete",
+            variant: "detailed",
+            title: itemOptions.title,
+            meta: itemOptions.meta,
+            tagsHtml: itemOptions.tagsHtml,
+            preview: itemOptions.preview,
+            image: itemOptions.image,
+            dataAttrs: { handoutId: rev.id },
+          })
+        : document.createElement("div");
+
+      if (!listApi?.createItem) {
+        card.className = "cd-recap-card";
+        card.dataset.handoutId = rev.id;
+        card.innerHTML = `
+          <div class="cd-recap-info">
+            <span class="cd-recap-title">${escapeHtml(itemOptions.title || rev.title)}</span>
+            <span class="cd-recap-meta">${escapeHtml(itemOptions.meta || "")}</span>
+            ${itemOptions.tagsHtml || ""}
+            ${itemOptions.preview ? `<p class="cd-recap-body">${escapeHtml(itemOptions.preview)}</p>` : ""}
+          </div>
+        `;
+      }
       listEl.appendChild(card);
     });
   }
@@ -136,25 +166,61 @@
       listEl.innerHTML = '<span class="cd-card-muted">Sin revelaciones recibidas</span>';
       return;
     }
+    const listApi = documentList();
+    const adapter = revelationAdapter();
+    listApi?.applyPreset?.(listEl, "complete");
     listEl.innerHTML = "";
     deliveries.forEach((del) => {
       const handout = del.handout || {};
-      const meta = formatDate(del.delivered_at);
-      const preview = truncateText(handout.body_markdown);
-      const tagsHtml = renderTagsMarkup(handout.tags);
+      const row = {
+        ...handout,
+        id: handout.id || del.revelation_id || del.handout_id || del.id,
+        revelation_id: handout.id || del.revelation_id || del.handout_id || null,
+        delivered_at: del.delivered_at,
+        deliveries: [],
+      };
+      const itemOptions = adapter?.buildDetailedListItemOptions?.(row, { isNarrator: false }) || {
+        title: handout.title || "Sin título",
+        meta: formatDate(del.delivered_at),
+        tagsHtml: renderTagsMarkup(handout.tags),
+        preview: truncateText(handout.body_markdown),
+        image: handout.image_signed_url
+          ? {
+              src: handout.image_signed_url,
+              alt: handout.title || "Revelación",
+            }
+          : null,
+      };
 
-      const card = document.createElement("div");
-      card.className = "cd-recap-card";
-      card.dataset.deliveryId = del.id;
-      card.dataset.revelationId = handout.id || "";
-      card.innerHTML = `
-        <div class="cd-recap-info">
-          <span class="cd-recap-title">${escapeHtml(handout.title || "Sin título")}</span>
-          <span class="cd-recap-meta">${meta}</span>
-          ${tagsHtml}
-          ${preview ? `<p class="cd-recap-body">${escapeHtml(preview)}</p>` : ""}
-        </div>
-      `;
+      const card = listApi?.createItem
+        ? listApi.createItem({
+            preset: "complete",
+            variant: "detailed",
+            title: itemOptions.title,
+            meta: itemOptions.meta,
+            tagsHtml: itemOptions.tagsHtml,
+            preview: itemOptions.preview,
+            image: itemOptions.image,
+            dataAttrs: {
+              deliveryId: del.id,
+              revelationId: handout.id || "",
+            },
+          })
+        : document.createElement("div");
+
+      if (!listApi?.createItem) {
+        card.className = "cd-recap-card";
+        card.dataset.deliveryId = del.id;
+        card.dataset.revelationId = handout.id || "";
+        card.innerHTML = `
+          <div class="cd-recap-info">
+            <span class="cd-recap-title">${escapeHtml(itemOptions.title || handout.title || "Sin título")}</span>
+            <span class="cd-recap-meta">${escapeHtml(itemOptions.meta || "")}</span>
+            ${itemOptions.tagsHtml || ""}
+            ${itemOptions.preview ? `<p class="cd-recap-body">${escapeHtml(itemOptions.preview)}</p>` : ""}
+          </div>
+        `;
+      }
       listEl.appendChild(card);
     });
   }
@@ -262,6 +328,44 @@
       .join("");
   }
 
+  function getChronicleTabButtons() {
+    return Array.from(document.querySelectorAll("#chronicle-tabs .app-tab[data-tab]"));
+  }
+
+  function getChronicleTabPanels() {
+    return Array.from(document.querySelectorAll(".cd-tab-panel[data-panel]"));
+  }
+
+  function getSavedChronicleTab() {
+    const savedTab = sessionStorage.getItem("chronicle-tab");
+    if (!savedTab) return null;
+    return document.querySelector(`#chronicle-tabs .app-tab[data-tab="${savedTab}"]`)
+      ? savedTab
+      : null;
+  }
+
+  function applyChronicleTab(target, options = {}) {
+    const normalizedTarget = String(target || "").trim();
+    if (!normalizedTarget) return false;
+
+    const tabButtons = getChronicleTabButtons();
+    const tabPanels = getChronicleTabPanels();
+    if (!tabButtons.length || !tabPanels.length) return false;
+    if (!tabButtons.some((button) => button.dataset.tab === normalizedTarget)) return false;
+
+    tabButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.tab === normalizedTarget);
+    });
+    tabPanels.forEach((panel) => {
+      panel.classList.toggle("active", panel.dataset.panel === normalizedTarget);
+    });
+
+    if (options.persist) {
+      sessionStorage.setItem("chronicle-tab", normalizedTarget);
+    }
+    return true;
+  }
+
   function renderLoadingState() {
     const ids = [
       "cd-last-session-card",
@@ -293,9 +397,10 @@
   }
 
   async function initPage() {
+    const { chronicleIdFromQuery, recapIdFromQuery } = getChronicleContextFromHash();
+    applyChronicleTab(recapIdFromQuery ? "diario" : getSavedChronicleTab() || "resumen");
     renderLoadingState();
 
-    const { chronicleIdFromQuery, recapIdFromQuery } = getChronicleContextFromHash();
     const chronicleId = chronicleIdFromQuery || localStorage.getItem("currentChronicleId");
     if (!chronicleId) {
         window.location.hash = "chronicles";
@@ -343,20 +448,14 @@
     ns.banner?.init({ chronicle, isNarrator });
 
     // ── Tab switching ──
-    const tabButtons = document.querySelectorAll(".app-tab");
-    const tabPanels = document.querySelectorAll(".cd-tab-panel");
+    const tabButtons = getChronicleTabButtons();
+    const tabPanels = getChronicleTabPanels();
 
     const scrollContainer = document.querySelector(".content");
 
     function switchTab(target) {
         const scrollPos = scrollContainer.scrollTop;
-        tabButtons.forEach(b => {
-            b.classList.toggle("active", b.dataset.tab === target);
-        });
-        tabPanels.forEach(p => {
-            p.classList.toggle("active", p.dataset.panel === target);
-        });
-        sessionStorage.setItem("chronicle-tab", target);
+        applyChronicleTab(target, { persist: true });
         scrollContainer.scrollTop = scrollPos;
     }
 
@@ -365,10 +464,8 @@
     });
 
     // Restore last active tab
-    const savedTab = sessionStorage.getItem("chronicle-tab");
-    if (savedTab && document.querySelector(`.app-tab[data-tab="${savedTab}"]`)) {
-        switchTab(savedTab);
-    }
+    const initialTab = recapIdFromQuery ? "diario" : getSavedChronicleTab();
+    if (initialTab) switchTab(initialTab);
 
     const {
         participants,

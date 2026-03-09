@@ -35,8 +35,9 @@
     return `${window.location.origin}${window.location.pathname}#${hash}`;
   }
 
-  async function shareRecap(chronicleId, recapId) {
+  async function shareRecap(chronicleId, recapId, options = {}) {
     if (!chronicleId || !recapId) return;
+    if (!options.isNarrator) return;
     const shareUrl = getShareUrl(chronicleId, recapId);
     try {
       if (navigator.clipboard?.writeText) {
@@ -232,20 +233,19 @@
     const recap = options.recap || (await fetchRecap(chronicleId, recapId));
     if (!recap) return null;
 
-    const actions = [
-      {
+    const actions = [];
+
+    if (isNarrator) {
+      actions.push({
         id: "share",
         kind: "icon",
         icon: "share-2",
         title: "Compartir",
         ariaLabel: "Compartir",
         onClick: () => {
-          void shareRecap(chronicleId, recap.id);
+          void shareRecap(chronicleId, recap.id, { isNarrator });
         },
-      },
-    ];
-
-    if (isNarrator) {
+      });
       actions.push(
         {
           id: "edit",

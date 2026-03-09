@@ -1,6 +1,6 @@
 ---
 name: use-documents
-description: Use the shared document system in this repo when a task touches document-archive, document-screen, note/recap/revelation viewers or forms, document-type adapters, or document list/card variants. Use this before creating a new document-like screen so new work plugs into the existing registry, archive route, shared shells, and list presets instead of inventing parallel implementations.
+description: Use the shared document system in this repo when a task touches document-archive, document-screen, note/recap/revelation viewers or forms, document-type adapters, or shared document list variants. Use this before creating a new document-like screen so new work plugs into the existing registry, archive route, shared shells, and shared list patterns instead of inventing parallel implementations.
 ---
 
 # Use Documents
@@ -24,6 +24,7 @@ Use this skill whenever the task touches document viewers, document forms, or ar
 - Shared list presets/helpers: `features/shared/document-list.js`
 - Shared list preset styles: `css/document-list.css`
 - Archive fragment: `fragments/document-archive.html`
+- Chronicle fragment and local diary lists: `fragments/chronicle.html`, `features/chronicle-detail/*.js`
 - Archive controller/view/service: `features/document-archive/*.js`
 - Archive styles: `css/document-archive.css`
 - Type registry: `features/shared/document-types/registry.js`
@@ -35,12 +36,17 @@ Use this skill whenever the task touches document viewers, document forms, or ar
 - Treat `document-archive` as list, search, filters, pagination, and entry point only.
 - Put document mutations in the shared viewer/form flow, not inline on archive cards, unless there is a documented exception.
 - Add new document types through the shared registry/adapters, not by creating a separate archive page.
-- Pick a list preset first, then customize the adapter/card details.
+- Pick the surface first: archive card vs local detailed list.
+- Archive cards and local detailed lists are different shared patterns; do not force one to impersonate the other with feature CSS.
+- For local non-archive lists like `Crónica > Diario`, build on `documentList.createItem({ variant: "detailed" })`.
+- If multiple document types need the same list anatomy, keep title/meta/tags/preview/media styling in `css/document-list.css`.
+- Keep document-type specifics in adapter helpers such as `buildDetailedListItemOptions(row, ctx)`.
 - If a document surface only needs the latest N items, use the shared list helper instead of custom slicing logic.
 - Global list rule: if a surface does not request a specific count, show the latest `5` documents.
 - If a surface requests a specific count, pass it explicitly, for example `1`.
 - “Latest” means newest by creation time, not by visual order guessed in the DOM.
 - Keep archive-specific CSS in `css/document-archive.css`, scoped by `data-archive-type` when needed.
+- Keep shared detailed-list CSS in `css/document-list.css`, not in `chronicles.css` or other feature CSS.
 - Keep shared viewer/form shell behavior in `document-screen`; scope special shell differences by `data-doc-type`.
 - If the document surface uses tags, also use `use-tags`.
 - If the work changes shared visuals or primitives, also use `use-themes`.
@@ -70,10 +76,23 @@ Use these names consistently when discussing or implementing archive views:
 These presets are surface-level decisions, not permanent properties of a `docType`.
 The same document type can use different presets in different places if the UX goal changes.
 
+## Shared Detailed List
+
+Use this for non-archive document lists that need the same visual anatomy across doc types, for example `Crónica > Diario > Sesiones`, `Mis Notas`, and `Revelaciones`.
+
+- Runtime shape: `documentList.createItem({ variant: "detailed", ... })`
+- Shared anatomy: title, meta, tags, preview, optional thumbnail
+- Shared preview rule: plain text, markdown stripped, line breaks preserved, max `5` lines
+- Shared tags rule: render readonly tags with the global tag wrapper `.abn-tag-list`
+- Type-specific responsibility: only provide the row-specific values via the adapter
+
+This pattern is separate from `Archivo de ...` cards.
+
 ## Common Moves
 
 - Need a new doc type: add/register an adapter, choose a list preset, and wire a shared viewer/form if the doc is editable.
 - Need only the latest N documents on a non-archive screen: use `ABNShared.documentList.getRecentRows(rows, { limit, getCreatedAt })`.
+- Need a local detailed list on a non-archive surface: have the adapter expose `buildDetailedListItemOptions(...)` and pass the result to `documentList.createItem({ variant: "detailed", ... })`.
 - Need archive-only behavior: edit the adapter plus `document-archive` view/controller hooks before touching unrelated screens.
 - Need grouped sections: implement `renderList()` in the adapter instead of forcing the controller to know about that type.
 - Need special archive filters: keep text search in the controller and expose type-specific stats/hooks from the adapter.

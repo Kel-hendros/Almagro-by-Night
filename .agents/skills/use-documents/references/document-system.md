@@ -63,7 +63,10 @@ Current helper API:
 
 - `applyPreset(host, preset)`
 - `createItem(options)`
+- `buildPreviewText(text, { maxLines })`
+- `stripMarkdownPreservingBreaks(text)`
 - `getRecentRows(rows, { limit, getCreatedAt })`
+- `renderSkeleton(host, { preset, count })`
 - `normalizeLimit(limit)`
 - `DEFAULT_LIMIT`
 
@@ -74,6 +77,11 @@ Global list rule:
 - latest means newest by creation time
 
 Use this helper on local surfaces like `Crónica > Diario` instead of re-implementing pagination or ad hoc slicing.
+
+Important distinction:
+
+- archive cards live in the adapter `renderCard()` path and can use archive-specific wrappers/styles
+- local non-archive detailed lists should use `createItem({ variant: "detailed" })` plus shared `css/document-list.css` anatomy
 
 ### 4. Type registry
 
@@ -103,6 +111,7 @@ Optional adapter methods:
 
 - `renderList(rows, ctx, meta)` when the type needs grouped/custom list markup
 - `getTagFilterStats(rows, ctx, filters)` when the type exposes tag chips
+- `buildDetailedListItemOptions(row, ctx)` for shared non-archive detailed lists
 - `getSecondaryBackAction(ctx)`
 - `subscribe(ctx, { onChange })`
 - `unsubscribe(subscription)`
@@ -111,6 +120,7 @@ Rule:
 
 - keep generic list orchestration in the controller
 - push type-specific rendering and behavior into the adapter
+- if a local surface wants the shared detailed list, adapters should return data, not bespoke markup
 
 ## Global List Presets
 
@@ -160,7 +170,31 @@ Use for:
 Current live example:
 
 - `features/shared/document-types/note.js`
-- `Crónica > Diario > Sesiones` now uses this preset for recaps as a denser local surface
+- `Archivo de Notas`
+
+### `Lista detallada`
+
+Meaning:
+
+- non-archive shared list item built with `documentList.createItem({ variant: "detailed" })`
+- title + meta + tags + preview + optional thumbnail
+- same typography, spacing, and content anatomy across document types
+- adapter provides values through `buildDetailedListItemOptions(...)`
+
+Use for:
+
+- `Crónica > Diario > Sesiones`
+- `Crónica > Diario > Mis Notas`
+- `Crónica > Diario > Revelaciones`
+
+Current live example:
+
+- `features/chronicle-detail/recaps.js`
+- `features/chronicle-detail/notes.js`
+- `features/chronicle-detail/controller.js`
+- `features/shared/document-types/recap.js`
+- `features/shared/document-types/note.js`
+- `features/shared/document-types/revelation.js`
 
 ### `Grid de cards`
 
@@ -263,12 +297,15 @@ Put here:
 
 - small in-context lists like `Crónica > Diario`
 - latest-N selection using `documentList.getRecentRows(...)`
-- preset choice for that local surface
+- shared detailed list composition using `documentList.createItem({ variant: "detailed" })`
+- adapter-owned row mapping through `buildDetailedListItemOptions(...)`
 
 Files:
 
 - `features/shared/document-list.js`
+- `css/document-list.css`
 - the consuming feature module, for example `features/chronicle-detail/recaps.js`
+- any fragment that must load the required shared adapters, for example `fragments/chronicle.html`
 
 ## Adding A New Document Type
 
@@ -279,6 +316,7 @@ Files:
 2b. Decide whether the surface is archive-sized or latest-N.
    - If it is just a local summary/list, default to the latest `5`
    - If it needs another amount, pass the limit explicitly
+2c. If the local surface should match the shared detailed list, add `buildDetailedListItemOptions(...)` to the adapter instead of inventing local card markup.
 3. Create or reuse a shared document screen.
    - Use `ABNShared.documentScreen.open({...})`
 4. Create a new adapter under `features/shared/document-types/`
@@ -293,6 +331,8 @@ Files:
 - Archive cards are for discovery, not full editing.
 - Local document lists should default to the latest `5` unless the surface explicitly asks for another count.
 - Local document lists should use creation-time recency when picking “latest”.
+- Local detailed lists should share title/meta/tags/preview/media styling across doc types.
+- Archive visuals and local detailed-list visuals should not diverge through feature-local CSS patches.
 - Search, tag filters, and pagination stay generic unless there is a strong reason otherwise.
 - If the type uses tags, use the shared tag system instead of local tag chips.
 - If a visual rule applies to multiple document types, put it in shared CSS rather than feature-local CSS.
@@ -305,19 +345,21 @@ Files:
 - Adapter: `features/shared/document-types/note.js`
 - Screen: `features/shared/note-screen.js`
 - Preset: `Lista completa` + `Lista agrupada` for narrator
+- Local list: `Lista detallada` in `Crónica > Diario > Mis Notas`
 
 ### Recaps
 
 - Adapter: `features/shared/document-types/recap.js`
 - Screen: `features/shared/recap-screen.js`
 - Archive preset: `Lista minimalista`
-- `Crónica > Diario > Sesiones`: `Lista completa`
+- Local list: `Lista detallada` in `Crónica > Diario > Sesiones`
 
 ### Revelations
 
 - Adapter: `features/shared/document-types/revelation.js`
 - Screen: `features/shared/revelation-screen.js`
 - Preset: `Grid de cards`
+- Local list: `Lista detallada` in `Crónica > Diario > Revelaciones`
 
 ## Review Checklist
 
@@ -326,6 +368,7 @@ Files:
 - Is the archive behavior living in an adapter instead of in the generic controller?
 - Is the chosen list preset clear and consistent with the document type?
 - If this is a local list, is it using the shared latest-N rule instead of custom manual limits?
+- If this is a local detailed list, is the adapter returning `buildDetailedListItemOptions(...)` instead of custom markup?
 - Are special styles scoped by `data-archive-type` or `data-doc-type` instead of leaking globally?
 - If tags are present, is the shared tag system being used?
 
@@ -334,7 +377,7 @@ Files:
 Use these when looking for nearby examples:
 
 ```bash
-rg -n "documentScreen|documentTypes\\.register|getListLayout|renderList|renderCard|openCreate|handleListClick|documentList|getRecentRows" features/shared features/document-archive features/chronicle-detail
+rg -n "documentScreen|documentTypes\\.register|getListLayout|renderList|renderCard|buildDetailedListItemOptions|openCreate|handleListClick|documentList|getRecentRows" features/shared features/document-archive features/chronicle-detail
 ```
 
 For archive CSS hooks:

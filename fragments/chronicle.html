@@ -144,8 +144,10 @@
                 <!-- Sesiones column -->
                 <div class="cd-diario-col" data-dcol="sesiones">
                     <span class="cd-diario-label">SESIONES</span>
-                    <button class="btn btn--ghost cd-add-list-btn cd-add-list-btn--compact" id="cd-open-recaps-archive">Ver Archivo</button>
-                    <button class="btn btn--secondary cd-add-list-btn hidden" id="cd-add-recap">+ Nuevo Recuento</button>
+                    <div class="cd-recaps-toolbar">
+                        <button class="btn btn--primary cd-add-list-btn cd-add-list-btn--compact" id="cd-open-recaps-archive" type="button">Archivo de Recuentos</button>
+                        <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact hidden" id="cd-add-recap" type="button">+ Nuevo Recuento</button>
+                    </div>
                     <div id="cd-sesiones-list" class="cd-diario-list">
                         <span class="cd-card-muted">Cargando...</span>
                     </div>
@@ -160,10 +162,6 @@
                             <i data-lucide="search" class="cd-notes-search-icon"></i>
                             <input type="text" id="cd-notes-search" class="cd-notes-search" placeholder="Buscar notas...">
                         </div>
-                        <button class="btn btn--ghost cd-notes-archive-btn" id="cd-notes-archive-toggle" type="button">
-                            <i data-lucide="archive" class="cd-notes-archive-icon"></i>
-                            <span>Archivo</span>
-                        </button>
                         <button class="btn btn--ghost cd-add-list-btn cd-add-list-btn--compact" id="cd-open-notes-archive">Ver Archivo</button>
                         <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact" id="cd-add-note">+ Nueva</button>
                     </div>
@@ -237,6 +235,10 @@
 
 </div>
 
+<script src="features/shared/document-types/registry.js"></script>
+<script src="features/shared/document-types/note.js"></script>
+<script src="features/shared/document-types/recap.js"></script>
+<script src="features/shared/document-types/revelation.js"></script>
 <script src="features/chronicle-detail/service.js"></script>
 <script src="features/chronicle-detail/header.js"></script>
 <script src="features/chronicle-detail/banner.js"></script>

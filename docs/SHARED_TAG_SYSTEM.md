@@ -228,13 +228,22 @@ Comportamiento esperado:
 ### 1. Render simple de tags
 
 ```js
-const html = tags
-  .map((tag) => {
-    const label = ABNShared.tags.formatLabel(tag, { displayMode: "title" });
-    return `<span class="abn-tag">${escapeHtml(label)}</span>`;
-  })
-  .join("");
+const html = `
+  <div class="abn-tag-list">
+    ${tags
+      .map((tag) => {
+        const label = ABNShared.tags.formatLabel(tag, { displayMode: "title" });
+        return `<span class="abn-tag">${escapeHtml(label)}</span>`;
+      })
+      .join("")}
+  </div>
+`;
 ```
+
+Regla:
+
+- en filas/cards readonly compartidas, usar `.abn-tag-list`
+- wrappers locales como `.da-tags-row` quedan reservados para layouts propios del archive
 
 ### 2. Editor reusable
 

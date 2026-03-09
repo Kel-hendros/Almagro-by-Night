@@ -145,7 +145,17 @@
     const adapter = state.adapter;
     if (!adapter?.fetchRows) return;
 
-    state.rows = await adapter.fetchRows(buildAdapterContext());
+    const ctx = buildAdapterContext();
+    const loadingConfig = adapter.getLoadingSkeleton?.(ctx) || null;
+    if (loadingConfig && !state.rows.length) {
+      view()?.renderLoading?.({
+        layout: adapter.getListLayout?.(ctx) || "stack",
+        preset: loadingConfig.preset,
+        count: loadingConfig.count,
+      });
+    }
+
+    state.rows = await adapter.fetchRows(ctx);
     applyFilters();
     renderCurrentPage();
   }

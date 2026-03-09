@@ -31,7 +31,7 @@
     const sharedTags = tagSystem();
     const normalized = sharedTags?.dedupe ? sharedTags.dedupe(list) : list;
 
-    return `<div class="da-tags-row">${normalized
+    return `<div class="abn-tag-list">${normalized
       .map((tag) => {
         const label = sharedTags?.formatLabel
           ? sharedTags.formatLabel(tag, { displayMode: "title" })
@@ -40,6 +40,22 @@
         return `<span class="${className}">${escapeHtml(label)}</span>`;
       })
       .join("")}</div>`;
+  }
+
+  function buildDetailedListItemOptions(row) {
+    const plain = toPlainText(row?.body_markdown || "");
+    const preview = root.documentList?.buildPreviewText
+      ? root.documentList.buildPreviewText(plain, { maxLines: 5 })
+      : plain;
+    const metaParts = [formatRelativeDate(row?.updated_at || row?.created_at)];
+    if (row?.player_name) metaParts.push(String(row.player_name).trim());
+
+    return {
+      title: row?.title || "Sin título",
+      meta: metaParts.filter(Boolean).join(" · "),
+      tagsHtml: renderTagsMarkup(row?.tags),
+      preview,
+    };
   }
 
   function toPlainText(markdown) {
@@ -83,6 +99,12 @@
     };
   }
 
+  function applyArchiveVisibility(rows, ctx) {
+    const source = Array.isArray(rows) ? rows : [];
+    if (!ctx?.excludeArchived) return source;
+    return source.filter((row) => !row?.is_archived);
+  }
+
   async function fetchRows(ctx) {
     const supabase = global.supabase;
     if (!supabase || !ctx.chronicleId) return [];
@@ -92,7 +114,7 @@
     });
 
     if (!error) {
-      return (Array.isArray(data) ? data : []).map(normalizeRow);
+      return applyArchiveVisibility((Array.isArray(data) ? data : []).map(normalizeRow), ctx);
     }
 
     console.warn("NoteDocumentType: RPC fallback", error.message);
@@ -113,17 +135,40 @@
       return [];
     }
 
-    return (response.data || []).map(normalizeRow);
+    return applyArchiveVisibility((response.data || []).map(normalizeRow), ctx);
   }
 
-  function filterRows(rows, query) {
+  function filterRows(rows, query, _ctx, filters = {}) {
     const source = Array.isArray(rows) ? rows : [];
     const normalizedQuery = String(query || "").trim().toLowerCase();
-    if (!normalizedQuery) return source;
+    const sharedTags = tagSystem();
+    const selectedTag = String(filters?.selectedTag || "").trim().toLowerCase();
+    if (!normalizedQuery && !selectedTag) return source;
 
     return source.filter((row) => {
       const haystack = `${row.title} ${row.body_markdown} ${(row.tags || []).join(" ")} ${row.player_name || ""}`.toLowerCase();
-      return haystack.includes(normalizedQuery);
+      const tags = Array.isArray(row?.tags) ? row.tags : [];
+      const matchesQuery = !normalizedQuery || haystack.includes(normalizedQuery);
+      const matchesTag =
+        !selectedTag ||
+        tags.some((tag) => {
+          const normalizedTag = sharedTags?.createTagKey
+            ? sharedTags.createTagKey(tag)
+            : String(tag || "").trim().toLowerCase();
+          return normalizedTag === selectedTag;
+        });
+      return matchesQuery && matchesTag;
+    });
+  }
+
+  function getTagFilterStats(rows, _ctx, filters = {}) {
+    const sharedTags = tagSystem();
+    if (!sharedTags?.collectStats) return [];
+
+    return sharedTags.collectStats(rows, {
+      getTags: (row) => row?.tags,
+      selectedTag: filters?.selectedTag || null,
+      selectedLabel: filters?.selectedTagLabel || "",
     });
   }
 
@@ -133,14 +178,16 @@
     const archivedLabel = row.is_archived ? '<span class="da-inline-badge">Archivada</span>' : "";
 
     return `
-      <article class="da-card da-card--clickable" data-document-id="${escapeHtml(row.id)}">
-        <div class="da-card-head">
-          <h3>${escapeHtml(row.title || "Sin título")}</h3>
+      <article class="abn-note-card abn-note-card--clickable" data-document-id="${escapeHtml(row.id)}">
+        <div class="abn-note-card-head">
+          <h3 class="abn-note-card-title">${escapeHtml(row.title || "Sin título")}</h3>
           ${archivedLabel}
         </div>
-        <p class="da-meta">${escapeHtml(formatRelativeDate(row.updated_at || row.created_at))}</p>
-        ${renderTagsMarkup(row.tags)}
-        ${preview ? `<p class="da-preview">${escapeHtml(preview)}</p>` : ""}
+        <p class="abn-note-card-meta">${escapeHtml(formatRelativeDate(row.updated_at || row.created_at))}</p>
+        <div class="abn-note-card-tags">
+          ${renderTagsMarkup(row.tags)}
+        </div>
+        ${preview ? `<p class="abn-note-card-preview">${escapeHtml(preview)}</p>` : ""}
       </article>
     `;
   }
@@ -271,8 +318,10 @@
         ? "No hay notas disponibles en esta crónica."
         : "No tienes notas en esta crónica.";
     },
+    buildDetailedListItemOptions,
     fetchRows,
     filterRows,
+    getTagFilterStats,
     renderList,
     renderCard,
     openCreate,

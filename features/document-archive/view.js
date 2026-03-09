@@ -1,6 +1,10 @@
 (function initDocumentArchiveView(global) {
   const ns = (global.ABNDocumentArchive = global.ABNDocumentArchive || {});
 
+  function documentList() {
+    return global.ABNShared?.documentList || null;
+  }
+
   function setHeader({ title, subtitle }) {
     const titleEl = document.getElementById("da-title");
     const subtitleEl = document.getElementById("da-subtitle");
@@ -84,6 +88,7 @@
     if (!host) return;
 
     setListLayout(layout);
+    host.removeAttribute("aria-busy");
 
     if (!cardsHtml) {
       host.innerHTML = `<p class="muted">${emptyMessage || "Sin documentos."}</p>`;
@@ -94,6 +99,22 @@
     if (global.lucide?.createIcons) {
       global.lucide.createIcons({ nodes: [host] });
     }
+  }
+
+  function renderLoading({ layout, preset = "complete", count = 5 } = {}) {
+    const host = document.getElementById("da-list");
+    if (!host) return;
+
+    setListLayout(layout);
+
+    const listApi = documentList();
+    if (listApi?.renderSkeleton) {
+      listApi.renderSkeleton(host, { preset, count });
+      return;
+    }
+
+    host.setAttribute("aria-busy", "true");
+    host.innerHTML = '<p class="muted">Cargando…</p>';
   }
 
   function setResultsMeta(text) {
@@ -128,6 +149,7 @@
     setCreateAction,
     renderTagFilters,
     renderCards,
+    renderLoading,
     setResultsMeta,
     setPagination,
     getSearchQuery,

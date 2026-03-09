@@ -30,10 +30,13 @@ The feature owns state and persistence. `ABNShared.tags` only handles normalizat
 - Default to `displayMode: "title"` unless the feature already has a strong reason not to.
 - Tag filters should combine with existing text filters, not replace them.
 - When comparing tags, use stable keys (`createTagKey`) rather than raw labels.
+- For readonly tag rows in shared cards/lists, use the global wrapper `.abn-tag-list`.
+- Do not use archive-only wrappers like `.da-tags-row` on shared non-archive lists.
+- If the tag surface is inside a document list/card flow, also use `use-documents`.
 
 ## Common Moves
 
-- Readonly tags: use `dedupe()` + `formatLabel()` and render `.abn-tag`
+- Readonly tags: use `dedupe()` + `formatLabel()` and render `.abn-tag` inside `.abn-tag-list`
 - Filter bar: use `collectStats()` + `renderFilterBar()` with local `selectedTag` state
 - Editor: use `renderEditor()` and keep `tags` plus `composerOpen` in local state
 - Save path: use `parse()` and/or `dedupe()` before building the payload

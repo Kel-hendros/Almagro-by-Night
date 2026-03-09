@@ -381,7 +381,7 @@ button,
     margin: 0;
     color: var(--theme-text-primary);
     font-family: var(--app-font-heading);
-    font-size: 2.4rem;
+    font-size: var(--auth-title-size);
     line-height: 1.05;
     font-weight: 600;
     letter-spacing: 0;
@@ -401,7 +401,7 @@ button,
     margin: 0.35rem 0 0;
     color: var(--theme-text-secondary) !important;
     font-style: italic;
-    font-size: 0.92rem !important;
+    font-size: var(--auth-subtitle-size) !important;
     font-family: var(--app-font-body) !important;
     font-weight: 400;
     letter-spacing: 0;
@@ -491,7 +491,7 @@ button,
 
 .auth-layout .auth-home-copy {
     max-width: 60ch;
-    font-size: 1.3rem !important;
+    font-size: var(--auth-copy-size) !important;
     line-height: 1.55;
 }
 
@@ -499,7 +499,7 @@ button,
     margin-top: auto !important;
     padding-top: 1rem;
     font-weight: 600 !important;
-    font-size: 1.3rem !important;
+    font-size: var(--auth-signature-size) !important;
 }
 
 .auth-layout .auth-card {
