@@ -50,7 +50,19 @@ function stripMarkdown(text: string) {
 function buildDescription(share: PublicRecapShare) {
   const preview = stripMarkdown(share.body || "");
   if (!preview) return "Recuento compartido";
-  return preview.length > 220 ? `${preview.slice(0, 217).trimEnd()}...` : preview;
+  const normalized = preview.replace(/\s*\n+\s*/g, " ").trim();
+  return normalized.length > 220 ? `${normalized.slice(0, 217).trimEnd()}...` : normalized;
+}
+
+function formatSessionMeta(share: PublicRecapShare) {
+  const parts: string[] = [];
+  if (share.session_number != null) {
+    parts.push(`Sesion ${share.session_number}`);
+  }
+  if (share.session_date) {
+    parts.push(share.session_date);
+  }
+  return parts.join(" · ");
 }
 
 function withTrailingSlash(url: string) {
@@ -95,12 +107,32 @@ function isPreviewBot(userAgent: string) {
   return [
     "whatsapp",
     "facebookexternalhit",
+    "facebookexternalua",
+    "facebookcatalog",
+    "facebot",
     "meta-externalagent",
+    "meta-externalfetcher",
+    "meta-inspector",
     "twitterbot",
     "slackbot",
     "discordbot",
     "telegrambot",
     "linkedinbot",
+    "skypeuripreview",
+    "googlebot",
+    "bingbot",
+  ].some((token) => ua.includes(token));
+}
+
+function isLikelyBrowser(userAgent: string) {
+  const ua = String(userAgent || "").toLowerCase();
+  return [
+    "mozilla/",
+    "applewebkit/",
+    "chrome/",
+    "safari/",
+    "firefox/",
+    "edg/",
   ].some((token) => ua.includes(token));
 }
 
@@ -110,11 +142,13 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect
   const canonicalUrl = buildPublicShareUrl(share.share_token) || reqUrl.toString();
   const appUrl = buildAppUrl(share.share_token);
   const ogImageUrl = buildOgImageUrl();
+  const sessionMeta = formatSessionMeta(share);
   const safeTitle = escapeHtml(title);
   const safeDescription = escapeHtml(description);
   const safeChronicle = escapeHtml(share.chronicle_name || "Crónica");
   const safeAppUrl = escapeHtml(appUrl);
   const safeOgImageUrl = escapeHtml(ogImageUrl);
+  const safeSessionMeta = escapeHtml(sessionMeta);
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -136,8 +170,6 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect
     <meta name="twitter:title" content="${safeTitle}">
     <meta name="twitter:description" content="${safeDescription}">
     <meta name="twitter:image" content="${safeOgImageUrl}">
-    ${options.autoRedirect ? `<meta http-equiv="refresh" content="0;url=${safeAppUrl}">` : ""}
-    ${options.autoRedirect ? `<script>window.location.replace(${JSON.stringify(appUrl)});</script>` : ""}
     <style>
       :root {
         color-scheme: dark;
@@ -164,10 +196,10 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect
         font-family: "Special Elite", Georgia, serif;
       }
       main {
-        width: min(720px, 100%);
-        padding: 32px;
+        width: min(560px, 100%);
+        padding: 28px;
         border: 1px solid var(--border);
-        border-radius: 22px;
+        border-radius: 20px;
         background:
           linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
           var(--surface);
@@ -183,13 +215,13 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect
       }
       h1 {
         margin: 0 0 10px;
-        font-size: clamp(1.8rem, 4vw, 2.6rem);
-        line-height: 1.05;
+        font-size: clamp(1.5rem, 3.8vw, 2.1rem);
+        line-height: 1.1;
       }
       .meta {
-        margin: 0 0 16px;
+        margin: 0 0 14px;
         color: var(--muted);
-        font-size: 0.95rem;
+        font-size: 0.9rem;
       }
       p {
         margin: 0;
@@ -197,10 +229,14 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect
         line-height: 1.55;
       }
       .preview {
-        margin-top: 16px;
-        padding-top: 16px;
+        margin-top: 14px;
+        padding-top: 14px;
         border-top: 1px solid var(--border);
         white-space: pre-wrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
       .actions {
         margin-top: 20px;
@@ -236,23 +272,37 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect
     <main>
       <p class="eyebrow">${safeChronicle}</p>
       <h1>${escapeHtml(share.title || "Recuento compartido")}</h1>
-      <p class="meta">Sesión ${escapeHtml(share.session_number ?? "—")}${share.session_date ? ` · ${escapeHtml(share.session_date)}` : ""}</p>
-      <p>${safeDescription}</p>
+      ${sessionMeta ? `<p class="meta">${safeSessionMeta}</p>` : ""}
       <p class="preview">${safeDescription}</p>
       <div class="actions">
-        <a class="primary" href="${safeAppUrl}">Abrir recuento</a>
+        <a class="primary" href="${safeAppUrl}">${options.autoRedirect ? "Abrir ahora" : "Abrir recuento"}</a>
         <a class="ghost" href="${escapeHtml(canonicalUrl)}">Recargar</a>
       </div>
-      <p class="hint">Si no redirige automáticamente, abrilo desde el botón.</p>
+      <p class="hint">${options.autoRedirect ? "Abriendo recuento..." : "Vista de previsualizacion del recuento compartido."}</p>
     </main>
+    ${options.autoRedirect
+      ? `<script>
+           window.location.replace(${JSON.stringify(appUrl)});
+         </script>`
+      : ""}
   </body>
 </html>`;
+}
+
+function htmlResponse(html: string, extraHeaders: Record<string, string> = {}) {
+  return new Response(new TextEncoder().encode(html), {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      ...extraHeaders,
+    },
+  });
 }
 
 Deno.serve(async (req: Request) => {
   const reqUrl = new URL(req.url);
   const token = extractToken(reqUrl);
   const userAgent = String(req.headers.get("user-agent") || "");
+  const varyHeader = "Accept, User-Agent";
 
   if (!token) {
     return new Response("Token faltante.", { status: 400 });
@@ -276,14 +326,24 @@ Deno.serve(async (req: Request) => {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
+        Vary: varyHeader,
       },
     });
   }
 
-  return new Response(buildHtml(data, reqUrl, { autoRedirect: !isPreviewBot(userAgent) }), {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
+  if (isLikelyBrowser(userAgent) && !isPreviewBot(userAgent) && req.method !== "HEAD") {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: buildAppUrl(data.share_token),
+        "Cache-Control": "no-store",
+        Vary: varyHeader,
+      },
+    });
+  }
+
+  return htmlResponse(buildHtml(data, reqUrl, { autoRedirect: false }), {
+    "Cache-Control": "no-store",
+    Vary: varyHeader,
   });
 });

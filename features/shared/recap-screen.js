@@ -1,5 +1,6 @@
 (function initSharedRecapScreen(global) {
   const root = (global.ABNShared = global.ABNShared || {});
+  const PUBLIC_SHARE_BUCKET_ID = "public-recap-shares";
 
   function documentScreen() {
     return root.documentScreen || null;
@@ -44,32 +45,58 @@
     const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
     if (!baseUrl) return getPublicShareAppUrl(shareToken);
 
-    const encodedToken = encodeURIComponent(String(shareToken || "").trim());
-    return new URL(`/functions/v1/public-recap-share/${encodedToken}`, `${baseUrl}/`).toString();
+    const token = encodeURIComponent(String(shareToken || "").trim());
+    return new URL(
+      `/storage/v1/object/public/${PUBLIC_SHARE_BUCKET_ID}/shares/${token}.html`,
+      `${baseUrl}/`,
+    ).toString();
   }
 
-  async function ensurePublicShare(recapId) {
-    if (!global.supabase || !recapId) return null;
+  async function publishPublicShare(recapId, mode = "ensure") {
+    const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
+    if (!baseUrl || !recapId || typeof global.abnGetSession !== "function") return null;
 
-    const { data, error } = await global.supabase
-      .rpc("ensure_recap_share", { p_recap_id: recapId })
-      .maybeSingle();
+    const {
+      data: { session },
+    } = await global.abnGetSession();
+    if (!session?.access_token) return null;
 
-    if (error) {
-      console.error("RecapScreen: no se pudo crear share", error);
+    let response = null;
+    try {
+      response = await fetch(new URL("/functions/v1/publish-recap-share", `${baseUrl}/`).toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({
+          recapId,
+          mode,
+        }),
+      });
+    } catch (error) {
+      console.error("RecapScreen: no se pudo invocar publish-recap-share", error);
       return null;
     }
 
-    return data || null;
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      console.error("RecapScreen: publish-recap-share devolvió error", payload || response.status);
+      return null;
+    }
+
+    return payload || null;
   }
 
   async function shareRecap(chronicleId, recapId, options = {}) {
     if (!chronicleId || !recapId) return;
     if (!options.isNarrator) return;
-    const share = await ensurePublicShare(recapId);
-    const shareUrl = share?.share_token
-      ? getPublicShareUrl(share.share_token)
-      : getShareUrl(chronicleId, recapId);
+    const share = await publishPublicShare(recapId, "ensure");
+    const shareUrl = String(share?.publicUrl || "").trim();
+    if (!shareUrl) {
+      global.alert("No se pudo generar el link público del recuento.");
+      return;
+    }
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
@@ -214,6 +241,7 @@
         return;
       }
 
+      void publishPublicShare(savedId || recap?.id || null, "refresh_if_exists");
       formApi?.close();
       if (typeof options.onSaved === "function") {
         options.onSaved({ recapId: savedId || recap?.id || null });
