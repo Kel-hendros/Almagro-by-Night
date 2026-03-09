@@ -44,10 +44,8 @@
     const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
     if (!baseUrl) return getPublicShareAppUrl(shareToken);
 
-    const url = new URL("/functions/v1/public-recap-share", `${baseUrl}/`);
-    url.searchParams.set("token", shareToken);
-    url.searchParams.set("app_url", getPublicShareAppUrl(shareToken));
-    return url.toString();
+    const encodedToken = encodeURIComponent(String(shareToken || "").trim());
+    return new URL(`/functions/v1/public-recap-share/${encodedToken}`, `${baseUrl}/`).toString();
   }
 
   async function ensurePublicShare(recapId) {

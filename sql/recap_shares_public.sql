@@ -90,7 +90,7 @@ begin
     v_player_id,
     true
   )
-  on conflict (recap_id)
+  on conflict on constraint recap_shares_recap_id_key
   do update
     set is_active = true,
         updated_at = now()

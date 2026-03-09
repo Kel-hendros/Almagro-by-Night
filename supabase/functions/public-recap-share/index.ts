@@ -14,6 +14,8 @@ type PublicRecapShare = {
   share_created_at: string | null;
 };
 
+const DEFAULT_APP_PUBLIC_URL = "https://kel-hendros.github.io/Almagro-by-Night/";
+
 function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -51,25 +53,48 @@ function buildDescription(share: PublicRecapShare) {
   return preview.length > 220 ? `${preview.slice(0, 217).trimEnd()}...` : preview;
 }
 
-function buildAppUrl(reqUrl: URL, token: string) {
-  const explicit = reqUrl.searchParams.get("app_url") || "";
-  if (explicit) return explicit;
+function withTrailingSlash(url: string) {
+  return url.endsWith("/") ? url : `${url}/`;
+}
 
-  const fallbackBase = Deno.env.get("APP_PUBLIC_URL") || "";
-  if (!fallbackBase) return "";
+function buildAppBaseUrl() {
+  const configured = String(Deno.env.get("APP_PUBLIC_URL") || "").trim();
+  const baseUrl = configured || DEFAULT_APP_PUBLIC_URL;
+  return withTrailingSlash(baseUrl);
+}
 
-  return `${fallbackBase.replace(/\/$/, "")}#public-recap?token=${encodeURIComponent(token)}`;
+function buildAppUrl(token: string) {
+  const baseUrl = buildAppBaseUrl().replace(/\/$/, "");
+  return `${baseUrl}#public-recap?token=${encodeURIComponent(token)}`;
+}
+
+function buildOgImageUrl() {
+  const configured = String(Deno.env.get("PUBLIC_SHARE_OG_IMAGE_URL") || "").trim();
+  if (configured) return configured;
+  return `${buildAppBaseUrl()}images/icono-grande.png`;
+}
+
+function extractToken(reqUrl: URL) {
+  const marker = "/functions/v1/public-recap-share/";
+  const rawPath = reqUrl.pathname || "";
+  const idx = rawPath.indexOf(marker);
+  if (idx === -1) return "";
+
+  const tail = rawPath.slice(idx + marker.length).split("/")[0] || "";
+  return decodeURIComponent(tail).trim();
 }
 
 function buildHtml(share: PublicRecapShare, reqUrl: URL) {
   const title = `${share.title || "Recuento"} · ${share.chronicle_name || "Crónica"}`;
   const description = buildDescription(share);
   const canonicalUrl = reqUrl.toString();
-  const appUrl = buildAppUrl(reqUrl, share.share_token);
+  const appUrl = buildAppUrl(share.share_token);
+  const ogImageUrl = buildOgImageUrl();
   const safeTitle = escapeHtml(title);
   const safeDescription = escapeHtml(description);
   const safeChronicle = escapeHtml(share.chronicle_name || "Crónica");
   const safeAppUrl = escapeHtml(appUrl);
+  const safeOgImageUrl = escapeHtml(ogImageUrl);
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -78,23 +103,28 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>${safeTitle}</title>
     <meta name="description" content="${safeDescription}">
+    <meta property="og:site_name" content="Buenos Aires by Night">
     <meta property="og:type" content="article">
     <meta property="og:title" content="${safeTitle}">
     <meta property="og:description" content="${safeDescription}">
     <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="${safeOgImageUrl}">
+    <meta property="og:image:alt" content="Buenos Aires by Night">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${safeTitle}">
     <meta name="twitter:description" content="${safeDescription}">
-    ${appUrl ? `<script>window.location.replace(${JSON.stringify(appUrl)});</script>` : ""}
+    <meta name="twitter:image" content="${safeOgImageUrl}">
+    <meta http-equiv="refresh" content="0;url=${safeAppUrl}">
+    <script>window.location.replace(${JSON.stringify(appUrl)});</script>
     <style>
       :root {
         color-scheme: dark;
-        --bg: #0f0f12;
-        --surface: #19191f;
-        --text: #f2efe8;
-        --muted: #b1aa9f;
+        --bg: #0b0c10;
+        --surface: rgba(20, 22, 29, 0.9);
+        --text: #f3efe6;
+        --muted: rgba(243, 239, 230, 0.72);
         --accent: #b63a32;
-        --border: rgba(255,255,255,0.08);
+        --border: rgba(255,255,255,0.1);
       }
       * { box-sizing: border-box; }
       body {
@@ -104,34 +134,51 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL) {
         place-items: center;
         padding: 24px;
         background:
-          radial-gradient(circle at top left, rgba(182,58,50,0.22), transparent 38%),
-          radial-gradient(circle at bottom right, rgba(255,255,255,0.06), transparent 26%),
+          radial-gradient(circle at top left, rgba(182,58,50,0.24), transparent 36%),
+          radial-gradient(circle at bottom right, rgba(201,160,74,0.14), transparent 24%),
+          linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
           var(--bg);
         color: var(--text);
-        font-family: Georgia, serif;
+        font-family: "Special Elite", Georgia, serif;
       }
       main {
         width: min(720px, 100%);
-        padding: 28px;
+        padding: 32px;
         border: 1px solid var(--border);
-        border-radius: 18px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+        border-radius: 22px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+          var(--surface);
         box-shadow: 0 20px 80px rgba(0,0,0,0.35);
+        backdrop-filter: blur(10px);
       }
       .eyebrow {
         margin: 0 0 8px;
         color: var(--muted);
         font-size: 0.9rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
       h1 {
         margin: 0 0 10px;
         font-size: clamp(1.8rem, 4vw, 2.6rem);
         line-height: 1.05;
       }
+      .meta {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
       p {
         margin: 0;
         color: var(--muted);
         line-height: 1.55;
+      }
+      .preview {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        white-space: pre-wrap;
       }
       .actions {
         margin-top: 20px;
@@ -157,17 +204,24 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL) {
         border: 1px solid var(--border);
         color: var(--text);
       }
+      .hint {
+        margin-top: 16px;
+        font-size: 0.88rem;
+      }
     </style>
   </head>
   <body>
     <main>
       <p class="eyebrow">${safeChronicle}</p>
       <h1>${escapeHtml(share.title || "Recuento compartido")}</h1>
+      <p class="meta">Sesión ${escapeHtml(share.session_number ?? "—")}${share.session_date ? ` · ${escapeHtml(share.session_date)}` : ""}</p>
       <p>${safeDescription}</p>
+      <p class="preview">${safeDescription}</p>
       <div class="actions">
-        ${appUrl ? `<a class="primary" href="${safeAppUrl}">Abrir recuento</a>` : ""}
+        <a class="primary" href="${safeAppUrl}">Abrir recuento</a>
         <a class="ghost" href="${escapeHtml(canonicalUrl)}">Recargar</a>
       </div>
+      <p class="hint">Si no redirige automáticamente, abrilo desde el botón.</p>
     </main>
   </body>
 </html>`;
@@ -175,7 +229,7 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL) {
 
 Deno.serve(async (req: Request) => {
   const reqUrl = new URL(req.url);
-  const token = (reqUrl.searchParams.get("token") || "").trim();
+  const token = extractToken(reqUrl);
 
   if (!token) {
     return new Response("Token faltante.", { status: 400 });
