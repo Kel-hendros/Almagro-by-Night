@@ -34,6 +34,7 @@
   async function init(config) {
     const {
       chronicleId,
+      chronicleName,
       currentPlayerId,
       isNarrator,
       initialRecapId,
@@ -194,6 +195,7 @@
       currentReaderRecapId = recapId;
       await recapScreen()?.showForChronicle?.({
         chronicleId,
+        chronicleName,
         currentPlayerId,
         isNarrator,
         recapId: recap.id,

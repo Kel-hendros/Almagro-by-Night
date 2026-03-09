@@ -550,6 +550,7 @@
 
     await ns.recaps?.init({
         chronicleId,
+        chronicleName: chronicle.name || "Crónica",
         currentPlayerId: currentPlayer.id,
         isNarrator,
         initialRecapId: recapIdFromQuery,

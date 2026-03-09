@@ -30,6 +30,54 @@
     return meta;
   }
 
+  function stripMarkdown(text) {
+    return String(text || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\[\[([^|\]]+?)(?:\|([^\]]+?))?\]\]/g, (_m, target, alias) =>
+        String(alias || target || "").trim(),
+      )
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      .replace(/_(.*?)_/g, "$1")
+      .replace(/~~(.*?)~~/g, "$1")
+      .replace(/^\s*>\s?/gm, "")
+      .replace(/^\s*[-*+]\s+/gm, "")
+      .replace(/^\s*\d+\.\s+/gm, "")
+      .replace(/[ \t]+/g, " ")
+      .trim();
+  }
+
+  function buildShareExcerpt(body, maxLength = 180) {
+    const preview = stripMarkdown(body || "").replace(/\s*\n+\s*/g, " ").trim();
+    if (!preview) return "";
+    if (preview.length <= maxLength) return preview;
+    return `${preview.slice(0, maxLength - 3).trimEnd()}...`;
+  }
+
+  function buildShareMessage(recap, chronicleName, shareUrl) {
+    const lines = [];
+    const number = Number.parseInt(recap?.session_number, 10);
+    const title = String(recap?.title || "").trim();
+    const safeChronicleName = String(chronicleName || "Crónica").trim() || "Crónica";
+    const excerpt = buildShareExcerpt(recap?.body || "");
+
+    if (Number.isFinite(number) && number > 0) {
+      lines.push(`Recuento Partida ${number} de la Crónica "${safeChronicleName}"`);
+    } else {
+      lines.push(`Recuento de la Crónica "${safeChronicleName}"`);
+    }
+    if (title) lines.push(title);
+    if (excerpt) lines.push(excerpt);
+    if (shareUrl) lines.push(shareUrl);
+
+    return lines.join("\n");
+  }
+
   function getShareUrl(chronicleId, recapId) {
     const hash = `chronicle?id=${encodeURIComponent(chronicleId)}&recap=${encodeURIComponent(recapId)}`;
     return `${window.location.origin}${window.location.pathname}#${hash}`;
@@ -93,16 +141,28 @@
       global.alert("No se pudo generar el link público del recuento.");
       return;
     }
+    const message = buildShareMessage(options.recap || null, options.chronicleName || "", shareUrl);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          text: message,
+        });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        console.warn("RecapScreen: navigator.share failed", error);
+      }
+    }
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        global.alert("Link público copiado al portapapeles.");
+        await navigator.clipboard.writeText(message);
+        global.alert("Mensaje para compartir copiado al portapapeles.");
         return;
       }
     } catch (error) {
       console.warn("RecapScreen: clipboard write failed", error);
     }
-    global.prompt("Copiá este link:", shareUrl);
+    global.prompt("Copiá este mensaje:", message);
   }
 
   async function fetchRecap(chronicleId, recapId) {
@@ -338,7 +398,11 @@
         title: "Compartir",
         ariaLabel: "Compartir",
         onClick: () => {
-          void shareRecap(chronicleId, recap.id, { isNarrator });
+          void shareRecap(chronicleId, recap.id, {
+            isNarrator,
+            recap,
+            chronicleName: options.chronicleName,
+          });
         },
       });
       actions.push(
