@@ -1,6 +1,5 @@
 (function initSharedRecapScreen(global) {
   const root = (global.ABNShared = global.ABNShared || {});
-  const PUBLIC_SHARE_BUCKET_ID = "public-recap-shares";
 
   function documentScreen() {
     return root.documentScreen || null;
@@ -46,10 +45,7 @@
     if (!baseUrl) return getPublicShareAppUrl(shareToken);
 
     const token = encodeURIComponent(String(shareToken || "").trim());
-    return new URL(
-      `/storage/v1/object/public/${PUBLIC_SHARE_BUCKET_ID}/shares/${token}.html`,
-      `${baseUrl}/`,
-    ).toString();
+    return new URL(`/functions/v1/public-recap-share/${token}`, `${baseUrl}/`).toString();
   }
 
   async function publishPublicShare(recapId, mode = "ensure") {
@@ -92,7 +88,7 @@
     if (!chronicleId || !recapId) return;
     if (!options.isNarrator) return;
     const share = await publishPublicShare(recapId, "ensure");
-    const shareUrl = String(share?.publicUrl || "").trim();
+    const shareUrl = String(share?.shareUrl || getPublicShareUrl(share?.shareToken || "")).trim();
     if (!shareUrl) {
       global.alert("No se pudo generar el link público del recuento.");
       return;

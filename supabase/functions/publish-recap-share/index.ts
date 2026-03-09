@@ -3,16 +3,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 type RecapRow = {
   id: string;
   chronicle_id: string;
-  title: string;
-  session_number: number | null;
-  session_date: string | null;
-  body: string | null;
-  updated_at: string | null;
 };
 
 type ChronicleRow = {
   id: string;
-  name: string;
   creator_id: string;
 };
 
@@ -24,8 +18,12 @@ type ShareRow = {
 };
 
 const DEFAULT_APP_PUBLIC_URL = "https://kel-hendros.github.io/Almagro-by-Night/";
-const DEFAULT_OG_IMAGE_URL = `${DEFAULT_APP_PUBLIC_URL}images/icono-grande.png`;
-const PUBLIC_SHARE_BUCKET_ID = "public-recap-shares";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  Vary: "Origin, Access-Control-Request-Headers",
+};
 
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -33,46 +31,9 @@ function jsonResponse(payload: unknown, status = 200) {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      ...CORS_HEADERS,
     },
   });
-}
-
-function escapeHtml(value: unknown) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function stripMarkdown(text: string) {
-  return String(text || "")
-    .replace(/\r\n?/g, "\n")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/\[\[([^|\]]+?)(?:\|([^\]]+?))?\]\]/g, (_m, target, alias) =>
-      String(alias || target || "").trim(),
-    )
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/\*(.*?)\*/g, "$1")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/_(.*?)_/g, "$1")
-    .replace(/~~(.*?)~~/g, "$1")
-    .replace(/^\s*>\s?/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/[ \t]+/g, " ")
-    .trim();
-}
-
-function buildDescription(recap: RecapRow) {
-  const preview = stripMarkdown(recap.body || "");
-  if (!preview) return "Recuento compartido";
-  const normalized = preview.replace(/\s*\n+\s*/g, " ").trim();
-  return normalized.length > 220 ? `${normalized.slice(0, 217).trimEnd()}...` : normalized;
 }
 
 function withTrailingSlash(url: string) {
@@ -89,166 +50,10 @@ function buildAppUrl(shareToken: string) {
   return `${baseUrl}#public-recap?token=${encodeURIComponent(shareToken)}`;
 }
 
-function buildOgImageUrl() {
-  const configured = String(Deno.env.get("PUBLIC_SHARE_OG_IMAGE_URL") || "").trim();
-  return configured || DEFAULT_OG_IMAGE_URL;
-}
-
-function formatSessionMeta(recap: RecapRow) {
-  const parts: string[] = [];
-  if (recap.session_number != null) parts.push(`Sesion ${recap.session_number}`);
-  if (recap.session_date) parts.push(recap.session_date);
-  return parts.join(" · ");
-}
-
-function buildObjectPath(shareToken: string) {
-  return `shares/${encodeURIComponent(String(shareToken || "").trim())}.html`;
-}
-
-function buildSnapshotHtml(params: {
-  chronicleName: string;
-  recap: RecapRow;
-  shareToken: string;
-  publicUrl: string;
-}) {
-  const title = `${params.recap.title || "Recuento"} · ${params.chronicleName || "Crónica"}`;
-  const description = buildDescription(params.recap);
-  const appUrl = buildAppUrl(params.shareToken);
-  const ogImageUrl = buildOgImageUrl();
-  const sessionMeta = formatSessionMeta(params.recap);
-
-  return `<!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>${escapeHtml(title)}</title>
-    <meta name="description" content="${escapeHtml(description)}">
-    <meta property="og:site_name" content="Buenos Aires by Night">
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="${escapeHtml(title)}">
-    <meta property="og:description" content="${escapeHtml(description)}">
-    <meta property="og:url" content="${escapeHtml(params.publicUrl)}">
-    <meta property="og:image" content="${escapeHtml(ogImageUrl)}">
-    <meta property="og:image:secure_url" content="${escapeHtml(ogImageUrl)}">
-    <meta property="og:image:alt" content="Buenos Aires by Night">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${escapeHtml(title)}">
-    <meta name="twitter:description" content="${escapeHtml(description)}">
-    <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
-    <link rel="canonical" href="${escapeHtml(params.publicUrl)}">
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #0b0c10;
-        --surface: rgba(20, 22, 29, 0.9);
-        --text: #f3efe6;
-        --muted: rgba(243, 239, 230, 0.72);
-        --accent: #b63a32;
-        --border: rgba(255,255,255,0.1);
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        background:
-          radial-gradient(circle at top left, rgba(182,58,50,0.24), transparent 36%),
-          radial-gradient(circle at bottom right, rgba(201,160,74,0.14), transparent 24%),
-          linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
-          var(--bg);
-        color: var(--text);
-        font-family: "Special Elite", Georgia, serif;
-      }
-      main {
-        width: min(560px, 100%);
-        padding: 28px;
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
-          var(--surface);
-        box-shadow: 0 20px 80px rgba(0,0,0,0.35);
-        backdrop-filter: blur(10px);
-      }
-      .eyebrow {
-        margin: 0 0 8px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-      h1 {
-        margin: 0 0 10px;
-        font-size: clamp(1.5rem, 3.8vw, 2.1rem);
-        line-height: 1.1;
-      }
-      .meta {
-        margin: 0 0 14px;
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-      .preview {
-        margin: 14px 0 0;
-        padding-top: 14px;
-        color: var(--muted);
-        line-height: 1.55;
-        border-top: 1px solid var(--border);
-      }
-      .actions {
-        margin-top: 20px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      a {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 42px;
-        padding: 0 16px;
-        border-radius: 999px;
-        text-decoration: none;
-        font-weight: 600;
-      }
-      .primary {
-        background: var(--accent);
-        color: white;
-      }
-      .ghost {
-        border: 1px solid var(--border);
-        color: var(--text);
-      }
-      .hint {
-        margin-top: 16px;
-        color: var(--muted);
-        font-size: 0.88rem;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <p class="eyebrow">${escapeHtml(params.chronicleName || "Crónica")}</p>
-      <h1>${escapeHtml(params.recap.title || "Recuento compartido")}</h1>
-      ${sessionMeta ? `<p class="meta">${escapeHtml(sessionMeta)}</p>` : ""}
-      <p class="preview">${escapeHtml(description)}</p>
-      <div class="actions">
-        <a class="primary" href="${escapeHtml(appUrl)}">Abrir recuento</a>
-        <a class="ghost" href="${escapeHtml(params.publicUrl)}">Recargar</a>
-      </div>
-      <p class="hint">Abriendo recuento...</p>
-    </main>
-    <script>
-      window.setTimeout(function () {
-        window.location.replace(${JSON.stringify(appUrl)});
-      }, 40);
-    </script>
-  </body>
-</html>`;
+function buildShareUrl(shareToken: string) {
+  const baseUrl = String(Deno.env.get("SUPABASE_URL") || "").trim().replace(/\/$/, "");
+  if (!baseUrl) return "";
+  return `${baseUrl}/functions/v1/public-recap-share/${encodeURIComponent(shareToken)}`;
 }
 
 function decodeJwtPayload(token: string) {
@@ -269,23 +74,14 @@ function getBearerToken(req: Request) {
   return header.slice(7).trim();
 }
 
-function isBucketExistsError(error: { message?: string } | null) {
-  const msg = String(error?.message || "").toLowerCase();
-  return msg.includes("already exists") || msg.includes("duplicate");
-}
-
-async function ensureBucket(serviceClient: ReturnType<typeof createClient>) {
-  const { error } = await serviceClient.storage.createBucket(PUBLIC_SHARE_BUCKET_ID, {
-    public: true,
-    allowedMimeTypes: ["text/html"],
-    fileSizeLimit: "1MB",
-  });
-  if (error && !isBucketExistsError(error)) {
-    throw error;
-  }
-}
-
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: CORS_HEADERS,
+    });
+  }
+
   if (req.method !== "POST") {
     return jsonResponse({ error: "method_not_allowed" }, 405);
   }
@@ -323,7 +119,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: recap, error: recapError } = await supabase
     .from("session_recaps")
-    .select("id, chronicle_id, title, session_number, session_date, body, updated_at")
+    .select("id, chronicle_id")
     .eq("id", recapId)
     .maybeSingle<RecapRow>();
   if (recapError || !recap) {
@@ -332,7 +128,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: chronicle, error: chronicleError } = await supabase
     .from("chronicles")
-    .select("id, name, creator_id")
+    .select("id, creator_id")
     .eq("id", recap.chronicle_id)
     .maybeSingle<ChronicleRow>();
   if (chronicleError || !chronicle) {
@@ -361,7 +157,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle<ShareRow>();
 
   if (!share && mode === "refresh_if_exists") {
-    return jsonResponse({ published: false, publicUrl: null, shareToken: null }, 200);
+    return jsonResponse({ published: false, shareToken: null, shareUrl: null, appUrl: null }, 200);
   }
 
   if (!share) {
@@ -394,48 +190,10 @@ Deno.serve(async (req: Request) => {
     share = activate.data;
   }
 
-  try {
-    await ensureBucket(supabase);
-  } catch (error) {
-    return jsonResponse({ error: `bucket_error:${String((error as Error)?.message || error)}` }, 500);
-  }
-
-  const objectPath = buildObjectPath(share.share_token);
-  const { data: publicUrlData } = supabase.storage
-    .from(PUBLIC_SHARE_BUCKET_ID)
-    .getPublicUrl(objectPath);
-  const publicUrl = String(publicUrlData?.publicUrl || "").trim();
-  if (!publicUrl) {
-    return jsonResponse({ error: "public_url_unavailable" }, 500);
-  }
-
-  const html = buildSnapshotHtml({
-    chronicleName: chronicle.name || "Crónica",
-    recap,
-    shareToken: share.share_token,
-    publicUrl,
-  });
-
-  const upload = await supabase.storage
-    .from(PUBLIC_SHARE_BUCKET_ID)
-    .upload(
-      objectPath,
-      new Blob([html], { type: "text/html" }),
-      {
-        upsert: true,
-        contentType: "text/html",
-        cacheControl: "60",
-      },
-    );
-
-  if (upload.error) {
-    return jsonResponse({ error: `upload_failed:${upload.error.message}` }, 500);
-  }
-
   return jsonResponse({
     published: true,
     shareToken: share.share_token,
-    publicUrl,
+    shareUrl: buildShareUrl(share.share_token),
     appUrl: buildAppUrl(share.share_token),
   });
 });
