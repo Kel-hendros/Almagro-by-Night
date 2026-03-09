@@ -3,37 +3,18 @@
   const service = () => ns.service;
   const SUMMARY_RECAP_LIMIT = 1;
 
-  function stripMarkdown(text) {
-    return (text || "")
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/\*(.*?)\*/g, "$1")
-      .replace(/#{1,6}\s/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/`([^`]+)`/g, "$1");
-  }
-
-  function previewLines(text, maxLines = 3) {
-    const sharedPreview = documentList()?.buildPreviewText?.(text, { maxLines });
-    if (typeof sharedPreview === "string") return sharedPreview;
-
-    const plain = stripMarkdown(text || "");
-    const lines = plain.split("\n").filter((line) => line.trim());
-    const preview = lines.slice(0, maxLines).join("\n");
-    return lines.length > maxLines ? preview + "…" : preview;
-  }
-
-  function formatSessionMeta(recap) {
-    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-    let label = `Sesión ${recap.session_number}`;
-    if (recap.session_date) {
-      const d = new Date(recap.session_date + "T00:00:00");
-      label += ` — ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-    }
-    return label;
-  }
-
   function documentList() {
     return global.ABNShared?.documentList || null;
+  }
+
+  function recapAdapter() {
+    return global.ABNShared?.documentTypes?.get?.("recap") || null;
+  }
+
+  function previewLines(text, maxLines = 5) {
+    const sharedPreview = documentList()?.buildPreviewText?.(text, { maxLines });
+    if (typeof sharedPreview === "string") return sharedPreview;
+    return String(text || "").trim();
   }
 
   function bytesToMegas(bytes) {
@@ -126,16 +107,23 @@
       };
 
       if (!listApi?.createItem) {
-        const dateStr = formatSessionMeta(visibleRecap);
-        const truncated = escapeHtml(previewLines(visibleRecap.body, 5));
+        const preview = listApi?.buildPreviewText?.(visibleRecap.body, { maxLines: 5 }) || "";
         lastCard.className = "cd-card cd-card--col cd-card-clickable";
         lastCard.innerHTML = `
-          <span class="cd-card-subtitle">${dateStr}</span>
-          <p class="cd-card-body">${truncated}</p>
+          <span class="cd-card-subtitle">${escapeHtml(visibleRecap.title || "Recuento")}</span>
+          <p class="cd-card-body">${escapeHtml(preview)}</p>
         `;
         lastCard.onclick = openRecap;
         return;
       }
+
+      const itemOptions = recapAdapter()?.buildDetailedListItemOptions?.(visibleRecap, {
+        chronicleId,
+      }) || {
+        title: visibleRecap.title || "Recuento",
+        meta: "",
+        preview: listApi.buildPreviewText?.(visibleRecap.body, { maxLines: 5 }) || "",
+      };
 
       lastCard.className = "dl-list dl-list--complete";
       lastCard.onclick = null;
@@ -143,9 +131,12 @@
       lastCard.appendChild(
         listApi.createItem({
           preset: "complete",
-          title: visibleRecap.title || "Recuento",
-          meta: formatSessionMeta(visibleRecap),
-          preview: previewLines(visibleRecap.body, 5),
+          variant: "detailed",
+          title: itemOptions.title,
+          meta: itemOptions.meta,
+          preview: itemOptions.preview,
+          tagsHtml: itemOptions.tagsHtml,
+          image: itemOptions.image,
           dataAttrs: { "recap-id": visibleRecap.id },
           onActivate: openRecap,
         }),
