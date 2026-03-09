@@ -35,14 +35,47 @@
     return `${window.location.origin}${window.location.pathname}#${hash}`;
   }
 
+  function getPublicShareAppUrl(shareToken) {
+    const hash = `public-recap?token=${encodeURIComponent(shareToken)}`;
+    return `${window.location.origin}${window.location.pathname}#${hash}`;
+  }
+
+  function getPublicShareUrl(shareToken) {
+    const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
+    if (!baseUrl) return getPublicShareAppUrl(shareToken);
+
+    const url = new URL("/functions/v1/public-recap-share", `${baseUrl}/`);
+    url.searchParams.set("token", shareToken);
+    url.searchParams.set("app_url", getPublicShareAppUrl(shareToken));
+    return url.toString();
+  }
+
+  async function ensurePublicShare(recapId) {
+    if (!global.supabase || !recapId) return null;
+
+    const { data, error } = await global.supabase
+      .rpc("ensure_recap_share", { p_recap_id: recapId })
+      .maybeSingle();
+
+    if (error) {
+      console.error("RecapScreen: no se pudo crear share", error);
+      return null;
+    }
+
+    return data || null;
+  }
+
   async function shareRecap(chronicleId, recapId, options = {}) {
     if (!chronicleId || !recapId) return;
     if (!options.isNarrator) return;
-    const shareUrl = getShareUrl(chronicleId, recapId);
+    const share = await ensurePublicShare(recapId);
+    const shareUrl = share?.share_token
+      ? getPublicShareUrl(share.share_token)
+      : getShareUrl(chronicleId, recapId);
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
-        global.alert("Link copiado al portapapeles.");
+        global.alert("Link público copiado al portapapeles.");
         return;
       }
     } catch (error) {
@@ -218,6 +251,46 @@
     return formApi;
   }
 
+  function openReadOnlyViewer(options = {}) {
+    const ds = documentScreen();
+    if (!ds) return null;
+
+    const recap = options.recap || null;
+    if (!recap) return null;
+
+    const actions = Array.isArray(options.actions) ? options.actions : [];
+    const footerActions = Array.isArray(options.footerActions) ? options.footerActions : [];
+
+    const api = ds.open({
+      docType: "recap",
+      title: recap.title || "",
+      subtitle: options.subtitle || formatMeta(recap),
+      actions,
+      footerActions,
+      bodyClass: "doc-view-body",
+      renderBody: (bodyHost) => {
+        const card = document.createElement("div");
+        card.className = "doc-view-card";
+        card.innerHTML = `<div class="doc-markdown">${global.renderMarkdown
+          ? global.renderMarkdown(recap.body || "")
+          : escapeHtml(recap.body || "")}</div>`;
+        bodyHost.innerHTML = "";
+        bodyHost.appendChild(card);
+      },
+      onClosed: () => {
+        if (typeof options.onClosed === "function") {
+          options.onClosed(recap);
+        }
+      },
+    });
+
+    if (global.lucide?.createIcons) {
+      global.lucide.createIcons();
+    }
+
+    return api;
+  }
+
   async function showForChronicle(options = {}) {
     const ds = documentScreen();
     if (!ds) return null;
@@ -346,38 +419,44 @@
       },
     ];
 
-    ds.open({
-      docType: "recap",
-      title: recap.title || "",
+    openReadOnlyViewer({
+      recap,
       subtitle: formatMeta(recap),
       actions,
       footerActions,
-      bodyClass: "doc-view-body",
-      renderBody: (bodyHost) => {
-        const card = document.createElement("div");
-        card.className = "doc-view-card";
-        card.innerHTML = `<div class="doc-markdown">${global.renderMarkdown
-          ? global.renderMarkdown(recap.body || "")
-          : escapeHtml(recap.body || "")}</div>`;
-        bodyHost.appendChild(card);
-      },
-      onClosed: () => {
-        if (typeof options.onClosed === "function") {
-          options.onClosed(recap);
-        }
-      },
+      onClosed: options.onClosed,
     });
-
-    if (global.lucide?.createIcons) {
-      global.lucide.createIcons();
-    }
 
     return recap;
   }
 
+  async function showPublicShare(options = {}) {
+    const share = options.share || null;
+    if (!share) return null;
+
+    const recap = {
+      id: share.recap_id,
+      title: share.title || "Recuento",
+      body: share.body || "",
+      session_number: share.session_number,
+      session_date: share.session_date,
+    };
+
+    return openReadOnlyViewer({
+      recap,
+      subtitle: formatMeta(recap),
+      onClosed: options.onClosed,
+    });
+  }
+
   root.recapScreen = {
+    fetchRecap,
     formatMeta,
+    getPublicShareUrl,
+    getShareUrl,
     openForm,
+    shareRecap,
+    showPublicShare,
     showForChronicle,
   };
 })(window);

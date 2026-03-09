@@ -117,6 +117,7 @@ function updateSidebarToggleIcon(sidebar) {
 function setActiveSidebarItem(baseHash) {
   const routeToMenu = {
     welcome: "menu-welcome",
+    "public-recap": "menu-welcome",
     user: "menu-user",
     settings: "menu-settings",
     chronicles: "menu-chronicles",
@@ -343,6 +344,7 @@ function updateSidebar() {
 // 2) Define routes mapping hashes to fragment URLs
 const routes = {
   welcome: "fragments/login.html",
+  "public-recap": "fragments/login.html",
   chronicles: "fragments/chronicles.html",
   chronicle: "fragments/chronicle.html",
   games: "fragments/games.html",
@@ -571,6 +573,7 @@ async function loadRoute(force = false) {
   // View-specific initialization
   if (
     baseHash === "welcome" ||
+    baseHash === "public-recap" ||
     baseHash === "login" ||
     baseHash === "register" ||
     baseHash === "user"
@@ -579,6 +582,9 @@ async function loadRoute(force = false) {
     if (typeof initAuthForms === "function") {
       console.log("Router: Calling initAuthForms for hash", baseHash);
       initAuthForms();
+    }
+    if (baseHash === "public-recap" && typeof window.loadPublicRecap === "function") {
+      window.loadPublicRecap();
     }
   }
   if (baseHash === "chronicles") {
