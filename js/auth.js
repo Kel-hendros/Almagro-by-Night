@@ -73,6 +73,13 @@ async function initAuthForms() {
     }
   };
 
+  const resolvePostAuthHash = () => {
+    const pendingHash = typeof window.abnConsumePendingRoute === "function"
+      ? window.abnConsumePendingRoute()
+      : "";
+    return pendingHash || "chronicles";
+  };
+
   if (suForm && !suForm._init) {
     suForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -99,7 +106,7 @@ async function initAuthForms() {
 
       await ensurePlayer({ displayName: name });
       showMsg("su-msg", "Registro completado. Redirigiendo...", "success");
-      window.location.hash = "chronicles";
+      window.location.hash = resolvePostAuthHash();
     });
     suForm._init = true;
   }
@@ -122,7 +129,7 @@ async function initAuthForms() {
 
       await ensurePlayer();
       showMsg("li-msg", "Ingreso exitoso. Redirigiendo...", "success");
-      window.location.hash = "chronicles";
+      window.location.hash = resolvePostAuthHash();
     });
     liForm._init = true;
   }

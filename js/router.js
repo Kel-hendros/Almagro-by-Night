@@ -446,6 +446,9 @@ async function loadRoute(force = false) {
       baseHash === "settings" ||
       baseHash === "active-character-sheet")
   ) {
+    if (typeof window.abnSetPendingRoute === "function" && targetHash !== "welcome") {
+      window.abnSetPendingRoute(targetHash);
+    }
     targetHash = "welcome";
   }
 

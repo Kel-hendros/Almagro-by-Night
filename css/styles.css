@@ -20,6 +20,13 @@
 }
 
 @font-face {
+    font-family: 'vampire-dingbats';
+    src: url('../fonts/VampireDingbats.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
     font-family: 'delavan';
     src: url('../fonts/delavan-webfont.woff2') format('woff2'),
         url('../fonts/delavan-webfont.woff') format('woff');

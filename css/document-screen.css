@@ -195,6 +195,36 @@
   margin-bottom: 0;
 }
 
+.doc-markdown .doc-wikilink {
+  font-weight: 700;
+  color: var(--theme-accent, var(--theme-text-primary, var(--text, #f2f2f2)));
+}
+
+.doc-markdown hr {
+  margin: 24px 0 22px;
+  border: 0;
+  height: auto;
+  overflow: visible;
+  text-align: center;
+  color: color-mix(
+    in srgb,
+    var(--theme-text-secondary, var(--text, #f2f2f2)) 72%,
+    transparent
+  );
+}
+
+.doc-markdown hr::before {
+  content: "34";
+  display: inline-block;
+  padding: 0 4px;
+  font-family: "vampire-dingbats", "Sigils", serif;
+  font-size: 3rem;
+  line-height: 1;
+  letter-spacing: 0;
+  word-spacing: 0;
+  white-space: nowrap;
+}
+
 .doc-markdown h1,
 .doc-markdown h2,
 .doc-markdown h3,

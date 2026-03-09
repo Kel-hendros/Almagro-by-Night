@@ -54,6 +54,41 @@ window.escapeHtml = function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 };
 
+const ABN_PENDING_ROUTE_KEY = "abn_pending_route";
+
+window.abnSetPendingRoute = function abnSetPendingRoute(hash) {
+  const normalized = String(hash || "").replace(/^#/, "").trim();
+  if (!normalized) return;
+  sessionStorage.setItem(ABN_PENDING_ROUTE_KEY, normalized);
+};
+
+window.abnGetPendingRoute = function abnGetPendingRoute() {
+  return sessionStorage.getItem(ABN_PENDING_ROUTE_KEY) || "";
+};
+
+window.abnConsumePendingRoute = function abnConsumePendingRoute() {
+  const value = window.abnGetPendingRoute();
+  if (value) {
+    sessionStorage.removeItem(ABN_PENDING_ROUTE_KEY);
+  }
+  return value;
+};
+
+window.abnClearPendingRoute = function abnClearPendingRoute() {
+  sessionStorage.removeItem(ABN_PENDING_ROUTE_KEY);
+};
+
+function renderWikilinks(rawText) {
+  return String(rawText || "").replace(
+    /\[\[([^|\]]+?)(?:\|([^\]]+?))?\]\]/g,
+    (_match, target, alias) => {
+      const label = String(alias || target || "").trim();
+      if (!label) return "";
+      return `<strong class="doc-wikilink">${window.escapeHtml(label)}</strong>`;
+    },
+  );
+}
+
 /**
  * Render markdown to safe HTML using marked + DOMPurify.
  * Falls back to escaped HTML if libraries aren't loaded.
@@ -80,7 +115,7 @@ window.validatePassword = function validatePassword(pw) {
 };
 
 window.renderMarkdown = function renderMarkdown(raw, opts) {
-  const text = raw || "";
+  const text = renderWikilinks(raw || "");
   if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
     return DOMPurify.sanitize(marked.parse(text, { breaks: true, ...opts }));
   }
