@@ -475,16 +475,59 @@
 }
 
 @media (max-width: 700px) {
+  .app > .ds-overlay {
+    left: 0;
+    width: 100%;
+  }
+
   .ds-overlay {
-    padding: 0;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   }
 
   .ds-shell {
     width: 100%;
-    height: 100%;
+    height: 100dvh;
     max-height: none;
     border-radius: 0;
     border: none;
+  }
+
+  .ds-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    padding: max(12px, calc(10px + env(safe-area-inset-top))) 14px 12px;
+  }
+
+  .ds-title-wrap {
+    grid-column: 1;
+    grid-row: 1;
+    padding-right: 4px;
+  }
+
+  .ds-close-btn {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ds-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    justify-content: flex-start;
+    align-self: stretch;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .ds-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ds-actions .btn,
+  .ds-actions .btn-icon {
+    flex: 0 0 auto;
   }
 
   .doc-form-row {
@@ -497,19 +540,56 @@
     align-items: stretch;
   }
 
-  .ds-header {
-    padding: 12px 14px;
-  }
-
   .ds-body {
-    padding: 14px;
+    padding: 14px 14px calc(18px + env(safe-area-inset-bottom));
   }
 
   .ds-footer {
-    padding: 10px 14px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .ds-footer .btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
   }
 
   .ds-title {
-    font-size: 1rem;
+    font-size: 1.02rem;
+    line-height: 1.25;
+  }
+
+  .ds-subtitle {
+    font-size: 0.76rem;
+  }
+
+  .doc-view-body,
+  .doc-form-body {
+    padding-bottom: 0;
+  }
+
+  .doc-markdown {
+    font-size: 0.98rem;
+    line-height: 1.66;
+  }
+
+  .doc-markdown pre {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .doc-form-textarea {
+    min-height: 180px;
+  }
+
+  .doc-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .doc-nav .btn {
+    width: 100%;
+    min-width: 0;
   }
 }

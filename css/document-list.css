@@ -267,18 +267,57 @@
 }
 
 @media (max-width: 700px) {
+  .dl-item {
+    gap: 7px;
+    padding: 14px 15px;
+    border-radius: 16px;
+  }
+
   .dl-item--detailed {
     flex-direction: column;
+    gap: 12px;
+    padding: 14px 15px;
+  }
+
+  .dl-item--detailed .dl-item-title {
+    font-size: 0.95rem;
+  }
+
+  .dl-item--detailed .dl-item-preview {
+    font-size: 0.88rem;
+    line-height: 1.58;
+  }
+
+  .dl-item-main {
+    gap: 6px;
   }
 
   .dl-item-media {
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    border-radius: 12px;
   }
 
   .dl-item-media-image {
     min-height: 120px;
     max-height: 160px;
+  }
+
+  .abn-note-card-head {
+    padding: 12px 12px 5px;
+  }
+
+  .abn-note-card-meta {
+    padding: 0 12px;
+  }
+
+  .abn-note-card-tags .abn-tag-list {
+    padding: 8px 12px 0;
+  }
+
+  .abn-note-card-preview {
+    padding: 8px 12px 12px;
+    font-size: 0.86rem;
   }
 }

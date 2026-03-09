@@ -466,3 +466,85 @@
 .abn-chip.is-selected .abn-chip-remove:hover {
   color: var(--theme-text-on-accent, #fff);
 }
+
+@media (max-width: 700px) {
+    .btn {
+        min-height: 42px;
+        padding: 0 15px;
+        font-size: 0.92rem;
+    }
+
+    .btn-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .btn-icon .lucide {
+        width: 14px;
+        height: 14px;
+    }
+
+    .btn-row {
+        flex-wrap: wrap;
+    }
+
+    .app-tabs {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .app-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .app-tab {
+        flex: 0 0 auto;
+    }
+
+    .app-tabs--underline {
+        scroll-snap-type: x proximity;
+    }
+
+    .app-tabs--underline .app-tab {
+        scroll-snap-align: start;
+    }
+
+    .app-modal-overlay {
+        padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+        align-items: flex-end;
+    }
+
+    .app-modal {
+        width: 100%;
+        max-width: 100%;
+        padding: 0.95rem;
+        border-radius: 16px 16px 12px 12px;
+    }
+
+    .app-modal-actions {
+        flex-wrap: wrap;
+    }
+
+    .app-modal-actions .btn {
+        flex: 1 1 100%;
+    }
+
+    .app-modal-title {
+        font-size: 1.12rem;
+    }
+
+    .app-label {
+        font-size: 0.96rem;
+    }
+
+    .app-input {
+        padding: 0.72rem 0.85rem;
+        font-size: 1rem;
+    }
+
+    .app-msg {
+        font-size: 0.92rem;
+    }
+}

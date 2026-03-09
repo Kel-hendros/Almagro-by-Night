@@ -28,7 +28,6 @@
 
     let allNotes = [];
     let filteredNotes = [];
-    let notesQuery = "";
 
     let currentReaderNoteId = null;
 
@@ -36,27 +35,13 @@
     const notasMoreBtn = document.getElementById("cd-notas-more");
     const addNoteBtn = document.getElementById("cd-add-note");
     const openArchiveBtn = document.getElementById("cd-open-notes-archive");
-    const notesSearchInput = document.getElementById("cd-notes-search");
 
     if (!notasList || !notasMoreBtn || !addNoteBtn) return;
 
-    function filterNotes() {
-      if (!notesQuery) {
-        filteredNotes = allNotes;
-        return;
-      }
-
-      const adapter = noteAdapter();
-      filteredNotes = adapter?.filterRows
-        ? adapter.filterRows(allNotes, notesQuery, buildNoteContext(chronicleId, currentPlayerId))
-        : allNotes;
-    }
-
     function renderNotesList() {
-      filterNotes();
+      filteredNotes = allNotes;
       if (!filteredNotes.length) {
-        const emptyMsg = notesQuery ? "Sin resultados." : "No hay notas todavía.";
-        notasList.innerHTML = `<span class="cd-card-muted">${emptyMsg}</span>`;
+        notasList.innerHTML = '<span class="cd-card-muted">No hay notas todavía.</span>';
         notasMoreBtn.classList.add("hidden");
         return;
       }
@@ -177,13 +162,6 @@
             void openNoteReader(currentNote.id);
           }
         },
-      });
-    }
-
-    if (notesSearchInput) {
-      notesSearchInput.addEventListener("input", () => {
-        notesQuery = notesSearchInput.value.trim();
-        renderNotesList();
       });
     }
 

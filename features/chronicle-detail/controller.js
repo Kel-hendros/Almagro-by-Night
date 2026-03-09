@@ -141,13 +141,23 @@
             tagsHtml: itemOptions.tagsHtml,
             preview: itemOptions.preview,
             image: itemOptions.image,
-            dataAttrs: { handoutId: rev.id },
+            dataAttrs: { "document-id": rev.id },
+            onActivate: () => {
+              revelationScreen()?.showForPlayer?.({
+                revelationId: rev.id,
+                onSaved: () => loadRevelacionesList(
+                  revelacionState.chronicleId,
+                  revelacionState.currentPlayerId,
+                  revelacionState.isNarrator,
+                ),
+              });
+            },
           })
         : document.createElement("div");
 
       if (!listApi?.createItem) {
         card.className = "cd-recap-card";
-        card.dataset.handoutId = rev.id;
+        card.dataset.documentId = rev.id;
         card.innerHTML = `
           <div class="cd-recap-info">
             <span class="cd-recap-title">${escapeHtml(itemOptions.title || rev.title)}</span>
@@ -202,8 +212,13 @@
             preview: itemOptions.preview,
             image: itemOptions.image,
             dataAttrs: {
-              deliveryId: del.id,
-              revelationId: handout.id || "",
+              "delivery-id": del.id,
+              "document-id": handout.id || "",
+            },
+            onActivate: () => {
+              const revelationId = handout.id || row.revelation_id || row.id || null;
+              if (!revelationId) return;
+              revelationScreen()?.showForPlayer?.({ revelationId });
             },
           })
         : document.createElement("div");
@@ -211,7 +226,7 @@
       if (!listApi?.createItem) {
         card.className = "cd-recap-card";
         card.dataset.deliveryId = del.id;
-        card.dataset.revelationId = handout.id || "";
+        card.dataset.documentId = handout.id || "";
         card.innerHTML = `
           <div class="cd-recap-info">
             <span class="cd-recap-title">${escapeHtml(itemOptions.title || handout.title || "Sin título")}</span>
@@ -256,6 +271,7 @@
   function handleRevelacionesListClick(event) {
     const rs = revelationScreen();
     if (!rs) return;
+    if (event.target.closest(".dl-item--clickable")) return;
 
     const onSaved = () => loadRevelacionesList(
       revelacionState.chronicleId,
@@ -263,15 +279,15 @@
       revelacionState.isNarrator,
     );
 
-    const narratorCard = event.target.closest("[data-handout-id]");
-    if (narratorCard?.dataset.handoutId) {
-      rs.showForPlayer({ revelationId: narratorCard.dataset.handoutId, onSaved });
+    const narratorCard = event.target.closest("[data-document-id]");
+    if (revelacionState.isNarrator && narratorCard?.dataset.documentId) {
+      rs.showForPlayer({ revelationId: narratorCard.dataset.documentId, onSaved });
       return;
     }
 
     const playerCard = event.target.closest("[data-delivery-id]");
-    if (playerCard?.dataset.revelationId) {
-      rs.showForPlayer({ revelationId: playerCard.dataset.revelationId });
+    if (playerCard?.dataset.documentId) {
+      rs.showForPlayer({ revelationId: playerCard.dataset.documentId });
     }
   }
 

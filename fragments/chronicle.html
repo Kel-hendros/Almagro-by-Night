@@ -135,7 +135,7 @@
         </div>
         <div class="cd-tab-panel" data-panel="diario">
             <div class="cd-diario-tabs">
-                <button class="cd-diario-tab active" data-dtab="sesiones">Sesiones</button>
+                <button class="cd-diario-tab active" data-dtab="sesiones">Recuentos</button>
                 <button class="cd-diario-tab" data-dtab="notas">Mis Notas</button>
                 <button class="cd-diario-tab" data-dtab="revelaciones">Revelaciones</button>
             </div>
@@ -143,8 +143,8 @@
             <div class="cd-diario-columns">
                 <!-- Sesiones column -->
                 <div class="cd-diario-col" data-dcol="sesiones">
-                    <span class="cd-diario-label">SESIONES</span>
-                    <div class="cd-recaps-toolbar">
+                    <span class="cd-diario-label">RECUENTOS</span>
+                    <div class="cd-diario-toolbar">
                         <button class="btn btn--primary cd-add-list-btn cd-add-list-btn--compact" id="cd-open-recaps-archive" type="button">Archivo de Recuentos</button>
                         <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact hidden" id="cd-add-recap" type="button">+ Nuevo Recuento</button>
                     </div>
@@ -157,13 +157,9 @@
                 <!-- Mis Notas column -->
                 <div class="cd-diario-col" data-dcol="notas">
                     <span class="cd-diario-label cd-diario-label--notas">MIS NOTAS</span>
-                    <div class="cd-notes-toolbar">
-                        <div class="cd-notes-search-wrap">
-                            <i data-lucide="search" class="cd-notes-search-icon"></i>
-                            <input type="text" id="cd-notes-search" class="cd-notes-search" placeholder="Buscar notas...">
-                        </div>
-                        <button class="btn btn--ghost cd-add-list-btn cd-add-list-btn--compact" id="cd-open-notes-archive">Ver Archivo</button>
-                        <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact" id="cd-add-note">+ Nueva</button>
+                    <div class="cd-diario-toolbar">
+                        <button class="btn btn--primary cd-add-list-btn cd-add-list-btn--compact" id="cd-open-notes-archive" type="button">Archivo de Notas</button>
+                        <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact" id="cd-add-note" type="button">+ Nueva Nota</button>
                     </div>
                     <div id="cd-notas-list" class="cd-diario-list">
                         <span class="cd-card-muted">Cargando...</span>
@@ -174,8 +170,10 @@
                 <!-- Revelaciones column -->
                 <div class="cd-diario-col" data-dcol="revelaciones">
                     <span class="cd-diario-label">REVELACIONES</span>
-                    <button class="btn btn--ghost cd-add-list-btn cd-add-list-btn--compact" id="cd-open-revelaciones-archive">Ver Archivo</button>
-                    <button class="btn btn--secondary cd-add-list-btn hidden" id="cd-add-revelacion">+ Crear Revelación</button>
+                    <div class="cd-diario-toolbar">
+                        <button class="btn btn--primary cd-add-list-btn cd-add-list-btn--compact" id="cd-open-revelaciones-archive" type="button">Archivo de Revelaciones</button>
+                        <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact hidden" id="cd-add-revelacion" type="button">+ Nueva Revelación</button>
+                    </div>
                     <div id="cd-revelaciones-list" class="cd-diario-list">
                         <span class="cd-card-muted">Cargando...</span>
                     </div>
