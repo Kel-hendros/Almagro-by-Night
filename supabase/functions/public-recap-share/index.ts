@@ -68,6 +68,13 @@ function buildAppUrl(token: string) {
   return `${baseUrl}#public-recap?token=${encodeURIComponent(token)}`;
 }
 
+function buildPublicShareUrl(token: string) {
+  const configured = String(Deno.env.get("SUPABASE_URL") || "").trim();
+  if (!configured) return "";
+  const baseUrl = configured.replace(/\/$/, "");
+  return `${baseUrl}/functions/v1/public-recap-share/${encodeURIComponent(token)}`;
+}
+
 function buildOgImageUrl() {
   const configured = String(Deno.env.get("PUBLIC_SHARE_OG_IMAGE_URL") || "").trim();
   if (configured) return configured;
@@ -75,19 +82,32 @@ function buildOgImageUrl() {
 }
 
 function extractToken(reqUrl: URL) {
-  const marker = "/functions/v1/public-recap-share/";
-  const rawPath = reqUrl.pathname || "";
-  const idx = rawPath.indexOf(marker);
-  if (idx === -1) return "";
-
-  const tail = rawPath.slice(idx + marker.length).split("/")[0] || "";
-  return decodeURIComponent(tail).trim();
+  const segments = String(reqUrl.pathname || "")
+    .split("/")
+    .filter(Boolean);
+  const lastSegment = segments[segments.length - 1] || "";
+  if (!lastSegment || lastSegment === "public-recap-share") return "";
+  return decodeURIComponent(lastSegment).trim();
 }
 
-function buildHtml(share: PublicRecapShare, reqUrl: URL) {
+function isPreviewBot(userAgent: string) {
+  const ua = String(userAgent || "").toLowerCase();
+  return [
+    "whatsapp",
+    "facebookexternalhit",
+    "meta-externalagent",
+    "twitterbot",
+    "slackbot",
+    "discordbot",
+    "telegrambot",
+    "linkedinbot",
+  ].some((token) => ua.includes(token));
+}
+
+function buildHtml(share: PublicRecapShare, reqUrl: URL, options: { autoRedirect: boolean }) {
   const title = `${share.title || "Recuento"} · ${share.chronicle_name || "Crónica"}`;
   const description = buildDescription(share);
-  const canonicalUrl = reqUrl.toString();
+  const canonicalUrl = buildPublicShareUrl(share.share_token) || reqUrl.toString();
   const appUrl = buildAppUrl(share.share_token);
   const ogImageUrl = buildOgImageUrl();
   const safeTitle = escapeHtml(title);
@@ -110,12 +130,14 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL) {
     <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
     <meta property="og:image" content="${safeOgImageUrl}">
     <meta property="og:image:alt" content="Buenos Aires by Night">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${safeTitle}">
     <meta name="twitter:description" content="${safeDescription}">
     <meta name="twitter:image" content="${safeOgImageUrl}">
-    <meta http-equiv="refresh" content="0;url=${safeAppUrl}">
-    <script>window.location.replace(${JSON.stringify(appUrl)});</script>
+    ${options.autoRedirect ? `<meta http-equiv="refresh" content="0;url=${safeAppUrl}">` : ""}
+    ${options.autoRedirect ? `<script>window.location.replace(${JSON.stringify(appUrl)});</script>` : ""}
     <style>
       :root {
         color-scheme: dark;
@@ -230,6 +252,7 @@ function buildHtml(share: PublicRecapShare, reqUrl: URL) {
 Deno.serve(async (req: Request) => {
   const reqUrl = new URL(req.url);
   const token = extractToken(reqUrl);
+  const userAgent = String(req.headers.get("user-agent") || "");
 
   if (!token) {
     return new Response("Token faltante.", { status: 400 });
@@ -257,7 +280,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  return new Response(buildHtml(data, reqUrl), {
+  return new Response(buildHtml(data, reqUrl, { autoRedirect: !isPreviewBot(userAgent) }), {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
