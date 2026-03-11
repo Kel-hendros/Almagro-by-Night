@@ -3916,26 +3916,35 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 
 .dice-widget-main {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: end;
 	justify-content: space-between;
-	gap: 14px;
+	gap: 10px 14px;
 	width: 100%;
 	min-width: 0;
 }
 
 .dice-inline-track {
-	display: inline-flex;
+	display: grid;
+	grid-template-columns:
+		minmax(64px, 96px) auto
+		minmax(64px, 96px) auto
+		minmax(64px, 96px) auto
+		minmax(64px, 96px);
 	align-items: end;
-	gap: 10px;
+	justify-content: space-between;
+	justify-items: center;
+	column-gap: 6px;
+	width: 100%;
 	min-width: 0;
-	flex: 1;
+	flex: 1 1 360px;
 }
 
 .dice-field {
 	display: grid;
 	gap: 6px;
-	width: 96px;
-	min-width: 96px;
+	width: 100%;
+	min-width: 64px;
 	max-width: 96px;
 	justify-items: center;
 }
@@ -4064,12 +4073,14 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 
 .dice-action-buttons {
 	display: inline-flex;
+	flex-wrap: wrap;
 	align-items: end;
+	justify-content: flex-end;
 	gap: 6px;
-	margin-left: 14px;
-	padding-left: 12px;
+	margin-left: auto;
+	padding-left: clamp(8px, 1vw, 12px);
 	border-left: 1px solid var(--ui-border);
-	flex-shrink: 0;
+	flex: 0 0 auto;
 }
 
 .dice-roll-btn {
@@ -4099,15 +4110,23 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 
 .dice-reset-btn {
 	height: 36px;
-	min-width: 72px;
+	width: 28px;
 	border: 1px solid rgba(255, 120, 120, 0.35);
 	border-radius: 8px;
 	background: rgba(255, 90, 90, 0.08);
 	color: var(--danger);
-	font-size: 0.76rem;
+	font-size: 0.9rem;
+	line-height: 1;
 	cursor: pointer;
-	padding: 0 10px;
-	white-space: nowrap;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.dice-reset-btn i {
+	font-size: 0.95rem;
+	line-height: 1;
 }
 
 .dice-history-btn {
@@ -5159,6 +5178,13 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 	}
 
 	.dice-inline-track {
+		grid-template-columns:
+			minmax(56px, 88px) auto
+			minmax(56px, 88px) auto
+			minmax(56px, 88px) auto
+			minmax(56px, 88px);
+		justify-content: start;
+		column-gap: 4px;
 		overflow-x: auto;
 		padding-bottom: 4px;
 		flex: 1;
