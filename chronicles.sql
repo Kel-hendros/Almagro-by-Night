@@ -202,7 +202,13 @@ create policy chronicles_insert_authenticated
 on public.chronicles
 for insert
 to authenticated
-with check (true);
+with check (
+  creator_id in (
+    select p.id
+    from public.players p
+    where p.user_id = (select auth.uid())
+  )
+);
 
 -- Only creator can update
 drop policy if exists chronicles_update_creator on public.chronicles;
@@ -301,7 +307,23 @@ create policy cp_insert_authenticated
 on public.chronicle_participants
 for insert
 to authenticated
-with check (true);
+with check (
+  role = 'narrator'
+  and player_id in (
+    select p.id
+    from public.players p
+    where p.user_id = (select auth.uid())
+  )
+  and chronicle_id in (
+    select c.id
+    from public.chronicles c
+    where c.creator_id in (
+      select p.id
+      from public.players p
+      where p.user_id = (select auth.uid())
+    )
+  )
+);
 
 -- Only narrator can remove participants
 drop policy if exists cp_delete_narrator on public.chronicle_participants;

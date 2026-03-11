@@ -4,10 +4,28 @@ let currentAvatarUrl = null;
 let currentAvatarPosition = { x: 50, y: 50, scale: 1 };
 let currentAvatarOriginalUrl = null;
 let currentAvatarThumbUrl = null;
+const DEFAULT_AVATAR_POSITION = Object.freeze({ x: 50, y: 50, scale: 1 });
+const AVATAR_SCALE_MIN = 1;
+const AVATAR_SCALE_MAX = 3;
 const ratingDotsModule = window.ABNSheetRatingDots;
 const uiRefreshModule = window.ABNSheetUIRefresh;
 const sheetModeModule = window.ABNSheetMode;
 sheetModeModule?.init();
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function normalizeAvatarPosition(position) {
+  const x = Number(position?.x);
+  const y = Number(position?.y);
+  const scale = Number(position?.scale);
+  return {
+    x: Number.isFinite(x) ? clamp(x, 0, 100) : DEFAULT_AVATAR_POSITION.x,
+    y: Number.isFinite(y) ? clamp(y, 0, 100) : DEFAULT_AVATAR_POSITION.y,
+    scale: Number.isFinite(scale) ? clamp(scale, AVATAR_SCALE_MIN, AVATAR_SCALE_MAX) : DEFAULT_AVATAR_POSITION.scale,
+  };
+}
 
 function isEditMode() {
   return sheetModeModule?.isEditMode?.() ?? true;
@@ -403,7 +421,7 @@ if (sheetLoaderModule) {
       currentAvatarOriginalUrl = sheet?.data?.avatarOriginalUrl || sheet?.avatar_url || null;
       currentAvatarThumbUrl = sheet?.data?.avatarThumbUrl || sheet?.avatar_url || null;
       currentAvatarUrl = currentAvatarThumbUrl || currentAvatarOriginalUrl;
-      currentAvatarPosition = sheet?.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
+      currentAvatarPosition = normalizeAvatarPosition(sheet?.data?.avatarPosition);
       loadCharacterFromJSON(sheet.data);
       updateAll();
 
@@ -501,17 +519,7 @@ function getCharacterData() {
   characterData.savedRolls = getSavedRollsData();
 
   // Keep avatar crop/position set in Characters view
-  characterData.avatarPosition = {
-    x: Number.isFinite(Number(currentAvatarPosition?.x))
-      ? Number(currentAvatarPosition.x)
-      : 50,
-    y: Number.isFinite(Number(currentAvatarPosition?.y))
-      ? Number(currentAvatarPosition.y)
-      : 50,
-    scale: Number.isFinite(Number(currentAvatarPosition?.scale))
-      ? Number(currentAvatarPosition.scale)
-      : 1,
-  };
+  characterData.avatarPosition = normalizeAvatarPosition(currentAvatarPosition);
   if (currentAvatarOriginalUrl) characterData.avatarOriginalUrl = currentAvatarOriginalUrl;
   if (currentAvatarThumbUrl) characterData.avatarThumbUrl = currentAvatarThumbUrl;
 

@@ -1,5 +1,8 @@
 (function initCharactersView(global) {
   const ns = (global.ABNCharacters = global.ABNCharacters || {});
+  const DEFAULT_AVATAR_POSITION = Object.freeze({ x: 50, y: 50, scale: 1 });
+  const AVATAR_SCALE_MIN = 1;
+  const AVATAR_SCALE_MAX = 3;
 
   const clanMapping = {
     Brujah: "1",
@@ -24,6 +27,21 @@
 
   function getClanSigil(clanName) {
     return clanMapping[clanName] || "L";
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function normalizeAvatarPosition(position) {
+    const x = Number(position?.x);
+    const y = Number(position?.y);
+    const scale = Number(position?.scale);
+    return {
+      x: Number.isFinite(x) ? clamp(x, 0, 100) : DEFAULT_AVATAR_POSITION.x,
+      y: Number.isFinite(y) ? clamp(y, 0, 100) : DEFAULT_AVATAR_POSITION.y,
+      scale: Number.isFinite(scale) ? clamp(scale, AVATAR_SCALE_MIN, AVATAR_SCALE_MAX) : DEFAULT_AVATAR_POSITION.scale,
+    };
   }
 
   function buildSkeletonCards(count = 4) {
@@ -79,7 +97,7 @@
         : "-";
       const hasAvatarThumb = !!sheet.data?.avatarThumbUrl;
       const avatarUrl = sheet.data?.avatarThumbUrl || sheet.avatar_url;
-      const avatarPos = sheet.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
+      const avatarPos = normalizeAvatarPosition(sheet.data?.avatarPosition);
 
       const chronicleInfo = chronicleMap[sheet.id];
       const playerName = playerMap[sheet.user_id];

@@ -1,6 +1,10 @@
 -- Function to delete avatar from storage
-CREATE OR REPLACE FUNCTION delete_character_avatar()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.delete_character_avatar()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, storage
+AS $$
 DECLARE
   avatar_path text;
 BEGIN
@@ -21,11 +25,11 @@ BEGIN
   END IF;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Trigger
-DROP TRIGGER IF EXISTS on_character_delete ON character_sheets;
+DROP TRIGGER IF EXISTS on_character_delete ON public.character_sheets;
 CREATE TRIGGER on_character_delete
-AFTER DELETE ON character_sheets
+AFTER DELETE ON public.character_sheets
 FOR EACH ROW
-EXECUTE FUNCTION delete_character_avatar();
+EXECUTE FUNCTION public.delete_character_avatar();

@@ -38,10 +38,35 @@ function escapeAttr(val) {
   return escapeHtml(val);
 }
 
+function sanitizeColor(value, fallback = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  if (/^#[0-9a-f]{3,8}$/i.test(raw)) return raw;
+  if (/^rgba?\(\s*[\d.%\s,]+\)$/i.test(raw)) return raw;
+  if (/^hsla?\(\s*[\d.%\s,]+\)$/i.test(raw)) return raw;
+  if (/^var\(--[a-z0-9_-]+\)$/i.test(raw)) return raw;
+  if (/^[a-z]+$/i.test(raw)) return raw;
+  return fallback;
+}
+
+function sanitizeUrl(value, fallback = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+    if (!/^https?:/i.test(raw)) return fallback;
+    return raw;
+  }
+  if (/^[./]/.test(raw) || !raw.startsWith("//")) return raw;
+  return fallback;
+}
+
 function getFactionMeta(keyword, fallbackName, fallbackColor) {
   const fallback = {
     name: fallbackName,
-    color: fallbackColor || getCssVarValue("--zone-neutral"),
+    color: sanitizeColor(
+      fallbackColor || getCssVarValue("--zone-neutral"),
+      getCssVarValue("--zone-neutral")
+    ),
   };
   if (!keyword || !window.gameFactions?.length) return fallback;
   const match = window.gameFactions.find((f) =>
@@ -50,7 +75,7 @@ function getFactionMeta(keyword, fallbackName, fallbackColor) {
   if (!match) return fallback;
   return {
     name: match.name || fallback.name,
-    color: match.color || fallback.color,
+    color: sanitizeColor(match.color, fallback.color),
   };
 }
 
@@ -137,9 +162,16 @@ function buildLieutenantCard(lt, options = {}) {
   const card = document.createElement("div");
   card.className = "lieutenant-card";
   const canDeploy = isLieutenantDeployable(lt);
-  const accentColor =
+  const accentColor = sanitizeColor(
     lt.faction_color ||
-    (lt.is_ally ? getCssVarValue("--color-red-accent") : null);
+      (lt.is_ally ? getCssVarValue("--color-red-accent") : null),
+    ""
+  );
+  const safeName = escapeHtml(lt.name || "Teniente");
+  const safeDescription = escapeHtml(lt.description || "");
+  const safeImageUrl = sanitizeUrl(lt.image_url, "");
+  const safeFactionColor = sanitizeColor(lt.faction_color, "#FF0000");
+  const safeFactionName = escapeHtml(lt.faction_name || "Facción");
   if (accentColor) {
     card.style.borderColor = accentColor;
     card.style.backgroundColor = `${accentColor}1A`;
@@ -150,7 +182,7 @@ function buildLieutenantCard(lt, options = {}) {
     card.innerHTML = `
       <div class="lieutenant-rich-header">
         <div class="lieutenant-rich-info">
-          <strong>${escapeHtml(lt.name || "Teniente")}</strong>
+          <strong>${safeName}</strong>
           <span class="lieutenant-mini-stats">💪 ${lt.phys_power || 0} · 🗣️ ${
       lt.soc_power || 0
     } · 🧠 ${lt.ment_power || 0}</span>
@@ -171,14 +203,14 @@ function buildLieutenantCard(lt, options = {}) {
       </div>
       <div class="lieutenant-rich-body">
         ${
-          lt.image_url
-            ? `<div class="lieutenant-rich-img"><img src="${
-                lt.image_url
-              }" alt="${lt.name || "Teniente"}"></div>`
+          safeImageUrl
+            ? `<div class="lieutenant-rich-img"><img src="${escapeAttr(
+                safeImageUrl
+              )}" alt="${safeName}"></div>`
             : ""
         }
         <div class="lieutenant-rich-text">
-          ${lt.description ? `<p>${lt.description}</p>` : ""}
+          ${lt.description ? `<p>${safeDescription}</p>` : ""}
          
           
         </div>
@@ -199,10 +231,10 @@ function buildLieutenantCard(lt, options = {}) {
   row.className = "lieutenant-minimal-row";
   row.innerHTML = `
     
-    <span>${escapeHtml(lt.name || "Teniente")}</span>
-    <span class="lieutenant-mini-faction" style="color:${
-      lt.faction_color || "#FF0000"
-    }">${escapeHtml(lt.faction_name || "Facción")}</span>
+    <span>${safeName}</span>
+    <span class="lieutenant-mini-faction" style="color:${escapeAttr(
+      safeFactionColor
+    )}">${safeFactionName}</span>
     <span class="lieutenant-mini-stats">💪 ${lt.phys_power || 0} · 🗣️ ${
     lt.soc_power || 0
   } · 🧠 ${lt.ment_power || 0}</span>
@@ -267,15 +299,22 @@ function showLieutenantModal(lt, options = {}) {
     });
   }
 
-  const accentColor = lt.faction_color || getCssVarValue("--color-red-accent");
+  const accentColor = sanitizeColor(
+    lt.faction_color,
+    getCssVarValue("--color-red-accent")
+  );
+  const safeImageUrl = sanitizeUrl(lt.image_url, "");
+  const safeName = escapeHtml(lt.name || "Teniente");
+  const safeFactionName = escapeHtml(lt.faction_name || "Facción");
+  const safeDescription = escapeHtml(lt.description || "");
+  const safeLocation = escapeHtml(
+    showLocation ? lt.current_zone_name || "Sin zona asignada" : zoneLabel || "Zona actual"
+  );
 
   dialog.innerHTML = `
-<div class="modal-content" style="border-color:${accentColor}">
+<div class="modal-content" style="border-color:${escapeAttr(accentColor)}">
   <!-- Botón cerrar arriba a la derecha -->
-  <button
-    class="modal-close-btn"
-    onclick="document.getElementById('lieutenant-detail-modal').close()"
-  >
+  <button class="modal-close-btn" type="button">
     ×
   </button>
 
@@ -286,15 +325,15 @@ function showLieutenantModal(lt, options = {}) {
     <div class="modal-column modal-column-left">
       <div class="modal-header">
         <div class="modal-title-block">
-          <h2>${lt.name || "Teniente"}</h2>
-          <p class="modal-faction" style="color:${accentColor}">
-            ${lt.faction_name || "Facción"}
+          <h2>${safeName}</h2>
+          <p class="modal-faction" style="color:${escapeAttr(accentColor)}">
+            ${safeFactionName}
           </p>
         </div>
       </div>
 
       <div class="modal-body">
-        ${lt.description ? `<p class="modal-desc">${lt.description}</p>` : ""}
+        ${lt.description ? `<p class="modal-desc">${safeDescription}</p>` : ""}
 
         <div class="modal-stats">
           <div class="stat-item">
@@ -316,11 +355,7 @@ function showLieutenantModal(lt, options = {}) {
 
         <div class="modal-location">
           <strong>📍 Ubicación actual:</strong>
-          <span>${
-            showLocation
-              ? lt.current_zone_name || "Sin zona asignada"
-              : zoneLabel || "Zona actual"
-          }</span>
+          <span>${safeLocation}</span>
         </div>
       </div>
     </div>
@@ -328,9 +363,9 @@ function showLieutenantModal(lt, options = {}) {
     <!-- COLUMNA DERECHA: imagen -->
     <div class="modal-column modal-column-right">
       ${
-        lt.image_url
+        safeImageUrl
           ? `<div class="modal-img">
-               <img src="${lt.image_url}" alt="${lt.name || "Teniente"}">
+               <img src="${escapeAttr(safeImageUrl)}" alt="${safeName}">
              </div>`
           : ""
       }
@@ -341,6 +376,8 @@ function showLieutenantModal(lt, options = {}) {
 
   `;
 
+  const closeBtn = dialog.querySelector(".modal-close-btn");
+  closeBtn?.addEventListener("click", () => dialog.close());
   dialog.showModal();
 }
 
@@ -529,7 +566,10 @@ window.DetailView.renderZone = async function (id) {
   }
 
   const description = data.description || "Sin descripción";
-  const imageUrl = data.image_url || "images/zone_image_default.png";
+  const imageUrl = sanitizeUrl(
+    data.image_url,
+    "images/zone_image_default.png"
+  );
   const currentGameId = window.currentGameId;
 
   // Check zone status cache first (sync)
@@ -630,7 +670,7 @@ window.DetailView.renderZone = async function (id) {
           <div class="detail-state" id="detail-state-block"></div>
         </div>
         <div class="detail-image-container portrait">
-          <img class="detail-img" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.name)}" />
+          <img class="detail-img" src="${escapeAttr(imageUrl)}" alt="${escapeHtml(data.name)}" />
         </div>
       </div>
   `;
@@ -663,10 +703,12 @@ window.DetailView.renderZone = async function (id) {
   if (data.benefits) {
     const isControlled = zoneStatus?.control_state === "CONTROLLED";
     const controllingColor = isControlled
-      ? zoneStatus.controlling_color || "#fff"
+      ? sanitizeColor(zoneStatus.controlling_color, "#fff")
       : "transparent";
     const checkStyle = isControlled
-      ? `background-color: ${controllingColor}; border-color: ${controllingColor};`
+      ? `background-color: ${escapeAttr(
+          controllingColor
+        )}; border-color: ${escapeAttr(controllingColor)};`
       : "";
     // Checkmark only if controlled
     const checkContent = isControlled ? "✓" : "";
@@ -704,7 +746,10 @@ window.DetailView.renderZone = async function (id) {
       zoneStatus.control_state === "CONTROLLED" &&
       zoneStatus.controlling_color
     ) {
-      colorPill = zoneStatus.controlling_color;
+      colorPill = sanitizeColor(
+        zoneStatus.controlling_color,
+        getCssVarValue("--zone-neutral")
+      );
     } else if (zoneStatus.control_state === "DISPUTED") {
       colorPill = getCssVarValue("--zone-dispute");
     }
@@ -766,7 +811,13 @@ window.DetailView.renderZone = async function (id) {
                 Math.min((seg.value / goal) * 100, 100),
                 0
               );
-              return `<div class="progress-segment" style="width:${width}%; background:${seg.color};"></div>`;
+              const segColor = sanitizeColor(
+                seg.color,
+                getCssVarValue("--zone-neutral")
+              );
+              return `<div class="progress-segment" style="width:${width}%; background:${escapeAttr(
+                segColor
+              )};"></div>`;
             })
             .join("")}
         </div>
@@ -779,7 +830,9 @@ window.DetailView.renderZone = async function (id) {
     stateBlock.innerHTML = `
       <div class="zone-control-card">
         <div class="zone-control-header">
-          <div class="detail-status-pill" style="background:${colorPill}"></div>
+          <div class="detail-status-pill" style="background:${escapeAttr(
+            colorPill
+          )}"></div>
           <p class="detail-status">${statusText}</p>
           ${
             thresholdLabel

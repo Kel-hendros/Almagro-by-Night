@@ -1389,9 +1389,11 @@
     state.disciplinePowers.forEach((power, index) => {
       const item = document.createElement("div");
       item.className = "discipline-power-item";
+      const safePowerName = escapeHtml(power.name || "");
+      const safePowerDescription = escapeHtml(power.description || "");
       item.innerHTML = `
       <div class="discipline-power-row">
-        <button class="discipline-power-title-btn" type="button">${power.name}</button>
+        <button class="discipline-power-title-btn" type="button">${safePowerName}</button>
         <div class="row-action-buttons mode-edit-only">
           <button class="btn-icon discipline-power-edit-btn" type="button" aria-label="Editar poder" title="Editar poder">
             <i data-lucide="pencil"></i>
@@ -1401,7 +1403,7 @@
           </button>
         </div>
       </div>
-      <div class="discipline-power-description">${power.description}</div>
+      <div class="discipline-power-description">${safePowerDescription}</div>
     `;
 
       const titleBtn = item.querySelector(".discipline-power-title-btn");

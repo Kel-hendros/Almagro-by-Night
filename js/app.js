@@ -398,7 +398,12 @@ async function loadGames() {
   ]);
 
   if (breadcrumb && chronName) {
-    breadcrumb.innerHTML = `<a href="#chronicle">${chronName}</a> &rsaquo; Almagro de Noche`;
+    breadcrumb.textContent = "";
+    const chronicleLink = document.createElement("a");
+    chronicleLink.href = "#chronicle";
+    chronicleLink.textContent = chronName;
+    breadcrumb.appendChild(chronicleLink);
+    breadcrumb.appendChild(document.createTextNode(" › Almagro de Noche"));
     breadcrumb.style.display = "block";
   }
 

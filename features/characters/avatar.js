@@ -1,14 +1,32 @@
 (function initCharactersAvatar(global) {
   const ns = (global.ABNCharacters = global.ABNCharacters || {});
   const service = () => ns.service;
+  const DEFAULT_AVATAR_POSITION = Object.freeze({ x: 50, y: 50, scale: 1 });
+  const AVATAR_SCALE_MIN = 1;
+  const AVATAR_SCALE_MAX = 3;
 
   const state = {
     currentSheetId: null,
     reposImage: new Image(),
-    reposState: { x: 50, y: 50, scale: 1, isDragging: false, lastX: 0, lastY: 0 },
+    reposState: { ...DEFAULT_AVATAR_POSITION, isDragging: false, lastX: 0, lastY: 0 },
     initialized: false,
     modalController: null,
   };
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function normalizeAvatarPosition(position) {
+    const x = Number(position?.x);
+    const y = Number(position?.y);
+    const scale = Number(position?.scale);
+    return {
+      x: Number.isFinite(x) ? clamp(x, 0, 100) : DEFAULT_AVATAR_POSITION.x,
+      y: Number.isFinite(y) ? clamp(y, 0, 100) : DEFAULT_AVATAR_POSITION.y,
+      scale: Number.isFinite(scale) ? clamp(scale, AVATAR_SCALE_MIN, AVATAR_SCALE_MAX) : DEFAULT_AVATAR_POSITION.scale,
+    };
+  }
 
   function getAvatarDisplayUrl(sheet) {
     return sheet?.data?.avatarThumbUrl || sheet?.avatar_url || "";
@@ -67,7 +85,7 @@
         const sheet = await service().getSheetById(sheetId);
         const updatedData = {
           ...(sheet?.data || {}),
-          avatarPosition: { x: 50, y: 50, scale: 1 },
+          avatarPosition: DEFAULT_AVATAR_POSITION,
           avatarOriginalUrl: publicUrl,
           avatarThumbUrl: "",
         };
@@ -77,7 +95,7 @@
           data: updatedData,
         });
 
-        openReposModal(publicUrl, { x: 50, y: 50, scale: 1 });
+        openReposModal(publicUrl, DEFAULT_AVATAR_POSITION);
         if (typeof onUpdated === "function") onUpdated();
       } catch (error) {
         console.error(error);
@@ -116,11 +134,11 @@
 
         const updatedData = {
           ...(sheet?.data || {}),
-          avatarPosition: {
+          avatarPosition: normalizeAvatarPosition({
             x: Math.round(state.reposState.x * 10) / 10,
             y: Math.round(state.reposState.y * 10) / 10,
             scale: state.reposState.scale,
-          },
+          }),
           avatarOriginalUrl: originalUrl,
           avatarThumbUrl: thumbUrl,
         };
@@ -186,7 +204,7 @@
     );
 
     zoom.addEventListener("input", (event) => {
-      state.reposState.scale = parseFloat(event.target.value);
+      state.reposState.scale = normalizeAvatarPosition({ scale: parseFloat(event.target.value) }).scale;
       drawPreview();
     });
 
@@ -228,15 +246,16 @@
   function openReposModal(imageUrl, position) {
     const { zoom, modal } = elements();
     if (!zoom || !modal) return;
+    const normalizedPosition = normalizeAvatarPosition(position);
 
     state.reposState = {
-      ...position,
+      ...normalizedPosition,
       isDragging: false,
       lastX: 0,
       lastY: 0,
     };
 
-    zoom.value = position.scale;
+    zoom.value = String(state.reposState.scale);
     state.reposImage.crossOrigin = "anonymous";
     state.reposImage.src = imageUrl;
     state.reposImage.onload = () => {
@@ -282,7 +301,7 @@
       const sheet = await service().getSheetById(sheetId);
       const displayUrl = getAvatarDisplayUrl(sheet);
       if (!displayUrl) return;
-      const pos = sheet.data?.avatarPosition || { x: 50, y: 50, scale: 1 };
+      const pos = normalizeAvatarPosition(sheet.data?.avatarPosition);
       const sourceUrl = sheet?.data?.avatarOriginalUrl || displayUrl;
       openReposModal(sourceUrl, pos);
     } catch (error) {
