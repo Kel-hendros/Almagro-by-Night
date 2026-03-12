@@ -321,3 +321,114 @@
     font-size: 0.86rem;
   }
 }
+
+/* ================================================
+   OBJECT BADGES (used in archive cards)
+   ================================================ */
+
+.objeto-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.objeto-type-badge {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.objeto-type-badge--arma {
+  background: color-mix(in srgb, var(--theme-danger, #c62828) 15%, transparent);
+  color: var(--theme-danger, #c62828);
+}
+
+.objeto-type-badge--equipo {
+  background: color-mix(in srgb, var(--theme-info, #4285f4) 15%, transparent);
+  color: var(--theme-info, #4285f4);
+}
+
+.objeto-type-badge--utilidad {
+  background: color-mix(in srgb, var(--theme-warning, #d4a14a) 15%, transparent);
+  color: var(--theme-warning, #d4a14a);
+}
+
+.objeto-type-badge--consumible {
+  background: color-mix(in srgb, var(--theme-success, #6e9e6e) 15%, transparent);
+  color: var(--theme-success, #6e9e6e);
+}
+
+.objeto-location-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--theme-text-secondary, #6e6e70);
+  border: 1px solid var(--theme-border-divider, #4d4d54);
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: var(--theme-bg-elevated, #2a2a2c);
+}
+
+.objeto-viewer-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* ================================================
+   OBJECT FAVORITE
+   ================================================ */
+
+.objeto-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.objeto-fav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted, var(--theme-text-tertiary, #4a4a4c));
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.objeto-fav-btn:hover {
+  color: var(--color-status-warning, var(--theme-warning, #d4a14a));
+  transform: scale(1.15);
+}
+
+.objeto-fav-btn .objeto-fav-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.objeto-fav-btn.objeto-fav--active {
+  color: var(--color-status-warning, var(--theme-warning, #d4a14a));
+}
+
+.objeto-fav-btn.objeto-fav--active .objeto-fav-icon {
+  fill: currentColor;
+}
+
+.objeto-fav-action--active {
+  color: var(--color-status-warning, var(--theme-warning, #d4a14a)) !important;
+}
+
+.objeto-fav-action--active svg {
+  fill: currentColor;
+}

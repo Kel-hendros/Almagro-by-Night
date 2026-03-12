@@ -1,17 +1,13 @@
 (function initABNSheetRevelaciones(global) {
-  const BUCKET_ID = "revelations-private";
-  const PRIVATE_REF_PREFIX = "abn-private://";
-  const SIGNED_URL_TTL = 60 * 60;
-  const SIGNED_URL_CACHE_TTL = 45 * 60 * 1000;
-  const SURL_PREFIX = "abn-surl:";
+  const DISPLAY_LIMIT = 5;
   const TOAST_AUTO_DISMISS_MS = 20000;
   const REFRESH_POLL_MS = 10000;
 
   const state = {
     chronicleId: null,
     playerId: null,
-    deliveries: [],
-    lastKnownDeliveries: new Map(),
+    rows: [],
+    lastKnownRows: new Map(),
     realtimeChannel: null,
     toastTimer: null,
     pollTimer: null,
@@ -28,105 +24,16 @@
     return global.ABNShared?.handouts || null;
   }
 
+  function getAdapter() {
+    return global.ABNShared?.documentTypes?.get?.("revelation") || null;
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
-  }
-
-  function parsePrivateImageRef(imageRef) {
-    const raw = String(imageRef || "").trim();
-    if (!raw.startsWith(PRIVATE_REF_PREFIX)) return null;
-    const suffix = raw.slice(PRIVATE_REF_PREFIX.length);
-    const slash = suffix.indexOf("/");
-    if (slash <= 0) return null;
-    const bucketId = suffix.slice(0, slash);
-    const objectPath = suffix.slice(slash + 1);
-    if (!bucketId || !objectPath) return null;
-    return { bucketId, objectPath };
-  }
-
-  function getPersistedUrl(ref) {
-    try {
-      const raw = sessionStorage.getItem(SURL_PREFIX + ref);
-      if (!raw) return null;
-      const entry = JSON.parse(raw);
-      if (Date.now() >= entry.exp) {
-        sessionStorage.removeItem(SURL_PREFIX + ref);
-        return null;
-      }
-      return entry.url;
-    } catch { return null; }
-  }
-
-  function persistUrl(ref, url) {
-    try {
-      sessionStorage.setItem(SURL_PREFIX + ref, JSON.stringify({
-        url, exp: Date.now() + SIGNED_URL_CACHE_TTL,
-      }));
-    } catch { /* storage full */ }
-  }
-
-  async function resolveSignedUrl(imageRef) {
-    const ref = String(imageRef || "").trim();
-    if (!ref) return "";
-
-    const persisted = getPersistedUrl(ref);
-    if (persisted) return persisted;
-
-    const supabase = getSupabase();
-    const parsed = parsePrivateImageRef(ref);
-    if (!supabase || !parsed) return "";
-    const { data, error } = await supabase.storage
-      .from(parsed.bucketId)
-      .createSignedUrl(parsed.objectPath, SIGNED_URL_TTL);
-    if (error) return "";
-
-    const url = String(data?.signedUrl || "");
-    if (url) persistUrl(ref, url);
-    return url;
-  }
-
-  async function fetchDeliveries() {
-    const handoutsApi = getHandoutsApi();
-    if (handoutsApi?.listPendingDeliveries && state.playerId) {
-      return handoutsApi.listPendingDeliveries({
-        playerId: state.playerId,
-        chronicleId: state.chronicleId,
-      });
-    }
-
-    const supabase = getSupabase();
-    if (!supabase || !state.playerId) return [];
-
-    const { data, error } = await supabase
-      .from("revelation_players")
-      .select(
-        "id, revelation_id, player_id, associated_at, handout:revelations(id, chronicle_id, title, body_markdown, image_url, created_at, tags)"
-      )
-      .eq("player_id", state.playerId)
-      .order("associated_at", { ascending: false });
-
-    if (error) {
-      console.warn("Revelaciones (sheet): error al cargar:", error.message);
-      return [];
-    }
-
-    const rows = (data || []).filter(
-      (row) => row.handout && row.handout.chronicle_id === state.chronicleId
-    );
-
-    return Promise.all(
-      rows.map(async (row) => ({
-        ...row,
-        handout: {
-          ...row.handout,
-          image_signed_url: await resolveSignedUrl(row.handout.image_url),
-        },
-      }))
-    );
   }
 
   function formatDate(dateStr) {
@@ -142,34 +49,57 @@
     }
   }
 
-  function getDeliveryTimestamp(row) {
-    const raw = row?.associated_at || row?.delivered_at || row?.handout?.created_at || "";
+  function getRowTimestamp(row) {
+    const raw = row?.delivered_at || row?.created_at || "";
     const stamp = raw ? new Date(raw).getTime() : 0;
     return Number.isFinite(stamp) ? stamp : 0;
+  }
+
+  async function fetchRows() {
+    const adapter = getAdapter();
+    if (adapter?.fetchRows) {
+      return adapter.fetchRows({
+        chronicleId: state.chronicleId,
+        currentPlayerId: state.playerId,
+        isNarrator: false,
+      });
+    }
+
+    // Fallback: use handouts API directly
+    const handoutsApi = getHandoutsApi();
+    if (handoutsApi?.listPendingDeliveries && state.playerId) {
+      return handoutsApi.listPendingDeliveries({
+        playerId: state.playerId,
+        chronicleId: state.chronicleId,
+      });
+    }
+
+    return [];
   }
 
   function renderList() {
     const host = document.getElementById("revelaciones-list");
     if (!host) return;
 
-    if (!state.deliveries.length) {
+    if (!state.rows.length) {
       host.innerHTML = '<p class="muted">Sin revelaciones.</p>';
       return;
     }
 
-    host.innerHTML = state.deliveries
+    const visible = state.rows.slice(0, DISPLAY_LIMIT);
+
+    host.innerHTML = visible
       .map((row) => {
-        const h = row.handout || {};
-        const title = escapeHtml(h.title || "Revelación");
-        const date = escapeHtml(formatDate(row.associated_at || row.delivered_at || h.created_at));
-        const tags = Array.isArray(h.tags) ? h.tags : [];
+        const title = escapeHtml(row.title || "Revelación");
+        const date = escapeHtml(formatDate(row.delivered_at || row.created_at));
+        const tags = Array.isArray(row.tags) ? row.tags : [];
         const tagsHtml = tags.length
           ? `<div class="revelaciones-item-tags">${tags
               .map((t) => `<span class="revelaciones-tag">${escapeHtml(t)}</span>`)
               .join("")}</div>`
           : "";
         return `
-          <article class="revelaciones-item" data-delivery-idx="${escapeHtml(row.id)}">
+          <article class="revelaciones-item" data-revelation-id="${escapeHtml(row.revelation_id || row.id)}">
             <div class="revelaciones-item-content">
               <strong class="revelaciones-item-title">${title}</strong>
               <span class="revelaciones-item-date">${date}</span>
@@ -179,18 +109,24 @@
       })
       .join("");
 
+    if (state.rows.length > DISPLAY_LIMIT) {
+      const moreBtn = document.createElement("button");
+      moreBtn.type = "button";
+      moreBtn.className = "objeto-view-archive-btn";
+      moreBtn.textContent = `Ver archivo completo (${state.rows.length} revelaciones)`;
+      moreBtn.addEventListener("click", () => navigateToArchive());
+      host.appendChild(moreBtn);
+    }
+
     host.querySelectorAll(".revelaciones-item").forEach((el) => {
       el.addEventListener("click", () => {
-        const id = el.dataset.deliveryIdx;
-        const row = state.deliveries.find((delivery) => delivery.id === id);
-        if (row) openViewer(row);
+        const revelationId = el.dataset.revelationId;
+        if (revelationId) openViewer(revelationId);
       });
     });
   }
 
-  function openViewer(row) {
-    const h = row.handout || {};
-    const revelationId = h.id;
+  function openViewer(revelationId) {
     if (!revelationId) return;
 
     const parentInbox = global.parent?.ABNActiveCharacterSheet?.handoutsInbox;
@@ -202,7 +138,6 @@
   }
 
   function showParentToast(row) {
-    const h = row.handout || {};
     const parentInbox = global.parent?.ABNActiveCharacterSheet?.handoutsInbox;
     if (
       global.parent &&
@@ -210,8 +145,8 @@
       typeof parentInbox?.showToast === "function"
     ) {
       parentInbox.showToast({
-        revelationId: h.id || "",
-        title: h.title || "Nueva revelación",
+        revelationId: row.revelation_id || row.id || "",
+        title: row.title || "Nueva revelación",
       });
       return true;
     }
@@ -225,8 +160,7 @@
     const dismissBtn = document.getElementById("revelacion-toast-dismiss");
     if (!toast || !viewBtn || !dismissBtn) return;
 
-    const h = row.handout || {};
-    if (titleEl) titleEl.textContent = h.title || "Nueva revelación";
+    if (titleEl) titleEl.textContent = row.title || "Nueva revelación";
 
     toast.classList.remove("hidden");
 
@@ -241,7 +175,7 @@
     };
 
     viewBtn.onclick = () => {
-      openViewer(row);
+      openViewer(row.revelation_id || row.id);
       hideToast();
     };
     dismissBtn.onclick = () => {
@@ -256,24 +190,25 @@
     showLocalToast(row);
   }
 
-  function applyDeliveries(deliveries, { notify = false } = {}) {
-    const previousDeliveries = state.lastKnownDeliveries;
-    state.deliveries = Array.isArray(deliveries) ? deliveries : [];
+  function applyRows(rows, { notify = false } = {}) {
+    const previousRows = state.lastKnownRows;
+    state.rows = Array.isArray(rows) ? rows : [];
     renderList();
 
     const newRows = notify
-      ? state.deliveries.filter((delivery) => {
-          const previousTimestamp = previousDeliveries.get(delivery.id);
-          if (!previousDeliveries.has(delivery.id)) return true;
-          return getDeliveryTimestamp(delivery) > previousTimestamp;
+      ? state.rows.filter((row) => {
+          const rowId = row.revelation_id || row.id;
+          const previousTimestamp = previousRows.get(rowId);
+          if (!previousRows.has(rowId)) return true;
+          return getRowTimestamp(row) > previousTimestamp;
         })
       : [];
     if (newRows.length) {
       void showToast(newRows[0]);
     }
 
-    state.lastKnownDeliveries = new Map(
-      state.deliveries.map((delivery) => [delivery.id, getDeliveryTimestamp(delivery)])
+    state.lastKnownRows = new Map(
+      state.rows.map((row) => [row.revelation_id || row.id, getRowTimestamp(row)])
     );
   }
 
@@ -281,8 +216,8 @@
     if (!state.playerId || !state.chronicleId || state.refreshInFlight) return;
     state.refreshInFlight = true;
     try {
-      const deliveries = await fetchDeliveries();
-      applyDeliveries(deliveries, { notify });
+      const rows = await fetchRows();
+      applyRows(rows, { notify });
     } finally {
       state.refreshInFlight = false;
     }
@@ -379,6 +314,21 @@
       .subscribe();
   }
 
+  function navigateToArchive() {
+    if (!state.chronicleId) return;
+    const hash = `document-archive?id=${encodeURIComponent(state.chronicleId)}&type=revelation`;
+    window.parent?.location
+      ? (window.parent.location.hash = hash)
+      : (window.location.hash = hash);
+  }
+
+  function bindArchiveButton() {
+    const btn = document.getElementById("revelacion-archive-btn");
+    if (!btn || btn._abnBound) return;
+    btn.addEventListener("click", () => navigateToArchive());
+    btn._abnBound = true;
+  }
+
   async function init(chronicleId, ownerUserId) {
     if (!chronicleId) return;
 
@@ -388,7 +338,6 @@
     const supabase = getSupabase();
     if (!supabase) return;
 
-    // Usar el userId del dueño de la hoja, no el usuario autenticado
     let targetUserId = ownerUserId;
     if (!targetUserId) {
       const { data: { user } } = await supabase.auth.getUser();
@@ -409,6 +358,7 @@
     subscribe();
     startPolling();
     bindRefreshTriggers();
+    bindArchiveButton();
   }
 
   function destroy() {
@@ -425,8 +375,8 @@
 
     unbindRefreshTriggers();
 
-    state.deliveries = [];
-    state.lastKnownDeliveries.clear();
+    state.rows = [];
+    state.lastKnownRows.clear();
     state.playerId = null;
     state.chronicleId = null;
     state.refreshInFlight = false;

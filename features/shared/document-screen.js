@@ -174,6 +174,9 @@
       }
     }
 
+    if (action.className) {
+      action.className.split(" ").filter(Boolean).forEach((cls) => button.classList.add(cls));
+    }
     if (action.disabled) button.disabled = true;
     return button;
   }
@@ -195,6 +198,7 @@
           ariaLabel: action?.ariaLabel || "",
           disabled: Boolean(action?.disabled),
           danger: Boolean(action?.danger),
+          className: action?.className || "",
           onClick: typeof action?.onClick === "function" ? action.onClick : null,
         };
       })

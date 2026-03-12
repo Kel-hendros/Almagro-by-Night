@@ -7,6 +7,7 @@
     type: null,
     adapter: null,
     chronicleId: null,
+    characterSheetId: null,
     chronicle: null,
     currentPlayerId: null,
     isNarrator: false,
@@ -33,6 +34,7 @@
     return {
       type: state.type,
       chronicleId: state.chronicleId,
+      characterSheetId: state.characterSheetId,
       chronicle: state.chronicle,
       currentPlayerId: state.currentPlayerId,
       isNarrator: state.isNarrator,
@@ -197,15 +199,12 @@
   function bindActions() {
     if (state.listenersBound) return;
 
-    document.getElementById("da-back-chronicle")?.addEventListener("click", () => {
-      if (!state.chronicleId) return;
-      window.location.hash = buildChronicleHash();
-    });
-
-    document.getElementById("da-back-secondary")?.addEventListener("click", (event) => {
-      const hash = event.currentTarget?.dataset?.navHash || "";
-      if (!hash) return;
-      window.location.hash = hash;
+    document.getElementById("da-back")?.addEventListener("click", () => {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.hash = buildChronicleHash();
+      }
     });
 
     document.getElementById("da-open-create")?.addEventListener("click", () => {
@@ -243,16 +242,14 @@
   function unbindActions() {
     if (!state.listenersBound) return;
 
-    const backChronicle = document.getElementById("da-back-chronicle");
-    const backSecondary = document.getElementById("da-back-secondary");
+    const backBtn = document.getElementById("da-back");
     const openCreate = document.getElementById("da-open-create");
     const search = document.getElementById("da-search");
     const prevBtn = document.getElementById("da-page-prev");
     const nextBtn = document.getElementById("da-page-next");
     const list = document.getElementById("da-list");
 
-    if (backChronicle) backChronicle.replaceWith(backChronicle.cloneNode(true));
-    if (backSecondary) backSecondary.replaceWith(backSecondary.cloneNode(true));
+    if (backBtn) backBtn.replaceWith(backBtn.cloneNode(true));
     if (openCreate) openCreate.replaceWith(openCreate.cloneNode(true));
     if (search) search.replaceWith(search.cloneNode(true));
     if (prevBtn) prevBtn.replaceWith(prevBtn.cloneNode(true));
@@ -272,6 +269,7 @@
     }
 
     state.chronicleId = ctx.chronicleId;
+    state.characterSheetId = ctx.characterSheetId || null;
     state.type = String(ctx.type || "").trim().toLowerCase();
     localStorage.setItem("currentChronicleId", state.chronicleId);
 
@@ -334,8 +332,6 @@
       visible: Boolean(adapter.canCreate?.(buildAdapterContext())),
       label: adapter.getCreateLabel?.(buildAdapterContext()) || "Crear",
     });
-    view().setSecondaryBackAction(adapter.getSecondaryBackAction?.(buildAdapterContext()) || null);
-
     bindActions();
     state.query = view().getSearchQuery();
     await refresh();
@@ -351,6 +347,7 @@
     state.type = null;
     state.adapter = null;
     state.chronicleId = null;
+    state.characterSheetId = null;
     state.chronicle = null;
     state.currentPlayerId = null;
     state.isNarrator = false;

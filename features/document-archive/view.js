@@ -33,22 +33,6 @@
     if (input) input.placeholder = value || "Buscar...";
   }
 
-  function setSecondaryBackAction(action) {
-    const button = document.getElementById("da-back-secondary");
-    if (!button) return;
-
-    if (!action?.hash) {
-      button.classList.add("hidden");
-      button.dataset.navHash = "";
-      button.textContent = "";
-      return;
-    }
-
-    button.classList.remove("hidden");
-    button.dataset.navHash = action.hash;
-    button.textContent = action.label || "Volver";
-  }
-
   function setCreateAction({ visible, label }) {
     const button = document.getElementById("da-open-create");
     if (!button) return;
@@ -145,7 +129,6 @@
     setHeader,
     setArchiveType,
     setSearchPlaceholder,
-    setSecondaryBackAction,
     setCreateAction,
     renderTagFilters,
     renderCards,

@@ -324,13 +324,6 @@
     getCreateLabel() {
       return "Crear Revelación";
     },
-    getSecondaryBackAction(ctx) {
-      if (!ctx.isNarrator || !ctx.chronicleId) return null;
-      return {
-        label: "Volver a Sesión Activa",
-        hash: `active-session?id=${encodeURIComponent(ctx.chronicleId)}`,
-      };
-    },
     canCreate(ctx) {
       return Boolean(ctx.isNarrator);
     },

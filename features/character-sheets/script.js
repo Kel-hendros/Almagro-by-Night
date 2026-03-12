@@ -442,6 +442,21 @@ if (sheetLoaderModule) {
         });
         void notesApi.refresh?.();
       }
+
+      const objetosApi = window.ABNSheetObjetos;
+      if (objetosApi) {
+        objetosApi.setContext({
+          sheetId: id,
+          chronicleId: revChronicleId || null,
+          userId: sheetOwnerUserId,
+        });
+        void objetosApi.refresh?.();
+      }
+
+      persistenceModule?.setSheetMeta?.({
+        userId: sheetOwnerUserId,
+        chronicleId: revChronicleId || null,
+      });
       revealSheet();
     },
     onSheetNotFound: () => {
@@ -1767,6 +1782,22 @@ function initNotes() {
 
 // Initialize on load
 initNotes();
+
+// ====== OBJECTS SYSTEM ====== //
+
+const objetosModule = window.ABNSheetObjetos;
+if (objetosModule) {
+  objetosModule.configure({
+    supabaseClient: window.supabase,
+  });
+}
+
+function initObjetos() {
+  void objetosModule?.init();
+}
+
+// Initialize on load
+initObjetos();
 
 // ====== SAVED ROLLS (TIRADAS RÁPIDAS) ====== //
 

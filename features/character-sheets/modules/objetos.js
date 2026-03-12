@@ -1,8 +1,9 @@
-(function initABNSheetNotes(global) {
+(function initABNSheetObjetos(global) {
   const DISPLAY_LIMIT = 5;
 
   const state = {
     rows: [],
+    activeTypeFilter: "all",
     context: {
       sheetId: null,
       chronicleId: null,
@@ -21,11 +22,11 @@
   }
 
   function getAdapter() {
-    return global.ABNShared?.documentTypes?.get?.("note") || null;
+    return global.ABNShared?.documentTypes?.get?.("objeto") || null;
   }
 
-  function noteScreen() {
-    return global.ABNShared?.noteScreen || null;
+  function objectScreen() {
+    return global.ABNShared?.objectScreen || null;
   }
 
   function escapeHtml(value) {
@@ -46,31 +47,22 @@
     });
   }
 
-  function markdownToPlainText(markdown) {
-    const shared = noteScreen();
-    if (typeof shared?.toPlainText === "function") {
-      return shared.toPlainText(markdown);
-    }
-    return String(markdown || "")
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/[*_~`>#-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+  const OBJECT_TYPE_LABELS = {
+    arma: "Arma",
+    equipo: "Equipo",
+    utilidad: "Utilidad",
+    consumible: "Consumible",
+  };
 
-  function buildPreview(body, maxLen = 140) {
-    const clean = markdownToPlainText(body);
-    if (clean.length <= maxLen) return clean;
-    return `${clean.slice(0, maxLen)}…`;
+  function getObjectTypeLabel(type) {
+    return OBJECT_TYPE_LABELS[type] || type || "";
   }
 
   function getLists() {
     return {
-      list: document.getElementById("note-list"),
-      newBtn: document.getElementById("note-new-btn"),
-      archiveBtn: document.getElementById("note-archive-btn"),
+      list: document.getElementById("objeto-list"),
+      newBtn: document.getElementById("objeto-new-btn"),
+      archiveBtn: document.getElementById("objeto-archive-btn"),
     };
   }
 
@@ -83,14 +75,16 @@
     if (archiveBtn) archiveBtn.disabled = true;
   }
 
-  function buildNoteCard(row) {
+  function buildObjectCard(row) {
     const card = document.createElement("article");
-    card.className = "note-card";
+    card.className = "objeto-sheet-card";
     card.setAttribute("role", "button");
     card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", `Abrir nota ${row.title || "sin título"}`);
+    card.setAttribute("aria-label", `Abrir objeto ${row.name || "sin nombre"}`);
 
-    const preview = buildPreview(row.body_markdown);
+    const locationBadge = row.location
+      ? `<span class="objeto-location-badge">${escapeHtml(row.location)}</span>`
+      : "";
     const tags = Array.isArray(row.tags) ? row.tags : [];
     const tagsHtml = tags.length
       ? `<div class="note-tags">${tags
@@ -100,14 +94,17 @@
 
     card.innerHTML = `
       <div class="note-header">
-        <strong class="note-title">${escapeHtml(row.title || "Sin título")}</strong>
+        <div class="objeto-card-title-row">
+          <span class="objeto-type-badge objeto-type-badge--${escapeHtml(row.object_type)}">${escapeHtml(getObjectTypeLabel(row.object_type))}</span>
+          <strong class="note-title">${escapeHtml(row.name)}</strong>
+        </div>
         <span class="note-date">${escapeHtml(formatDate(row.updated_at || row.created_at))}</span>
       </div>
-      ${preview ? `<p class="note-body">${escapeHtml(preview)}</p>` : ""}
+      ${locationBadge ? `<p class="objeto-location-row">${locationBadge}</p>` : ""}
       ${tagsHtml}
     `;
 
-    const open = () => openNoteViewer(row.id);
+    const open = () => openObjectViewer(row.id);
     card.addEventListener("click", open);
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -119,31 +116,41 @@
     return card;
   }
 
-  function renderNotes() {
+  function getFilteredRows() {
+    const active = state.rows.filter((row) => !row.is_archived);
+    if (state.activeTypeFilter === "all") return active;
+    return active.filter((row) => row.object_type === state.activeTypeFilter);
+  }
+
+  function renderObjects() {
     const { list, newBtn, archiveBtn } = getLists();
     if (!list) return;
 
     if (newBtn) newBtn.disabled = false;
     if (archiveBtn) archiveBtn.disabled = !state.context.chronicleId;
 
+    const filtered = getFilteredRows();
+
     list.innerHTML = "";
 
-    if (!state.rows.length) {
+    if (!filtered.length) {
       const empty = document.createElement("p");
       empty.className = "discipline-detail-label";
-      empty.textContent = "No hay notas.";
+      empty.textContent = state.activeTypeFilter === "all"
+        ? "No hay objetos activos."
+        : `No hay objetos de tipo ${getObjectTypeLabel(state.activeTypeFilter)}.`;
       list.appendChild(empty);
       return;
     }
 
-    const visible = state.rows.slice(0, DISPLAY_LIMIT);
-    visible.forEach((row) => list.appendChild(buildNoteCard(row)));
+    const visible = filtered.slice(0, DISPLAY_LIMIT);
+    visible.forEach((row) => list.appendChild(buildObjectCard(row)));
 
-    if (state.rows.length > DISPLAY_LIMIT) {
+    if (filtered.length > DISPLAY_LIMIT) {
       const moreBtn = document.createElement("button");
       moreBtn.type = "button";
       moreBtn.className = "objeto-view-archive-btn";
-      moreBtn.textContent = `Ver archivo completo (${state.rows.length} notas)`;
+      moreBtn.textContent = `Ver archivo completo (${filtered.length} objetos)`;
       moreBtn.addEventListener("click", () => navigateToArchive());
       list.appendChild(moreBtn);
     }
@@ -153,9 +160,20 @@
     }
   }
 
+  function setActiveTypeFilter(nextType) {
+    state.activeTypeFilter = OBJECT_TYPE_LABELS[nextType] ? nextType : "all";
+    const filters = document.querySelectorAll(".objeto-type-filter");
+    filters.forEach((btn) => {
+      const isActive = btn.getAttribute("data-type") === state.activeTypeFilter;
+      btn.classList.toggle("active", isActive);
+    });
+    renderObjects();
+  }
+
   function buildAdapterContext() {
     return {
       chronicleId: state.context.chronicleId,
+      characterSheetId: state.context.sheetId,
       currentPlayerId: state.context.playerId,
       isNarrator: false,
     };
@@ -205,7 +223,7 @@
 
     if (!state.context.chronicleId) {
       return {
-        error: new Error("Esta hoja no está asociada a una crónica activa para gestionar notas."),
+        error: new Error("Esta hoja no está asociada a una crónica activa."),
       };
     }
 
@@ -215,7 +233,12 @@
   async function refresh() {
     const { error: contextError } = await resolveContext();
     if (contextError) {
-      renderContextMessage(contextError.message || "No se pudieron cargar las notas.");
+      renderContextMessage(contextError.message || "No se pudieron cargar los objetos.");
+      return;
+    }
+
+    if (!state.context.sheetId) {
+      renderContextMessage("No se pudo determinar el personaje.");
       return;
     }
 
@@ -227,55 +250,62 @@
 
     const rows = await adapter.fetchRows(buildAdapterContext());
     state.rows = Array.isArray(rows) ? rows : [];
-    renderNotes();
+    renderObjects();
   }
 
-  function openNoteViewer(noteId) {
-    const sharedNotes = noteScreen();
-    if (!sharedNotes?.showForPlayer) return;
+  function openObjectViewer(objectId) {
+    const screen = objectScreen();
+    if (!screen?.showForPlayer) return;
 
-    sharedNotes.showForPlayer({
-      noteId,
+    screen.showForPlayer({
+      objectId,
+      characterSheetId: state.context.sheetId,
       onSaved: () => refresh(),
     });
   }
 
-  function openNoteForm(noteId) {
-    const sharedNotes = noteScreen();
-    if (!sharedNotes) return;
+  async function openObjectForm(objectId) {
+    const screen = objectScreen();
+    if (!screen) return;
 
-    const note = noteId != null
-      ? state.rows.find((n) => String(n.id) === String(noteId)) || null
+    const object = objectId != null
+      ? state.rows.find((o) => String(o.id) === String(objectId)) || null
       : null;
 
-    sharedNotes.openForm({
-      note,
-      title: note ? "Editar Nota" : "Nueva Nota",
-      tagsLowercase: true,
+    const supabase = deps.supabaseClient;
+    const locationSuggestions = supabase && state.context.sheetId
+      ? await (screen.fetchLocationSuggestions?.(supabase, state.context.sheetId) || [])
+      : [];
+
+    screen.openForm({
+      object,
+      title: object ? "Editar Objeto" : "Nuevo Objeto",
+      locationSuggestions,
       persistence: {
-        type: "chronicle-note",
+        type: "character-object",
         supabase: deps.supabaseClient,
         chronicleId: state.context.chronicleId,
+        characterSheetId: state.context.sheetId,
         playerId: state.context.playerId,
-        errorMessagePrefix: "No se pudo guardar la nota",
+        errorMessagePrefix: "No se pudo guardar el objeto",
       },
-      onSaved: async ({ noteId: targetId }) => {
+      onSaved: async ({ objectId: targetId }) => {
         await refresh();
         if (targetId != null) {
-          openNoteViewer(targetId);
+          openObjectViewer(targetId);
         }
       },
-      onCancel: (currentNote) => {
-        if (currentNote?.id != null) {
-          openNoteViewer(currentNote.id);
+      onCancel: (currentObject) => {
+        if (currentObject?.id != null) {
+          openObjectViewer(currentObject.id);
         }
       },
     });
   }
 
   function navigateToArchive() {
-    if (!state.context.chronicleId) return;
-    const hash = `document-archive?id=${encodeURIComponent(state.context.chronicleId)}&type=note`;
+    if (!state.context.chronicleId || !state.context.sheetId) return;
+    const hash = `document-archive?id=${encodeURIComponent(state.context.chronicleId)}&type=objeto&charId=${encodeURIComponent(state.context.sheetId)}`;
     window.parent?.location
       ? (window.parent.location.hash = hash)
       : (window.location.hash = hash);
@@ -284,11 +314,18 @@
   function bindListeners() {
     if (state.listenersBound) return;
 
-    const newBtn = document.getElementById("note-new-btn");
-    const archiveBtn = document.getElementById("note-archive-btn");
+    const newBtn = document.getElementById("objeto-new-btn");
+    const archiveBtn = document.getElementById("objeto-archive-btn");
+
+    const typeFilters = document.querySelectorAll(".objeto-type-filter");
+    typeFilters.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setActiveTypeFilter(btn.getAttribute("data-type") || "all");
+      });
+    });
 
     newBtn?.addEventListener("click", () => {
-      void openNoteForm(null);
+      void openObjectForm(null);
     });
 
     archiveBtn?.addEventListener("click", () => navigateToArchive());
@@ -316,11 +353,11 @@
     }
   }
 
-  global.ABNSheetNotes = {
+  global.ABNSheetObjetos = {
     configure,
     init,
     setContext,
     refresh,
-    renderNotes,
+    renderObjects,
   };
 })(window);

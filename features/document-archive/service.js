@@ -9,6 +9,7 @@
     return {
       chronicleId: params.get("id") || localStorage.getItem("currentChronicleId") || null,
       type: params.get("type") || null,
+      characterSheetId: params.get("charId") || null,
     };
   }
 

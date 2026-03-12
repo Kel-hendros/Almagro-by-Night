@@ -663,7 +663,7 @@
                         <button class="dock-tab" data-panel="panel-experiencia">Experiencia</button>
                         <button class="dock-tab" data-panel="panel-meritos-defectos">Méritos y Defectos</button>
                         <button class="dock-tab" data-panel="panel-rituales">Rituales</button>
-                        <div class="dock-tab-placeholder"></div>
+                        <button class="dock-tab" data-panel="panel-objetos">Objetos</button>
                         <div class="dock-tab-placeholder"></div>
                         <div class="dock-tab-placeholder"></div>
                     </div>
@@ -841,19 +841,11 @@
                                     <button id="note-archive-btn" class="discipline-power-header-add note-archive-btn" type="button"
                                         aria-label="Abrir archivo de notas">Archivo</button>
                                     <button id="note-new-btn" class="discipline-power-header-add" type="button"
-                                        aria-label="Crear nueva nota">Nueva nota</button>
+                                        aria-label="Crear nueva nota">+</button>
                                 </div>
                             </div>
 
-                            <input id="note-search" class="discipline-repo-search note-search" type="text"
-                                placeholder="Buscar por título, cuerpo o tag..." autocomplete="off">
-
-                            <div class="note-tabs">
-                                <button class="note-tab active" data-note-tab="active" type="button">Activas</button>
-                                <button class="note-tab" data-note-tab="archived" type="button">Archivadas</button>
-                            </div>
                             <div id="note-list" class="note-list"></div>
-                            <div id="note-archive-list" class="note-list hidden"></div>
                         </div>
                     </section>
 
@@ -882,9 +874,37 @@
                     <!-- TAB: REVELACIONES -->
                     <section class="dock-panel" id="panel-revelaciones">
                         <div class="revelaciones-pane">
+                            <div class="discipline-powers-header">
+                                <h3>Revelaciones</h3>
+                                <button id="revelacion-archive-btn" class="discipline-power-header-add note-archive-btn" type="button"
+                                    aria-label="Abrir archivo de revelaciones">Archivo</button>
+                            </div>
                             <div id="revelaciones-list" class="revelaciones-list">
                                 <p class="muted">Cargando...</p>
                             </div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: OBJETOS -->
+                    <section class="dock-panel" id="panel-objetos">
+                        <div class="objetos-pane">
+                            <div class="discipline-powers-header">
+                                <h3>Objetos</h3>
+                                <div class="discipline-powers-actions">
+                                    <button id="objeto-archive-btn" class="discipline-power-header-add note-archive-btn" type="button"
+                                        aria-label="Abrir archivo de objetos">Archivo</button>
+                                    <button id="objeto-new-btn" class="discipline-power-header-add" type="button"
+                                        aria-label="Agregar objeto">+</button>
+                                </div>
+                            </div>
+                            <div class="objeto-type-filters">
+                                <button class="objeto-type-filter active" data-type="all" type="button">Todos</button>
+                                <button class="objeto-type-filter" data-type="arma" type="button">Armas</button>
+                                <button class="objeto-type-filter" data-type="equipo" type="button">Equipo</button>
+                                <button class="objeto-type-filter" data-type="utilidad" type="button">Utilidad</button>
+                                <button class="objeto-type-filter" data-type="consumible" type="button">Consumible</button>
+                            </div>
+                            <div id="objeto-list" class="objeto-list"></div>
                         </div>
                     </section>
 
@@ -1266,6 +1286,12 @@
     <script src="../../features/shared/document-screen.js"></script>
     <script src="../../features/shared/tags.js"></script>
     <script src="../../features/shared/note-screen.js"></script>
+    <script src="../../features/shared/object-screen.js"></script>
+    <script src="../../features/shared/handouts.js"></script>
+    <script src="../../features/shared/document-types/registry.js"></script>
+    <script src="../../features/shared/document-types/note.js"></script>
+    <script src="../../features/shared/document-types/revelation.js"></script>
+    <script src="../../features/shared/document-types/objeto.js"></script>
     <script src="modules/theme-discord.js"></script>
     <script src="modules/clan-header.js"></script>
     <script src="modules/attribute-boost.js"></script>
@@ -1292,6 +1318,7 @@
     <script src="modules/saved-rolls.js"></script>
     <script src="modules/attacks.js"></script>
     <script src="modules/revelaciones.js"></script>
+    <script src="modules/objetos.js"></script>
     <script src="modules/dock.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script.js"></script>

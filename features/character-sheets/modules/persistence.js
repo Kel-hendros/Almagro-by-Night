@@ -10,6 +10,7 @@
 
   let saveTimeout = null;
   let lifecycleBound = false;
+  let sheetMeta = { userId: null, chronicleId: null };
 
   function configure(nextDeps = {}) {
     deps.getCurrentSheetId =
@@ -97,19 +98,60 @@
       .eq("id", sheetId);
   }
 
+  function snapshotToSessionCache() {
+    const sheetId = deps.getCurrentSheetId ? deps.getCurrentSheetId() : null;
+    if (!sheetId || !deps.getCharacterData) return;
+
+    const bootstrap = global.legacyCharacterSheetBootstrap;
+    if (!bootstrap?.writeCache) return;
+
+    try {
+      const characterJSON = deps.getCharacterData();
+      const characterData = JSON.parse(characterJSON);
+      const characterName = deps.getCharacterName ? deps.getCharacterName() : "";
+
+      bootstrap.writeCache(sheetId, {
+        id: sheetId,
+        name: characterName || "Sin Nombre",
+        data: characterData,
+        user_id: sheetMeta.userId || null,
+        chronicle_id: sheetMeta.chronicleId || null,
+        _cached_at: Date.now(),
+      });
+    } catch {
+      // ignore serialization errors
+    }
+  }
+
   function initLifecycleHooks() {
     if (lifecycleBound) return;
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flushPendingSave();
+      if (document.visibilityState === "hidden") {
+        flushPendingSave();
+        snapshotToSessionCache();
+      }
     });
-    window.addEventListener("beforeunload", flushPendingSave);
+    window.addEventListener("beforeunload", () => {
+      flushPendingSave();
+      snapshotToSessionCache();
+    });
+    window.addEventListener("pagehide", () => {
+      snapshotToSessionCache();
+    });
     lifecycleBound = true;
+  }
+
+  function setSheetMeta(meta = {}) {
+    if (meta.userId != null) sheetMeta.userId = meta.userId;
+    if (meta.chronicleId != null) sheetMeta.chronicleId = meta.chronicleId;
   }
 
   global.ABNSheetPersistence = {
     configure,
     saveCharacterData,
     flushPendingSave,
+    snapshotToSessionCache,
+    setSheetMeta,
     initLifecycleHooks,
   };
 })(window);

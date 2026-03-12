@@ -1,4 +1,36 @@
 (function initLegacyCharacterSheetBootstrap(global) {
+  const CACHE_PREFIX = "abn-sheet:";
+
+  function cacheKey(id) {
+    return CACHE_PREFIX + id;
+  }
+
+  function readCache(id) {
+    try {
+      const raw = sessionStorage.getItem(cacheKey(id));
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCache(id, sheet) {
+    try {
+      sessionStorage.setItem(cacheKey(id), JSON.stringify(sheet));
+    } catch {
+      // sessionStorage full — ignore
+    }
+  }
+
+  function clearCache(id) {
+    try {
+      sessionStorage.removeItem(cacheKey(id));
+    } catch {
+      // ignore
+    }
+  }
+
   async function run(options) {
     const {
       supabaseClient,
@@ -42,6 +74,13 @@
         return;
       }
 
+      // Try cached snapshot first for instant load
+      const cached = readCache(id);
+      if (cached && typeof onSheetLoaded === "function") {
+        onSheetLoaded({ id, sheet: cached, user, fromCache: true });
+        return;
+      }
+
       const { data, error } = await supabaseClient
         .from("character_sheets")
         .select("*")
@@ -56,7 +95,7 @@
       }
 
       if (typeof onSheetLoaded === "function") {
-        onSheetLoaded({ id, sheet: data, user });
+        onSheetLoaded({ id, sheet: data, user, fromCache: false });
       }
     } catch (error) {
       if (typeof onError === "function") {
@@ -69,5 +108,8 @@
 
   global.legacyCharacterSheetBootstrap = {
     run,
+    writeCache,
+    readCache,
+    clearCache,
   };
 })(window);
