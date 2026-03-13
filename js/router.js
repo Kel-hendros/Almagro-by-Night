@@ -133,6 +133,7 @@ function setActiveSidebarItem(baseHash) {
     tools: "menu-tools",
     "portrait-generator": "menu-tools",
     "card-creator": "menu-tools",
+    "card-creator-local": "menu-tools",
     "active-encounter": "menu-tools",
     "temporal-codex": "menu-tools",
   };
@@ -353,6 +354,7 @@ const routes = {
   tools: "fragments/tools.html",
   "portrait-generator": "fragments/portrait-generator.html",
   "card-creator": "fragments/card-creator.html",
+  "card-creator-local": "fragments/card-creator-local.html",
   "character-sheets": "fragments/character-sheets.html",
   "active-character-sheet": "fragments/active-character-sheet.html",
   "active-session": "fragments/active-session.html",

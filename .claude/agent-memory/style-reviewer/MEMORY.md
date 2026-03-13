@@ -13,6 +13,8 @@ Semantic aliases (use these in component CSS): `--theme-bg-primary`, `--theme-bg
 
 Typography: `--app-font-body`, `--app-font-heading`
 
+CRITICAL: `--theme-bg-base` and `--theme-text-muted` are UNDEFINED aliases — not declared anywhere in theme-tokens.css or styles.css. They resolve to nothing (transparent/inherit). Both appear widely across the codebase (tools.css, ghoul.css, ui-components.css, card-creator.css, temporal-codex.css, revelation-screen.css, games.css). Correct mappings: `--theme-bg-base` → `var(--color-bg-base)` / `--theme-text-muted` → `var(--color-text-muted)`. These aliases need to be added to theme-tokens.css.
+
 ## Known Hardcoded Values in Shared Files (NOT violations — intentional)
 - `ui-components.css` lines 61–63: `.btn--danger` uses `#c62828` and `#ffffff` (danger button intentionally hardcoded)
 - `ui-components.css` lines 108–116: `.btn-icon--danger` and hover use `#c62828`, `#ad1f1f`, `#ffffff`
@@ -32,6 +34,14 @@ The most common inline style violation in this project. Components frequently us
 - Theme tokens and variables: `css/theme-tokens.css`
 - Chronicle Detail: `css/chronicles.css` (cd- prefix component system, uses local `--cd-*` aliases that map to `--theme-*`)
 - Territorial game: `css/game.css` (legacy --color-cream/--color-red-accent system, pre-dates theme-tokens)
+- Tools: `css/tools.css` (tool-card grid; fragment wrapper MUST use `.main-container games` not `.main-container tools`)
+
+## Container Class Convention
+ALL content pages MUST use `class="main-container games"` as the wrapper. The `.games` modifier in `chronicles.css` lines 3–16 resets the legacy `.main-container` (removes the semi-transparent box, backdrop-filter, centered text, fixed width). Without `.games`, the old ghost-box appearance returns.
+- Correct: `games.html`, `chronicles.html`, `character-sheets.html`, `card-creator-local.html`, `resource-manager.html` — all use `.main-container.games`
+- Bug pattern: `tools.html` was using `.main-container.tools` (no `.games`) — caused the semi-transparent vestigial box and wrong text color (Mar 2026, fixed)
+- Extra modifier classes are fine alongside `.games`: e.g. `class="main-container games tools"` or `class="main-container games cs-page"`
+- `temporal-codex.html` uses bare `.main-container` — also missing `.games`, may have the same visual bug
 
 ## Global Tab System (added Feb 2026)
 - Global classes: `.app-tabs`, `.app-tab`, `.app-tabs--underline`, `.app-tab-panel` in `ui-components.css` lines 212–288
@@ -67,6 +77,16 @@ All previously flagged inline styles in resource-manager.js and resource-manager
 - `detail.zone.js`: `style="width:${width}%; background:${seg.color};"` on progress bar segments — computed % width + data-driven faction color, acceptable
 - `detail.zone.js`: `style="background:${colorPill}"` on `.detail-status-pill` — data-driven zone control color, acceptable
 - `view.js` (active-session): `style="width:${bloodRatio.percent}%;"` on `.as-blood-fill` — runtime percentage width, matches progress bar pattern
+
+## Card Creator Feature (css/card-creator.css, fragments/card-creator-local.html, js/tools/card-creator/card-creator.js)
+- CSS Ownership: `css/card-creator.css`, loaded via `<link>` in the fragment
+- Namespace prefix: `cc-` for all component classes
+- FULLY AUDITED AND CLEAN as of Mar 2026 (all issues resolved)
+- Card-art constants (intentional, commented in CSS): `color: #fff`, `text-shadow: 3px 3px 1px #000` on `.cc-card-text`; `color: color-mix(in srgb, var(--theme-text-on-accent) 73%, transparent)` on `.cc-card-description`
+- All `img.style.left/top/transform/filter` in JS are dynamic image manipulation — ACCEPTABLE EXCEPTION
+- Canvas export `ctx.fillStyle/shadowColor` values are Canvas 2D API — ACCEPTABLE EXCEPTION
+- `style="display:none"` on the file input in HTML — ACCEPTABLE EXCEPTION (documented)
+- Hidden `<img>` elements use `.hidden` class correctly (not inline style)
 
 ## Active Session Feature (css/active-session.css, features/active-session/, fragments/active-session.html)
 - CSS Ownership: `css/active-session.css`, loaded via `<link>` inside `fragments/active-session.html`

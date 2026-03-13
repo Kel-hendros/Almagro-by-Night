@@ -41,19 +41,19 @@
 }
 
 .tool-card-cover--portrait {
-    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-accent) 35%, transparent), var(--theme-bg-base));
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-accent) 35%, transparent), var(--theme-bg-primary));
 }
 
 .tool-card-cover--cards {
-    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-success) 35%, transparent), var(--theme-bg-base));
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-success) 35%, transparent), var(--theme-bg-primary));
 }
 
 .tool-card-cover--combat {
-    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-accent) 45%, transparent), color-mix(in srgb, var(--theme-bg-surface) 80%, var(--theme-bg-base)));
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-accent) 45%, transparent), color-mix(in srgb, var(--theme-bg-surface) 80%, var(--theme-bg-primary)));
 }
 
 .tool-card-cover--codex {
-    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-text-secondary) 30%, transparent), var(--theme-bg-base));
+    background: linear-gradient(140deg, color-mix(in srgb, var(--theme-text-secondary) 30%, transparent), var(--theme-bg-primary));
 }
 
 .tool-card-content {

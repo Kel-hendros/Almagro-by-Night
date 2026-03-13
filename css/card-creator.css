@@ -1,0 +1,531 @@
+/* ============================================================
+   Card Creator – local WoD card generator
+   ============================================================ */
+
+/* ── Fonts ─────────────────────────────────────────── */
+@font-face {
+  font-family: "Delavan";
+  src: url("../js/tools/card-creator/assets/fonts/delavan_.TTF") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Goudos";
+  src: url("../js/tools/card-creator/assets/fonts/GOUDOS.ttf") format("truetype");
+  font-display: swap;
+}
+
+/* ── Layout ────────────────────────────────────────── */
+.cc-root {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cc-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.cc-controls {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cc-preview-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* ── Section titles ────────────────────────────────── */
+.cc-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--theme-text-secondary);
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+/* ── Image upload ──────────────────────────────────── */
+.cc-image-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cc-file-label {
+  display: inline-block;
+  padding: 0.45rem 0.75rem;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.cc-file-label:hover { opacity: 0.85; }
+
+.cc-url-input {
+  flex: 1;
+  min-width: 160px;
+  padding: 0.45rem 0.6rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  color: var(--theme-text-primary);
+  font-size: 0.82rem;
+}
+.cc-url-input:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+
+/* ── Creature type icons ───────────────────────────── */
+.cc-creature-icons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cc-icon-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 50px;
+  cursor: pointer;
+  position: relative;
+}
+
+.cc-icon-container img {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--theme-border-divider);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.cc-icon-container img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 12px var(--theme-accent);
+}
+.cc-icon-thumb.active {
+  box-shadow: 0 0 14px var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+
+.cc-icon-label {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: var(--theme-text-secondary);
+  margin-top: 2px;
+}
+.cc-icon-container:hover .cc-icon-label,
+.cc-icon-thumb.active + .cc-icon-label {
+  display: block;
+}
+
+/* ── Position buttons ──────────────────────────────── */
+.cc-position-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+.cc-position-buttons.cc-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cc-pos-btn {
+  padding: 0.25rem 0.75rem;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-divider);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+}
+.cc-pos-btn:first-child { border-radius: 12px 0 0 12px; }
+.cc-pos-btn:last-child  { border-radius: 0 12px 12px 0; }
+.cc-pos-btn.active {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+/* ── Clan selector ─────────────────────────────────── */
+.cc-clan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cc-clan-form select {
+  padding: 0.4rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  color: var(--theme-text-primary);
+  font-size: 0.82rem;
+}
+.cc-clan-form select:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+
+/* ── Border selector ───────────────────────────────── */
+.cc-border-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.cc-border-thumb {
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: box-shadow 0.15s;
+}
+.cc-border-thumb.active {
+  box-shadow: 0 0 10px var(--theme-accent);
+}
+
+.cc-selected-border {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--theme-bg-surface);
+  color: var(--theme-accent);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  margin-left: 0.4rem;
+}
+
+/* ── Sliders ───────────────────────────────────────── */
+.cc-slider-group {
+  margin-bottom: 0.4rem;
+}
+.cc-slider-group label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--theme-text-secondary);
+  margin-bottom: 2px;
+}
+.cc-slider-group input[type="range"] {
+  width: 100%;
+  accent-color: var(--theme-accent);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 10px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+}
+
+/* ── Text controls ─────────────────────────────────── */
+.cc-text-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cc-text-controls label {
+  font-size: 0.78rem;
+  color: var(--theme-text-secondary);
+}
+.cc-text-controls input,
+.cc-text-controls textarea {
+  padding: 0.4rem 0.6rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  color: var(--theme-text-primary);
+  font-size: 0.82rem;
+  font-family: "Goudos", serif;
+}
+.cc-text-controls input:focus,
+.cc-text-controls textarea:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+
+.cc-font-size-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cc-font-size-row label {
+  flex-shrink: 0;
+}
+.cc-font-size-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--theme-accent);
+  height: 6px;
+}
+.cc-size-indicator {
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--theme-text-secondary);
+}
+
+/* ── Size selector ─────────────────────────────────── */
+.cc-size-select {
+  width: 100%;
+  padding: 0.4rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  color: var(--theme-text-primary);
+  font-size: 0.82rem;
+}
+.cc-size-select:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+
+.cc-custom-size-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.cc-custom-size-row label {
+  font-size: 0.78rem;
+  color: var(--theme-text-secondary);
+}
+.cc-custom-w-input {
+  width: 90px;
+  padding: 0.35rem 0.5rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  color: var(--theme-text-primary);
+  font-size: 0.82rem;
+}
+.cc-custom-w-input:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+.cc-size-hint {
+  font-size: 0.7rem;
+  color: var(--theme-text-tertiary);
+}
+
+/* ── Card preview ──────────────────────────────────── */
+#cc-card-wrapper {
+  position: relative;
+  display: flex;
+  height: 1050px;
+  width: 100%;
+  zoom: 0.55;
+  overflow: visible;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.cc-card {
+  position: relative;
+  width: 663px;
+  height: 996px;
+  overflow: visible;
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Icons on card */
+.cc-card .icon {
+  position: absolute;
+}
+.cc-card .cc-type-icon {
+  width: 70px;
+  height: 70px;
+  z-index: 10;
+}
+.cc-card .cc-type-icon.center {
+  top: -15px;
+  right: 50%;
+  transform: translateX(50%);
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.5));
+}
+.cc-card .cc-type-icon.left {
+  width: 120px; height: 120px;
+  top: 3px; left: 7px;
+  filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.5));
+}
+.cc-card .cc-type-icon.right {
+  width: 120px; height: 120px;
+  top: 3px; right: 7px;
+  filter: drop-shadow(-3px 3px 5px rgba(0,0,0,0.5));
+}
+
+.cc-card .cc-clan-icon {
+  width: 120px;
+  height: auto;
+  bottom: 200px;
+  right: 90%;
+  transform: translateX(50%);
+  z-index: 5;
+  filter: drop-shadow(5px -2px 10px rgba(0,0,0,0.5));
+}
+
+/* Border layer */
+.cc-border-layer {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 12px 5px rgba(0,0,0,0.56));
+}
+
+/* User image */
+.cc-user-image {
+  position: relative;
+  width: 88%;
+  height: 75%;
+  overflow: hidden;
+  z-index: 1;
+  margin: 5% auto 0;
+  cursor: grab;
+}
+.cc-user-image.cc-dragging {
+  cursor: grabbing;
+}
+.cc-user-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  transform-origin: top left;
+}
+
+/* Card text overlay */
+.cc-card-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 84%;
+  height: 14%;
+  text-align: center;
+  z-index: 10;
+  overflow: hidden;
+  color: #fff; /* card-art constant — intentionally white over card artwork */
+  text-shadow: 3px 3px 1px #000; /* card-art constant */
+  margin-top: 3.5%;
+}
+.cc-card-title {
+  font-size: 2rem;
+  line-height: 1.3;
+  font-family: "Delavan", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 90%;
+  margin-top: 0.5rem;
+}
+.cc-card-description {
+  width: 92%;
+  font-size: 1.5rem;
+  font-family: "Goudos", serif;
+  line-height: 1.2;
+  overflow: hidden;
+  word-break: break-word;
+  white-space: pre-wrap;
+  margin-top: 0.5rem;
+  color: color-mix(in srgb, var(--theme-text-on-accent) 73%, transparent); /* card-art constant — white text at 73% opacity over card artwork */
+}
+
+/* ── Image adjustments box (above card) ───────────── */
+.cc-adjustments-box {
+  width: 100%;
+  max-width: 365px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.cc-adjustments-box .cc-section-title {
+  margin-bottom: 0.25rem;
+}
+.cc-adjustments-box .cc-font-size-row label {
+  font-size: 0.75rem;
+  color: var(--theme-text-secondary);
+  min-width: 5rem;
+}
+.cc-adjustments-box .cc-font-size-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--theme-accent);
+  height: 6px;
+}
+
+/* ── Preview sliders (below card) ──────────────────── */
+.cc-preview-sliders {
+  width: 100%;
+  max-width: 365px; /* ≈ 663 * 0.55 zoom */
+  margin-top: 0.5rem;
+}
+.cc-preview-sliders .cc-slider-group {
+  margin-bottom: 0.25rem;
+}
+
+/* ── Export button ──────────────────────────────────── */
+.cc-export-btn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 2rem;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-family: "Goudos", serif;
+  font-weight: 600;
+  box-shadow: 0 5px 5px rgba(0,0,0,0.45);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.cc-export-btn:hover {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+/* ── Responsive ────────────────────────────────────── */
+@media (max-width: 800px) {
+  .cc-body {
+    flex-direction: column;
+  }
+  .cc-preview-pane {
+    order: -1;
+  }
+  #cc-card-wrapper {
+    zoom: 0.35;
+  }
+}
