@@ -12,14 +12,23 @@
       requestBackgroundUpload,
       removeEncounterBackground,
       getMap,
+      getTilePainter,
+      getWallDrawer,
+      getFogBrush,
+      addLight,
+      findLightAt,
+      openLightPopover,
+      removeLight,
     } = ctx;
 
     function setDrawerTab(tab) {
-      const useAssets = tab !== "settings";
-      els.drawerTabAssets?.classList.toggle("active", useAssets);
-      els.drawerTabSettings?.classList.toggle("active", !useAssets);
-      els.drawerTabAssetsPane?.classList.toggle("active", useAssets);
-      els.drawerTabSettingsPane?.classList.toggle("active", !useAssets);
+      var tabs = ["entities", "terrain", "settings"];
+      tabs.forEach(function (t) {
+        var btn = els["drawerTab_" + t];
+        var pane = els["drawerTabPane_" + t];
+        if (btn) btn.classList.toggle("active", t === tab);
+        if (pane) pane.classList.toggle("active", t === tab);
+      });
     }
 
     function clampGridLevel(level) {
@@ -119,8 +128,9 @@
           await removeEncounterBackground();
         });
 
-      els.drawerTabAssets?.addEventListener("click", () => setDrawerTab("assets"));
-      els.drawerTabSettings?.addEventListener("click", () => setDrawerTab("settings"));
+      els.drawerTab_entities?.addEventListener("click", () => setDrawerTab("entities"));
+      els.drawerTab_terrain?.addEventListener("click", () => setDrawerTab("terrain"));
+      els.drawerTab_settings?.addEventListener("click", () => setDrawerTab("settings"));
       els.gridOpacityLevels
         ?.querySelectorAll("[data-level]")
         .forEach((btn) => {
@@ -144,13 +154,525 @@
         });
       }
 
-      setDrawerTab("assets");
+      // Terrain palette
+      renderTerrainPalette();
+      bindTerrainEvents();
+
+      // Wall tools
+      bindWallEvents();
+
+      // Light tools
+      bindLightEvents();
+
+      // Fog tools
+      bindFogEvents();
+
+      setDrawerTab("entities");
       refreshGridOpacityButtons();
+    }
+
+    function renderTerrainPalette() {
+      const palette = document.getElementById("ae-terrain-palette");
+      if (!palette || !global.TileTextures) return;
+      const TT = global.TileTextures;
+      palette.innerHTML = TT.TEXTURE_IDS.map((id) => {
+        const label = TT.TEXTURE_LABELS[id] || id;
+        const thumb = TT.getThumbnailDataUrl(id);
+        return '<button class="ae-terrain-swatch" data-texture="' + id + '" title="' + label + '">' +
+          '<img src="' + thumb + '" alt="' + label + '" width="36" height="36">' +
+          '<span>' + label + '</span></button>';
+      }).join("");
+    }
+
+    function bindTerrainEvents() {
+      const palette = document.getElementById("ae-terrain-palette");
+      if (palette) {
+        palette.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-texture]");
+          if (!btn || !requireAdminAction()) return;
+          const painter = getTilePainter?.();
+          if (!painter) return;
+          const textureId = btn.dataset.texture;
+          const wasActive = painter.getTexture() === textureId && painter.isActive();
+          if (wasActive) {
+            painter.deactivate();
+          } else {
+            deactivateOtherTools("tilePainter");
+            painter.setTexture(textureId);
+          }
+          refreshTerrainPaletteUI();
+        });
+      }
+
+      const brushBtns = document.getElementById("ae-brush-sizes");
+      if (brushBtns) {
+        brushBtns.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-brush]");
+          if (!btn) return;
+          const painter = getTilePainter?.();
+          if (!painter) return;
+          painter.setBrushSize(parseInt(btn.dataset.brush, 10) || 1);
+          refreshBrushSizeUI();
+        });
+      }
+
+      document.getElementById("btn-ae-terrain-eraser")?.addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        const painter = getTilePainter?.();
+        if (!painter) return;
+        if (painter.isActive() && !painter.getTexture()) {
+          painter.deactivate();
+        } else {
+          deactivateOtherTools("tilePainter");
+          painter.setTexture(null);
+          painter.activate(null);
+        }
+        refreshTerrainPaletteUI();
+      });
+
+      document.getElementById("btn-ae-terrain-clear")?.addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        const painter = getTilePainter?.();
+        if (!painter) return;
+        if (confirm("¿Limpiar todo el terreno?")) {
+          painter.clearAll();
+        }
+      });
+    }
+
+    function refreshTerrainPaletteUI() {
+      const painter = getTilePainter?.();
+      const activeTexture = painter?.isActive() ? painter.getTexture() : null;
+      const isEraserActive = painter?.isActive() && !painter.getTexture();
+      const swatches = document.querySelectorAll(".ae-terrain-swatch");
+      swatches.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.texture === activeTexture);
+      });
+      const eraserBtn = document.getElementById("btn-ae-terrain-eraser");
+      if (eraserBtn) eraserBtn.classList.toggle("active", isEraserActive);
+      refreshBrushSizeUI();
+    }
+
+    function refreshBrushSizeUI() {
+      const painter = getTilePainter?.();
+      const currentSize = painter?.getBrushSize() || 1;
+      const btns = document.querySelectorAll("#ae-brush-sizes [data-brush]");
+      btns.forEach((btn) => {
+        btn.classList.toggle("active", parseInt(btn.dataset.brush, 10) === currentSize);
+      });
+    }
+
+    // ── Mutual exclusion helper ──
+
+    function deactivateOtherTools(except) {
+      if (except !== "tilePainter") {
+        var painter = getTilePainter?.();
+        if (painter?.isActive()) {
+          painter.deactivate();
+          refreshTerrainPaletteUI();
+        }
+      }
+      if (except !== "wallDrawer") {
+        var wd = getWallDrawer?.();
+        if (wd?.isActive()) {
+          wd.deactivate();
+          refreshWallUI();
+        }
+      }
+      if (except !== "fogBrush") {
+        var fb = getFogBrush?.();
+        if (fb?.isActive()) {
+          fb.deactivate();
+          refreshFogUI();
+        }
+      }
+      if (except !== "lightPlacer" && lightPlaceMode) {
+        deactivateLightPlacer();
+      }
+    }
+
+    // ── Wall Tools ──
+
+    function bindWallEvents() {
+      var typeBtns = document.querySelectorAll(".ae-wall-type-btn");
+      typeBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (!requireAdminAction()) return;
+          var wd = getWallDrawer?.();
+          if (!wd) return;
+          var type = btn.dataset.wallType;
+          var wasActive = wd.isActive() && wd.getType() === type && wd.getMode() === "draw";
+          if (wasActive) {
+            wd.deactivate();
+          } else {
+            deactivateOtherTools("wallDrawer");
+            wd.activate(type);
+            wd.setMode("draw");
+          }
+          refreshWallUI();
+        });
+      });
+
+      document.getElementById("btn-ae-wall-draw")?.addEventListener("click", function () {
+        if (!requireAdminAction()) return;
+        var wd = getWallDrawer?.();
+        if (!wd || !wd.isActive()) return;
+        wd.setMode("draw");
+        refreshWallUI();
+      });
+
+      document.getElementById("btn-ae-wall-erase")?.addEventListener("click", function () {
+        if (!requireAdminAction()) return;
+        var wd = getWallDrawer?.();
+        if (!wd) return;
+        if (wd.isActive() && wd.getMode() === "erase") {
+          wd.deactivate();
+        } else {
+          deactivateOtherTools("wallDrawer");
+          if (!wd.isActive()) wd.activate(wd.getType() || "wall");
+          wd.setMode("erase");
+        }
+        refreshWallUI();
+      });
+
+      document.getElementById("btn-ae-wall-clear")?.addEventListener("click", function () {
+        if (!requireAdminAction()) return;
+        var wd = getWallDrawer?.();
+        if (!wd) return;
+        wd.clearAll();
+        refreshWallUI();
+      });
+
+      // Keyboard: Escape to cancel chain or deactivate
+      document.addEventListener("keydown", function (e) {
+        var wd = getWallDrawer?.();
+        if (!wd || !wd.isActive()) return;
+        if (wd.handleKeyDown(e)) {
+          e.preventDefault();
+          refreshWallUI();
+          return;
+        }
+        if (e.key === "Escape") {
+          wd.deactivate();
+          refreshWallUI();
+          e.preventDefault();
+        }
+      });
+    }
+
+    function refreshWallUI() {
+      var wd = getWallDrawer?.();
+      var isActive = wd?.isActive() || false;
+      var currentType = isActive ? wd.getType() : null;
+      var currentMode = isActive ? wd.getMode() : null;
+
+      document.querySelectorAll(".ae-wall-type-btn").forEach(function (btn) {
+        btn.classList.toggle("active", isActive && btn.dataset.wallType === currentType && currentMode === "draw");
+      });
+
+      var drawBtn = document.getElementById("btn-ae-wall-draw");
+      var eraseBtn = document.getElementById("btn-ae-wall-erase");
+      if (drawBtn) drawBtn.classList.toggle("active", isActive && currentMode === "draw");
+      if (eraseBtn) eraseBtn.classList.toggle("active", isActive && currentMode === "erase");
+
+      var countEl = document.getElementById("ae-wall-count");
+      if (countEl) {
+        var count = wd?.getWallCount() || 0;
+        countEl.textContent = count + " segmento" + (count !== 1 ? "s" : "");
+      }
+    }
+
+    // ── Light Tools ──
+
+    var lightPlaceMode = false;
+
+    function deactivateLightPlacer() {
+      lightPlaceMode = false;
+      var addBtn = document.getElementById("btn-ae-add-light");
+      if (addBtn) addBtn.classList.remove("active");
+      var map = getMap?.();
+      if (map) map.canvas?.classList.remove("light-placer-active");
+    }
+
+    function bindLightEvents() {
+      // Ambient light controls
+      var ambientColor = document.getElementById("ae-ambient-color");
+      var ambientIntensity = document.getElementById("ae-ambient-intensity");
+      var ambientVal = document.getElementById("ae-ambient-intensity-val");
+
+      function refreshAmbientUI() {
+        var al = state.encounter?.data?.ambientLight || { color: "#8090b0", intensity: 0 };
+        if (ambientColor) ambientColor.value = al.color || "#8090b0";
+        if (ambientIntensity) ambientIntensity.value = al.intensity != null ? al.intensity : 0;
+        if (ambientVal) ambientVal.textContent = Math.round((al.intensity || 0) * 100) + "%";
+      }
+
+      function syncAmbientToMap() {
+        var map = getMap?.();
+        if (map) map._ambientLight = state.encounter?.data?.ambientLight || { color: "#8090b0", intensity: 0.5 };
+      }
+
+      if (ambientColor) {
+        ambientColor.addEventListener("input", function () {
+          if (!requireAdminAction()) return;
+          var al = state.encounter?.data?.ambientLight;
+          if (!al) return;
+          al.color = ambientColor.value;
+          syncAmbientToMap();
+          var map = getMap?.();
+          if (map) { map.invalidateLighting?.(); map.invalidateFog?.(); map.draw(); }
+          ctx.saveEncounter?.();
+        });
+      }
+      if (ambientIntensity) {
+        ambientIntensity.addEventListener("input", function () {
+          if (!requireAdminAction()) return;
+          var al = state.encounter?.data?.ambientLight;
+          if (!al) return;
+          al.intensity = parseFloat(ambientIntensity.value) || 0;
+          if (ambientVal) ambientVal.textContent = Math.round(al.intensity * 100) + "%";
+          syncAmbientToMap();
+          var map = getMap?.();
+          if (map) { map.invalidateLighting?.(); map.invalidateFog?.(); map.draw(); }
+          ctx.saveEncounter?.();
+        });
+      }
+      refreshAmbientUI();
+
+      var addBtn = document.getElementById("btn-ae-add-light");
+      if (addBtn) {
+        addBtn.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!requireAdminAction()) return;
+          // Toggle light placement mode
+          lightPlaceMode = !lightPlaceMode;
+          addBtn.classList.toggle("active", lightPlaceMode);
+          var map = getMap?.();
+          if (map) {
+            map.canvas?.classList.toggle("light-placer-active", lightPlaceMode);
+          }
+          if (lightPlaceMode) {
+            deactivateOtherTools("lightPlacer");
+          }
+        });
+      }
+
+      // Escape to exit light placement / link mode
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && ctx.isLinkMode?.()) {
+          ctx.handleLinkModeClick?.(-9999, -9999); // cancel
+          e.preventDefault();
+          return;
+        }
+        if (e.key === "Escape" && lightPlaceMode) {
+          deactivateLightPlacer();
+          e.preventDefault();
+        }
+      });
+
+      // Listen for clicks on the canvas to place lights
+      var canvas = document.getElementById("ae-map-canvas");
+      if (canvas) {
+        canvas.addEventListener("click", function (e) {
+          var map = getMap?.();
+          if (!map) return;
+          var rect = canvas.getBoundingClientRect();
+          var mx = e.clientX - rect.left;
+          var my = e.clientY - rect.top;
+          var wx = (mx - map.offsetX) / map.scale;
+          var wy = (my - map.offsetY) / map.scale;
+          var cellX = wx / map.gridSize;
+          var cellY = wy / map.gridSize;
+
+          // Link mode takes priority
+          if (ctx.isLinkMode?.()) {
+            ctx.handleLinkModeClick?.(cellX, cellY);
+            return;
+          }
+
+          if (!lightPlaceMode || !canEditEncounter()) return;
+
+          // Check if clicking on existing light → open popover instead
+          var existing = findLightAt?.(cellX, cellY);
+          if (existing) {
+            openLightPopover?.(existing);
+            return;
+          }
+
+          addLight?.(cellX, cellY);
+          renderLightList();
+        });
+
+        // Right-click on light → open popover
+        canvas.addEventListener("contextmenu", function (e) {
+          if (!canEditEncounter()) return;
+          var map = getMap?.();
+          if (!map) return;
+          var rect = canvas.getBoundingClientRect();
+          var mx = e.clientX - rect.left;
+          var my = e.clientY - rect.top;
+          var wx = (mx - map.offsetX) / map.scale;
+          var wy = (my - map.offsetY) / map.scale;
+          var cellX = wx / map.gridSize;
+          var cellY = wy / map.gridSize;
+          var light = findLightAt?.(cellX, cellY);
+          if (light) {
+            e.preventDefault();
+            e.stopPropagation();
+            openLightPopover?.(light);
+          }
+        });
+      }
+    }
+
+    function renderLightList() {
+      var listEl = document.getElementById("ae-list-lights");
+      if (!listEl) return;
+      var lights = state.encounter?.data?.lights || [];
+      if (!lights.length) {
+        listEl.innerHTML = '<button class="ae-drawer-item empty" disabled>Sin luces</button>';
+        return;
+      }
+      listEl.innerHTML = lights.map(function (l) {
+        var label = "Luz (" + (l.radius || 4) + " celdas)";
+        return '<button class="ae-drawer-item ae-drawer-item--light" data-light-id="' + l.id + '">' +
+          '<span class="ae-light-swatch" style="background:' + (l.color || "#ffcc66") + '"></span>' +
+          '<span>' + label + '</span></button>';
+      }).join("");
+
+      listEl.querySelectorAll("[data-light-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var lid = btn.dataset.lightId;
+          var light = (state.encounter?.data?.lights || []).find(function (l) { return l.id === lid; });
+          if (light) openLightPopover?.(light);
+        });
+      });
+    }
+
+    // ── Fog Tools ──
+
+    function bindFogEvents() {
+      // Master toggle
+      var fogCheck = document.getElementById("ae-fog-enabled-check");
+      if (fogCheck) {
+        fogCheck.checked = !!state.encounter?.data?.fog?.enabled;
+        fogCheck.addEventListener("change", function () {
+          if (!requireAdminAction()) { fogCheck.checked = !fogCheck.checked; return; }
+          var fog = state.encounter?.data?.fog;
+          if (!fog) return;
+          fog.enabled = fogCheck.checked;
+          var map = getMap?.();
+          if (map) {
+            map.setFogConfig?.(fog);
+            map.invalidateFog?.();
+            map.invalidateLighting?.(); // darkness level changes when fog is toggled
+            map.draw();
+          }
+          ctx.saveEncounter?.();
+        });
+      }
+
+      // Mode selector
+      document.querySelectorAll("[data-fog-mode]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (!requireAdminAction()) return;
+          var fog = state.encounter?.data?.fog;
+          if (!fog) return;
+          fog.mode = btn.dataset.fogMode;
+          var map = getMap?.();
+          if (map) {
+            map.setFogConfig?.(fog);
+            map.invalidateFog?.();
+            map.draw();
+          }
+          refreshFogUI();
+          ctx.saveEncounter?.();
+        });
+      });
+
+      // Reveal brush
+      document.getElementById("btn-ae-fog-reveal")?.addEventListener("click", function () {
+        if (!requireAdminAction()) return;
+        var fb = getFogBrush?.();
+        if (!fb) return;
+        if (fb.isActive() && fb.getBrushType() === "reveal") {
+          fb.deactivate();
+        } else {
+          deactivateOtherTools("fogBrush");
+          fb.setBrushType("reveal");
+          fb.activate("reveal");
+        }
+        refreshFogUI();
+      });
+
+      // Hide brush
+      document.getElementById("btn-ae-fog-hide")?.addEventListener("click", function () {
+        if (!requireAdminAction()) return;
+        var fb = getFogBrush?.();
+        if (!fb) return;
+        if (fb.isActive() && fb.getBrushType() === "hide") {
+          fb.deactivate();
+        } else {
+          deactivateOtherTools("fogBrush");
+          fb.setBrushType("hide");
+          fb.activate("hide");
+        }
+        refreshFogUI();
+      });
+
+      // Fog brush sizes
+      var fogBrushSizes = document.getElementById("ae-fog-brush-sizes");
+      if (fogBrushSizes) {
+        fogBrushSizes.addEventListener("click", function (e) {
+          var btn = e.target.closest("[data-fog-brush]");
+          if (!btn) return;
+          var fb = getFogBrush?.();
+          if (!fb) return;
+          fb.setBrushSize(parseInt(btn.dataset.fogBrush, 10) || 1);
+          refreshFogUI();
+        });
+      }
+
+      // Reset exploration
+      document.getElementById("btn-ae-fog-reset")?.addEventListener("click", function () {
+        if (!requireAdminAction()) return;
+        var fb = getFogBrush?.();
+        if (fb) fb.resetExploration();
+      });
+    }
+
+    function refreshFogUI() {
+      var fb = getFogBrush?.();
+      var isActive = fb?.isActive() || false;
+      var brushType = isActive ? fb.getBrushType() : null;
+      var brushSize = fb?.getBrushSize() || 1;
+
+      var revealBtn = document.getElementById("btn-ae-fog-reveal");
+      var hideBtn = document.getElementById("btn-ae-fog-hide");
+      if (revealBtn) revealBtn.classList.toggle("active", isActive && brushType === "reveal");
+      if (hideBtn) hideBtn.classList.toggle("active", isActive && brushType === "hide");
+
+      // Fog mode buttons
+      var currentMode = state.encounter?.data?.fog?.mode || "auto";
+      document.querySelectorAll("[data-fog-mode]").forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.fogMode === currentMode);
+      });
+
+      // Fog brush size buttons
+      document.querySelectorAll("#ae-fog-brush-sizes [data-fog-brush]").forEach(function (btn) {
+        btn.classList.toggle("active", parseInt(btn.dataset.fogBrush, 10) === brushSize);
+      });
+
+      // Fog enabled checkbox
+      var fogCheck = document.getElementById("ae-fog-enabled-check");
+      if (fogCheck) fogCheck.checked = !!state.encounter?.data?.fog?.enabled;
     }
 
     function renderAssetLists() {
       if (!els.listBackground || !els.listDecor || !els.listEntitiesNpc || !els.listEntitiesPc) return;
       refreshGridOpacityButtons();
+      renderLightList();
       const map = getMap();
 
       const mapData = state.encounter?.data?.map || {};
@@ -298,6 +820,12 @@
         if (!el) return;
         el.style.display = canEditEncounter() ? "" : "none";
       });
+
+      var narratorOnlySections = ["ae-terrain-section", "ae-walls-section", "ae-lights-section", "ae-fog-section"];
+      narratorOnlySections.forEach(function (id) {
+        var section = document.getElementById(id);
+        if (section) section.style.display = canEditEncounter() ? "" : "none";
+      });
       refreshGridOpacityButtons();
 
       var freeMovCheck = document.getElementById("ae-free-movement-check");
@@ -312,6 +840,9 @@
       renderAssetLists,
       setBusy,
       applyPermissions,
+      refreshTerrainPaletteUI,
+      refreshWallUI,
+      refreshFogUI,
     };
   }
 

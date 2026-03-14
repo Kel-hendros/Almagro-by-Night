@@ -365,6 +365,30 @@
       const worldCellY = worldY / this.gridSize;
       const layer = this.activeLayer || "entities";
 
+      // Tile painter intercept
+      if (this._tilePainter && this._tilePainter.isActive()) {
+        if (this._tilePainter.handleMouseDown(e, worldCellX, worldCellY)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // Wall drawer intercept
+      if (this._wallDrawer && this._wallDrawer.isActive()) {
+        if (this._wallDrawer.handleMouseDown(e, worldCellX, worldCellY)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // Fog brush intercept
+      if (this._fogBrush && this._fogBrush.isActive()) {
+        if (this._fogBrush.handleMouseDown(e, worldCellX, worldCellY)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
       if (this.measureToolActive) {
         if (e.button === 0) {
           e.preventDefault();
@@ -384,6 +408,97 @@
           this.isPanning = true;
           this.dragStart = { x: e.clientX, y: e.clientY };
           return;
+        }
+      }
+
+      // Light interaction: only on background layer
+      if (e.button === 0 && layer === "background" && this.lights && this.lights.length) {
+        var clickedLight = null;
+        var lightThreshold = 0.5; // in grid cells (~25px at zoom 1)
+        for (var li = 0; li < this.lights.length; li++) {
+          var lt = this.lights[li];
+          var ldx = worldCellX - lt.x, ldy = worldCellY - lt.y;
+          if (Math.sqrt(ldx * ldx + ldy * ldy) < lightThreshold) {
+            clickedLight = lt;
+            break;
+          }
+        }
+        if (clickedLight) {
+          this.selectedLightId = clickedLight.id;
+          this._isDraggingLight = true;
+          this._draggedLight = clickedLight;
+          this._dragLightOffset = {
+            x: worldX - clickedLight.x * this.gridSize,
+            y: worldY - clickedLight.y * this.gridSize,
+          };
+          if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+          e.preventDefault();
+          this.draw();
+          return;
+        } else {
+          // Clicked empty space on background layer: deselect light/switch
+          if (this.selectedLightId || this.selectedSwitchId) {
+            this.selectedLightId = null;
+            this.selectedSwitchId = null;
+            if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+            this.draw();
+          }
+        }
+      }
+
+      // Switch interaction on background layer (narrator: select/drag)
+      if (e.button === 0 && layer === "background" && this.switches && this.switches.length) {
+        var clickedSwitch = null;
+        for (var swi = 0; swi < this.switches.length; swi++) {
+          var swt = this.switches[swi];
+          var sdx = worldCellX - swt.x, sdy = worldCellY - swt.y;
+          if (Math.sqrt(sdx * sdx + sdy * sdy) < 0.5) { clickedSwitch = swt; break; }
+        }
+        if (clickedSwitch) {
+          this.selectedSwitchId = clickedSwitch.id;
+          this.selectedLightId = null;
+          this._isDraggingSwitch = true;
+          this._draggedSwitch = clickedSwitch;
+          this._dragSwitchOffset = {
+            x: worldX - clickedSwitch.x * this.gridSize,
+            y: worldY - clickedSwitch.y * this.gridSize,
+          };
+          if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+          e.preventDefault();
+          this.draw();
+          return;
+        }
+      }
+
+      // Switch toggle from any layer (like door toggle)
+      if (e.button === 0 && this.switches && this.switches.length && layer !== "background") {
+        for (var swi = 0; swi < this.switches.length; swi++) {
+          var swt = this.switches[swi];
+          var sdx = worldCellX - swt.x, sdy = worldCellY - swt.y;
+          if (Math.sqrt(sdx * sdx + sdy * sdy) < 0.5) {
+            if (typeof this.onSwitchToggle === "function") {
+              this.onSwitchToggle(swt.id);
+              e.preventDefault();
+              return;
+            }
+          }
+        }
+      }
+
+      // Door toggle intercept (works in any layer, narrator only, left-click)
+      // BUT: if there's a token at this position, the token takes priority (player needs to move it)
+      if (e.button === 0 && this.walls && this.walls.length &&
+          typeof window.WallDrawer?.tryToggleDoor === "function" &&
+          !(this._wallDrawer && this._wallDrawer.isActive())) {
+        var tokenAtClick = typeof this.getTokenAt === "function" ? this.getTokenAt(worldX, worldY) : null;
+        if (!tokenAtClick) {
+          var toggledDoor = window.WallDrawer.tryToggleDoor(worldCellX, worldCellY, this.walls);
+          if (toggledDoor && typeof this.onWallDoorToggle === "function") {
+            this.onWallDoorToggle(toggledDoor);
+            this.draw();
+            e.preventDefault();
+            return;
+          }
         }
       }
 
@@ -675,6 +790,65 @@
     };
 
     proto.handleMouseMove = function handleMouseMove(e) {
+      // Tile painter intercept
+      if (this._tilePainter && this._tilePainter.isActive()) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        const cellX = worldX / this.gridSize;
+        const cellY = worldY / this.gridSize;
+        if (this._tilePainter.handleMouseMove(cellX, cellY)) return;
+      }
+
+      // Wall drawer mousemove
+      if (this._wallDrawer && this._wallDrawer.isActive()) {
+        const rect2 = this.canvas.getBoundingClientRect();
+        const mx = e.clientX - rect2.left;
+        const my = e.clientY - rect2.top;
+        const wx = (mx - this.offsetX) / this.scale;
+        const wy = (my - this.offsetY) / this.scale;
+        this._wallDrawer.handleMouseMove(e, wx / this.gridSize, wy / this.gridSize);
+      }
+
+      // Fog brush mousemove
+      if (this._fogBrush && this._fogBrush.isActive()) {
+        const rect3 = this.canvas.getBoundingClientRect();
+        const fmx = e.clientX - rect3.left;
+        const fmy = e.clientY - rect3.top;
+        const fwx = (fmx - this.offsetX) / this.scale;
+        const fwy = (fmy - this.offsetY) / this.scale;
+        if (this._fogBrush.handleMouseMove(fwx / this.gridSize, fwy / this.gridSize)) return;
+      }
+
+      // Switch drag
+      if (this._isDraggingSwitch && this._draggedSwitch) {
+        const sRect = this.canvas.getBoundingClientRect();
+        const smx = e.clientX - sRect.left;
+        const smy = e.clientY - sRect.top;
+        const swx = (smx - this.offsetX) / this.scale;
+        const swy = (smy - this.offsetY) / this.scale;
+        this._draggedSwitch.x = (swx - this._dragSwitchOffset.x) / this.gridSize;
+        this._draggedSwitch.y = (swy - this._dragSwitchOffset.y) / this.gridSize;
+        this.draw();
+        return;
+      }
+
+      // Light drag
+      if (this._isDraggingLight && this._draggedLight) {
+        const lRect = this.canvas.getBoundingClientRect();
+        const lmx = e.clientX - lRect.left;
+        const lmy = e.clientY - lRect.top;
+        const lwx = (lmx - this.offsetX) / this.scale;
+        const lwy = (lmy - this.offsetY) / this.scale;
+        this._draggedLight.x = (lwx - this._dragLightOffset.x) / this.gridSize;
+        this._draggedLight.y = (lwy - this._dragLightOffset.y) / this.gridSize;
+        if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+        this.draw();
+        return;
+      }
+
       if (this.isPanning) {
         const dx = e.clientX - this.dragStart.x;
         const dy = e.clientY - this.dragStart.y;
@@ -703,11 +877,56 @@
         const rawGridX = (worldX - this.dragTokenOffset.x) / this.gridSize;
         const rawGridY = (worldY - this.dragTokenOffset.y) / this.gridSize;
 
-        const nextX = this.freeMovement ? rawGridX : Math.round(rawGridX);
-        const nextY = this.freeMovement ? rawGridY : Math.round(rawGridY);
+        var nextX = this.freeMovement ? rawGridX : Math.round(rawGridX);
+        var nextY = this.freeMovement ? rawGridY : Math.round(rawGridY);
+
         const liveToken = (this.tokens || []).find(
           (token) => token.id === this.draggedToken.id,
         );
+        var curToken = liveToken || this.draggedToken;
+        var prevX = curToken.x;
+        var prevY = curToken.y;
+
+        // Determine if dragged token is a PC (affects wall collision + fog)
+        var dragInst = null;
+        var dragIsPC = false;
+        if (curToken.instanceId) {
+          for (var ii = 0; ii < (this.instances || []).length; ii++) {
+            if (this.instances[ii].id === curToken.instanceId) { dragInst = this.instances[ii]; break; }
+          }
+          dragIsPC = !!(dragInst && dragInst.isPC);
+        }
+
+        // Wall collision: only block PCs. NPCs move freely (narrator controls them).
+        if (dragIsPC && this.walls && this.walls.length && typeof window.WallDrawer?.checkMovementCollision === "function") {
+          if (nextX !== prevX || nextY !== prevY) {
+            var collision = window.WallDrawer.checkMovementCollision(
+              prevX, prevY, nextX, nextY, this.walls, curToken.size || 1,
+            );
+            if (collision.blocked) {
+              var stopX = this.freeMovement ? collision.lastX : Math.round(collision.lastX);
+              var stopY = this.freeMovement ? collision.lastY : Math.round(collision.lastY);
+              curToken.x = stopX;
+              curToken.y = stopY;
+              if (liveToken) this.draggedToken = liveToken;
+              this.isDraggingToken = false;
+              this._lastDragFogUpdate = 0;
+              if (typeof this.invalidateFog === "function") this.invalidateFog();
+              if (this.onTokenMove) {
+                var oldX = this.dragStartTokenPos ? this.dragStartTokenPos.x : null;
+                var oldY = this.dragStartTokenPos ? this.dragStartTokenPos.y : null;
+                if (typeof this.markLocalTokenMove === "function") {
+                  this.markLocalTokenMove(curToken.id, curToken.x, curToken.y);
+                }
+                this.onTokenMove(curToken.id, curToken.x, curToken.y, oldX, oldY);
+              }
+              this.draggedToken = null;
+              this.draw();
+              return;
+            }
+          }
+        }
+
         if (liveToken) {
           liveToken.x = nextX;
           liveToken.y = nextY;
@@ -715,6 +934,14 @@
         } else {
           this.draggedToken.x = nextX;
           this.draggedToken.y = nextY;
+        }
+        // Fog: only recompute when dragging a PC (NPCs don't affect visibility)
+        if (dragIsPC && typeof this.invalidateFog === "function" && this._fog?.config?.enabled) {
+          var now = performance.now();
+          if (!this._lastDragFogUpdate || now - this._lastDragFogUpdate > 140) {
+            this._lastDragFogUpdate = now;
+            this.invalidateFog();
+          }
         }
         this.draw();
       } else if (this.isDraggingMapEffect && this.draggedMapEffect) {
@@ -825,9 +1052,49 @@
     };
 
     proto.handleMouseUp = function handleMouseUp() {
+      // Tile painter intercept
+      if (this._tilePainter && this._tilePainter.isActive()) {
+        this._tilePainter.handleMouseUp();
+      }
+      // Wall drawer: no drag, but call handleMouseUp for completeness
+      if (this._wallDrawer && this._wallDrawer.isActive()) {
+        this._wallDrawer.handleMouseUp();
+      }
+      // Fog brush mouseup
+      if (this._fogBrush && this._fogBrush.isActive()) {
+        this._fogBrush.handleMouseUp();
+      }
+
+      // Switch drag end
+      if (this._isDraggingSwitch) {
+        this._isDraggingSwitch = false;
+        if (typeof this.onSwitchMove === "function" && this._draggedSwitch) {
+          this.onSwitchMove(this._draggedSwitch);
+        }
+        this._draggedSwitch = null;
+      }
+
+      // Light drag end
+      if (this._isDraggingLight) {
+        this._isDraggingLight = false;
+        if (typeof this.onLightMove === "function" && this._draggedLight) {
+          this.onLightMove(this._draggedLight);
+        }
+        this._draggedLight = null;
+      }
+
       this.isPanning = false;
       if (this.isDraggingToken) {
         this.isDraggingToken = false;
+        this._lastDragFogUpdate = 0;
+        // Only invalidate fog if dragged token is a PC
+        if (this.draggedToken && typeof this.invalidateFog === "function") {
+          var upInst = null;
+          for (var ui = 0; ui < (this.instances || []).length; ui++) {
+            if (this.instances[ui].id === this.draggedToken.instanceId) { upInst = this.instances[ui]; break; }
+          }
+          if (upInst && upInst.isPC) this.invalidateFog();
+        }
         if (this.onTokenMove && this.draggedToken) {
           const oldX = this.dragStartTokenPos ? this.dragStartTokenPos.x : null;
           const oldY = this.dragStartTokenPos ? this.dragStartTokenPos.y : null;

@@ -1,6 +1,14 @@
 (function initActiveEncounterFeatureBootstrap(global) {
   const FEATURE_BASE = "features/active-encounter/";
   const CHAIN = [
+    "tile-textures.js",
+    "tile-painter.js",
+    "wall-renderer.js",
+    "wall-drawer.js",
+    "light-renderer.js",
+    "fog-visibility.js",
+    "fog-renderer.js",
+    "fog-brush.js",
     "tactical-map-render.js",
     "tactical-map-interactions.js",
     "tactical-map.js",

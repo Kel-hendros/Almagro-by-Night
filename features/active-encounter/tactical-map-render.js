@@ -26,6 +26,48 @@
       return hover.tokenId === token.id;
     };
 
+    /**
+     * Draw hover halo for the focused token ABOVE the fog/lighting overlay.
+     * Called after drawFogOfWar in the pipeline so it's never dimmed.
+     */
+    proto.drawTokenHoverOverlay = function drawTokenHoverOverlay(timestamp) {
+      if (!this.hoverFocus || this.hoverFocus.type !== "entity") return;
+      var hover = this.hoverFocus;
+      var token = null;
+      for (var i = 0; i < this.tokens.length; i++) {
+        var t = this.tokens[i];
+        if ((hover.tokenId && t.id === hover.tokenId) ||
+            (hover.instanceId && t.instanceId === hover.instanceId)) {
+          token = t;
+          break;
+        }
+      }
+      if (!token) return;
+
+      // If fog hides this token, don't show hover either
+      var fog = this._fog;
+      if (fog && fog.config && fog.config.enabled) {
+        var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
+        if (isPlayerView && fog.polygons && fog.polygons.length > 0 && window.FogVisibility) {
+          var tSize = token.size || 1;
+          var tcx = token.x + tSize * 0.5;
+          var tcy = token.y + tSize * 0.5;
+          var inView = false;
+          for (var pi = 0; pi < fog.polygons.length && !inView; pi++) {
+            if (window.FogVisibility.pointInPolygon(tcx, tcy, fog.polygons[pi])) inView = true;
+          }
+          if (!inView) return;
+        }
+      }
+
+      var pos = this.getTokenRenderPosition(token, timestamp);
+      var size = (token.size || 1) * this.gridSize;
+      var radius = size * 0.4;
+      var cx = pos.x * this.gridSize + size / 2;
+      var cy = pos.y * this.gridSize + size / 2;
+      this.drawHoverHalo(cx, cy, radius + 2);
+    };
+
     proto.drawHoverHalo = function drawHoverHalo(cx, cy, radius) {
       this.ctx.save();
       this.ctx.beginPath();
@@ -246,6 +288,66 @@
 
         this.ctx.restore();
       });
+    };
+
+    proto.drawTileMap = function drawTileMap() {
+      const tileMap = this.tileMap;
+      if (!tileMap || typeof tileMap !== "object") return;
+      const keys = Object.keys(tileMap);
+      if (!keys.length) return;
+
+      const gs = this.gridSize;
+      const viewportWidth = this.canvas.width / this.scale;
+      const viewportHeight = this.canvas.height / this.scale;
+      const startX = -this.offsetX / this.scale;
+      const startY = -this.offsetY / this.scale;
+      const minCellX = Math.floor(startX / gs) - 1;
+      const maxCellX = Math.ceil((startX + viewportWidth) / gs) + 1;
+      const minCellY = Math.floor(startY / gs) - 1;
+      const maxCellY = Math.ceil((startY + viewportHeight) / gs) + 1;
+
+      const TT = global.TileTextures;
+      if (!TT) return;
+
+      this.ctx.save();
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const parts = key.split(",");
+        const cx = parseInt(parts[0], 10);
+        const cy = parseInt(parts[1], 10);
+        if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
+        const textureId = tileMap[key];
+        const pattern = TT.getOrCreatePattern(this.ctx, textureId);
+        if (!pattern) continue;
+        // Align pattern origin to cell so every cell looks identical
+        if (typeof pattern.setTransform === "function") {
+          pattern.setTransform(new DOMMatrix().translateSelf(cx * gs, cy * gs));
+        }
+        this.ctx.fillStyle = pattern;
+        // Overlap by 0.5px to eliminate grid-line gaps between tiles
+        this.ctx.fillRect(cx * gs - 0.5, cy * gs - 0.5, gs + 1, gs + 1);
+      }
+      this.ctx.restore();
+    };
+
+    proto.drawTilePainterHover = function drawTilePainterHover() {
+      const hover = this._tilePainterHover;
+      if (!hover) return;
+      const gs = this.gridSize;
+      const half = Math.floor(hover.brushSize / 2);
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+      this.ctx.setLineDash([Math.max(4 / this.scale, 2), Math.max(3 / this.scale, 2)]);
+      for (let dy = 0; dy < hover.brushSize; dy++) {
+        for (let dx = 0; dx < hover.brushSize; dx++) {
+          const cx = (hover.cellX - half + dx) * gs;
+          const cy = (hover.cellY - half + dy) * gs;
+          this.ctx.strokeRect(cx, cy, gs, gs);
+        }
+      }
+      this.ctx.setLineDash([]);
+      this.ctx.restore();
     };
 
     proto.drawBackground = function drawBackground() {
@@ -591,7 +693,43 @@
     proto.drawTokens = function drawTokens(timestamp) {
       const now = typeof timestamp === "number" ? timestamp : performance.now();
 
+      // In player/impersonate view with fog enabled, fade tokens based on visibility
+      var fog = this._fog;
+      var fogHidesTokens = false;
+      var fogPolygons = null;
+      if (fog && fog.config && fog.config.enabled) {
+        var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
+        if (isPlayerView && fog.polygons && fog.polygons.length > 0) {
+          fogHidesTokens = true;
+          fogPolygons = fog.polygons;
+        }
+      }
+      // Opacity tracking for smooth fade in/out
+      if (!this._tokenFogOpacity) this._tokenFogOpacity = {};
+      var FADE_SPEED = 0.18; // per frame (~11 frames = 180ms for full transition)
+
       this.tokens.forEach((token) => {
+        var fogTarget = 1;
+        if (fogHidesTokens && window.FogVisibility) {
+          // Check if the token center is inside any visibility polygon.
+          // More accurate than cell-based check, avoids corner artifacts.
+          var tSize = token.size || 1;
+          var tokenCX = token.x + tSize * 0.5;
+          var tokenCY = token.y + tSize * 0.5;
+          var inView = false;
+          for (var pi = 0; pi < fogPolygons.length && !inView; pi++) {
+            if (window.FogVisibility.pointInPolygon(tokenCX, tokenCY, fogPolygons[pi])) {
+              inView = true;
+            }
+          }
+          fogTarget = inView ? 1 : 0;
+        }
+        // Lerp opacity toward target
+        var curOpacity = this._tokenFogOpacity[token.id] != null ? this._tokenFogOpacity[token.id] : fogTarget;
+        if (curOpacity < fogTarget) curOpacity = Math.min(fogTarget, curOpacity + FADE_SPEED);
+        else if (curOpacity > fogTarget) curOpacity = Math.max(fogTarget, curOpacity - FADE_SPEED);
+        this._tokenFogOpacity[token.id] = curOpacity;
+        if (curOpacity < 0.01) return; // fully hidden
         const hoverType = this.getHoverFocusType();
         const isFocused = this.isTokenHoverFocused(token);
         const isDimmed = !!hoverType && !isFocused;
@@ -622,7 +760,7 @@
         const visualCx = cx;
         const visualCy = cy - flightLift;
         const isNarratorHidden = instance && instance.visible === false;
-        const alpha = isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1;
+        const alpha = (isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1) * curOpacity;
 
         if (isFlying) {
           // Ground shadow stays on the real token position while the token body "floats".

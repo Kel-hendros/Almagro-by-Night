@@ -35,11 +35,31 @@
             <div id="ae-tools-drawer" class="ae-drawer">
                 <div class="ae-drawer-content">
                     <div class="ae-drawer-tabs">
-                        <button id="btn-ae-tab-assets" class="ae-drawer-tab active" title="Activos del mapa">☷</button>
-                        <button id="btn-ae-tab-settings" class="ae-drawer-tab" title="Configuración">⚙</button>
+                        <button id="btn-ae-tab-entities" class="ae-drawer-tab active" title="Entidades">&#x1F464;</button>
+                        <button id="btn-ae-tab-terrain" class="ae-drawer-tab" title="Terreno">&#x25A6;</button>
+                        <button id="btn-ae-tab-settings" class="ae-drawer-tab" title="Ajustes">&#x2699;</button>
                     </div>
 
-                    <div id="ae-drawer-tab-assets-content" class="ae-tab-pane active">
+                    <!-- Tab 1: Entidades -->
+                    <div id="ae-drawer-tab-entities-content" class="ae-tab-pane active">
+                        <div class="ae-entity-subsection">
+                            <div class="ae-entity-subheader">
+                                <span>PNJs</span>
+                                <button id="btn-ae-add-entity-npc" class="ae-section-add-btn" type="button" title="Agregar PNJ" aria-label="Agregar PNJ">+</button>
+                            </div>
+                            <div id="ae-list-entities-npc" class="ae-drawer-list"></div>
+                        </div>
+                        <div class="ae-entity-subsection">
+                            <div class="ae-entity-subheader">
+                                <span>PJs</span>
+                                <button id="btn-ae-add-entity-pc" class="ae-section-add-btn" type="button" title="Agregar PJ" aria-label="Agregar PJ">+</button>
+                            </div>
+                            <div id="ae-list-entities-pc" class="ae-drawer-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Terreno -->
+                    <div id="ae-drawer-tab-terrain-content" class="ae-tab-pane">
                         <details class="ae-collapse" open>
                             <summary>
                                 <span>Fondo</span>
@@ -49,6 +69,74 @@
                                 <div id="ae-list-background" class="ae-drawer-list"></div>
                                 <button id="btn-ae-map-remove-bg" class="ae-btn ae-btn--danger ae-btn--full">Quitar Fondo</button>
                                 <input type="file" id="ae-map-bg-input" accept="image/*" style="display:none;">
+                            </div>
+                        </details>
+
+                        <details class="ae-collapse" id="ae-terrain-section">
+                            <summary>
+                                <span>Pintura</span>
+                            </summary>
+                            <div class="ae-collapse-body">
+                                <div id="ae-terrain-palette" class="ae-terrain-palette"></div>
+                                <div class="ae-terrain-controls">
+                                    <label class="ae-setting-label">Brocha</label>
+                                    <div id="ae-brush-sizes" class="ae-levels">
+                                        <button type="button" class="ae-level-btn active" data-brush="1">1</button>
+                                        <button type="button" class="ae-level-btn" data-brush="2">2</button>
+                                        <button type="button" class="ae-level-btn" data-brush="3">3</button>
+                                    </div>
+                                </div>
+                                <button id="btn-ae-terrain-eraser" class="ae-btn ae-btn--secondary ae-btn--full" type="button">Borrador</button>
+                                <button id="btn-ae-terrain-clear" class="ae-btn ae-btn--danger ae-btn--full" type="button">Limpiar todo</button>
+                            </div>
+                        </details>
+
+                        <details class="ae-collapse" id="ae-walls-section">
+                            <summary>
+                                <span>Paredes</span>
+                            </summary>
+                            <div class="ae-collapse-body">
+                                <div class="ae-wall-types">
+                                    <button class="ae-wall-type-btn" data-wall-type="wall" title="Pared">
+                                        <span class="ae-wall-type-icon ae-wall-type-icon--wall"></span>
+                                        <span>Pared</span>
+                                    </button>
+                                    <button class="ae-wall-type-btn" data-wall-type="door" title="Puerta">
+                                        <span class="ae-wall-type-icon ae-wall-type-icon--door"></span>
+                                        <span>Puerta</span>
+                                    </button>
+                                    <button class="ae-wall-type-btn" data-wall-type="window" title="Ventana">
+                                        <span class="ae-wall-type-icon ae-wall-type-icon--window"></span>
+                                        <span>Ventana</span>
+                                    </button>
+                                </div>
+                                <div class="ae-wall-mode-btns">
+                                    <button id="btn-ae-wall-draw" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Dibujar</button>
+                                    <button id="btn-ae-wall-erase" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Borrar</button>
+                                </div>
+                                <button id="btn-ae-wall-clear" class="ae-btn ae-btn--danger ae-btn--full" type="button">Limpiar todo</button>
+                                <div id="ae-wall-count" class="ae-wall-count">0 segmentos</div>
+                            </div>
+                        </details>
+
+                        <details class="ae-collapse" id="ae-lights-section">
+                            <summary>
+                                <span>Luces</span>
+                                <button id="btn-ae-add-light" class="ae-section-add-btn" type="button" title="Agregar luz" aria-label="Agregar luz">+</button>
+                            </summary>
+                            <div class="ae-collapse-body">
+                                <div class="ae-ambient-light-controls">
+                                    <div class="ae-setting-row">
+                                        <label class="ae-setting-label">Luz ambiente</label>
+                                        <input type="color" id="ae-ambient-color" value="#8090b0" class="ae-ambient-color-input">
+                                    </div>
+                                    <div class="ae-setting-row">
+                                        <label class="ae-setting-label">Intensidad</label>
+                                        <input type="range" id="ae-ambient-intensity" min="0" max="1" step="0.05" value="0">
+                                        <span id="ae-ambient-intensity-val" class="ae-light-range-val">0%</span>
+                                    </div>
+                                </div>
+                                <div id="ae-list-lights" class="ae-drawer-list"></div>
                             </div>
                         </details>
 
@@ -62,29 +150,46 @@
                             </div>
                         </details>
 
-                        <details class="ae-collapse" open>
+                        <details class="ae-collapse" id="ae-fog-section">
                             <summary>
-                                <span>Entidades</span>
+                                <span>Niebla</span>
                             </summary>
                             <div class="ae-collapse-body">
-                                <div class="ae-entity-subsection">
-                                    <div class="ae-entity-subheader">
-                                        <span>PNJs</span>
-                                        <button id="btn-ae-add-entity-npc" class="ae-section-add-btn" type="button" title="Agregar PNJ" aria-label="Agregar PNJ">+</button>
-                                    </div>
-                                    <div id="ae-list-entities-npc" class="ae-drawer-list"></div>
+                                <div class="ae-setting-row">
+                                    <label class="ae-setting-check">
+                                        <input type="checkbox" id="ae-fog-enabled-check">
+                                        <span>Activar niebla de guerra</span>
+                                    </label>
                                 </div>
-                                <div class="ae-entity-subsection">
-                                    <div class="ae-entity-subheader">
-                                        <span>PJs</span>
-                                        <button id="btn-ae-add-entity-pc" class="ae-section-add-btn" type="button" title="Agregar PJ" aria-label="Agregar PJ">+</button>
+                                <div class="ae-setting-row ae-fog-mode-row">
+                                    <label class="ae-setting-label">Modo</label>
+                                    <div class="ae-fog-mode-btns ae-levels">
+                                        <button type="button" class="ae-level-btn active" data-fog-mode="auto">Auto</button>
+                                        <button type="button" class="ae-level-btn" data-fog-mode="manual">Manual</button>
                                     </div>
-                                    <div id="ae-list-entities-pc" class="ae-drawer-list"></div>
                                 </div>
+                                <div class="ae-fog-manual-controls">
+                                    <label class="ae-setting-label">Pincel manual</label>
+                                    <div class="ae-fog-brush-btns">
+                                        <button id="btn-ae-fog-reveal" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Revelar</button>
+                                        <button id="btn-ae-fog-hide" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Ocultar</button>
+                                    </div>
+                                    <div class="ae-terrain-controls">
+                                        <label class="ae-setting-label">Brocha</label>
+                                        <div id="ae-fog-brush-sizes" class="ae-levels">
+                                            <button type="button" class="ae-level-btn active" data-fog-brush="1">1</button>
+                                            <button type="button" class="ae-level-btn" data-fog-brush="2">2</button>
+                                            <button type="button" class="ae-level-btn" data-fog-brush="3">3</button>
+                                            <button type="button" class="ae-level-btn" data-fog-brush="5">5</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button id="btn-ae-fog-reset" class="ae-btn ae-btn--danger ae-btn--full" type="button">Reiniciar exploración</button>
                             </div>
                         </details>
                     </div>
 
+                    <!-- Tab 3: Ajustes -->
                     <div id="ae-drawer-tab-settings-content" class="ae-tab-pane">
                         <details class="ae-collapse" open>
                             <summary>

@@ -11,6 +11,7 @@
       onInvokePower,
       onIsPowerActive,
       onToggleVisibility,
+      onToggleImpersonate,
       getMap,
     } = ctx;
     let menuEl = null;
@@ -22,6 +23,7 @@
     let conditionsBtnEl = null;
     let powersBtnEl = null;
     let visibilityBtnEl = null;
+    let impersonateBtnEl = null;
     let deleteBtnEl = null;
     let lastTokenInfo = null;
     let lastPlacement = null;
@@ -115,6 +117,20 @@
       });
       visibilityBtnEl = visibilityBtn;
 
+      const impersonateBtn = document.createElement("button");
+      impersonateBtn.type = "button";
+      impersonateBtn.textContent = "Ver como...";
+      impersonateBtn.className = "ae-token-context-action ae-token-context-action--impersonate";
+      impersonateBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const tokenId = menu.dataset.tokenId || null;
+        hide();
+        if (tokenId && typeof onToggleImpersonate === "function") {
+          onToggleImpersonate(tokenId);
+        }
+      });
+      impersonateBtnEl = impersonateBtn;
+
       const deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
       deleteBtn.textContent = "Borrar token";
@@ -155,6 +171,7 @@
       primary.appendChild(conditionBtn);
       primary.appendChild(powersBtn);
       primary.appendChild(visibilityBtn);
+      primary.appendChild(impersonateBtn);
       primary.appendChild(deleteBtn);
       primary.appendChild(unsummonBtn);
       body.appendChild(primary);
@@ -240,6 +257,7 @@
         if (conditionsBtnEl) conditionsBtnEl.style.display = "none";
         if (powersBtnEl) powersBtnEl.style.display = "none";
         if (visibilityBtnEl) visibilityBtnEl.style.display = "none";
+        if (impersonateBtnEl) impersonateBtnEl.style.display = "none";
         if (deleteBtnEl) deleteBtnEl.style.display = "none";
         if (unsummonBtnEl) unsummonBtnEl.style.display = "";
         activePanel = null;
@@ -252,6 +270,17 @@
       if (powersBtnEl) powersBtnEl.style.display = canManage || canUsePowers ? "" : "none";
       if (visibilityBtnEl) visibilityBtnEl.style.display = canManage ? "" : "none";
       if (deleteBtnEl) deleteBtnEl.style.display = canManage ? "" : "none";
+
+      // Impersonate: only for narrator, only when fog is enabled
+      if (impersonateBtnEl) {
+        var fogEnabled = !!state.encounter?.data?.fog?.enabled;
+        var instance = getInstanceByTokenId(tokenId);
+        var showImpersonate = canManage && fogEnabled && instance;
+        impersonateBtnEl.style.display = showImpersonate ? "" : "none";
+        if (showImpersonate) {
+          refreshImpersonateState(tokenId);
+        }
+      }
       if (unsummonBtnEl) unsummonBtnEl.style.display = "none";
 
       if (!canManage && activePanel !== "powers") {
@@ -272,6 +301,18 @@
       const isVisible = instance?.visible !== false;
       visibilityBtnEl.textContent = isVisible ? "Visible" : "Oculto";
       visibilityBtnEl.classList.toggle("is-active", !isVisible);
+    }
+
+    function refreshImpersonateState(tokenId) {
+      if (!impersonateBtnEl || !tokenId) return;
+      var instance = getInstanceByTokenId(tokenId);
+      var map = getMap?.();
+      var currentImpersonate = map?._fog?.impersonateInstanceId || null;
+      var isImpersonating = currentImpersonate === instance?.id;
+      impersonateBtnEl.textContent = isImpersonating
+        ? "Dejar de ver como " + (instance?.name || "PJ")
+        : "Ver como " + (instance?.name || "PJ");
+      impersonateBtnEl.classList.toggle("is-active", isImpersonating);
     }
 
     function refreshConditionState(tokenId) {
