@@ -91,6 +91,8 @@
   let browserController = null;
   let drawerController = null;
   let tilePainter = null;
+  let wallDrawer = null;
+  let fogBrush = null;
   let tokenActionsController = null;
   let tokenContextMenuController = null;
 
@@ -217,14 +219,12 @@
     els.layerCurrentLabel = document.getElementById("ae-layer-current-label");
     els.uploadOverlay = document.getElementById("ae-upload-overlay");
     els.uploadMessage = document.getElementById("ae-upload-message");
-    els.drawerTabAssets = document.getElementById("btn-ae-tab-assets");
-    els.drawerTabAssetsPane = document.getElementById(
-      "ae-drawer-tab-assets-content",
-    );
-    els.drawerTabSettings = document.getElementById("btn-ae-tab-settings");
-    els.drawerTabSettingsPane = document.getElementById(
-      "ae-drawer-tab-settings-content",
-    );
+    els.drawerTab_entities = document.getElementById("btn-ae-tab-entities");
+    els.drawerTabPane_entities = document.getElementById("ae-drawer-tab-entities-content");
+    els.drawerTab_terrain = document.getElementById("btn-ae-tab-terrain");
+    els.drawerTabPane_terrain = document.getElementById("ae-drawer-tab-terrain-content");
+    els.drawerTab_settings = document.getElementById("btn-ae-tab-settings");
+    els.drawerTabPane_settings = document.getElementById("ae-drawer-tab-settings-content");
     els.gridOpacityLevels = document.getElementById("ae-grid-opacity-levels");
     els.listBackground = document.getElementById("ae-list-background");
     els.listDecor = document.getElementById("ae-list-decor");
@@ -280,6 +280,17 @@
       getMap: () => state.map,
       saveEncounter: () => saveEncounter(),
       getTilePainter: () => tilePainter,
+      getWallDrawer: () => wallDrawer,
+      getFogBrush: () => fogBrush,
+      addLight: (x, y) => addLight(x, y),
+      findLightAt: (x, y) => findLightAt(x, y),
+      openLightPopover: (light) => openLightPopover(light),
+      removeLight: (id) => removeLight(id),
+      addSwitch: (x, y, lid) => addSwitch(x, y, lid),
+      findSwitchAt: (x, y) => findSwitchAt(x, y),
+      openSwitchPopover: (sw) => openSwitchPopover(sw),
+      handleLinkModeClick: (x, y) => handleLinkModeClick(x, y),
+      isLinkMode: () => !!state._linkMode,
     });
     tokenActionsController = window.AEEncounterTokenActions?.createController?.({
       state,
@@ -312,6 +323,17 @@
         onIsPowerActive: (tokenId, powerId) =>
           !!tokenActionsController?.isPowerActive(tokenId, powerId),
         onToggleVisibility: (tokenId) => toggleTokenVisibility(tokenId),
+        onToggleImpersonate: (tokenId) => {
+          var token = (state.encounter?.data?.tokens || []).find(t => t.id === tokenId);
+          if (!token) return;
+          var instance = (state.encounter?.data?.instances || []).find(i => i.id === token.instanceId);
+          if (!instance || !state.map) return;
+          var fog = state.map._fog;
+          var currentId = fog?.impersonateInstanceId || null;
+          var nextId = currentId === instance.id ? null : instance.id;
+          state.map.setFogImpersonate(nextId);
+          state.map.draw();
+        },
       });
 
     setupListeners();
@@ -326,9 +348,21 @@
     // Init Map
     state.map = new TacticalMap("ae-map-canvas", "ae-map-container");
     state.map.freeMovement = !!state.encounter?.data?.freeMovement;
-    // Ensure tileMap exists
+    // Ensure tileMap and walls exist
     if (!state.encounter.data.tileMap || typeof state.encounter.data.tileMap !== "object") {
       state.encounter.data.tileMap = {};
+    }
+    if (!Array.isArray(state.encounter.data.walls)) {
+      state.encounter.data.walls = [];
+    }
+    if (!Array.isArray(state.encounter.data.lights)) {
+      state.encounter.data.lights = [];
+    }
+    if (!Array.isArray(state.encounter.data.switches)) {
+      state.encounter.data.switches = [];
+    }
+    if (!state.encounter.data.ambientLight) {
+      state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5 };
     }
     state.map.setData(
       state.encounter?.data?.tokens,
@@ -338,6 +372,9 @@
         designTokens: state.encounter?.data?.designTokens || [],
         mapEffects: state.encounter?.data?.mapEffects || [],
         tileMap: state.encounter.data.tileMap,
+        walls: state.encounter.data.walls,
+        lights: state.encounter.data.lights,
+        switches: state.encounter.data.switches,
       },
     );
 
@@ -356,6 +393,63 @@
       });
       state.map._tilePainter = tilePainter;
     }
+
+    // Init Wall Drawer (narrator only)
+    if (window.WallDrawer) {
+      wallDrawer = window.WallDrawer.createWallDrawer({
+        getMap: () => state.map,
+        getWalls: () => state.encounter?.data?.walls || [],
+        setWalls: (walls) => {
+          if (state.encounter?.data) {
+            state.encounter.data.walls = walls;
+            if (state.map) state.map.walls = walls;
+          }
+        },
+        onChanged: () => { state.map?.recomputeRooms?.(); state.map?.invalidateFog?.(); state.map?.invalidateLighting?.(); saveEncounter(); },
+        canEdit: canEditEncounter,
+      });
+      state.map._wallDrawer = wallDrawer;
+    }
+
+    // Ambient light reference on the map
+    state.map._ambientLight = state.encounter.data.ambientLight || { color: "#8090b0", intensity: 0 };
+    state.map.recomputeRooms();
+
+    // Init Fog of War
+    if (!state.encounter.data.fog) {
+      state.encounter.data.fog = { enabled: false, mode: "auto", revealed: {}, hidden: {}, explored: {} };
+    }
+    if (typeof state.map.initFog === "function") {
+      state.map.initFog(state.encounter.data.fog, canEditEncounter());
+      // For players: set which instances they control so fog is per-player
+      if (!canEditEncounter()) {
+        var myInstanceIds = (state.encounter.data.instances || [])
+          .filter(function (inst) {
+            if (!inst.isPC || !inst.characterSheetId) return false;
+            var sheet = state.characterSheets.find(function (s) { return s.id === inst.characterSheetId; });
+            return !!sheet && !!state.user && sheet.user_id === state.user.id;
+          })
+          .map(function (inst) { return inst.id; });
+        state.map.setFogViewerInstances(myInstanceIds.length ? myInstanceIds : null);
+      }
+    }
+
+    // Init Fog Brush (narrator only)
+    if (window.FogBrush) {
+      fogBrush = window.FogBrush.createFogBrush({
+        getMap: () => state.map,
+        getFog: () => state.encounter?.data?.fog || {},
+        setFog: (fog) => {
+          if (state.encounter?.data) {
+            state.encounter.data.fog = fog;
+          }
+        },
+        onChanged: () => saveEncounter(),
+        canEdit: canEditEncounter,
+      });
+      state.map._fogBrush = fogBrush;
+    }
+
     state.map.setActiveInstance(
       state.encounter?.data?.activeInstanceId || null,
     );
@@ -366,6 +460,9 @@
         if (canEditEncounter()) {
           t.x = x;
           t.y = y;
+          // Only invalidate fog when a PC moves (NPCs don't affect visibility)
+          var movedInst = (state.encounter.data.instances || []).find(function (i) { return i.id === t.instanceId; });
+          if (movedInst && movedInst.isPC) state.map.invalidateFog?.();
           saveEncounter();
           return;
         }
@@ -445,6 +542,33 @@
       render();
       scheduleBackgroundPersist();
     };
+
+    state.map.onSwitchToggle = (switchId) => {
+      if (!state.encounter?.data) return;
+      toggleSwitch(switchId);
+    };
+
+    state.map.onSwitchMove = () => {
+      if (!state.encounter?.data) return;
+      saveEncounter();
+    };
+
+    state.map.onLightMove = () => {
+      if (!state.encounter?.data || !canEditEncounter()) return;
+      saveEncounter();
+    };
+
+    state.map.onWallDoorToggle = (door) => {
+      if (!state.encounter?.data || !canEditEncounter()) return;
+      state.map.invalidateFog?.();
+      state.map.invalidateLighting?.();
+      saveEncounter();
+    };
+
+    // ── Light placement mode ──
+    state._lightPlaceMode = false;
+    state._lightPopover = null;
+    state._lightDragId = null;
 
     setupMapControls();
     applyPermissionsUI();
@@ -849,6 +973,294 @@
     }
   }
 
+  // ── Light management ──
+
+  function generateLightId() {
+    return "light-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 5);
+  }
+
+  function addLight(x, y) {
+    if (!state.encounter?.data) return;
+    var lights = state.encounter.data.lights || [];
+    lights.push({ id: generateLightId(), x: x, y: y, radius: 4, color: "#ffcc66", intensity: 0.8 });
+    state.encounter.data.lights = lights;
+    if (state.map) { state.map.lights = lights; state.map.invalidateLighting?.(); state.map.draw(); }
+    saveEncounter();
+  }
+
+  function updateLight(lightId, patch) {
+    var lights = state.encounter?.data?.lights || [];
+    var light = lights.find(function (l) { return l.id === lightId; });
+    if (!light) return;
+    for (var key in patch) light[key] = patch[key];
+    if (state.map) { state.map.invalidateLighting?.(); state.map.draw(); }
+    saveEncounter();
+  }
+
+  function removeLight(lightId) {
+    if (!state.encounter?.data) return;
+    state.encounter.data.lights = (state.encounter.data.lights || []).filter(function (l) { return l.id !== lightId; });
+    if (state.map) { state.map.lights = state.encounter.data.lights; state.map.invalidateLighting?.(); state.map.draw(); }
+    closeLightPopover();
+    saveEncounter();
+  }
+
+  function findLightAt(cellX, cellY) {
+    var lights = state.encounter?.data?.lights || [];
+    var best = null, bestDist = 0.6; // threshold in cells
+    for (var i = 0; i < lights.length; i++) {
+      var l = lights[i];
+      var dx = cellX - l.x, dy = cellY - l.y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bestDist) { bestDist = d; best = l; }
+    }
+    return best;
+  }
+
+  function openLightPopover(light) {
+    closeLightPopover();
+    if (!light || !state.map) return;
+    var gs = state.map.gridSize;
+    var scale = state.map.scale;
+    var rect = state.map.canvas.getBoundingClientRect();
+    var screenX = rect.left + state.map.offsetX + light.x * gs * scale;
+    var screenY = rect.top + state.map.offsetY + light.y * gs * scale;
+
+    var pop = document.createElement("div");
+    pop.className = "ae-light-popover";
+    pop.innerHTML =
+      '<div class="ae-light-popover-row"><label>Color</label><input type="color" id="ae-lp-color" value="' + (light.color || "#ffcc66") + '"></div>' +
+      '<div class="ae-light-popover-row"><label>Radio</label><input type="range" id="ae-lp-radius" min="1" max="15" step="0.5" value="' + (light.radius || 4) + '"><span class="ae-light-range-val" id="ae-lp-radius-val">' + (light.radius || 4) + '</span></div>' +
+      '<div class="ae-light-popover-row"><label>Fuerza</label><input type="range" id="ae-lp-intensity" min="0.1" max="1" step="0.05" value="' + (light.intensity != null ? light.intensity : 0.8) + '"><span class="ae-light-range-val" id="ae-lp-int-val">' + Math.round((light.intensity != null ? light.intensity : 0.8) * 100) + '%</span></div>' +
+      '<button class="ae-btn ae-btn--secondary ae-btn--full" id="ae-lp-create-switch" type="button" style="margin-top:4px;">Crear interruptor</button>' +
+      '<button class="ae-btn ae-btn--secondary ae-btn--full" id="ae-lp-link-switch" type="button">Vincular a interruptor</button>' +
+      '<button class="ae-btn ae-btn--danger ae-btn--full" id="ae-lp-delete" type="button" style="margin-top:4px;">Eliminar luz</button>';
+
+    pop.style.left = Math.round(Math.min(screenX + 20, window.innerWidth - 220)) + "px";
+    pop.style.top = Math.round(Math.min(screenY - 60, window.innerHeight - 180)) + "px";
+    document.body.appendChild(pop);
+    state._lightPopover = { el: pop, lightId: light.id };
+
+    pop.querySelector("#ae-lp-color").addEventListener("input", function (e) {
+      updateLight(light.id, { color: e.target.value });
+    });
+    pop.querySelector("#ae-lp-radius").addEventListener("input", function (e) {
+      var v = parseFloat(e.target.value); pop.querySelector("#ae-lp-radius-val").textContent = v;
+      updateLight(light.id, { radius: v });
+    });
+    pop.querySelector("#ae-lp-intensity").addEventListener("input", function (e) {
+      var v = parseFloat(e.target.value); pop.querySelector("#ae-lp-int-val").textContent = Math.round(v * 100) + "%";
+      updateLight(light.id, { intensity: v });
+    });
+    pop.querySelector("#ae-lp-delete").addEventListener("click", function () { removeLight(light.id); });
+    pop.querySelector("#ae-lp-create-switch").addEventListener("click", function () {
+      closeLightPopover();
+      addSwitch(light.x + 1, light.y, light.id);
+    });
+    pop.querySelector("#ae-lp-link-switch").addEventListener("click", function () {
+      closeLightPopover();
+      enterLinkMode("light", light.id);
+    });
+
+    // Close on outside click (deferred so current click doesn't trigger it)
+    setTimeout(function () {
+      function onOutside(e) {
+        if (pop.contains(e.target)) return;
+        closeLightPopover();
+        document.removeEventListener("mousedown", onOutside);
+      }
+      document.addEventListener("mousedown", onOutside);
+    }, 50);
+  }
+
+  function closeLightPopover() {
+    if (state._lightPopover?.el) {
+      state._lightPopover.el.remove();
+    }
+    state._lightPopover = null;
+  }
+
+  // ── Switch management ──
+
+  function generateSwitchId() {
+    return "sw-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 5);
+  }
+
+  function addSwitch(x, y, linkedLightId) {
+    if (!state.encounter?.data) return null;
+    var sw = { id: generateSwitchId(), x: x, y: y, on: true, lightIds: linkedLightId ? [linkedLightId] : [] };
+    if (!state.encounter.data.switches) state.encounter.data.switches = [];
+    state.encounter.data.switches.push(sw);
+    if (state.map) { state.map.switches = state.encounter.data.switches; state.map.invalidateLighting?.(); state.map.draw(); }
+    saveEncounter();
+    return sw;
+  }
+
+  function removeSwitch(switchId) {
+    if (!state.encounter?.data) return;
+    state.encounter.data.switches = (state.encounter.data.switches || []).filter(function (s) { return s.id !== switchId; });
+    if (state.map) { state.map.switches = state.encounter.data.switches; state.map.selectedSwitchId = null; state.map.draw(); }
+    closeSwitchPopover();
+    saveEncounter();
+  }
+
+  function toggleSwitch(switchId) {
+    var switches = state.encounter?.data?.switches || [];
+    var lights = state.encounter?.data?.lights || [];
+    var sw = switches.find(function (s) { return s.id === switchId; });
+    if (!sw) return;
+    sw.on = !sw.on;
+    (sw.lightIds || []).forEach(function (lid) {
+      var light = lights.find(function (l) { return l.id === lid; });
+      if (light) light.on = sw.on;
+    });
+    if (state.map) { state.map.invalidateLighting?.(); state.map.draw(); }
+    saveEncounter();
+  }
+
+  function linkSwitchToLight(switchId, lightId) {
+    var sw = (state.encounter?.data?.switches || []).find(function (s) { return s.id === switchId; });
+    if (!sw) return;
+    if (!sw.lightIds) sw.lightIds = [];
+    if (sw.lightIds.indexOf(lightId) === -1) sw.lightIds.push(lightId);
+    if (state.map) { state.map.invalidateLighting?.(); state.map.draw(); }
+    saveEncounter();
+  }
+
+  function unlinkSwitchFromLight(switchId, lightId) {
+    var sw = (state.encounter?.data?.switches || []).find(function (s) { return s.id === switchId; });
+    if (!sw) return;
+    sw.lightIds = (sw.lightIds || []).filter(function (id) { return id !== lightId; });
+    if (state.map) state.map.draw();
+    saveEncounter();
+  }
+
+  function findSwitchAt(cellX, cellY) {
+    var switches = state.encounter?.data?.switches || [];
+    var best = null, bestDist = 0.6;
+    for (var i = 0; i < switches.length; i++) {
+      var s = switches[i];
+      var dx = cellX - s.x, dy = cellY - s.y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bestDist) { bestDist = d; best = s; }
+    }
+    return best;
+  }
+
+  function openSwitchPopover(sw) {
+    closeSwitchPopover();
+    closeLightPopover();
+    if (!sw || !state.map) return;
+    var gs = state.map.gridSize;
+    var scale = state.map.scale;
+    var rect = state.map.canvas.getBoundingClientRect();
+    var screenX = rect.left + state.map.offsetX + sw.x * gs * scale;
+    var screenY = rect.top + state.map.offsetY + sw.y * gs * scale;
+
+    var lights = state.encounter?.data?.lights || [];
+    var linkedLights = (sw.lightIds || []).map(function (lid) {
+      return lights.find(function (l) { return l.id === lid; });
+    }).filter(Boolean);
+
+    var pop = document.createElement("div");
+    pop.className = "ae-light-popover";
+
+    var toggleLabel = sw.on !== false ? "Encendido" : "Apagado";
+    var toggleClass = sw.on !== false ? "ae-btn--secondary" : "ae-btn--danger";
+    var html = '<div class="ae-light-popover-row" style="justify-content:space-between;"><label>Interruptor</label>' +
+      '<button id="ae-sp-toggle" class="ae-btn ' + toggleClass + '" type="button" style="padding:3px 10px;font-size:0.7rem;">' + toggleLabel + '</button></div>';
+
+    if (linkedLights.length > 0) {
+      html += '<div style="font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Luces conectadas</div>';
+      for (var i = 0; i < linkedLights.length; i++) {
+        var l = linkedLights[i];
+        html += '<div class="ae-light-popover-row" style="justify-content:space-between;">' +
+          '<span style="font-size:0.7rem;color:#ccc;">Luz (' + (l.radius || 4) + 'c)</span>' +
+          '<button class="ae-sp-unlink" data-light-id="' + l.id + '" style="background:none;border:none;color:#cf5f5f;cursor:pointer;font-size:0.8rem;" title="Desvincular">✕</button></div>';
+      }
+    } else {
+      html += '<div style="font-size:0.68rem;color:#666;padding:4px 0;">Sin luces conectadas</div>';
+    }
+
+    html += '<button id="ae-sp-link" class="ae-btn ae-btn--secondary ae-btn--full" type="button" style="margin-top:4px;">+ Vincular luz</button>';
+    html += '<button id="ae-sp-delete" class="ae-btn ae-btn--danger ae-btn--full" type="button" style="margin-top:2px;">Eliminar</button>';
+
+    pop.innerHTML = html;
+    pop.style.left = Math.round(Math.min(screenX + 20, window.innerWidth - 230)) + "px";
+    pop.style.top = Math.round(Math.min(screenY - 60, window.innerHeight - 200)) + "px";
+    document.body.appendChild(pop);
+    state._switchPopover = { el: pop, switchId: sw.id };
+
+    pop.querySelector("#ae-sp-toggle").addEventListener("click", function () {
+      toggleSwitch(sw.id);
+      openSwitchPopover(sw); // re-render
+    });
+    pop.querySelector("#ae-sp-link").addEventListener("click", function () {
+      closeSwitchPopover();
+      enterLinkMode("switch", sw.id);
+    });
+    pop.querySelector("#ae-sp-delete").addEventListener("click", function () { removeSwitch(sw.id); });
+    pop.querySelectorAll(".ae-sp-unlink").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        unlinkSwitchFromLight(sw.id, btn.dataset.lightId);
+        openSwitchPopover(sw); // re-render
+      });
+    });
+
+    setTimeout(function () {
+      function onOutside(e) {
+        if (pop.contains(e.target)) return;
+        closeSwitchPopover();
+        document.removeEventListener("mousedown", onOutside);
+      }
+      document.addEventListener("mousedown", onOutside);
+    }, 50);
+  }
+
+  function closeSwitchPopover() {
+    if (state._switchPopover?.el) state._switchPopover.el.remove();
+    state._switchPopover = null;
+  }
+
+  // ── Link mode (connect lights ↔ switches) ──
+
+  function enterLinkMode(fromType, fromId) {
+    state._linkMode = { fromType: fromType, fromId: fromId };
+    state.map?.canvas?.classList.add("light-placer-active");
+  }
+
+  function exitLinkMode() {
+    state._linkMode = null;
+    state.map?.canvas?.classList.remove("light-placer-active");
+  }
+
+  function handleLinkModeClick(cellX, cellY) {
+    if (!state._linkMode) return false;
+    var mode = state._linkMode;
+
+    if (mode.fromType === "switch") {
+      // Looking for a light to link to this switch
+      var light = findLightAt(cellX, cellY);
+      if (light) {
+        linkSwitchToLight(mode.fromId, light.id);
+        exitLinkMode();
+        return true;
+      }
+    } else if (mode.fromType === "light") {
+      // Looking for a switch to link to this light
+      var sw = findSwitchAt(cellX, cellY);
+      if (sw) {
+        linkSwitchToLight(sw.id, mode.fromId);
+        exitLinkMode();
+        return true;
+      }
+    }
+
+    // Click on empty → cancel
+    exitLinkMode();
+    return true;
+  }
+
   function setupMapControls() {
     document
       .getElementById("btn-map-zoom-in")
@@ -987,14 +1399,40 @@
 
   function applyRemoteEncounterUpdate(updated) {
     if (!updated || !state.encounter) return;
+    // Preserve local tileMap when the tile painter is active or has pending saves
+    var localTileMap = (tilePainter && tilePainter.isActive())
+      ? state.encounter.data.tileMap
+      : null;
+    // Preserve local walls when the wall drawer is active
+    var localWalls = (wallDrawer && wallDrawer.isActive())
+      ? state.encounter.data.walls
+      : null;
+    // Preserve local fog when the fog brush is active
+    var localFog = (fogBrush && fogBrush.isActive())
+      ? state.encounter.data.fog
+      : null;
     state.encounter.status = normalizeEncounterStatus(updated.status);
     state.encounter.data = updated.data || state.encounter.data;
+    if (localTileMap) {
+      state.encounter.data.tileMap = localTileMap;
+    }
+    if (localWalls) {
+      state.encounter.data.walls = localWalls;
+    }
+    if (localFog) {
+      state.encounter.data.fog = localFog;
+    }
     if (state.encounterHasUpdatedAt && updated.updated_at) {
       state.encounterUpdatedAt = updated.updated_at;
     }
     state.lastEncounterSyncKey = buildEncounterSyncKey(updated);
     sanitizeEncounterTokens();
     ensureActiveInstance();
+    // Update fog config from remote data
+    if (state.map && typeof state.map.setFogConfig === "function") {
+      state.map.setFogConfig(state.encounter.data.fog || null);
+      state.map.invalidateFog?.();
+    }
     render();
   }
 
@@ -1528,7 +1966,12 @@
         designTokens: mapDesignTokens,
         mapEffects: state.encounter.data.mapEffects || [],
         tileMap: state.encounter.data.tileMap || {},
+        walls: state.encounter.data.walls || [],
+        lights: state.encounter.data.lights || [],
+        switches: state.encounter.data.switches || [],
       });
+      // Keep ambient light reference in sync after remote data updates
+      state.map._ambientLight = state.encounter.data.ambientLight || { color: "#8090b0", intensity: 0.5 };
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
 
       // Handle narrator's "Ver aquí" — pan players to target + show pin
@@ -1692,6 +2135,21 @@
         cardEl.style.opacity = "0.72";
         cardEl.title = "Sin permiso para ver detalle";
       }
+
+      // Hover → highlight token on map
+      cardEl.addEventListener("mouseenter", () => {
+        var token = (state.encounter?.data?.tokens || []).find(
+          (t) => t.instanceId === inst.id,
+        );
+        state.map?.setHoverFocus?.({
+          type: "entity",
+          instanceId: inst.id,
+          tokenId: token?.id || null,
+        });
+      });
+      cardEl.addEventListener("mouseleave", () => {
+        state.map?.clearHoverFocus?.();
+      });
 
       // Delete button
       row.querySelector(".ae-btn-delete").addEventListener("click", async (e) => {
@@ -2929,6 +3387,11 @@
       ),
       mapEffects: normalizeMapEffectsData(state.encounter.data.mapEffects),
       tileMap: state.encounter.data.tileMap || {},
+      walls: state.encounter.data.walls || [],
+      lights: state.encounter.data.lights || [],
+      switches: state.encounter.data.switches || [],
+      ambientLight: state.encounter.data.ambientLight || null,
+      fog: state.encounter.data.fog || null,
     };
 
     state.isApplyingRemoteUpdate = true;

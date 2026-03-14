@@ -10,6 +10,29 @@
     let brushSize = 1;
     let isPainting = false;
     let isErasing = false;
+    let _dirty = false;
+    let _saveTimer = null;
+    const SAVE_DELAY = 800; // ms after last stroke before persisting
+
+    function scheduleSave() {
+      _dirty = true;
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(function () {
+        _saveTimer = null;
+        if (_dirty && onChanged) {
+          _dirty = false;
+          onChanged();
+        }
+      }, SAVE_DELAY);
+    }
+
+    function flushSave() {
+      if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+      if (_dirty && onChanged) {
+        _dirty = false;
+        onChanged();
+      }
+    }
 
     function isActive() {
       return active;
@@ -26,8 +49,13 @@
       active = false;
       isPainting = false;
       isErasing = false;
+      flushSave();
       const map = getMap();
-      if (map) map.canvas.classList.remove("tile-painter-active");
+      if (map) {
+        map._tilePainterHover = null;
+        map.canvas.classList.remove("tile-painter-active");
+        map.draw();
+      }
     }
 
     function setTexture(textureId) {
@@ -87,17 +115,16 @@
     }
 
     // Mouse event handlers — called from tactical-map-interactions when painter is active.
+    // Painting is fully local; persistence is debounced until the stroke ends.
     function handleMouseDown(e, cellX, cellY) {
       if (e.button === 2) {
         isErasing = true;
         applyBrush(cellX, cellY, true);
-        if (onChanged) onChanged();
         return true;
       }
       if (e.button === 0) {
         isPainting = true;
         applyBrush(cellX, cellY, false);
-        if (onChanged) onChanged();
         return true;
       }
       return false;
@@ -105,15 +132,11 @@
 
     function handleMouseMove(cellX, cellY) {
       if (isPainting) {
-        if (applyBrush(cellX, cellY, false)) {
-          if (onChanged) onChanged();
-        }
+        applyBrush(cellX, cellY, false);
         return true;
       }
       if (isErasing) {
-        if (applyBrush(cellX, cellY, true)) {
-          if (onChanged) onChanged();
-        }
+        applyBrush(cellX, cellY, true);
         return true;
       }
       // Draw hover preview
@@ -126,8 +149,10 @@
     }
 
     function handleMouseUp() {
+      const wasPainting = isPainting || isErasing;
       isPainting = false;
       isErasing = false;
+      if (wasPainting) scheduleSave();
     }
 
     return {

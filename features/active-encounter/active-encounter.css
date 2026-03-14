@@ -2067,6 +2067,19 @@
     opacity: 0.9;
 }
 
+.ae-token-context-action--impersonate::before {
+    content: "👁";
+    font-size: 0.82rem;
+    line-height: 1;
+    opacity: 0.9;
+}
+
+.ae-token-context-action--impersonate.is-active {
+    background: rgba(100, 160, 220, 0.18);
+    border-color: rgba(100, 160, 220, 0.4);
+    color: #a7d4ff;
+}
+
 .ae-token-context-action:hover {
     background: rgba(173, 56, 56, 0.16);
     border-color: rgba(173, 56, 56, 0.24);
@@ -2585,6 +2598,298 @@
 
 canvas.tile-painter-active {
     cursor: crosshair;
+}
+
+/* ── Wall Tools ── */
+
+.ae-wall-types {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.ae-wall-type-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #999;
+    font-size: 0.6rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.ae-wall-type-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ccc;
+}
+
+.ae-wall-type-btn.active {
+    border-color: var(--color-gold, #d7bb78);
+    background: rgba(215, 187, 120, 0.12);
+    color: #e8e8e8;
+}
+
+.ae-wall-type-icon {
+    display: block;
+    width: 36px;
+    height: 20px;
+    position: relative;
+}
+
+.ae-wall-type-icon--wall::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    right: 4px;
+    height: 4px;
+    background: #d4a574;
+    border-radius: 1px;
+    transform: translateY(-50%);
+}
+
+.ae-wall-type-icon--door::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    right: 4px;
+    height: 4px;
+    background: #c5a059;
+    border-radius: 1px;
+    transform: translateY(-50%);
+    mask-image: linear-gradient(to right, #000 30%, transparent 30%, transparent 70%, #000 70%);
+    -webkit-mask-image: linear-gradient(to right, #000 30%, transparent 30%, transparent 70%, #000 70%);
+}
+
+.ae-wall-type-icon--door::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #c5a059;
+    border-bottom: none;
+    border-right: none;
+    border-radius: 10px 0 0 0;
+    transform: translateX(-50%);
+}
+
+.ae-wall-type-icon--window::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    right: 4px;
+    height: 3px;
+    background: #7bb3d4;
+    border-radius: 1px;
+    transform: translateY(-50%);
+}
+
+.ae-wall-type-icon--window::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 10px;
+    background: #7bb3d4;
+    transform: translate(-50%, -50%);
+}
+
+.ae-wall-mode-btns {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.ae-btn.ae-btn--half {
+    flex: 1;
+}
+
+#btn-ae-wall-draw.active,
+#btn-ae-wall-erase.active {
+    background: rgba(215, 187, 120, 0.2);
+    border-color: var(--color-gold, #d7bb78);
+    color: var(--color-gold, #d7bb78);
+}
+
+.ae-wall-count {
+    font-size: 0.65rem;
+    color: #666;
+    text-align: center;
+    padding-top: 2px;
+}
+
+canvas.wall-drawer-active {
+    cursor: crosshair;
+}
+
+canvas.wall-eraser-active {
+    cursor: pointer;
+}
+
+/* ── Fog of War Controls ── */
+
+.ae-fog-mode-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ae-fog-mode-btns {
+    flex: 1;
+}
+
+.ae-fog-brush-btns {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+#btn-ae-fog-reveal.active {
+    background: rgba(46, 166, 99, 0.2);
+    border-color: rgba(46, 166, 99, 0.6);
+    color: #6fd9a0;
+}
+
+#btn-ae-fog-hide.active {
+    background: rgba(207, 95, 95, 0.2);
+    border-color: rgba(207, 95, 95, 0.6);
+    color: #f0a0a0;
+}
+
+.ae-fog-manual-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+canvas.fog-brush-active {
+    cursor: crosshair;
+}
+
+canvas.light-placer-active {
+    cursor: crosshair;
+}
+
+/* ── Light Popover ── */
+
+.ae-light-popover {
+    position: fixed;
+    z-index: 100;
+    background: rgba(15, 15, 15, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 170px;
+}
+
+.ae-light-popover-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ae-light-popover-row label {
+    font-size: 0.68rem;
+    color: #aaa;
+    min-width: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.ae-light-popover-row input[type="color"] {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.ae-light-popover-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--color-gold, #c5a059);
+}
+
+.ae-light-popover-row .ae-light-range-val {
+    font-size: 0.68rem;
+    color: #ccc;
+    min-width: 22px;
+    text-align: right;
+    font-weight: 700;
+}
+
+.ae-light-popover .ae-btn--danger {
+    margin-top: 2px;
+}
+
+/* Ambient light controls */
+.ae-ambient-light-controls {
+    padding: 6px 0 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ae-ambient-light-controls .ae-setting-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ae-ambient-light-controls .ae-setting-label {
+    min-width: 64px;
+}
+
+.ae-ambient-color-input {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.ae-ambient-light-controls input[type="range"] {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--color-gold, #c5a059);
+}
+
+/* Light drawer list items */
+.ae-drawer-item--light {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ae-light-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
 }
 
 /* ── Embed Mode (loaded inside persiana iframe) ── */

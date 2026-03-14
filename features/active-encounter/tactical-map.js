@@ -50,7 +50,13 @@ window.TacticalMap = class TacticalMap {
     this.designTokens = [];
     this.mapEffects = [];
     this.tileMap = {};
+    this.walls = [];
+    this.lights = [];
+    this.switches = [];
+    this._indoorCells = null;
+    this.selectedSwitchId = null;
     this._tilePainterHover = null;
+    this._wallDrawerState = null;
     this.designTokenLayers = {
       underlay: [],
       overlay: [],
@@ -106,6 +112,11 @@ window.TacticalMap = class TacticalMap {
     this.canDragDesignToken = null;
     this.onBackgroundChange = null;
     this.canEditBackground = null;
+    this.onWallDoorToggle = null;
+    this.onLightMove = null;
+    this.onSwitchToggle = null;
+    this.onSwitchMove = null;
+    this.selectedLightId = null;
     this.activeLayer = "entities";
     this.selectedDesignTokenId = null;
     this.selectedMapEffectId = null;
@@ -187,6 +198,15 @@ window.TacticalMap = class TacticalMap {
     this.mapLayer = this.normalizeMapLayer(extras?.map || null);
     if (extras?.tileMap && typeof extras.tileMap === "object") {
       this.tileMap = extras.tileMap;
+    }
+    if (Array.isArray(extras?.walls)) {
+      this.walls = extras.walls;
+    }
+    if (Array.isArray(extras?.lights)) {
+      this.lights = extras.lights;
+    }
+    if (Array.isArray(extras?.switches)) {
+      this.switches = extras.switches;
     }
 
     const preloadTokenImage = (token) => {
@@ -713,6 +733,7 @@ window.TacticalMap = class TacticalMap {
     }
     if (next !== "background") {
       this.selectedBackground = false;
+      this.selectedLightId = null;
     }
     this.draw();
   }
@@ -967,6 +988,25 @@ window.TacticalMap = class TacticalMap {
     }
   }
 
+  recomputeRooms() {
+    if (!window.FogVisibility?.detectIndoorCells) { this._indoorCells = null; return; }
+    var ml = this.mapLayer || {};
+    var minX = Math.floor(ml.x || 0) - 5;
+    var minY = Math.floor(ml.y || 0) - 5;
+    var maxX = Math.ceil((ml.x || 0) + (ml.widthCells || 20)) + 5;
+    var maxY = Math.ceil((ml.y || 0) + (ml.heightCells || 20)) + 5;
+    for (var i = 0; i < (this.tokens || []).length; i++) {
+      var t = this.tokens[i];
+      minX = Math.min(minX, Math.floor(t.x) - 3);
+      minY = Math.min(minY, Math.floor(t.y) - 3);
+      maxX = Math.max(maxX, Math.ceil(t.x) + 3);
+      maxY = Math.max(maxY, Math.ceil(t.y) + 3);
+    }
+    this._indoorCells = window.FogVisibility.detectIndoorCells(
+      this.walls || [], { minX: minX, minY: minY, maxX: maxX, maxY: maxY }
+    );
+  }
+
   draw(timestamp) {
     if (typeof this.drawGrid !== "function" || typeof this.drawTokens !== "function") {
       throw new Error(
@@ -993,6 +1033,9 @@ window.TacticalMap = class TacticalMap {
     if (this.mapLayer.showGrid !== false) {
       this.drawGrid();
     }
+    if (typeof this.drawWalls === "function") {
+      this.drawWalls();
+    }
     if (typeof this.drawMapEffects === "function") {
       this.drawMapEffects(timestamp);
     }
@@ -1003,11 +1046,29 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawDesignTokens === "function") {
       this.drawDesignTokens("overlay");
     }
+    // Light indicators (dots/glow) drawn before overlay so they're visible
+    if (typeof this.drawLightIndicators === "function") {
+      this.drawLightIndicators();
+    }
+    // Combined overlay: handles BOTH fog (visibility) and lighting (darkness/illumination)
+    if (typeof this.drawFogOfWar === "function") {
+      this.drawFogOfWar();
+    }
+    // Hover halo drawn AFTER overlay so it's never dimmed by lighting/fog
+    if (typeof this.drawTokenHoverOverlay === "function") {
+      this.drawTokenHoverOverlay(timestamp);
+    }
+    if (typeof this.drawFogBrushHover === "function") {
+      this.drawFogBrushHover();
+    }
     if (typeof this.drawMeasurement === "function") {
       this.drawMeasurement();
     }
     if (typeof this.drawTilePainterHover === "function") {
       this.drawTilePainterHover();
+    }
+    if (typeof this.drawWallDrawerPreview === "function") {
+      this.drawWallDrawerPreview();
     }
     this.ctx.restore();
     this._repositionViewPin();
@@ -1015,6 +1076,15 @@ window.TacticalMap = class TacticalMap {
   }
 };
 
+if (typeof window.__applyTacticalMapLightRenderer === "function") {
+  window.__applyTacticalMapLightRenderer(window.TacticalMap);
+}
+if (typeof window.__applyTacticalMapWallRenderer === "function") {
+  window.__applyTacticalMapWallRenderer(window.TacticalMap);
+}
+if (typeof window.__applyTacticalMapFogRenderer === "function") {
+  window.__applyTacticalMapFogRenderer(window.TacticalMap);
+}
 if (typeof window.__applyTacticalMapRender === "function") {
   window.__applyTacticalMapRender(window.TacticalMap);
 }
