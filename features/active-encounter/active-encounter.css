@@ -2517,6 +2517,76 @@
     font-style: italic;
 }
 
+/* ── Terrain Palette ── */
+.ae-terrain-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.ae-terrain-swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    width: 52px;
+}
+
+.ae-terrain-swatch img {
+    border-radius: 4px;
+    display: block;
+}
+
+.ae-terrain-swatch span {
+    font-size: 0.6rem;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 48px;
+    text-align: center;
+}
+
+.ae-terrain-swatch:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ae-terrain-swatch.active {
+    border-color: var(--color-gold, #d7bb78);
+    background: rgba(215, 187, 120, 0.12);
+}
+
+.ae-terrain-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.ae-terrain-controls .ae-setting-label {
+    margin: 0;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+#btn-ae-terrain-eraser.active {
+    background: rgba(215, 187, 120, 0.2);
+    border-color: var(--color-gold, #d7bb78);
+    color: var(--color-gold, #d7bb78);
+}
+
+canvas.tile-painter-active {
+    cursor: crosshair;
+}
+
 /* ── Embed Mode (loaded inside persiana iframe) ── */
 html.embed-mode .ae-header { display: none; }
 html.embed-mode .active-encounter-container {

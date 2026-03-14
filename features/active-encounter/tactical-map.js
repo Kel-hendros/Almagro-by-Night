@@ -49,6 +49,8 @@ window.TacticalMap = class TacticalMap {
     this.tokens = [];
     this.designTokens = [];
     this.mapEffects = [];
+    this.tileMap = {};
+    this._tilePainterHover = null;
     this.designTokenLayers = {
       underlay: [],
       overlay: [],
@@ -183,6 +185,9 @@ window.TacticalMap = class TacticalMap {
     };
     this.instances = instances || [];
     this.mapLayer = this.normalizeMapLayer(extras?.map || null);
+    if (extras?.tileMap && typeof extras.tileMap === "object") {
+      this.tileMap = extras.tileMap;
+    }
 
     const preloadTokenImage = (token) => {
       const hasValidImageObject =
@@ -982,6 +987,9 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawBackground === "function") {
       this.drawBackground();
     }
+    if (typeof this.drawTileMap === "function") {
+      this.drawTileMap();
+    }
     if (this.mapLayer.showGrid !== false) {
       this.drawGrid();
     }
@@ -997,6 +1005,9 @@ window.TacticalMap = class TacticalMap {
     }
     if (typeof this.drawMeasurement === "function") {
       this.drawMeasurement();
+    }
+    if (typeof this.drawTilePainterHover === "function") {
+      this.drawTilePainterHover();
     }
     this.ctx.restore();
     this._repositionViewPin();

@@ -365,6 +365,14 @@
       const worldCellY = worldY / this.gridSize;
       const layer = this.activeLayer || "entities";
 
+      // Tile painter intercept
+      if (this._tilePainter && this._tilePainter.isActive()) {
+        if (this._tilePainter.handleMouseDown(e, worldCellX, worldCellY)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
       if (this.measureToolActive) {
         if (e.button === 0) {
           e.preventDefault();
@@ -675,6 +683,18 @@
     };
 
     proto.handleMouseMove = function handleMouseMove(e) {
+      // Tile painter intercept
+      if (this._tilePainter && this._tilePainter.isActive()) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        const cellX = worldX / this.gridSize;
+        const cellY = worldY / this.gridSize;
+        if (this._tilePainter.handleMouseMove(cellX, cellY)) return;
+      }
+
       if (this.isPanning) {
         const dx = e.clientX - this.dragStart.x;
         const dy = e.clientY - this.dragStart.y;
@@ -825,6 +845,11 @@
     };
 
     proto.handleMouseUp = function handleMouseUp() {
+      // Tile painter intercept
+      if (this._tilePainter && this._tilePainter.isActive()) {
+        this._tilePainter.handleMouseUp();
+      }
+
       this.isPanning = false;
       if (this.isDraggingToken) {
         this.isDraggingToken = false;

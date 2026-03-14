@@ -90,6 +90,7 @@
   let assetsService = null;
   let browserController = null;
   let drawerController = null;
+  let tilePainter = null;
   let tokenActionsController = null;
   let tokenContextMenuController = null;
 
@@ -278,6 +279,7 @@
       removeEncounterBackground: () => removeEncounterBackground(),
       getMap: () => state.map,
       saveEncounter: () => saveEncounter(),
+      getTilePainter: () => tilePainter,
     });
     tokenActionsController = window.AEEncounterTokenActions?.createController?.({
       state,
@@ -324,6 +326,10 @@
     // Init Map
     state.map = new TacticalMap("ae-map-canvas", "ae-map-container");
     state.map.freeMovement = !!state.encounter?.data?.freeMovement;
+    // Ensure tileMap exists
+    if (!state.encounter.data.tileMap || typeof state.encounter.data.tileMap !== "object") {
+      state.encounter.data.tileMap = {};
+    }
     state.map.setData(
       state.encounter?.data?.tokens,
       state.encounter?.data?.instances,
@@ -331,8 +337,25 @@
         map: state.encounter?.data?.map || null,
         designTokens: state.encounter?.data?.designTokens || [],
         mapEffects: state.encounter?.data?.mapEffects || [],
+        tileMap: state.encounter.data.tileMap,
       },
     );
+
+    // Init Tile Painter (narrator only)
+    if (window.TilePainter) {
+      tilePainter = window.TilePainter.createTilePainter({
+        getMap: () => state.map,
+        getTileMap: () => state.encounter?.data?.tileMap || {},
+        setTileMap: (newMap) => {
+          if (state.encounter?.data) {
+            state.encounter.data.tileMap = newMap;
+            if (state.map) state.map.tileMap = newMap;
+          }
+        },
+        onChanged: () => saveEncounter(),
+      });
+      state.map._tilePainter = tilePainter;
+    }
     state.map.setActiveInstance(
       state.encounter?.data?.activeInstanceId || null,
     );
@@ -1504,6 +1527,7 @@
         map: state.encounter.data.map || null,
         designTokens: mapDesignTokens,
         mapEffects: state.encounter.data.mapEffects || [],
+        tileMap: state.encounter.data.tileMap || {},
       });
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
 
@@ -2904,6 +2928,7 @@
         })),
       ),
       mapEffects: normalizeMapEffectsData(state.encounter.data.mapEffects),
+      tileMap: state.encounter.data.tileMap || {},
     };
 
     state.isApplyingRemoteUpdate = true;

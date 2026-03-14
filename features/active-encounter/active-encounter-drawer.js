@@ -12,6 +12,7 @@
       requestBackgroundUpload,
       removeEncounterBackground,
       getMap,
+      getTilePainter,
     } = ctx;
 
     function setDrawerTab(tab) {
@@ -144,8 +145,101 @@
         });
       }
 
+      // Terrain palette
+      renderTerrainPalette();
+      bindTerrainEvents();
+
       setDrawerTab("assets");
       refreshGridOpacityButtons();
+    }
+
+    function renderTerrainPalette() {
+      const palette = document.getElementById("ae-terrain-palette");
+      if (!palette || !global.TileTextures) return;
+      const TT = global.TileTextures;
+      palette.innerHTML = TT.TEXTURE_IDS.map((id) => {
+        const label = TT.TEXTURE_LABELS[id] || id;
+        const thumb = TT.getThumbnailDataUrl(id);
+        return '<button class="ae-terrain-swatch" data-texture="' + id + '" title="' + label + '">' +
+          '<img src="' + thumb + '" alt="' + label + '" width="36" height="36">' +
+          '<span>' + label + '</span></button>';
+      }).join("");
+    }
+
+    function bindTerrainEvents() {
+      const palette = document.getElementById("ae-terrain-palette");
+      if (palette) {
+        palette.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-texture]");
+          if (!btn || !requireAdminAction()) return;
+          const painter = getTilePainter?.();
+          if (!painter) return;
+          const textureId = btn.dataset.texture;
+          const wasActive = painter.getTexture() === textureId && painter.isActive();
+          if (wasActive) {
+            painter.deactivate();
+          } else {
+            painter.setTexture(textureId);
+          }
+          refreshTerrainPaletteUI();
+        });
+      }
+
+      const brushBtns = document.getElementById("ae-brush-sizes");
+      if (brushBtns) {
+        brushBtns.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-brush]");
+          if (!btn) return;
+          const painter = getTilePainter?.();
+          if (!painter) return;
+          painter.setBrushSize(parseInt(btn.dataset.brush, 10) || 1);
+          refreshBrushSizeUI();
+        });
+      }
+
+      document.getElementById("btn-ae-terrain-eraser")?.addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        const painter = getTilePainter?.();
+        if (!painter) return;
+        if (painter.isActive() && !painter.getTexture()) {
+          painter.deactivate();
+        } else {
+          painter.setTexture(null);
+          painter.activate(null);
+        }
+        refreshTerrainPaletteUI();
+      });
+
+      document.getElementById("btn-ae-terrain-clear")?.addEventListener("click", () => {
+        if (!requireAdminAction()) return;
+        const painter = getTilePainter?.();
+        if (!painter) return;
+        if (confirm("¿Limpiar todo el terreno?")) {
+          painter.clearAll();
+        }
+      });
+    }
+
+    function refreshTerrainPaletteUI() {
+      const painter = getTilePainter?.();
+      const activeTexture = painter?.isActive() ? painter.getTexture() : null;
+      const isEraserActive = painter?.isActive() && !painter.getTexture();
+      const swatches = document.querySelectorAll(".ae-terrain-swatch");
+      swatches.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.texture === activeTexture);
+      });
+      const eraserBtn = document.getElementById("btn-ae-terrain-eraser");
+      if (eraserBtn) eraserBtn.classList.toggle("active", isEraserActive);
+      refreshBrushSizeUI();
+    }
+
+    function refreshBrushSizeUI() {
+      const painter = getTilePainter?.();
+      const currentSize = painter?.getBrushSize() || 1;
+      const btns = document.querySelectorAll("#ae-brush-sizes [data-brush]");
+      btns.forEach((btn) => {
+        btn.classList.toggle("active", parseInt(btn.dataset.brush, 10) === currentSize);
+      });
     }
 
     function renderAssetLists() {
@@ -298,6 +392,11 @@
         if (!el) return;
         el.style.display = canEditEncounter() ? "" : "none";
       });
+
+      const terrainSection = document.getElementById("ae-terrain-section");
+      if (terrainSection) {
+        terrainSection.style.display = canEditEncounter() ? "" : "none";
+      }
       refreshGridOpacityButtons();
 
       var freeMovCheck = document.getElementById("ae-free-movement-check");
@@ -312,6 +411,7 @@
       renderAssetLists,
       setBusy,
       applyPermissions,
+      refreshTerrainPaletteUI,
     };
   }
 

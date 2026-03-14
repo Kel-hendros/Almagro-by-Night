@@ -248,6 +248,68 @@
       });
     };
 
+    proto.drawTileMap = function drawTileMap() {
+      const tileMap = this.tileMap;
+      if (!tileMap || typeof tileMap !== "object") return;
+      const keys = Object.keys(tileMap);
+      if (!keys.length) return;
+
+      const gs = this.gridSize;
+      const viewportWidth = this.canvas.width / this.scale;
+      const viewportHeight = this.canvas.height / this.scale;
+      const startX = -this.offsetX / this.scale;
+      const startY = -this.offsetY / this.scale;
+      const minCellX = Math.floor(startX / gs) - 1;
+      const maxCellX = Math.ceil((startX + viewportWidth) / gs) + 1;
+      const minCellY = Math.floor(startY / gs) - 1;
+      const maxCellY = Math.ceil((startY + viewportHeight) / gs) + 1;
+
+      const TT = global.TileTextures;
+      if (!TT) return;
+
+      this.ctx.save();
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const parts = key.split(",");
+        const cx = parseInt(parts[0], 10);
+        const cy = parseInt(parts[1], 10);
+        if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
+        const textureId = tileMap[key];
+        const pattern = TT.getOrCreatePattern(this.ctx, textureId);
+        if (!pattern) continue;
+        this.ctx.fillStyle = pattern;
+        this.ctx.save();
+        this.ctx.translate(cx * gs, cy * gs);
+        // Reset pattern transform so it tiles from cell origin
+        if (typeof pattern.setTransform === "function") {
+          pattern.setTransform(new DOMMatrix().translateSelf(0, 0));
+        }
+        this.ctx.fillRect(0, 0, gs, gs);
+        this.ctx.restore();
+      }
+      this.ctx.restore();
+    };
+
+    proto.drawTilePainterHover = function drawTilePainterHover() {
+      const hover = this._tilePainterHover;
+      if (!hover) return;
+      const gs = this.gridSize;
+      const half = Math.floor(hover.brushSize / 2);
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+      this.ctx.setLineDash([Math.max(4 / this.scale, 2), Math.max(3 / this.scale, 2)]);
+      for (let dy = 0; dy < hover.brushSize; dy++) {
+        for (let dx = 0; dx < hover.brushSize; dx++) {
+          const cx = (hover.cellX - half + dx) * gs;
+          const cy = (hover.cellY - half + dy) * gs;
+          this.ctx.strokeRect(cx, cy, gs, gs);
+        }
+      }
+      this.ctx.setLineDash([]);
+      this.ctx.restore();
+    };
+
     proto.drawBackground = function drawBackground() {
       if (!this.mapLayer || !this.backgroundImage) return;
       if (!this.backgroundImage.complete || this.backgroundImage.naturalWidth <= 0)
