@@ -1,4 +1,5 @@
 <link rel="stylesheet" href="css/card-creator.css">
+<link rel="stylesheet" href="css/card-creator-custom-border.css">
 
 <div id="cc-root" class="main-container games cc-root">
 
@@ -47,7 +48,12 @@
       <!-- Border -->
       <div>
         <p class="cc-section-title">Borde <span id="cc-selected-border" class="cc-selected-border"></span></p>
+        <div class="cc-border-mode-toggle">
+          <button class="cc-mode-btn active" data-mode="gallery">Galería</button>
+          <button class="cc-mode-btn" data-mode="custom">Personalizado</button>
+        </div>
         <div id="cc-border-options" class="cc-border-options"></div>
+        <div id="cc-custom-border-panel" class="hidden"></div>
       </div>
 
       <!-- Text -->
@@ -138,5 +144,6 @@
   </div>
 </div>
 
+<script src="js/tools/card-creator/custom-border.js"></script>
 <script src="js/tools/card-creator/card-creator.js"></script>
 <script>if (window.initCardCreatorLocal) window.initCardCreatorLocal();</script>

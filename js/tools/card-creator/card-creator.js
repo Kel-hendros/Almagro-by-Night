@@ -317,9 +317,15 @@
       }
 
       // ── 2. Border frame (full card) + drop shadow ──
-      const activeBorder = $(".cc-border-thumb.active");
-      if (activeBorder) {
-        const borderImg = await loadImg(activeBorder.dataset.border);
+      let borderSrc;
+      if (global.CCCustomBorder && global.CCCustomBorder.isActive()) {
+        borderSrc = global.CCCustomBorder.getImageDataUrl();
+      } else {
+        const activeBorder = $(".cc-border-thumb.active");
+        borderSrc = activeBorder?.dataset.border;
+      }
+      if (borderSrc) {
+        const borderImg = await loadImg(borderSrc);
         if (borderImg) {
           ctx.save();
           ctx.shadowColor = "rgba(0,0,0,0.56)";
@@ -379,9 +385,24 @@
         }
       }
 
-      // ── 5. Text ──
+      // ── 5. Text backdrop (custom border only) + Text ──
       const titleText = el.nameInput.value || "";
       const descText  = el.descInput.value || "";
+      const isCustomBorder = global.CCCustomBorder && global.CCCustomBorder.isActive();
+
+      if (isCustomBorder && (titleText || descText)) {
+        const bdW = REF_W * 0.84 * sx;
+        const bdH = REF_H * 0.14 * sy;
+        const bdX = ox + (W - bdW) / 2;
+        const bdY = oy + TEXT_TOP * sy;
+        const bdR = 12 * Math.min(sx, sy);
+        ctx.save();
+        ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        ctx.beginPath();
+        ctx.roundRect(bdX, bdY, bdW, bdH, bdR);
+        ctx.fill();
+        ctx.restore();
+      }
 
       if (titleText || descText) {
         const textCenterX = ox + W / 2;
@@ -471,6 +492,7 @@
       rangeZoom:    $("#cc-range-zoom"),
       nameInput:    $("#cc-card-name"),
       descInput:    $("#cc-card-desc"),
+      cardText:     $(".cc-card-text"),
       cardTitle:    $(".cc-card-title"),
       cardDesc:     $(".cc-card-description"),
       selectedBorderSpan: $("#cc-selected-border"),
@@ -565,6 +587,40 @@
       el.selectedBorderSpan.textContent = initialBorder.alt || "";
       currentBorder = initialBorder.alt || "";
     }
+
+    // ── Mode toggle (Gallery ↔ Custom) ──
+    let _customInited = false;
+    const modeBtns = $$(".cc-mode-btn");
+    const galleryPanel = $("#cc-border-options");
+    const customPanel = $("#cc-custom-border-panel");
+
+    function setBorderMode(mode) {
+      modeBtns.forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+      galleryPanel.classList.toggle("hidden", mode !== "gallery");
+      customPanel.classList.toggle("hidden", mode !== "custom");
+
+      if (mode === "custom") {
+        if (!_customInited && global.CCCustomBorder) {
+          global.CCCustomBorder.init(customPanel, changeBorder);
+          _customInited = true;
+        }
+        if (global.CCCustomBorder) global.CCCustomBorder.activate();
+        el.selectedBorderSpan.textContent = "Personalizado";
+        el.cardText.classList.add("cc-text-backdrop");
+      } else {
+        if (global.CCCustomBorder) global.CCCustomBorder.deactivate();
+        el.cardText.classList.remove("cc-text-backdrop");
+        const active = $(".cc-border-thumb.active");
+        if (active) {
+          changeBorder(active.dataset.border);
+          el.selectedBorderSpan.textContent = active.alt || "";
+        }
+      }
+    }
+
+    modeBtns.forEach(btn => {
+      btn.addEventListener("click", () => setBorderMode(btn.dataset.mode));
+    });
 
     // ── Text inputs → live preview ──
     el.nameInput.addEventListener("input", () => {

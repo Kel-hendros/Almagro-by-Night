@@ -1,0 +1,308 @@
+/* ============================================================
+   Card Creator – Custom Border panel
+   ============================================================ */
+
+/* ── Panel layout ──────────────────────────────────────── */
+.ccb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ccb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Fill type tabs ────────────────────────────────────── */
+.ccb-fill-tabs {
+  display: flex;
+}
+
+.ccb-tab {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-divider);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+}
+.ccb-tab:first-child { border-radius: 10px 0 0 10px; }
+.ccb-tab:last-child  { border-radius: 0 10px 10px 0; }
+.ccb-tab.active {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+/* ── Fill panes ────────────────────────────────────────── */
+.ccb-fill-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+/* ── Color row ─────────────────────────────────────────── */
+.ccb-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+.ccb-color-row input[type="color"] {
+  width: 36px;
+  height: 28px;
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 4px;
+  padding: 1px;
+  cursor: pointer;
+  background: var(--theme-bg-surface);
+}
+
+/* ── Gradient colors ───────────────────────────────────── */
+.ccb-gradient-colors {
+  display: flex;
+  gap: 1rem;
+}
+
+/* ── Direction buttons ─────────────────────────────────── */
+.ccb-direction-btns {
+  display: flex;
+  gap: 2px;
+}
+
+.ccb-dir-btn {
+  width: 36px;
+  height: 32px;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.ccb-dir-btn.active {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+/* ── Texture overlay grid ──────────────────────────────── */
+.ccb-tex-hint {
+  font-weight: 400;
+  font-size: 0.68rem;
+  color: var(--theme-text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ccb-texture-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ccb-tex-thumb {
+  width: 44px;
+  height: 44px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  background-size: 44px 44px;
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.ccb-tex-thumb:hover {
+  box-shadow: 0 0 6px var(--theme-accent);
+}
+.ccb-tex-thumb.active {
+  box-shadow: 0 0 8px var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+
+/* "Ninguna" texture thumb */
+.ccb-tex-none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-bg-surface) !important;
+  color: var(--theme-text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* ── Overlay sliders ───────────────────────────────────── */
+.ccb-overlay-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ccb-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ccb-slider-row label {
+  font-size: 0.75rem;
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+  min-width: 4rem;
+}
+.ccb-slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--theme-accent);
+  height: 6px;
+}
+.ccb-slider-value {
+  width: 2.5rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+}
+
+/* ── Blend mode row ────────────────────────────────────── */
+.ccb-blend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ccb-blend-row > label {
+  font-size: 0.75rem;
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+  min-width: 4rem;
+}
+
+.ccb-blend-btns {
+  display: flex;
+  gap: 2px;
+}
+
+.ccb-blend-btn {
+  padding: 0.2rem 0.5rem;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: background 0.15s;
+}
+.ccb-blend-btn.active {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+/* ── Presets ───────────────────────────────────────────── */
+.ccb-presets-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ccb-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.25rem 0.5rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--theme-text-secondary);
+  transition: border-color 0.15s, background 0.15s;
+}
+.ccb-preset-chip:hover {
+  border-color: var(--theme-accent);
+  background: var(--theme-bg-raised, var(--theme-bg-surface));
+}
+
+.ccb-preset-label {
+  pointer-events: none;
+}
+
+.ccb-preset-delete {
+  background: none;
+  border: none;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 50%;
+  transition: color 0.15s;
+}
+.ccb-preset-delete:hover {
+  color: var(--color-danger, #c0392b);
+}
+
+.ccb-preset-save-row {
+  display: flex;
+  gap: 0.35rem;
+}
+.ccb-preset-save-row input {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  background: var(--theme-bg-surface);
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 6px;
+  color: var(--theme-text-primary);
+  font-size: 0.78rem;
+}
+.ccb-preset-save-row input:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+
+.ccb-save-preset-btn {
+  padding: 0.3rem 0.65rem;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.ccb-save-preset-btn:hover {
+  opacity: 0.85;
+}
+
+.ccb-no-presets {
+  font-size: 0.72rem;
+  color: var(--theme-text-muted);
+  margin: 0;
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .ccb-dir-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .ccb-blend-btn {
+    min-height: 44px;
+    padding: 0.3rem 0.6rem;
+  }
+  .ccb-tex-thumb {
+    width: 48px;
+    height: 48px;
+    background-size: 48px 48px;
+  }
+}

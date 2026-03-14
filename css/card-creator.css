@@ -187,6 +187,30 @@
   border-color: var(--theme-accent);
 }
 
+/* ── Border mode toggle ───────────────────────────── */
+.cc-border-mode-toggle {
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+
+.cc-mode-btn {
+  flex: 1;
+  padding: 0.25rem 0.75rem;
+  background: var(--theme-bg-surface);
+  color: var(--theme-text-secondary);
+  border: 1px solid var(--theme-border-divider);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+}
+.cc-mode-btn:first-child { border-radius: 12px 0 0 12px; }
+.cc-mode-btn:last-child  { border-radius: 0 12px 12px 0; }
+.cc-mode-btn.active {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
 /* ── Border selector ───────────────────────────────── */
 .cc-border-options {
   display: flex;
@@ -437,6 +461,10 @@
   color: #fff; /* card-art constant — intentionally white over card artwork */
   text-shadow: 3px 3px 1px #000; /* card-art constant */
   margin-top: 3.5%;
+  border-radius: 12px;
+}
+.cc-card-text.cc-text-backdrop {
+  background: rgba(0, 0, 0, 0.55);
 }
 .cc-card-title {
   font-size: 2rem;
