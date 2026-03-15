@@ -1,17 +1,36 @@
 (function initActiveEncounterFeatureBootstrap(global) {
   const FEATURE_BASE = "features/active-encounter/";
   const CHAIN = [
-    "tile-textures.js",
-    "tile-painter.js",
-    "wall-renderer.js",
-    "wall-drawer.js",
-    "light-renderer.js",
-    "fog-visibility.js",
-    "fog-renderer.js",
-    "fog-brush.js",
-    "tactical-map-render.js",
-    "tactical-map-interactions.js",
-    "tactical-map.js",
+    // Terrain
+    "terrain/tile-textures.js",
+    "terrain/tile-painter.js",
+    // Walls
+    "walls/wall-renderer.js",
+    "walls/wall-drawer.js",
+    // Lighting
+    "lighting/light-renderer.js",
+    "lighting/light-switch-manager.js",
+    "lighting/light-visibility.js",
+    // Fog
+    "fog/fog-visibility.js",
+    "fog/fog-renderer.js",
+    "fog/fog-brush.js",
+    // Tactical Map
+    "tactical-map/tactical-map-render.js",
+    "tactical-map/tactical-map-interactions.js",
+    "tactical-map/tactical-map.js",
+    // Persistence
+    "persistence/encounter-persistence.js",
+    // Context menus
+    "context-menus/design-token-menu.js",
+    "context-menus/map-context-menu.js",
+    // Modal
+    "modal/instance-modal.js",
+    // Instances
+    "instances/instance-manager.js",
+    // Realtime
+    "realtime/encounter-sync.js",
+    // Encounter subsystems
     "active-encounter-turns.js",
     "active-encounter-layers-toolbar.js",
     "active-encounter-assets-service.js",
@@ -21,6 +40,7 @@
     "token-actions.js",
     "token-context-menu.js",
     "roll-feed.js",
+    // Orchestrator
     "active-encounter.js",
   ];
 

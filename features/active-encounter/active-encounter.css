@@ -118,12 +118,12 @@
 
 /* ── Buttons ── */
 .ae-btn {
-    padding: 4px 12px;
+    padding: 4px 10px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     transition: all 0.15s ease;
     letter-spacing: 0.3px;
 }
@@ -254,6 +254,53 @@
     gap: 10px;
     padding: 8px;
     z-index: 20;
+    transition: width 0.25s ease, min-width 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
+    overflow: hidden;
+}
+
+.ae-timeline-sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    opacity: 0;
+    border-left: none;
+    pointer-events: none;
+}
+
+/* ── Timeline Toggle FAB (right side) ── */
+.ae-fab-timeline {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(30, 30, 30, 0.85);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    z-index: 32;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.ae-fab-timeline span {
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.25s ease;
+}
+
+.ae-fab-timeline:hover {
+    transform: scale(1.08);
+    background: rgba(50, 50, 50, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.ae-fab-timeline.is-collapsed span {
+    transform: rotate(180deg);
 }
 
 /* ── Turn Controls ── */
@@ -740,27 +787,27 @@
 
 .ae-drawer-content {
     flex-grow: 1;
-    padding: 12px;
+    padding: 8px 10px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
     overflow: hidden;
 }
 
 .ae-drawer-tabs {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .ae-drawer-tab {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.05);
     color: #d4d4d4;
-    font-size: 1rem;
+    font-size: 0.85rem;
     cursor: pointer;
 }
 
@@ -773,7 +820,7 @@
 .ae-tab-pane {
     display: none;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
@@ -794,8 +841,8 @@
 .ae-collapse>summary {
     list-style: none;
     cursor: pointer;
-    padding: 8px 0 7px;
-    font-size: 0.74rem;
+    padding: 5px 0 4px;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: #d6d6d6;
@@ -805,7 +852,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
 }
 
 .ae-collapse>summary::-webkit-details-marker {
@@ -813,10 +860,10 @@
 }
 
 .ae-collapse-body {
-    padding: 7px 0 10px 0;
+    padding: 5px 0 6px 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 5px;
 }
 
 .ae-section-add-btn {
@@ -847,34 +894,36 @@
 .ae-entity-subsection {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
 }
 
 .ae-entity-subheader {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
     color: #cfcfcf;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.7px;
-    padding-bottom: 4px;
+    padding-bottom: 3px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .ae-setting-row {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
 }
 
 .ae-setting-label {
-    font-size: 0.72rem;
-    color: #d9d9d9;
+    font-size: 0.65rem;
+    color: #999;
     letter-spacing: 0.4px;
     text-transform: uppercase;
+    white-space: nowrap;
+    min-width: 50px;
 }
 
 .ae-setting-check {
@@ -893,18 +942,20 @@
 }
 
 .ae-levels {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 6px;
+    display: flex;
+    gap: 3px;
+    flex: 1;
 }
 
 .ae-level-btn {
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: rgba(255, 255, 255, 0.05);
     color: #d5d5d5;
-    border-radius: 8px;
-    height: 28px;
-    font-size: 0.74rem;
+    border-radius: 6px;
+    height: 24px;
+    min-width: 24px;
+    flex: 1;
+    font-size: 0.68rem;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -940,8 +991,8 @@
     background: transparent;
     border-radius: 4px;
     color: #d9d9d9;
-    font-size: 0.72rem;
-    padding: 6px 4px;
+    font-size: 0.68rem;
+    padding: 4px 4px;
     text-align: left;
     cursor: pointer;
     transition: opacity 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
@@ -1127,320 +1178,6 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 3px;
-}
-
-/* ── Modal ── */
-.ae-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(4px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.ae-modal-content {
-    background: #0e0e0e;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    width: 750px;
-    max-width: 95%;
-    padding: 16px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.ae-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 8px;
-}
-
-.ae-modal-header h3 {
-    margin: 0;
-    color: var(--color-cream);
-    font-size: 1rem;
-}
-
-.ae-title-name {
-    color: var(--color-red-accent);
-}
-
-.ae-title-code {
-    color: var(--color-cream);
-    font-weight: normal;
-    opacity: 0.6;
-    font-size: 0.85rem;
-}
-
-/* ── Stats in Modal ── */
-.ae-group-fieldset {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 12px;
-    padding: 10px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.ae-group-fieldset legend {
-    padding: 0 8px;
-    color: var(--color-red-accent);
-    font-family: 'Special Elite', cursive;
-    font-size: 0.85rem;
-}
-
-.ae-stat-grid-3col {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
-
-.ae-stat-grid-4col {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-}
-
-.ae-stat-col h4 {
-    color: #999;
-    margin: 0 0 6px 0;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 3px;
-}
-
-.ae-stat-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    margin-bottom: 2px;
-    padding: 1px 0;
-}
-
-.stat-label {
-    color: #aaa;
-}
-
-.stat-val {
-    color: #f0f0f0;
-    font-weight: 700;
-}
-
-.ae-divider {
-    border: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 12px 0;
-}
-
-/* ── Modal Health Controls ── */
-.ae-health-section h4 {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #aaa;
-    margin-bottom: 6px;
-}
-
-.ae-modal-health-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 6px;
-}
-
-.ae-ctrl-btn.ae-size-lg {
-    width: 36px;
-    height: 36px;
-    font-size: 1.1rem;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    color: #ccc;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.15s ease;
-}
-
-.ae-ctrl-btn.ae-size-lg:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-}
-
-.ae-hp-bar.ae-size-lg {
-    flex-grow: 1;
-    height: 24px;
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Damage/Heal Input */
-.ae-damage-input {
-    width: 36px;
-    height: 36px;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 700;
-    border-radius: 6px;
-    flex-shrink: 0;
-    -moz-appearance: textfield;
-    appearance: textfield;
-}
-
-.ae-damage-input::-webkit-outer-spin-button,
-.ae-damage-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-}
-
-.ae-damage-input:focus {
-    outline: none;
-    border-color: var(--color-red-accent, #ad3838);
-}
-
-/* ── Editable Stat Picker ── */
-.editable-stat {
-    cursor: pointer;
-    border-bottom: 1px dotted #555;
-    transition: all 0.15s ease;
-    position: relative;
-    padding: 0 3px;
-}
-
-.editable-stat:hover {
-    color: var(--color-red-accent);
-    border-color: var(--color-red-accent);
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 3px;
-}
-
-.ae-stat-picker-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 20000;
-    display: none;
-}
-
-.ae-stat-picker {
-    position: absolute;
-    background: rgba(10, 10, 10, 0.97);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--color-red-accent);
-    border-radius: 6px;
-    padding: 6px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 3px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-    z-index: 20001;
-    display: none;
-    min-width: 100px;
-}
-
-.ae-picker-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #eee;
-    font-weight: 700;
-    font-family: 'Special Elite', cursive;
-    padding: 6px 0;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.85rem;
-    min-width: 28px;
-}
-
-.ae-picker-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--color-red-accent);
-    color: var(--color-red-accent);
-}
-
-.ae-picker-btn.active {
-    background: var(--color-red-accent);
-    color: var(--color-cream);
-    border-color: var(--color-red-accent);
-}
-
-/* ── PC Badge ── */
-.ae-pc-badge {
-    font-size: 0.55rem;
-    background: rgba(197, 160, 89, 0.15);
-    color: var(--color-gold, #c5a059);
-    padding: 1px 6px;
-    border-radius: 8px;
-    text-transform: uppercase;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    border: 1px solid rgba(197, 160, 89, 0.2);
-    vertical-align: middle;
-    margin-left: 6px;
-}
-
-/* ── PC Temp Stat ── */
-.ae-stat-temp {
-    color: #27ae60;
-    margin-left: 4px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    background: rgba(39, 174, 96, 0.1);
-    padding: 0 3px;
-    border-radius: 3px;
-    border: 1px solid rgba(39, 174, 96, 0.2);
-}
-
-/* ── PC Readonly View ── */
-.ae-pc-readonly-view .ae-stat-row {
-    padding: 3px 6px;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 2px;
-    margin-bottom: 1px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.ae-pc-readonly-view .ae-stat-row:nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.ae-pc-readonly-view .ae-stat-col h4 {
-    margin: 6px 0 5px 0;
-    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-    padding-bottom: 4px;
-    color: #999;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.ae-pc-readonly-view .ae-group-fieldset {
-    margin-bottom: 14px;
-    border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* =============================================
@@ -2534,22 +2271,22 @@
 .ae-terrain-palette {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 8px;
+    gap: 3px;
+    margin-bottom: 4px;
 }
 
 .ae-terrain-swatch {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 4px;
+    gap: 1px;
+    padding: 3px;
     border: 2px solid transparent;
-    border-radius: 6px;
+    border-radius: 5px;
     background: rgba(255, 255, 255, 0.05);
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
-    width: 52px;
+    width: 44px;
 }
 
 .ae-terrain-swatch img {
@@ -2558,12 +2295,12 @@
 }
 
 .ae-terrain-swatch span {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     color: #999;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 48px;
+    max-width: 40px;
     text-align: center;
 }
 
@@ -2580,8 +2317,8 @@
 .ae-terrain-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 6px;
+    margin-bottom: 4px;
 }
 
 .ae-terrain-controls .ae-setting-label {
@@ -2604,19 +2341,18 @@ canvas.tile-painter-active {
 
 .ae-wall-types {
     display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 4px;
+    margin-bottom: 4px;
 }
 
 .ae-wall-type-btn {
     flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 6px 4px;
+    gap: 6px;
+    padding: 4px 6px;
     border: 2px solid transparent;
-    border-radius: 6px;
+    border-radius: 5px;
     background: rgba(255, 255, 255, 0.05);
     color: #999;
     font-size: 0.6rem;
@@ -2638,9 +2374,10 @@ canvas.tile-painter-active {
 
 .ae-wall-type-icon {
     display: block;
-    width: 36px;
-    height: 20px;
+    width: 24px;
+    height: 16px;
     position: relative;
+    flex-shrink: 0;
 }
 
 .ae-wall-type-icon--wall::after {
@@ -2708,8 +2445,7 @@ canvas.tile-painter-active {
 
 .ae-wall-mode-btns {
     display: flex;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: 4px;
 }
 
 .ae-btn.ae-btn--half {
@@ -2752,8 +2488,7 @@ canvas.wall-eraser-active {
 
 .ae-fog-brush-btns {
     display: flex;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: 4px;
 }
 
 #btn-ae-fog-reveal.active {
@@ -2771,7 +2506,7 @@ canvas.wall-eraser-active {
 .ae-fog-manual-controls {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 canvas.fog-brush-active {
@@ -2780,116 +2515,6 @@ canvas.fog-brush-active {
 
 canvas.light-placer-active {
     cursor: crosshair;
-}
-
-/* ── Light Popover ── */
-
-.ae-light-popover {
-    position: fixed;
-    z-index: 100;
-    background: rgba(15, 15, 15, 0.97);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 170px;
-}
-
-.ae-light-popover-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ae-light-popover-row label {
-    font-size: 0.68rem;
-    color: #aaa;
-    min-width: 50px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-}
-
-.ae-light-popover-row input[type="color"] {
-    width: 28px;
-    height: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    padding: 0;
-}
-
-.ae-light-popover-row input[type="range"] {
-    flex: 1;
-    height: 4px;
-    accent-color: var(--color-gold, #c5a059);
-}
-
-.ae-light-popover-row .ae-light-range-val {
-    font-size: 0.68rem;
-    color: #ccc;
-    min-width: 22px;
-    text-align: right;
-    font-weight: 700;
-}
-
-.ae-light-popover .ae-btn--danger {
-    margin-top: 2px;
-}
-
-/* Ambient light controls */
-.ae-ambient-light-controls {
-    padding: 6px 0 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.ae-ambient-light-controls .ae-setting-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ae-ambient-light-controls .ae-setting-label {
-    min-width: 64px;
-}
-
-.ae-ambient-color-input {
-    width: 28px;
-    height: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    padding: 0;
-}
-
-.ae-ambient-light-controls input[type="range"] {
-    flex: 1;
-    height: 4px;
-    accent-color: var(--color-gold, #c5a059);
-}
-
-/* Light drawer list items */
-.ae-drawer-item--light {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.ae-light-swatch {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    flex-shrink: 0;
 }
 
 /* ── Embed Mode (loaded inside persiana iframe) ── */

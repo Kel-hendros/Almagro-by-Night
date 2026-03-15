@@ -95,64 +95,14 @@
   let fogBrush = null;
   let tokenActionsController = null;
   let tokenContextMenuController = null;
+  let persistenceController = null;
+  let designTokenMenuController = null;
+  let mapContextMenuController = null;
+  let modalController = null;
 
-  // --- Field mapping: character sheet flat keys → display names ---
-  const PC_ATTR_MAP = {
-    physical: {
-      "fuerza-value": "Fuerza",
-      "destreza-value": "Destreza",
-      "resistencia-value": "Resistencia",
-    },
-    social: {
-      "carisma-value": "Carisma",
-      "manipulacion-value": "Manipulación",
-      "apariencia-value": "Apariencia",
-    },
-    mental: {
-      "percepcion-value": "Percepción",
-      "inteligencia-value": "Inteligencia",
-      "astucia-value": "Astucia",
-    },
-  };
-
-  const PC_ABILITY_MAP = {
-    talents: {
-      "alerta-value": "Alerta",
-      "atletismo-value": "Atletismo",
-      "callejeo-value": "Callejeo",
-      "consciencia-value": "Consciencia",
-      "empatia-value": "Empatía",
-      "expresion-value": "Expresión",
-      "intimidacion-value": "Intimidación",
-      "liderazgo-value": "Liderazgo",
-      "pelea-value": "Pelea",
-      "subterfugio-value": "Subterfugio",
-    },
-    skills: {
-      "tratoConAnimales-value": "Trato Animales",
-      "conducir-value": "Conducir",
-      "etiqueta-value": "Etiqueta",
-      "armasDeFuego-value": "A. Fuego",
-      "peleaConArmas-value": "Armas C.C.",
-      "interpretacion-value": "Interprete",
-      "latrocinio-value": "Latrocinio",
-      "sigilo-value": "Sigilo",
-      "supervivencia-value": "Supervivencia",
-      "pericia-value": "Pericia",
-    },
-    knowledges: {
-      "academicismo-value": "Académico",
-      "ciencias-value": "Ciencias",
-      "finanzas-value": "Finanzas",
-      "informatica-value": "Informática",
-      "investigacion-value": "Investiga.",
-      "leyes-value": "Leyes",
-      "medicina-value": "Medicina",
-      "ocultismo-value": "Ocultismo",
-      "politica-value": "Política",
-      "tecnologia-value": "Tecnología",
-    },
-  };
+  // PC_ATTR_MAP & PC_ABILITY_MAP — moved to modal/instance-modal.js
+  const PC_ATTR_MAP = window.AEInstanceModal?.PC_ATTR_MAP || {};
+  const PC_ABILITY_MAP = window.AEInstanceModal?.PC_ABILITY_MAP || {};
 
   function embedNavigateAway() {
     try {
@@ -240,6 +190,27 @@
     els.modalHpText = document.getElementById("ae-modal-hp-text");
     els.modalNotes = document.getElementById("ae-modal-notes");
 
+    persistenceController = window.AEEncounterPersistence?.createController?.({
+      state,
+      supabase,
+      canEditEncounter,
+      normalizeMapLayerData,
+      normalizeDesignTokensData,
+      normalizeMapEffectsData,
+      loadEncounterData: () => loadEncounterData(),
+    });
+    designTokenMenuController = window.AEDesignTokenMenu?.createController?.({
+      getEncounterData: () => state.encounter?.data,
+      canEditEncounter,
+      render: () => render(),
+      saveEncounter: () => saveEncounter(),
+    });
+    mapContextMenuController = window.AEMapContextMenu?.createController?.({
+      state,
+      supabase,
+      saveEncounter: () => saveEncounter(),
+      getMap: () => state.map,
+    });
     layersController = window.AEEncounterLayers?.createController?.({
       state,
       els,
@@ -266,6 +237,11 @@
       getEncounterAssetPublicUrl: (path) =>
         assetsService?.getEncounterAssetPublicUrl(path) || "",
     });
+    lightSwitchManager = window.AELightSwitchManager?.createManager?.({
+      getEncounterData: () => state.encounter?.data,
+      getMap: () => state.map,
+      saveEncounter: () => saveEncounter(),
+    });
     drawerController = window.AEEncounterDrawer?.createController?.({
       state,
       els,
@@ -282,15 +258,23 @@
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
       getFogBrush: () => fogBrush,
-      addLight: (x, y) => addLight(x, y),
-      findLightAt: (x, y) => findLightAt(x, y),
-      openLightPopover: (light) => openLightPopover(light),
-      removeLight: (id) => removeLight(id),
-      addSwitch: (x, y, lid) => addSwitch(x, y, lid),
-      findSwitchAt: (x, y) => findSwitchAt(x, y),
-      openSwitchPopover: (sw) => openSwitchPopover(sw),
-      handleLinkModeClick: (x, y) => handleLinkModeClick(x, y),
-      isLinkMode: () => !!state._linkMode,
+      addLight: (x, y) => lightSwitchManager?.addLight(x, y),
+      findLightAt: (x, y) => lightSwitchManager?.findLightAt(x, y),
+      openLightPopover: (light) => lightSwitchManager?.openLightPopover(light),
+      removeLight: (id) => lightSwitchManager?.removeLight(id),
+      addSwitch: (x, y, lid) => lightSwitchManager?.addSwitch(x, y, lid),
+      findSwitchAt: (x, y) => lightSwitchManager?.findSwitchAt(x, y),
+      openSwitchPopover: (sw) => lightSwitchManager?.openSwitchPopover(sw),
+      handleLinkModeClick: (x, y) => lightSwitchManager?.handleLinkModeClick(x, y),
+      isLinkMode: () => lightSwitchManager?.isLinkMode() || false,
+    });
+    modalController = window.AEInstanceModal?.createController?.({
+      state,
+      els,
+      canEditEncounter,
+      ensureActiveInstance: () => ensureActiveInstance(),
+      render: () => render(),
+      saveEncounter: () => saveEncounter(),
     });
     tokenActionsController = window.AEEncounterTokenActions?.createController?.({
       state,
@@ -335,6 +319,30 @@
           state.map.draw();
         },
       });
+
+    syncController = window.AEEncounterSync?.createController?.({
+      state,
+      els,
+      supabase,
+      normalizeEncounterStatus,
+      sanitizeEncounterTokens: () => sanitizeEncounterTokens(),
+      ensureActiveInstance: () => ensureActiveInstance(),
+      render: () => render(),
+      openModal: (inst) => openModal(inst),
+      getTilePainter: () => tilePainter,
+      getWallDrawer: () => wallDrawer,
+      getFogBrush: () => fogBrush,
+      getApplyBroadcastInitiative: () => applyBroadcastInitiative,
+    });
+    instanceManager = window.AEInstanceManager?.createController?.({
+      state,
+      canEditEncounter,
+      removeInstanceLocal: (id) => removeInstanceLocal(id),
+      render: () => render(),
+      saveEncounter: () => saveEncounter(),
+      encounterTurns,
+      extractPCHealth: (charData) => extractPCHealth(charData),
+    });
 
     setupListeners();
 
@@ -411,8 +419,8 @@
       state.map._wallDrawer = wallDrawer;
     }
 
-    // Ambient light reference on the map
-    state.map._ambientLight = state.encounter.data.ambientLight || { color: "#8090b0", intensity: 0 };
+    // Ambient light reference on the map (always use the encounter data object)
+    state.map._ambientLight = state.encounter.data.ambientLight;
     state.map.recomputeRooms();
 
     // Init Fog of War
@@ -526,14 +534,14 @@
     state.map.onDesignTokenSelect = () => {};
     state.map.onDesignTokenContext = (tokenInfo) => {
       if (!tokenInfo?.tokenId || !canEditEncounter()) return;
-      openDesignTokenContextMenu(tokenInfo);
+      designTokenMenuController?.open(tokenInfo);
     };
     state.map.onEmptyContext = (info) => {
       if (!canEditEncounter()) return;
-      openMapContextMenu(info);
+      mapContextMenuController?.open(info);
     };
     state.map.onPing = (info) => {
-      sendPing(info.cellX, info.cellY);
+      mapContextMenuController?.sendPing(info.cellX, info.cellY);
     };
     state.map.canEditBackground = () => canEditEncounter();
     state.map.onBackgroundChange = (nextMap) => {
@@ -545,7 +553,7 @@
 
     state.map.onSwitchToggle = (switchId) => {
       if (!state.encounter?.data) return;
-      toggleSwitch(switchId);
+      lightSwitchManager?.toggleSwitch(switchId);
     };
 
     state.map.onSwitchMove = () => {
@@ -553,8 +561,10 @@
       saveEncounter();
     };
 
-    state.map.onLightMove = () => {
+    state.map.onLightMove = (light) => {
       if (!state.encounter?.data || !canEditEncounter()) return;
+      state._lightDragId = light?.id || null;
+      state._lightLocalChangeUntil = Date.now() + 1800;
       saveEncounter();
     };
 
@@ -567,8 +577,8 @@
 
     // ── Light placement mode ──
     state._lightPlaceMode = false;
-    state._lightPopover = null;
     state._lightDragId = null;
+    state._lightLocalChangeUntil = 0;
 
     setupMapControls();
     applyPermissionsUI();
@@ -757,14 +767,9 @@
     }
   }
 
-  function scheduleBackgroundPersist(delayMs = 180) {
-    if (state.backgroundPersistTimer) {
-      clearTimeout(state.backgroundPersistTimer);
-    }
-    state.backgroundPersistTimer = setTimeout(() => {
-      state.backgroundPersistTimer = null;
-      saveEncounter();
-    }, delayMs);
+  // scheduleBackgroundPersist — delegated to persistence/encounter-persistence.js
+  function scheduleBackgroundPersist(delayMs) {
+    persistenceController?.scheduleBackgroundPersist(delayMs);
   }
 
   function canCurrentUserControlToken(token) {
@@ -973,293 +978,8 @@
     }
   }
 
-  // ── Light management ──
-
-  function generateLightId() {
-    return "light-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 5);
-  }
-
-  function addLight(x, y) {
-    if (!state.encounter?.data) return;
-    var lights = state.encounter.data.lights || [];
-    lights.push({ id: generateLightId(), x: x, y: y, radius: 4, color: "#ffcc66", intensity: 0.8 });
-    state.encounter.data.lights = lights;
-    if (state.map) { state.map.lights = lights; state.map.invalidateLighting?.(); state.map.draw(); }
-    saveEncounter();
-  }
-
-  function updateLight(lightId, patch) {
-    var lights = state.encounter?.data?.lights || [];
-    var light = lights.find(function (l) { return l.id === lightId; });
-    if (!light) return;
-    for (var key in patch) light[key] = patch[key];
-    if (state.map) { state.map.invalidateLighting?.(); state.map.draw(); }
-    saveEncounter();
-  }
-
-  function removeLight(lightId) {
-    if (!state.encounter?.data) return;
-    state.encounter.data.lights = (state.encounter.data.lights || []).filter(function (l) { return l.id !== lightId; });
-    if (state.map) { state.map.lights = state.encounter.data.lights; state.map.invalidateLighting?.(); state.map.draw(); }
-    closeLightPopover();
-    saveEncounter();
-  }
-
-  function findLightAt(cellX, cellY) {
-    var lights = state.encounter?.data?.lights || [];
-    var best = null, bestDist = 0.6; // threshold in cells
-    for (var i = 0; i < lights.length; i++) {
-      var l = lights[i];
-      var dx = cellX - l.x, dy = cellY - l.y;
-      var d = Math.sqrt(dx * dx + dy * dy);
-      if (d < bestDist) { bestDist = d; best = l; }
-    }
-    return best;
-  }
-
-  function openLightPopover(light) {
-    closeLightPopover();
-    if (!light || !state.map) return;
-    var gs = state.map.gridSize;
-    var scale = state.map.scale;
-    var rect = state.map.canvas.getBoundingClientRect();
-    var screenX = rect.left + state.map.offsetX + light.x * gs * scale;
-    var screenY = rect.top + state.map.offsetY + light.y * gs * scale;
-
-    var pop = document.createElement("div");
-    pop.className = "ae-light-popover";
-    pop.innerHTML =
-      '<div class="ae-light-popover-row"><label>Color</label><input type="color" id="ae-lp-color" value="' + (light.color || "#ffcc66") + '"></div>' +
-      '<div class="ae-light-popover-row"><label>Radio</label><input type="range" id="ae-lp-radius" min="1" max="15" step="0.5" value="' + (light.radius || 4) + '"><span class="ae-light-range-val" id="ae-lp-radius-val">' + (light.radius || 4) + '</span></div>' +
-      '<div class="ae-light-popover-row"><label>Fuerza</label><input type="range" id="ae-lp-intensity" min="0.1" max="1" step="0.05" value="' + (light.intensity != null ? light.intensity : 0.8) + '"><span class="ae-light-range-val" id="ae-lp-int-val">' + Math.round((light.intensity != null ? light.intensity : 0.8) * 100) + '%</span></div>' +
-      '<button class="ae-btn ae-btn--secondary ae-btn--full" id="ae-lp-create-switch" type="button" style="margin-top:4px;">Crear interruptor</button>' +
-      '<button class="ae-btn ae-btn--secondary ae-btn--full" id="ae-lp-link-switch" type="button">Vincular a interruptor</button>' +
-      '<button class="ae-btn ae-btn--danger ae-btn--full" id="ae-lp-delete" type="button" style="margin-top:4px;">Eliminar luz</button>';
-
-    pop.style.left = Math.round(Math.min(screenX + 20, window.innerWidth - 220)) + "px";
-    pop.style.top = Math.round(Math.min(screenY - 60, window.innerHeight - 180)) + "px";
-    document.body.appendChild(pop);
-    state._lightPopover = { el: pop, lightId: light.id };
-
-    pop.querySelector("#ae-lp-color").addEventListener("input", function (e) {
-      updateLight(light.id, { color: e.target.value });
-    });
-    pop.querySelector("#ae-lp-radius").addEventListener("input", function (e) {
-      var v = parseFloat(e.target.value); pop.querySelector("#ae-lp-radius-val").textContent = v;
-      updateLight(light.id, { radius: v });
-    });
-    pop.querySelector("#ae-lp-intensity").addEventListener("input", function (e) {
-      var v = parseFloat(e.target.value); pop.querySelector("#ae-lp-int-val").textContent = Math.round(v * 100) + "%";
-      updateLight(light.id, { intensity: v });
-    });
-    pop.querySelector("#ae-lp-delete").addEventListener("click", function () { removeLight(light.id); });
-    pop.querySelector("#ae-lp-create-switch").addEventListener("click", function () {
-      closeLightPopover();
-      addSwitch(light.x + 1, light.y, light.id);
-    });
-    pop.querySelector("#ae-lp-link-switch").addEventListener("click", function () {
-      closeLightPopover();
-      enterLinkMode("light", light.id);
-    });
-
-    // Close on outside click (deferred so current click doesn't trigger it)
-    setTimeout(function () {
-      function onOutside(e) {
-        if (pop.contains(e.target)) return;
-        closeLightPopover();
-        document.removeEventListener("mousedown", onOutside);
-      }
-      document.addEventListener("mousedown", onOutside);
-    }, 50);
-  }
-
-  function closeLightPopover() {
-    if (state._lightPopover?.el) {
-      state._lightPopover.el.remove();
-    }
-    state._lightPopover = null;
-  }
-
-  // ── Switch management ──
-
-  function generateSwitchId() {
-    return "sw-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 5);
-  }
-
-  function addSwitch(x, y, linkedLightId) {
-    if (!state.encounter?.data) return null;
-    var sw = { id: generateSwitchId(), x: x, y: y, on: true, lightIds: linkedLightId ? [linkedLightId] : [] };
-    if (!state.encounter.data.switches) state.encounter.data.switches = [];
-    state.encounter.data.switches.push(sw);
-    if (state.map) { state.map.switches = state.encounter.data.switches; state.map.invalidateLighting?.(); state.map.draw(); }
-    saveEncounter();
-    return sw;
-  }
-
-  function removeSwitch(switchId) {
-    if (!state.encounter?.data) return;
-    state.encounter.data.switches = (state.encounter.data.switches || []).filter(function (s) { return s.id !== switchId; });
-    if (state.map) { state.map.switches = state.encounter.data.switches; state.map.selectedSwitchId = null; state.map.draw(); }
-    closeSwitchPopover();
-    saveEncounter();
-  }
-
-  function toggleSwitch(switchId) {
-    var switches = state.encounter?.data?.switches || [];
-    var lights = state.encounter?.data?.lights || [];
-    var sw = switches.find(function (s) { return s.id === switchId; });
-    if (!sw) return;
-    sw.on = !sw.on;
-    (sw.lightIds || []).forEach(function (lid) {
-      var light = lights.find(function (l) { return l.id === lid; });
-      if (light) light.on = sw.on;
-    });
-    if (state.map) { state.map.invalidateLighting?.(); state.map.draw(); }
-    saveEncounter();
-  }
-
-  function linkSwitchToLight(switchId, lightId) {
-    var sw = (state.encounter?.data?.switches || []).find(function (s) { return s.id === switchId; });
-    if (!sw) return;
-    if (!sw.lightIds) sw.lightIds = [];
-    if (sw.lightIds.indexOf(lightId) === -1) sw.lightIds.push(lightId);
-    if (state.map) { state.map.invalidateLighting?.(); state.map.draw(); }
-    saveEncounter();
-  }
-
-  function unlinkSwitchFromLight(switchId, lightId) {
-    var sw = (state.encounter?.data?.switches || []).find(function (s) { return s.id === switchId; });
-    if (!sw) return;
-    sw.lightIds = (sw.lightIds || []).filter(function (id) { return id !== lightId; });
-    if (state.map) state.map.draw();
-    saveEncounter();
-  }
-
-  function findSwitchAt(cellX, cellY) {
-    var switches = state.encounter?.data?.switches || [];
-    var best = null, bestDist = 0.6;
-    for (var i = 0; i < switches.length; i++) {
-      var s = switches[i];
-      var dx = cellX - s.x, dy = cellY - s.y;
-      var d = Math.sqrt(dx * dx + dy * dy);
-      if (d < bestDist) { bestDist = d; best = s; }
-    }
-    return best;
-  }
-
-  function openSwitchPopover(sw) {
-    closeSwitchPopover();
-    closeLightPopover();
-    if (!sw || !state.map) return;
-    var gs = state.map.gridSize;
-    var scale = state.map.scale;
-    var rect = state.map.canvas.getBoundingClientRect();
-    var screenX = rect.left + state.map.offsetX + sw.x * gs * scale;
-    var screenY = rect.top + state.map.offsetY + sw.y * gs * scale;
-
-    var lights = state.encounter?.data?.lights || [];
-    var linkedLights = (sw.lightIds || []).map(function (lid) {
-      return lights.find(function (l) { return l.id === lid; });
-    }).filter(Boolean);
-
-    var pop = document.createElement("div");
-    pop.className = "ae-light-popover";
-
-    var toggleLabel = sw.on !== false ? "Encendido" : "Apagado";
-    var toggleClass = sw.on !== false ? "ae-btn--secondary" : "ae-btn--danger";
-    var html = '<div class="ae-light-popover-row" style="justify-content:space-between;"><label>Interruptor</label>' +
-      '<button id="ae-sp-toggle" class="ae-btn ' + toggleClass + '" type="button" style="padding:3px 10px;font-size:0.7rem;">' + toggleLabel + '</button></div>';
-
-    if (linkedLights.length > 0) {
-      html += '<div style="font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Luces conectadas</div>';
-      for (var i = 0; i < linkedLights.length; i++) {
-        var l = linkedLights[i];
-        html += '<div class="ae-light-popover-row" style="justify-content:space-between;">' +
-          '<span style="font-size:0.7rem;color:#ccc;">Luz (' + (l.radius || 4) + 'c)</span>' +
-          '<button class="ae-sp-unlink" data-light-id="' + l.id + '" style="background:none;border:none;color:#cf5f5f;cursor:pointer;font-size:0.8rem;" title="Desvincular">✕</button></div>';
-      }
-    } else {
-      html += '<div style="font-size:0.68rem;color:#666;padding:4px 0;">Sin luces conectadas</div>';
-    }
-
-    html += '<button id="ae-sp-link" class="ae-btn ae-btn--secondary ae-btn--full" type="button" style="margin-top:4px;">+ Vincular luz</button>';
-    html += '<button id="ae-sp-delete" class="ae-btn ae-btn--danger ae-btn--full" type="button" style="margin-top:2px;">Eliminar</button>';
-
-    pop.innerHTML = html;
-    pop.style.left = Math.round(Math.min(screenX + 20, window.innerWidth - 230)) + "px";
-    pop.style.top = Math.round(Math.min(screenY - 60, window.innerHeight - 200)) + "px";
-    document.body.appendChild(pop);
-    state._switchPopover = { el: pop, switchId: sw.id };
-
-    pop.querySelector("#ae-sp-toggle").addEventListener("click", function () {
-      toggleSwitch(sw.id);
-      openSwitchPopover(sw); // re-render
-    });
-    pop.querySelector("#ae-sp-link").addEventListener("click", function () {
-      closeSwitchPopover();
-      enterLinkMode("switch", sw.id);
-    });
-    pop.querySelector("#ae-sp-delete").addEventListener("click", function () { removeSwitch(sw.id); });
-    pop.querySelectorAll(".ae-sp-unlink").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        unlinkSwitchFromLight(sw.id, btn.dataset.lightId);
-        openSwitchPopover(sw); // re-render
-      });
-    });
-
-    setTimeout(function () {
-      function onOutside(e) {
-        if (pop.contains(e.target)) return;
-        closeSwitchPopover();
-        document.removeEventListener("mousedown", onOutside);
-      }
-      document.addEventListener("mousedown", onOutside);
-    }, 50);
-  }
-
-  function closeSwitchPopover() {
-    if (state._switchPopover?.el) state._switchPopover.el.remove();
-    state._switchPopover = null;
-  }
-
-  // ── Link mode (connect lights ↔ switches) ──
-
-  function enterLinkMode(fromType, fromId) {
-    state._linkMode = { fromType: fromType, fromId: fromId };
-    state.map?.canvas?.classList.add("light-placer-active");
-  }
-
-  function exitLinkMode() {
-    state._linkMode = null;
-    state.map?.canvas?.classList.remove("light-placer-active");
-  }
-
-  function handleLinkModeClick(cellX, cellY) {
-    if (!state._linkMode) return false;
-    var mode = state._linkMode;
-
-    if (mode.fromType === "switch") {
-      // Looking for a light to link to this switch
-      var light = findLightAt(cellX, cellY);
-      if (light) {
-        linkSwitchToLight(mode.fromId, light.id);
-        exitLinkMode();
-        return true;
-      }
-    } else if (mode.fromType === "light") {
-      // Looking for a switch to link to this light
-      var sw = findSwitchAt(cellX, cellY);
-      if (sw) {
-        linkSwitchToLight(sw.id, mode.fromId);
-        exitLinkMode();
-        return true;
-      }
-    }
-
-    // Click on empty → cancel
-    exitLinkMode();
-    return true;
-  }
+  // ── Light & Switch management (delegated to lighting/light-switch-manager.js) ──
+  let lightSwitchManager = null;
 
   function setupMapControls() {
     document
@@ -1298,200 +1018,23 @@
     });
   }
 
-  function setupRealtimeSubscription() {
-    teardownRealtimeSubscriptions();
+  // --- REALTIME SYNC — delegated to realtime/encounter-sync.js ---
+  let syncController = null;
 
-    const characterSheetsChannel = supabase
-      .channel("character-sheets-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "character_sheets",
-        },
-        (payload) => {
-          const updatedSheet = payload.new;
-
-          // Update characterSheets cache
-          const sheetIdx = state.characterSheets.findIndex(
-            (s) => s.id === updatedSheet.id,
-          );
-          if (sheetIdx !== -1) {
-            state.characterSheets[sheetIdx] = updatedSheet;
-          } else {
-            state.characterSheets.push(updatedSheet);
-          }
-
-          const d = state.encounter?.data;
-          if (d && d.instances) {
-            const inst = d.instances.find(
-              (i) => i.characterSheetId === updatedSheet.id,
-            );
-            if (inst) {
-              inst.pcHealth = extractPCHealth(updatedSheet.data);
-              render();
-
-              // If modal is open for this instance, refresh it
-              if (
-                state.selectedInstanceId === inst.id &&
-                els.modal.style.display !== "none"
-              ) {
-                openModal(inst);
-              }
-            }
-          }
-        },
-      )
-      .subscribe();
-
-    const encounterChannel = supabase
-      .channel(`encounter-${state.encounterId}-changes`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "encounters",
-          filter: `id=eq.${state.encounterId}`,
-        },
-        (payload) => {
-          if (state.isApplyingRemoteUpdate) return;
-          const updated = payload.new;
-          if (!updated) return;
-          applyRemoteEncounterUpdate(updated);
-        },
-      )
-      .subscribe();
-
-    state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
-
-    // Roll feed: subscribe to broadcast channel for dice roll notifications
-    if (window.AERollFeed) {
-      window.AERollFeed.destroy();
-      window.AERollFeed.create(state.encounterId, {
-        onInitiativeRoll: applyBroadcastInitiative,
-      });
-    }
-
-    startEncounterSyncPolling();
+  function setupRealtimeSubscription() { syncController?.setup(); }
+  function teardownRealtimeSubscriptions() { syncController?.teardown(); }
+  function startEncounterSyncPolling() { syncController?.startPolling(); }
+  function stopEncounterSyncPolling() { syncController?.stopPolling(); }
+  function extractPCHealth(charData) {
+    return syncController?.extractPCHealth(charData) || [0, 0, 0, 0, 0, 0, 0];
   }
-
-  function teardownRealtimeSubscriptions() {
-    if (window.AERollFeed) {
-      window.AERollFeed.destroy();
-    }
-
-    if (!Array.isArray(state.realtimeChannels) || state.realtimeChannels.length === 0) {
-      return;
-    }
-    state.realtimeChannels.forEach((channel) => {
-      if (!channel) return;
-      try {
-        channel.unsubscribe?.();
-      } catch (_error) {}
-      try {
-        supabase.removeChannel?.(channel);
-      } catch (_error) {}
-    });
-    state.realtimeChannels = [];
-  }
-
-  function applyRemoteEncounterUpdate(updated) {
-    if (!updated || !state.encounter) return;
-    // Preserve local tileMap when the tile painter is active or has pending saves
-    var localTileMap = (tilePainter && tilePainter.isActive())
-      ? state.encounter.data.tileMap
-      : null;
-    // Preserve local walls when the wall drawer is active
-    var localWalls = (wallDrawer && wallDrawer.isActive())
-      ? state.encounter.data.walls
-      : null;
-    // Preserve local fog when the fog brush is active
-    var localFog = (fogBrush && fogBrush.isActive())
-      ? state.encounter.data.fog
-      : null;
-    state.encounter.status = normalizeEncounterStatus(updated.status);
-    state.encounter.data = updated.data || state.encounter.data;
-    if (localTileMap) {
-      state.encounter.data.tileMap = localTileMap;
-    }
-    if (localWalls) {
-      state.encounter.data.walls = localWalls;
-    }
-    if (localFog) {
-      state.encounter.data.fog = localFog;
-    }
-    if (state.encounterHasUpdatedAt && updated.updated_at) {
-      state.encounterUpdatedAt = updated.updated_at;
-    }
-    state.lastEncounterSyncKey = buildEncounterSyncKey(updated);
-    sanitizeEncounterTokens();
-    ensureActiveInstance();
-    // Update fog config from remote data
-    if (state.map && typeof state.map.setFogConfig === "function") {
-      state.map.setFogConfig(state.encounter.data.fog || null);
-      state.map.invalidateFog?.();
-    }
-    render();
-  }
-
   function buildEncounterSyncKey(encounterLike) {
+    if (syncController) return syncController.buildSyncKey(encounterLike);
     if (!encounterLike) return "";
     return JSON.stringify({
       status: normalizeEncounterStatus(encounterLike.status),
       data: encounterLike.data || {},
     });
-  }
-
-  function startEncounterSyncPolling() {
-    stopEncounterSyncPolling();
-    state.encounterSyncTimer = setInterval(async () => {
-      if (!state.encounterId || state.isApplyingRemoteUpdate) return;
-
-      const { data, error } = await supabase
-        .from("encounters")
-        .select(
-          state.encounterHasUpdatedAt
-            ? "id, status, data, updated_at"
-            : "id, status, data",
-        )
-        .eq("id", state.encounterId)
-        .maybeSingle();
-      if (error || !data) return;
-
-      const incomingKey = buildEncounterSyncKey(data);
-      if (
-        !state.lastEncounterSyncKey ||
-        incomingKey !== state.lastEncounterSyncKey
-      ) {
-        applyRemoteEncounterUpdate(data);
-      }
-    }, 1500);
-  }
-
-  function stopEncounterSyncPolling() {
-    if (!state.encounterSyncTimer) return;
-    clearInterval(state.encounterSyncTimer);
-    state.encounterSyncTimer = null;
-    if (state.backgroundPersistTimer) {
-      clearTimeout(state.backgroundPersistTimer);
-      state.backgroundPersistTimer = null;
-    }
-  }
-
-  function extractPCHealth(charData) {
-    if (!charData) return [0, 0, 0, 0, 0, 0, 0];
-    const healthKeys = [
-      "magullado-value",
-      "lastimado-value",
-      "lesionado-value",
-      "herido-value",
-      "malherido-value",
-      "tullido-value",
-      "incapacitado-value",
-    ];
-    return healthKeys.map((key) => parseInt(charData[key]) || 0);
   }
 
   function requireAdminAction() {
@@ -1504,6 +1047,17 @@
     document.getElementById("btn-ae-back").addEventListener("click", () => {
       navigateAway("chronicle");
     });
+
+    // Timeline sidebar toggle
+    const timelineToggle = document.getElementById("btn-ae-toggle-timeline");
+    const timelineSidebar = document.querySelector(".ae-timeline-sidebar");
+    if (timelineToggle && timelineSidebar) {
+      timelineToggle.addEventListener("click", () => {
+        timelineSidebar.classList.toggle("collapsed");
+        timelineToggle.classList.toggle("is-collapsed");
+      });
+    }
+
     document
       .getElementById("btn-ae-next-turn")
       .addEventListener("click", () => {
@@ -1565,10 +1119,10 @@
       .addEventListener("click", closeModal);
     document
       .getElementById("btn-modal-dmg")
-      .addEventListener("click", () => handleModalAction("dmg"));
+      .addEventListener("click", () => modalController?.handleModalAction("dmg"));
     document
       .getElementById("btn-modal-heal")
-      .addEventListener("click", () => handleModalAction("heal"));
+      .addEventListener("click", () => modalController?.handleModalAction("heal"));
 
     runtime.documentClickHandler = (e) => {
       if (
@@ -1579,19 +1133,17 @@
       }
 
       if (
-        isDesignTokenMenuOpen() &&
-        designTokenMenuEl &&
-        !designTokenMenuEl.contains(e.target)
+        designTokenMenuController?.isOpen?.() &&
+        !designTokenMenuController?.contains?.(e.target)
       ) {
-        closeDesignTokenContextMenu();
+        designTokenMenuController?.close();
       }
 
       if (
-        isMapContextMenuOpen() &&
-        mapContextMenuEl &&
-        !mapContextMenuEl.contains(e.target)
+        mapContextMenuController?.isOpen?.() &&
+        !mapContextMenuController?.contains?.(e.target)
       ) {
-        closeMapContextMenu();
+        mapContextMenuController?.close();
       }
 
       if (els.layerMenu && els.layerToolbar && !els.layerToolbar.contains(e.target)) {
@@ -1601,8 +1153,8 @@
     runtime.documentKeydownHandler = (e) => {
       if (e.key === "Escape") {
         tokenContextMenuController?.hide?.();
-        closeDesignTokenContextMenu();
-        closeMapContextMenu();
+        designTokenMenuController?.close?.();
+        mapContextMenuController?.close?.();
       }
 
       if (!canEditEncounter()) return;
@@ -1970,8 +1522,8 @@
         lights: state.encounter.data.lights || [],
         switches: state.encounter.data.switches || [],
       });
-      // Keep ambient light reference in sync after remote data updates
-      state.map._ambientLight = state.encounter.data.ambientLight || { color: "#8090b0", intensity: 0.5 };
+      // Keep ambient light reference in sync (always point to the encounter data object)
+      state.map._ambientLight = state.encounter.data.ambientLight;
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
 
       // Handle narrator's "Ver aquí" — pan players to target + show pin
@@ -2192,226 +1744,12 @@
 
   // --- ADD NPC ---
 
-  async function addNPC(tplId, count, options) {
-    if (!canEditEncounter()) return;
-    if (!tplId) return;
-    count = count || 1;
-    var opts = options || {};
+  // --- INSTANCE MANAGEMENT — delegated to instances/instance-manager.js ---
+  let instanceManager = null;
 
-    const tpl = state.templates.find((t) => t.id === tplId);
-    if (!tpl) return;
-
-    const d = state.encounter.data;
-    const instances = d.instances;
-    const tplData = tpl.data;
-
-    // Deep clone groups for each instance
-    const baseLetter = tpl.name[0].toUpperCase();
-    let maxNum = findMaxCode(instances, baseLetter);
-
-    for (let i = 0; i < count; i++) {
-      maxNum++;
-      const groups = JSON.parse(JSON.stringify(tplData.groups || []));
-
-      // Build flat stats for easy lookup
-      const stats = {};
-      groups.forEach((g) => {
-        g.fields.forEach((f) => {
-          stats[f.name] = f.value;
-        });
-      });
-
-      const initVal = calculateInitiative({ groups, stats });
-
-      const instanceId = crypto.randomUUID();
-
-      const inst = {
-        id: instanceId,
-        templateId: tpl.id,
-        name: tpl.name,
-        code: `${baseLetter}${maxNum}`,
-        status: "active",
-        initiative: initVal,
-        groups: groups,
-        stats: stats,
-        notes: tplData.notes || "",
-        health: tplData.maxHealth || 7,
-        maxHealth: tplData.maxHealth || 7,
-        isPC: false,
-      };
-      if (opts.hidden) inst.visible = false;
-      instances.push(inst);
-
-      // Auto-create token if requested (or default behavior)
-      // For now we assume yes if adding to map, or maybe we add a checkbox later?
-      // Let's check a fictional "addToken" global state or argument for now, or just ALWAYS add it to 0,0
-
-      // Check checkbox from browser
-      const addToken = document.getElementById("ae-add-token-check")?.checked;
-
-      if (addToken) {
-        state.encounter.data.tokens.push({
-          id: crypto.randomUUID(),
-          instanceId: instanceId,
-          x: Math.round(-state.map.offsetX / state.map.scale / 50) + 2, // Spawn near center view
-          y: Math.round(-state.map.offsetY / state.map.scale / 50) + 2,
-          size: 1,
-          imgUrl: tpl.driver?.avatarUrl || tpl.data?.avatarUrl || null,
-        });
-      }
-    }
-
-    render();
-    saveEncounter();
-  }
-
-  // --- ADD PC from Character Sheet ---
-
-  async function addPC(sheetId) {
-    if (!canEditEncounter()) return;
-    if (!sheetId) return;
-
-    const sheet = state.characterSheets.find((s) => s.id === sheetId);
-    if (!sheet || !sheet.data) return;
-
-    const d = state.encounter.data;
-    const instances = d.instances;
-
-    // Check if this PC is already in the encounter
-    const alreadyAdded = instances.find(
-      (i) => i.isPC && i.characterSheetId === sheetId,
-    );
-    if (alreadyAdded) {
-      alert(`${sheet.name} ya está en este encuentro.`);
-      return;
-    }
-
-    const charData = sheet.data;
-    const pcName =
-      charData.nombre || charData.name || sheet.name || "PJ Sin Nombre";
-
-    // Build groups structure from flat character data
-    const groups = buildPCGroups(charData);
-    const stats = {};
-    groups.forEach((g) => {
-      g.fields.forEach((f) => {
-        stats[f.name] = f.value;
-      });
-    });
-
-    // Generate code
-    const baseLetter = pcName[0].toUpperCase();
-    const maxNum = findMaxCode(instances, baseLetter) + 1;
-
-    const initVal = calculateInitiative({ groups, stats });
-
-    // Get max health from character sheet or default to 7
-    const maxHealth = 7;
-
-    const instanceId = crypto.randomUUID();
-
-    instances.push({
-      id: instanceId,
-      characterSheetId: sheetId,
-      templateId: null,
-      name: pcName,
-      code: `${baseLetter}${maxNum}`,
-      status: "active",
-      initiative: initVal,
-      groups: groups,
-      stats: stats,
-      notes: charData.clan ? `Clan: ${charData.clan}` : "",
-      health: maxHealth,
-      maxHealth: maxHealth,
-      pcHealth: extractPCHealth(charData),
-      isPC: true,
-      avatarUrl: sheet.avatar_url || null,
-    });
-
-    // Check checkbox
-    const addToken = document.getElementById("ae-add-token-check")?.checked;
-
-    if (addToken) {
-      state.encounter.data.tokens.push({
-        id: crypto.randomUUID(),
-        instanceId: instanceId,
-        x: Math.round(-state.map.offsetX / state.map.scale / 50) + 3,
-        y: Math.round(-state.map.offsetY / state.map.scale / 50) + 3,
-        size: 1,
-        imgUrl: sheet.avatar_url || null,
-      });
-    }
-
-    render();
-    saveEncounter();
-  }
-
-  function buildPCGroups(charData) {
-    const flatAttrMap = {
-      ...PC_ATTR_MAP.physical,
-      ...PC_ATTR_MAP.social,
-      ...PC_ATTR_MAP.mental,
-    };
-    const flatAbilityMap = {
-      ...PC_ABILITY_MAP.talents,
-      ...PC_ABILITY_MAP.skills,
-      ...PC_ABILITY_MAP.knowledges,
-    };
-
-    // Build Atributos
-    const attrFields = Object.entries(flatAttrMap).map(([key, name]) => {
-      const def = window.TEMPLATE_DEFINITIONS.npc.groups[0].fields.find(
-        (f) => f.name === name,
-      );
-      return {
-        name: name,
-        value: parseInt(charData[key]) || 1,
-        type: def ? def.type : "Físicos",
-      };
-    });
-
-    // Build Habilidades
-    const skillFields = Object.entries(flatAbilityMap).map(([key, name]) => {
-      const def = window.TEMPLATE_DEFINITIONS.npc.groups[1].fields.find(
-        (f) => f.name === name,
-      );
-      return {
-        name: name,
-        value: parseInt(charData[key]) || 0,
-        type: def ? def.type : "Talentos",
-      };
-    });
-
-    // Build Otros
-    const otherFields = [
-      {
-        name: "Salud máxima",
-        value: 7,
-        type: "Rasgos",
-      },
-      {
-        name: "Fuerza de Voluntad",
-        value: parseInt(charData["voluntadPerm-value"]) || 5,
-        type: "Rasgos",
-      },
-    ];
-
-    return [
-      { name: "Atributos", fields: attrFields },
-      { name: "Habilidades", fields: skillFields },
-      { name: "Otros", fields: otherFields },
-    ];
-  }
-
-  // --- INSTANCE MANAGEMENT ---
-
-  function removeInstance(id) {
-    if (!canEditEncounter()) return;
-    const removed = removeInstanceLocal(id);
-    if (!removed) return;
-    render();
-    saveEncounter();
-  }
+  function addNPC(tplId, count, options) { return instanceManager?.addNPC(tplId, count, options); }
+  function addPC(sheetId) { return instanceManager?.addPC(sheetId); }
+  function removeInstance(id) { return instanceManager?.removeInstance(id); }
 
   function updateInitiative(id, val) {
     if (!canEditEncounter()) return;
@@ -2468,38 +1806,7 @@
     saveEncounter();
   }
 
-  // --- HEALTH & COMBAT ---
-
-  function handleModalAction(type) {
-    if (!state.selectedInstanceId) return;
-    handleAction(state.selectedInstanceId, type);
-  }
-
-  function handleAction(id, type) {
-    if (!canEditEncounter()) return;
-    const inst = state.encounter.data.instances.find((i) => i.id === id);
-    if (!inst) return;
-
-    if (type === "dmg") {
-      const amount =
-        parseInt(document.getElementById("ae-damage-amount")?.value) || 1;
-      inst.health = Math.max(0, inst.health - amount);
-    } else if (type === "heal") {
-      const amount =
-        parseInt(document.getElementById("ae-heal-amount")?.value) || 1;
-      inst.health = Math.min(inst.maxHealth, inst.health + amount);
-    }
-
-    if (inst.health === 0 && inst.status !== "dead")
-      inst.status = "incapacitated";
-    else if (inst.health > 0 && inst.status === "incapacitated")
-      inst.status = "active";
-
-    ensureActiveInstance();
-    render();
-    if (state.selectedInstanceId === id) updateModalUI(inst);
-    saveEncounter();
-  }
+  // --- HEALTH & COMBAT — delegated to modal/instance-modal.js ---
 
   // --- VISIBILITY ---
 
@@ -2515,180 +1822,8 @@
     saveEncounter();
   }
 
-  function toggleDesignTokenVisibility(tokenId) {
-    if (!canEditEncounter()) return;
-    const dt = (state.encounter?.data?.designTokens || []).find((t) => t.id === tokenId);
-    if (!dt) return;
-    dt.visible = dt.visible === false ? true : false;
-    render();
-    saveEncounter();
-  }
-
-  // --- DESIGN TOKEN CONTEXT MENU ---
-
-  let designTokenMenuEl = null;
-
-  function openDesignTokenContextMenu(tokenInfo) {
-    closeDesignTokenContextMenu();
-    const dt = (state.encounter?.data?.designTokens || []).find((t) => t.id === tokenInfo.tokenId);
-    if (!dt) return;
-
-    const menu = document.createElement("div");
-    menu.className = "ae-token-context-menu ae-design-token-context-menu is-open";
-    menu.dataset.tokenId = tokenInfo.tokenId;
-
-    const isVisible = dt.visible !== false;
-    menu.innerHTML = `
-      <div class="ae-token-context-body">
-        <div class="ae-token-context-primary">
-          <button type="button" class="ae-token-context-action ae-token-context-action--visibility ${isVisible ? "" : "is-active"}"
-            data-action="visibility">${isVisible ? "Visible" : "Oculto"}</button>
-          <button type="button" class="ae-token-context-action ae-token-context-action--danger"
-            data-action="delete">Borrar decorado</button>
-        </div>
-      </div>
-    `;
-
-    menu.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const action = e.target.closest("[data-action]")?.dataset.action;
-      if (!action) return;
-      const id = menu.dataset.tokenId;
-      if (action === "visibility") {
-        toggleDesignTokenVisibility(id);
-        const updated = (state.encounter?.data?.designTokens || []).find((t) => t.id === id);
-        const btn = menu.querySelector('[data-action="visibility"]');
-        if (btn && updated) {
-          const vis = updated.visible !== false;
-          btn.textContent = vis ? "Visible" : "Oculto";
-          btn.classList.toggle("is-active", !vis);
-        }
-      } else if (action === "delete") {
-        closeDesignTokenContextMenu();
-        removeDesignToken(id);
-      }
-    });
-
-    document.body.appendChild(menu);
-    designTokenMenuEl = menu;
-
-    const margin = 10;
-    const menuWidth = menu.offsetWidth || 180;
-    const menuHeight = menu.offsetHeight || 80;
-    const left = Math.min(tokenInfo.clientX, window.innerWidth - menuWidth - margin);
-    const top = Math.min(tokenInfo.clientY, window.innerHeight - menuHeight - margin);
-    menu.style.left = `${Math.max(margin, left)}px`;
-    menu.style.top = `${Math.max(margin, top)}px`;
-  }
-
-  function closeDesignTokenContextMenu() {
-    if (designTokenMenuEl?.parentNode) {
-      designTokenMenuEl.parentNode.removeChild(designTokenMenuEl);
-    }
-    designTokenMenuEl = null;
-  }
-
-  function isDesignTokenMenuOpen() {
-    return !!designTokenMenuEl;
-  }
-
-  function removeDesignToken(tokenId) {
-    if (!canEditEncounter()) return;
-    const list = state.encounter?.data?.designTokens;
-    if (!Array.isArray(list)) return;
-    const idx = list.findIndex((t) => t.id === tokenId);
-    if (idx === -1) return;
-    list.splice(idx, 1);
-    render();
-    saveEncounter();
-  }
-
-  // --- MAP CONTEXT MENU ("Ver aqui") ---
-
-  let mapContextMenuEl = null;
-
-  function openMapContextMenu(info) {
-    closeMapContextMenu();
-
-    const menu = document.createElement("div");
-    menu.className = "ae-token-context-menu ae-map-context-menu is-open";
-
-    menu.innerHTML =
-      '<div class="ae-token-context-body">' +
-      '<div class="ae-token-context-primary">' +
-      '<button type="button" class="ae-token-context-action ae-token-context-action--viewhere" ' +
-      'data-action="viewhere">Ver aquí</button>' +
-      "</div></div>";
-
-    menu.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var action = e.target.closest("[data-action]")?.dataset.action;
-      if (action === "viewhere") {
-        closeMapContextMenu();
-        setViewTarget(info.cellX, info.cellY);
-      }
-    });
-
-    document.body.appendChild(menu);
-    mapContextMenuEl = menu;
-
-    var margin = 10;
-    var menuWidth = menu.offsetWidth || 160;
-    var menuHeight = menu.offsetHeight || 44;
-    var left = Math.min(info.clientX, window.innerWidth - menuWidth - margin);
-    var top = Math.min(info.clientY, window.innerHeight - menuHeight - margin);
-    menu.style.left = Math.max(margin, left) + "px";
-    menu.style.top = Math.max(margin, top) + "px";
-  }
-
-  function closeMapContextMenu() {
-    if (mapContextMenuEl?.parentNode) {
-      mapContextMenuEl.parentNode.removeChild(mapContextMenuEl);
-    }
-    mapContextMenuEl = null;
-  }
-
-  function isMapContextMenuOpen() {
-    return !!mapContextMenuEl;
-  }
-
-  function setViewTarget(cellX, cellY) {
-    if (!state.encounter?.data) return;
-    var narratorName = state.currentPlayer?.name || "Narrador";
-    state.encounter.data.viewTarget = {
-      x: cellX, y: cellY, ts: Date.now(), narrator: narratorName,
-    };
-    saveEncounter();
-    if (state.map) {
-      state.map.showViewPin(cellX, cellY, narratorName);
-    }
-  }
-
-  var _pingCooldownUntil = 0;
-
-  function sendPing(cellX, cellY) {
-    if (!state.encounter?.data || !state.encounterId) return;
-    if (Date.now() < _pingCooldownUntil) return;
-    _pingCooldownUntil = Date.now() + 3000;
-    var playerName = state.currentPlayer?.name || "Jugador";
-    var ts = Date.now();
-    state.encounter.data.ping = {
-      x: cellX, y: cellY, ts: ts, player: playerName,
-    };
-    state.lastPingTs = ts;
-    if (state.map) {
-      state.map.showPing(cellX, cellY, playerName);
-    }
-    supabase.rpc("send_encounter_ping", {
-      p_encounter_id: state.encounterId,
-      p_x: cellX,
-      p_y: cellY,
-      p_player: playerName,
-      p_ts: ts,
-    }).then(function (res) {
-      if (res.error) console.warn("Ping error:", res.error.message);
-    });
-  }
+  // --- DESIGN TOKEN CONTEXT MENU — delegated to context-menus/design-token-menu.js ---
+  // --- MAP CONTEXT MENU — delegated to context-menus/map-context-menu.js ---
 
   // --- ENTITY BROWSER ---
 
@@ -2761,688 +1896,29 @@
     assetsService?.addDesignTokenFromAsset(assetId);
   }
 
-  // --- MODAL ---
+  // --- MODAL — delegated to modal/instance-modal.js ---
 
   function openModal(inst) {
-    if (window.AE_Picker) window.AE_Picker.init();
-
-    const dmgBtn = document.getElementById("btn-modal-dmg");
-    const healBtn = document.getElementById("btn-modal-heal");
-    const dmgInput = document.getElementById("ae-damage-amount");
-    const healInput = document.getElementById("ae-heal-amount");
-    [dmgBtn, healBtn, dmgInput, healInput].forEach((el) => {
-      if (el) el.disabled = !canEditEncounter();
-    });
-
-    if (inst.isPC) {
-      renderPCModal(inst);
-    } else {
-      renderNPCModal(inst);
-    }
-
-    updateModalUI(inst);
-    els.modal.style.display = "flex";
-  }
-
-  function renderNPCModal(inst) {
-    state.selectedInstanceId = inst.id;
-    els.modalTitle.innerHTML = "";
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "ae-title-name";
-    nameSpan.textContent = inst.name;
-    nameSpan.style.cursor = "pointer";
-    nameSpan.title = "Click para editar nombre";
-
-    const codeSpan = document.createElement("span");
-    codeSpan.className = "ae-title-code";
-    codeSpan.textContent = ` | ${inst.code}`;
-
-    els.modalTitle.appendChild(nameSpan);
-    els.modalTitle.appendChild(codeSpan);
-
-    nameSpan.addEventListener("click", () => {
-      if (!canEditEncounter()) return;
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = inst.name;
-      input.className = "ae-input";
-      input.style.fontSize = "1.5rem";
-      input.style.width = "auto";
-      input.style.minWidth = "200px";
-      input.style.color = "var(--color-red-accent)";
-      input.style.background = "#111";
-      input.style.border = "1px solid #444";
-      input.style.display = "inline-block";
-
-      const saveName = () => {
-        const newName = input.value.trim();
-        if (newName && newName !== inst.name) {
-          inst.name = newName;
-          nameSpan.textContent = newName;
-          render(); // Updates timeline
-          saveEncounter();
-        }
-        if (els.modalTitle.contains(input)) {
-          els.modalTitle.replaceChild(nameSpan, input);
-        }
-      };
-
-      input.addEventListener("blur", saveName);
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          input.blur();
-        } else if (e.key === "Escape") {
-          if (els.modalTitle.contains(input)) {
-            els.modalTitle.replaceChild(nameSpan, input);
-          }
-        }
-      });
-
-      els.modalTitle.replaceChild(input, nameSpan);
-      input.focus();
-    });
-
-    // Show health controls for NPCs
-    const healthControls = els.modal.querySelector(".ae-health-section");
-    if (healthControls)
-      healthControls.style.display = canEditEncounter() ? "block" : "none";
-
-    // Show Notes for NPCs
-    if (els.modalNotes) {
-      els.modalNotes.style.display = "block";
-      els.modalNotes.textContent =
-        inst.notes || inst.data?.notes || "Sin notas.";
-    }
-    els.modalStats.innerHTML = "";
-    els.modalStats.className = "";
-
-    if (els.modalNotes)
-      els.modalNotes.textContent =
-        inst.notes || inst.data?.notes || "Sin notas.";
-
-    const groups = inst.groups
-      ? inst.groups
-      : window.TEMPLATE_DEFINITIONS.npc.groups;
-
-    // Token Section
-    els.modalStats.appendChild(renderTokenSection(inst, els.modalStats));
-
-    groups.forEach((group, gIdx) => {
-      const fieldset = document.createElement("fieldset");
-      fieldset.className = "ae-group-fieldset";
-
-      const legend = document.createElement("legend");
-      legend.textContent = group.name;
-      fieldset.appendChild(legend);
-
-      const grid = document.createElement("div");
-      grid.className = "ae-stat-grid-3col";
-
-      const byType = {};
-      group.fields.forEach((f) => {
-        if (!byType[f.type]) byType[f.type] = [];
-        byType[f.type].push(f);
-      });
-
-      Object.entries(byType).forEach(([typeName, fields]) => {
-        const col = document.createElement("div");
-        col.className = "ae-stat-col";
-
-        const subTitle = document.createElement("h4");
-        subTitle.textContent = typeName;
-        col.appendChild(subTitle);
-
-        fields.forEach((f) => {
-          let val = f.value;
-          if (!inst.groups && inst.stats && inst.stats[f.name] !== undefined) {
-            val = inst.stats[f.name];
-          }
-
-          const row = document.createElement("div");
-          row.className = "ae-stat-row";
-
-          const labelSpan = document.createElement("span");
-          labelSpan.className = "stat-label";
-          labelSpan.textContent = f.name;
-
-          const valSpan = document.createElement("span");
-          valSpan.className = "stat-val editable-stat";
-          valSpan.textContent = val;
-          valSpan.dataset.statName = f.name;
-
-          valSpan.addEventListener("click", (e) => {
-            if (!canEditEncounter()) return;
-            e.stopPropagation();
-            const currentInt = parseInt(valSpan.textContent) || 0;
-            if (window.AE_Picker) {
-              window.AE_Picker.open(valSpan, currentInt, (newVal) => {
-                valSpan.textContent = newVal;
-
-                if (inst.groups) {
-                  const g = inst.groups.find((gr) => gr.name === group.name);
-                  if (g) {
-                    const field = g.fields.find((fi) => fi.name === f.name);
-                    if (field) field.value = newVal;
-                  }
-                }
-
-                if (!inst.stats) inst.stats = {};
-                inst.stats[f.name] = newVal;
-
-                if (f.name === "Salud máxima") {
-                  inst.maxHealth = newVal;
-                  if (inst.health > inst.maxHealth)
-                    inst.health = inst.maxHealth;
-                  updateModalUI(inst);
-                  render();
-                }
-
-                saveEncounter();
-              });
-            }
-          });
-
-          row.appendChild(labelSpan);
-          row.appendChild(valSpan);
-          col.appendChild(row);
-        });
-        grid.appendChild(col);
-      });
-
-      fieldset.appendChild(grid);
-      els.modalStats.appendChild(fieldset);
-    });
-  }
-
-  function renderPCModal(inst) {
-    state.selectedInstanceId = inst.id;
-    const sheet = state.characterSheets.find(
-      (s) => s.id === inst.characterSheetId,
-    );
-    if (!sheet) {
-      els.modalStats.innerHTML = "<p>No se encontró la hoja de personaje.</p>";
-      return;
-    }
-
-    const charData = sheet.data || {};
-    const clanName = charData.clan ? `, del Clan ${escapeHtml(charData.clan)}` : "";
-    els.modalTitle.innerHTML = `<span class="ae-title-name">${escapeHtml(inst.name)}${clanName}</span> <span class="ae-pc-badge">PJ</span>`;
-
-    // Hide NPC health controls, we'll draw our own
-    const healthControls = els.modal.querySelector(".ae-health-section");
-    if (healthControls) healthControls.style.display = "none";
-
-    els.modalStats.innerHTML = "";
-    els.modalStats.className = "ae-pc-readonly-view";
-
-    // Token Section
-    els.modalStats.appendChild(renderTokenSection(inst, els.modalStats));
-
-    // Attributes
-    const attrFieldset = document.createElement("fieldset");
-    attrFieldset.className = "ae-group-fieldset";
-    attrFieldset.innerHTML = "<legend>Atributos</legend>";
-    const attrGrid = document.createElement("div");
-    attrGrid.className = "ae-stat-grid-3col";
-
-    const categories = [
-      { name: "Físicos", map: PC_ATTR_MAP.physical, temp: true },
-      { name: "Sociales", map: PC_ATTR_MAP.social },
-      { name: "Mentales", map: PC_ATTR_MAP.mental },
-    ];
-
-    categories.forEach((cat) => {
-      const col = document.createElement("div");
-      col.className = "ae-stat-col";
-      col.innerHTML = `<h4>${cat.name}</h4>`;
-
-      Object.entries(cat.map).forEach(([id, name]) => {
-        let val = parseInt(charData[id]) || 0;
-        let tempHtml = "";
-        if (cat.temp) {
-          const tempId =
-            "temp" +
-            id.split("-")[0].charAt(0).toUpperCase() +
-            id.split("-")[0].slice(1);
-          const tempVal = parseInt(charData[tempId]) || 0;
-          if (tempVal > 0) {
-            tempHtml = `<span class="ae-stat-temp">+${tempVal}</span>`;
-          }
-        }
-        col.innerHTML += `
-          <div class="ae-stat-row">
-            <span class="stat-label">${name}</span>
-            <span class="stat-val">${val}${tempHtml}</span>
-          </div>`;
-      });
-      attrGrid.appendChild(col);
-    });
-    attrFieldset.appendChild(attrGrid);
-    els.modalStats.appendChild(attrFieldset);
-
-    // Abilities
-    const abilFieldset = document.createElement("fieldset");
-    abilFieldset.className = "ae-group-fieldset";
-    abilFieldset.innerHTML = "<legend>Habilidades</legend>";
-    const abilGrid = document.createElement("div");
-    abilGrid.className = "ae-stat-grid-3col";
-
-    const abilCats = [
-      { name: "Talentos", map: PC_ABILITY_MAP.talents },
-      { name: "Técnicas", map: PC_ABILITY_MAP.skills },
-      { name: "Conocimientos", map: PC_ABILITY_MAP.knowledges },
-    ];
-
-    abilCats.forEach((cat) => {
-      const col = document.createElement("div");
-      col.className = "ae-stat-col";
-      col.innerHTML = `<h4>${cat.name}</h4>`;
-
-      Object.entries(cat.map).forEach(([id, name]) => {
-        let val = parseInt(charData[id]) || 0;
-        col.innerHTML += `
-          <div class="ae-stat-row">
-            <span class="stat-label">${name}</span>
-            <span class="stat-val">${val}</span>
-          </div>`;
-      });
-      abilGrid.appendChild(col);
-    });
-    abilFieldset.appendChild(abilGrid);
-    els.modalStats.appendChild(abilFieldset);
-
-    // Other Stats: Humanity, Willpower, Health & Blood
-    const otherFieldset = document.createElement("fieldset");
-    otherFieldset.className = "ae-group-fieldset";
-    otherFieldset.innerHTML = "<legend>Otros</legend>";
-    const otherGrid = document.createElement("div");
-    otherGrid.className = "ae-stat-grid-4col";
-
-    // Humanity
-    const humCol = document.createElement("div");
-    humCol.className = "ae-stat-col";
-    const humanityName = charData["humanidad"] || "Humanidad/Senda";
-    const humanityVal = parseInt(charData["humanidad-value"]) || 0;
-    humCol.innerHTML = `<h4>Senda</h4>
-      <div class="ae-stat-row">
-        <span class="stat-label">${humanityName}</span>
-        <span class="stat-val">${humanityVal}</span>
-      </div>`;
-    otherGrid.appendChild(humCol);
-
-    // Willpower
-    const willCol = document.createElement("div");
-    willCol.className = "ae-stat-col";
-    const willPerm = parseInt(charData["voluntadPerm-value"]) || 0;
-    const willTemp = parseInt(charData["voluntadTemp-value"]) || 0;
-    willCol.innerHTML = `<h4>Voluntad</h4>
-      <div class="ae-stat-row">
-        <span class="stat-label">Permanente</span>
-        <span class="stat-val">${willPerm}</span>
-      </div>
-      <div class="ae-stat-row">
-        <span class="stat-label">Temporal</span>
-        <span class="stat-val">${willTemp}</span>
-      </div>`;
-    otherGrid.appendChild(willCol);
-
-    // Blood Pool
-    const bloodCol = document.createElement("div");
-    bloodCol.className = "ae-stat-col";
-
-    const getBloodMax = (gen) => {
-      if (gen <= 6) return 30;
-      if (gen <= 7) return 20;
-      if (gen <= 8) return 15;
-      if (gen <= 9) return 14;
-      if (gen <= 10) return 13;
-      if (gen <= 11) return 12;
-      if (gen <= 12) return 11;
-      return 10;
-    };
-
-    const gen = parseInt(charData["generacion"]) || 13;
-    const maxBlood = getBloodMax(gen);
-    const currentBloodStr = charData["blood-value"] || "";
-    const currentBlood = currentBloodStr.replace(/0/g, "").length;
-    const isLowBlood = currentBlood < 5;
-    const bloodStyle = isLowBlood
-      ? 'style="color: var(--color-red-accent);"'
-      : "";
-
-    bloodCol.innerHTML = `<h4>Sangre</h4>
-      <div class="ae-stat-row">
-        <span class="stat-label">Actual / Max</span>
-        <span class="stat-val" ${bloodStyle}>${currentBlood} / ${maxBlood}</span>
-      </div>
-      ${isLowBlood ? '<div style="font-size: 0.7em; color: var(--color-red-accent); margin-top: 4px; font-weight: bold;">¡RESERVA BAJA!</div>' : ""}`;
-    otherGrid.appendChild(bloodCol);
-
-    // Health Squares inside modal
-    const healthCol = document.createElement("div");
-    healthCol.className = "ae-stat-col";
-    const types = ["", "contundente", "letal", "agravado"];
-    const boxes = (inst.pcHealth || [0, 0, 0, 0, 0, 0, 0])
-      .map((val) => `<span class="ae-health-sq ${types[val] || ""}"></span>`)
-      .join("");
-
-    // Calculate movement penalty for modal as well
-    const healthLevelNames = [
-      "Magullado",
-      "Lastimado",
-      "Lesionado",
-      "Herido",
-      "Malherido",
-      "Tullido",
-      "Incapacitado",
-    ];
-    const movementPenalties = [
-      "Sin penalización.",
-      "Sin penalización.",
-      "Velocidad al correr se divide a la mitad.",
-      "No puede correr. Solo puede moverse o atacar.",
-      "Solo puede cojear (3 metros por turno).",
-      "Solo puede arrastrarse (1 metro por turno).",
-      "Incapaz de moverse.",
-    ];
-    let currentLevelIndex = -1;
-    const pcH = inst.pcHealth || [];
-    for (let i = 0; i < pcH.length; i++) {
-      if (pcH[i] > 0) currentLevelIndex = i;
-    }
-    let tooltip = "Salud: Sin daño";
-    if (currentLevelIndex !== -1) {
-      tooltip = `${healthLevelNames[currentLevelIndex]}: ${movementPenalties[currentLevelIndex]}`;
-    }
-
-    healthCol.innerHTML = `<h4>Salud</h4>
-      <div class="ae-pc-health-row" style="justify-content: flex-start;" title="${tooltip}">
-        ${boxes}
-      </div>
-      <div style="font-size: 0.8em; color: #888; margin-top: 5px;">${tooltip}</div>`;
-    otherGrid.appendChild(healthCol);
-
-    otherFieldset.appendChild(otherGrid);
-    els.modalStats.appendChild(otherFieldset);
-
-    // Hide Code and Notes for PCs
-
-    if (els.modalNotes) {
-      els.modalNotes.style.display = "none";
-    }
-  }
-
-  function renderTokenSection(inst, container) {
-    // Check if token already exists
-    const token = state.encounter.data.tokens.find(
-      (t) => t.instanceId === inst.id,
-    );
-    const isOnMap = !!token;
-
-    const section = document.createElement("div");
-    section.className = "ae-token-section";
-    section.style.textAlign = "center";
-    section.style.marginBottom = "16px";
-    section.style.borderBottom = "1px solid rgba(255,255,255,0.1)";
-    section.style.paddingBottom = "16px";
-
-    const title = document.createElement("h4");
-    title.textContent = "Token";
-    title.style.color = "#aaa";
-    title.style.textTransform = "uppercase";
-    title.style.fontSize = "0.7rem";
-    title.style.letterSpacing = "1px";
-    title.style.marginBottom = "8px";
-    section.appendChild(title);
-
-    const previewContainer = document.createElement("div");
-    previewContainer.className = `ae-token-preview ${isOnMap ? "active" : ""}`;
-    previewContainer.style.width = "60px";
-    previewContainer.style.height = "60px";
-    previewContainer.style.borderRadius = "50%";
-    previewContainer.style.margin = "0 auto";
-    previewContainer.style.cursor = "pointer";
-    previewContainer.style.position = "relative";
-    previewContainer.style.overflow = "hidden";
-
-    let borderColor = "#444"; // Default off-map/inactive
-    if (isOnMap) {
-      borderColor = inst.isPC
-        ? "var(--color-gold, #c5a059)"
-        : "var(--color-selected-token, #ff9800)";
-    }
-
-    previewContainer.style.border = `2px solid ${borderColor}`;
-    previewContainer.style.transition = "all 0.2s ease";
-
-    // Image logic
-    const imgUrl = inst.avatarUrl || inst.data?.avatarUrl;
-    if (imgUrl) {
-      const img = document.createElement("img");
-      img.src = imgUrl;
-      img.style.width = "100%";
-      img.style.height = "100%";
-      img.style.objectFit = "cover";
-      previewContainer.appendChild(img);
-    } else {
-      const initials = document.createElement("div");
-      initials.textContent = inst.name[0];
-      initials.style.width = "100%";
-      initials.style.height = "100%";
-      initials.style.display = "flex";
-      initials.style.alignItems = "center";
-      initials.style.justifyContent = "center";
-      initials.style.backgroundColor = "#333";
-      initials.style.color = "#ccc";
-      initials.style.fontSize = "1.5rem";
-      initials.style.fontWeight = "bold";
-      previewContainer.appendChild(initials);
-    }
-
-    // Code Overlay (mimic map)
-    if (!imgUrl) {
-      const codeOverlay = document.createElement("div");
-      codeOverlay.textContent = inst.code;
-      codeOverlay.style.position = "absolute";
-      codeOverlay.style.top = "50%";
-      codeOverlay.style.left = "50%";
-      codeOverlay.style.transform = "translate(-50%, -50%)";
-      codeOverlay.style.color = "#fff";
-      codeOverlay.style.fontWeight = "bold";
-      codeOverlay.style.fontSize = "0.9rem";
-      codeOverlay.style.textShadow = "0 0 3px #000";
-      codeOverlay.style.background = "rgba(0,0,0,0.5)";
-      codeOverlay.style.borderRadius = "50%";
-      codeOverlay.style.width = "36px";
-      codeOverlay.style.height = "36px";
-      codeOverlay.style.display = "flex";
-      codeOverlay.style.alignItems = "center";
-      codeOverlay.style.justifyContent = "center";
-      previewContainer.appendChild(codeOverlay);
-    }
-
-    section.appendChild(previewContainer);
-
-    const statusText = document.createElement("div");
-    statusText.textContent = isOnMap
-      ? "En Mapa (Click para quitar)"
-      : "Oculto (Click para agregar)";
-    statusText.style.fontSize = "0.7rem";
-    statusText.style.marginTop = "6px";
-    statusText.style.color = isOnMap ? "#2ecc71" : "#888"; // Green if active, gray if not
-    section.appendChild(statusText);
-
-    // Toggle Click Logic
-    previewContainer.addEventListener("click", () => {
-      if (!canEditEncounter()) return;
-      if (isOnMap) {
-        // Remove token
-        state.encounter.data.tokens = state.encounter.data.tokens.filter(
-          (t) => t.instanceId !== inst.id,
-        );
-      } else {
-        // Add token
-        // Calculate center of view
-        let x = 0;
-        let y = 0;
-        if (state.map) {
-          // Center of viewport in world coords
-          const canvasW = state.map.canvas.width;
-          const canvasH = state.map.canvas.height;
-          x = Math.round(
-            (-state.map.offsetX + canvasW / 2) / state.map.scale / 50,
-          );
-          y = Math.round(
-            (-state.map.offsetY + canvasH / 2) / state.map.scale / 50,
-          );
-        }
-
-        state.encounter.data.tokens.push({
-          id: crypto.randomUUID(),
-          instanceId: inst.id,
-          x: x,
-          y: y,
-          size: 1,
-          imgUrl: imgUrl || null,
-        });
-      }
-
-      saveEncounter();
-      render(); // Updates map
-
-      // Re-render this section in place to update UI
-      if (container.contains(section)) {
-        const newSection = renderTokenSection(inst, container);
-        container.replaceChild(newSection, section);
-      }
-    });
-
-    return section;
+    modalController?.openModal(inst);
   }
 
   function closeModal() {
-    els.modal.style.display = "none";
-    state.selectedInstanceId = null;
+    modalController?.closeModal();
   }
 
   function updateModalUI(inst) {
-    const hpPct = (inst.health / inst.maxHealth) * 100;
-    let hpClass = "high";
-    if (hpPct < 50) hpClass = "med";
-    if (hpPct < 20) hpClass = "low";
-    if (inst.health === 0) hpClass = "dead";
-
-    els.modalHpFill.className = "ae-hp-fill " + hpClass;
-    els.modalHpFill.style.width = hpPct + "%";
-    els.modalHpText.textContent = `${inst.health} / ${inst.maxHealth}`;
+    modalController?.updateModalUI(inst);
   }
 
   // --- SAVE ---
 
+  // sanitizeEncounterTokens & saveEncounter — delegated to persistence/encounter-persistence.js
   function sanitizeEncounterTokens() {
-    const d = state.encounter?.data;
-    if (!d) return { changed: false, removedCount: 0 };
-
-    const validIds = new Set((d.instances || []).map((i) => i.id));
-    const tokens = d.tokens || [];
-    const nextTokens = tokens.filter((t) => t && validIds.has(t.instanceId));
-    const removedCount = tokens.length - nextTokens.length;
-    const changed = removedCount > 0;
-
-    if (changed) {
-      d.tokens = nextTokens;
-      if (state.selectedTokenId) {
-        const stillExists = nextTokens.some(
-          (t) => t.id === state.selectedTokenId,
-        );
-        if (!stillExists) {
-          state.selectedTokenId = null;
-          if (state.map) state.map.selectedTokenId = null;
-        }
-      }
-    }
-
-    return { changed, removedCount };
+    return persistenceController?.sanitizeEncounterTokens() || { changed: false, removedCount: 0 };
   }
 
   async function saveEncounter() {
-    if (!state.encounter) return;
-    if (!canEditEncounter()) return;
-    sanitizeEncounterTokens();
-    const btn = document.getElementById("btn-ae-save");
-    const prevText = btn?.textContent || "";
-    if (btn) btn.textContent = "Guardando...";
-
-    // Remove runtime-only image objects before persisting.
-    const cleanData = {
-      ...state.encounter.data,
-      map: normalizeMapLayerData(state.encounter.data.map),
-      tokens: (state.encounter.data.tokens || []).map(({ img, ...token }) => ({
-        ...token,
-      })),
-      designTokens: normalizeDesignTokensData(
-        (state.encounter.data.designTokens || []).map(({ img, ...token }) => ({
-          ...token,
-        })),
-      ),
-      mapEffects: normalizeMapEffectsData(state.encounter.data.mapEffects),
-      tileMap: state.encounter.data.tileMap || {},
-      walls: state.encounter.data.walls || [],
-      lights: state.encounter.data.lights || [],
-      switches: state.encounter.data.switches || [],
-      ambientLight: state.encounter.data.ambientLight || null,
-      fog: state.encounter.data.fog || null,
-    };
-
-    state.isApplyingRemoteUpdate = true;
-    let error = null;
-
-    if (state.encounterHasUpdatedAt) {
-      let query = supabase
-        .from("encounters")
-        .update({ data: cleanData })
-        .eq("id", state.encounterId);
-
-      if (state.encounterUpdatedAt) {
-        query = query.eq("updated_at", state.encounterUpdatedAt);
-      }
-
-      const { data, error: updateErr } = await query
-        .select("updated_at")
-        .maybeSingle();
-      error = updateErr || null;
-
-      if (!error) {
-        if (state.encounterUpdatedAt && !data) {
-          alert(
-            "Otro usuario actualizó este encuentro antes. Refresca y vuelve a intentar.",
-          );
-          await loadEncounterData();
-          if (btn) btn.textContent = prevText;
-          state.isApplyingRemoteUpdate = false;
-          return;
-        }
-        if (data?.updated_at) {
-          state.encounterUpdatedAt = data.updated_at;
-        }
-      }
-    } else {
-      const { error: updateErr } = await supabase
-        .from("encounters")
-        .update({ data: cleanData })
-        .eq("id", state.encounterId);
-      error = updateErr || null;
-    }
-
-    if (error) alert("Error: " + error.message);
-
-    if (btn) {
-      btn.textContent = "Guardado";
-      setTimeout(() => (btn.textContent = prevText), 1000);
-    }
-    setTimeout(() => {
-      state.isApplyingRemoteUpdate = false;
-    }, 200);
+    return persistenceController?.saveEncounter();
   }
 
   function teardownGlobalDocumentListeners() {
@@ -3467,8 +1943,17 @@
     removeGlobalLifecycleListeners();
     tokenContextMenuController?.destroy?.();
     tokenContextMenuController = null;
-    closeDesignTokenContextMenu();
-    closeMapContextMenu();
+    lightSwitchManager?.destroy?.();
+    lightSwitchManager = null;
+    persistenceController?.destroy?.();
+    persistenceController = null;
+    designTokenMenuController?.destroy?.();
+    designTokenMenuController = null;
+    mapContextMenuController?.destroy?.();
+    mapContextMenuController = null;
+    modalController = null;
+    syncController = null;
+    instanceManager = null;
     tokenActionsController = null;
 
     if (state.map && typeof state.map.destroy === "function") {
@@ -3480,23 +1965,6 @@
   }
 
   // --- UTILITIES ---
-
-  function calculateInitiative(data) {
-    return encounterTurns.calculateInitiative(data);
-  }
-
-  function findMaxCode(instances, baseLetter) {
-    let maxNum = 0;
-    const regex = new RegExp(`^${baseLetter}(\\d+)$`);
-    instances.forEach((i) => {
-      const m = i.code.match(regex);
-      if (m) {
-        const n = parseInt(m[1]);
-        if (n > maxNum) maxNum = n;
-      }
-    });
-    return maxNum;
-  }
 
   function getHealthClass(current, max, status) {
     if (status === "dead" || current === 0) return "dead";

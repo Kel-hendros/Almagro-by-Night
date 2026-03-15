@@ -399,17 +399,14 @@
       var ambientColor = document.getElementById("ae-ambient-color");
       var ambientIntensity = document.getElementById("ae-ambient-intensity");
       var ambientVal = document.getElementById("ae-ambient-intensity-val");
+      var _ambientSaveTimer = null;
 
-      function refreshAmbientUI() {
-        var al = state.encounter?.data?.ambientLight || { color: "#8090b0", intensity: 0 };
-        if (ambientColor) ambientColor.value = al.color || "#8090b0";
-        if (ambientIntensity) ambientIntensity.value = al.intensity != null ? al.intensity : 0;
-        if (ambientVal) ambientVal.textContent = Math.round((al.intensity || 0) * 100) + "%";
-      }
-
-      function syncAmbientToMap() {
-        var map = getMap?.();
-        if (map) map._ambientLight = state.encounter?.data?.ambientLight || { color: "#8090b0", intensity: 0.5 };
+      function debouncedSaveAmbient() {
+        if (_ambientSaveTimer) clearTimeout(_ambientSaveTimer);
+        _ambientSaveTimer = setTimeout(function () {
+          _ambientSaveTimer = null;
+          ctx.saveEncounter?.();
+        }, 500);
       }
 
       if (ambientColor) {
@@ -418,10 +415,9 @@
           var al = state.encounter?.data?.ambientLight;
           if (!al) return;
           al.color = ambientColor.value;
-          syncAmbientToMap();
           var map = getMap?.();
           if (map) { map.invalidateLighting?.(); map.invalidateFog?.(); map.draw(); }
-          ctx.saveEncounter?.();
+          debouncedSaveAmbient();
         });
       }
       if (ambientIntensity) {
@@ -431,13 +427,11 @@
           if (!al) return;
           al.intensity = parseFloat(ambientIntensity.value) || 0;
           if (ambientVal) ambientVal.textContent = Math.round(al.intensity * 100) + "%";
-          syncAmbientToMap();
           var map = getMap?.();
           if (map) { map.invalidateLighting?.(); map.invalidateFog?.(); map.draw(); }
-          ctx.saveEncounter?.();
+          debouncedSaveAmbient();
         });
       }
-      refreshAmbientUI();
 
       var addBtn = document.getElementById("btn-ae-add-light");
       if (addBtn) {
@@ -669,9 +663,21 @@
       if (fogCheck) fogCheck.checked = !!state.encounter?.data?.fog?.enabled;
     }
 
+    function refreshAmbientUI() {
+      var al = state.encounter?.data?.ambientLight;
+      if (!al) return;
+      var ambientColor = document.getElementById("ae-ambient-color");
+      var ambientIntensity = document.getElementById("ae-ambient-intensity");
+      var ambientVal = document.getElementById("ae-ambient-intensity-val");
+      if (ambientColor) ambientColor.value = al.color || "#8090b0";
+      if (ambientIntensity) ambientIntensity.value = al.intensity != null ? al.intensity : 0;
+      if (ambientVal) ambientVal.textContent = Math.round((al.intensity != null ? al.intensity : 0) * 100) + "%";
+    }
+
     function renderAssetLists() {
       if (!els.listBackground || !els.listDecor || !els.listEntitiesNpc || !els.listEntitiesPc) return;
       refreshGridOpacityButtons();
+      refreshAmbientUI();
       renderLightList();
       const map = getMap();
 

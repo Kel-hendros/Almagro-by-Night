@@ -1,0 +1,109 @@
+/* ── Light Popover ── */
+
+.ae-light-popover {
+    position: fixed;
+    z-index: 100;
+    background: rgba(15, 15, 15, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 170px;
+}
+
+.ae-light-popover-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ae-light-popover-row label {
+    font-size: 0.68rem;
+    color: #aaa;
+    min-width: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.ae-light-popover-row input[type="color"] {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.ae-light-popover-row input[type="range"] {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--color-gold, #c5a059);
+}
+
+.ae-light-popover-row .ae-light-range-val {
+    font-size: 0.68rem;
+    color: #ccc;
+    min-width: 22px;
+    text-align: right;
+    font-weight: 700;
+}
+
+.ae-light-popover .ae-btn--danger {
+    margin-top: 2px;
+}
+
+/* Ambient light controls */
+.ae-ambient-light-controls {
+    padding: 4px 0 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ae-ambient-light-controls .ae-setting-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ae-ambient-light-controls .ae-setting-label {
+    min-width: 52px;
+}
+
+.ae-ambient-color-input {
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.ae-ambient-light-controls input[type="range"] {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--color-gold, #c5a059);
+}
+
+/* Light drawer list items */
+.ae-drawer-item--light {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ae-light-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}

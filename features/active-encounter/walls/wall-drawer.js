@@ -434,7 +434,7 @@
    *   - door open: doesn't block movement or vision
    *   - door closed: blocks both
    *   - window open: doesn't block movement or vision (curtain open)
-   *   - window closed: blocks movement, doesn't block vision
+   *   - window closed: blocks movement and vision
    * Returns the toggled wall, or null.
    */
   function tryToggleDoor(cellX, cellY, walls) {

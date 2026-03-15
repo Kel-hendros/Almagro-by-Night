@@ -11,8 +11,7 @@
    * Does this wall block vision?
    */
   function blocksVision(wall) {
-    if (wall.type === "window") return false;
-    if (wall.type === "door" && wall.doorOpen) return false;
+    if ((wall.type === "door" || wall.type === "window") && wall.doorOpen) return false;
     return true;
   }
 

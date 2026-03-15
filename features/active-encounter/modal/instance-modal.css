@@ -1,0 +1,313 @@
+/* ── Modal ── */
+.ae-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.ae-modal-content {
+    background: #0e0e0e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    width: 750px;
+    max-width: 95%;
+    padding: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.ae-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+}
+
+.ae-modal-header h3 {
+    margin: 0;
+    color: var(--color-cream);
+    font-size: 1rem;
+}
+
+.ae-title-name {
+    color: var(--color-red-accent);
+}
+
+.ae-title-code {
+    color: var(--color-cream);
+    font-weight: normal;
+    opacity: 0.6;
+    font-size: 0.85rem;
+}
+
+/* ── Stats in Modal ── */
+.ae-group-fieldset {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ae-group-fieldset legend {
+    padding: 0 8px;
+    color: var(--color-red-accent);
+    font-family: 'Special Elite', cursive;
+    font-size: 0.85rem;
+}
+
+.ae-stat-grid-3col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.ae-stat-grid-4col {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.ae-stat-col h4 {
+    color: #999;
+    margin: 0 0 6px 0;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 3px;
+}
+
+.ae-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+    padding: 1px 0;
+}
+
+.stat-label {
+    color: #aaa;
+}
+
+.stat-val {
+    color: #f0f0f0;
+    font-weight: 700;
+}
+
+.ae-divider {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 12px 0;
+}
+
+/* ── Modal Health Controls ── */
+.ae-health-section h4 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+
+.ae-modal-health-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.ae-ctrl-btn.ae-size-lg {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #ccc;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.ae-ctrl-btn.ae-size-lg:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.ae-hp-bar.ae-size-lg {
+    flex-grow: 1;
+    height: 24px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Damage/Heal Input */
+.ae-damage-input {
+    width: 36px;
+    height: 36px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: 6px;
+    flex-shrink: 0;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.ae-damage-input::-webkit-outer-spin-button,
+.ae-damage-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.ae-damage-input:focus {
+    outline: none;
+    border-color: var(--color-red-accent, #ad3838);
+}
+
+/* ── Editable Stat Picker ── */
+.editable-stat {
+    cursor: pointer;
+    border-bottom: 1px dotted #555;
+    transition: all 0.15s ease;
+    position: relative;
+    padding: 0 3px;
+}
+
+.editable-stat:hover {
+    color: var(--color-red-accent);
+    border-color: var(--color-red-accent);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
+}
+
+.ae-stat-picker-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 20000;
+    display: none;
+}
+
+.ae-stat-picker {
+    position: absolute;
+    background: rgba(10, 10, 10, 0.97);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-red-accent);
+    border-radius: 6px;
+    padding: 6px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    z-index: 20001;
+    display: none;
+    min-width: 100px;
+}
+
+.ae-picker-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #eee;
+    font-weight: 700;
+    font-family: 'Special Elite', cursive;
+    padding: 6px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.85rem;
+    min-width: 28px;
+}
+
+.ae-picker-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-red-accent);
+    color: var(--color-red-accent);
+}
+
+.ae-picker-btn.active {
+    background: var(--color-red-accent);
+    color: var(--color-cream);
+    border-color: var(--color-red-accent);
+}
+
+/* ── PC Badge ── */
+.ae-pc-badge {
+    font-size: 0.55rem;
+    background: rgba(197, 160, 89, 0.15);
+    color: var(--color-gold, #c5a059);
+    padding: 1px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(197, 160, 89, 0.2);
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+/* ── PC Temp Stat ── */
+.ae-stat-temp {
+    color: #27ae60;
+    margin-left: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(39, 174, 96, 0.1);
+    padding: 0 3px;
+    border-radius: 3px;
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+/* ── PC Readonly View ── */
+.ae-pc-readonly-view .ae-stat-row {
+    padding: 3px 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 2px;
+    margin-bottom: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ae-pc-readonly-view .ae-stat-row:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ae-pc-readonly-view .ae-stat-col h4 {
+    margin: 6px 0 5px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+    color: #999;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ae-pc-readonly-view .ae-group-fieldset {
+    margin-bottom: 14px;
+    border-color: rgba(255, 255, 255, 0.1);
+}

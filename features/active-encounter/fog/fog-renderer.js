@@ -6,7 +6,6 @@
 
   var BLUR_RADIUS = 6;
   var BLUR_PAD = 2;
-
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -255,7 +254,7 @@
     // ══════════════════════════════════════════════════
     // STEP 3: Focal lights — reduce darkness within polygons
     // ══════════════════════════════════════════════════
-    if (lights.length > 0 && global.FogVisibility) {
+    if (lights.length > 0 && global.AELightVisibility) {
       ctx.save();
       ctx.globalCompositeOperation = "destination-out";
       for (var li = 0; li < lights.length; li++) {
@@ -263,7 +262,7 @@
         if (light.on === false) continue; // switched off — no illumination
         var lr = light.radius || 4;
         var lI = Math.min(1, Math.max(0, light.intensity != null ? light.intensity : 0.8));
-        var lpoly = global.FogVisibility.computeVisibilityPolygon(light.x, light.y, walls, lr);
+        var lpoly = global.AELightVisibility.computeLightPolygon(light.x, light.y, walls, lr);
         if (!lpoly || lpoly.length < 3) continue;
 
         var lcx = light.x * gs + offX;
@@ -298,14 +297,14 @@
         if (light.on === false) continue;
         var lr = light.radius || 4;
         var lI = Math.min(1, Math.max(0, light.intensity != null ? light.intensity : 0.8));
-        var lRgb = hexToRgb(light.color || "#ffcc66");
-        var lpoly = global.FogVisibility.computeVisibilityPolygon(light.x, light.y, walls, lr);
+        var lpoly = global.AELightVisibility.computeLightPolygon(light.x, light.y, walls, lr);
         if (!lpoly || lpoly.length < 3) continue;
 
         var lcx = light.x * gs + offX;
         var lcy = light.y * gs + offY;
         var lrpx = lr * gs;
         var ltAlpha = lI * 0.08;
+        var lRgb = hexToRgb(light.color || "#ffcc66");
 
         ctx.save();
         ctx.beginPath();

@@ -1,5 +1,7 @@
 <div class="active-encounter-container">
     <link rel="stylesheet" href="features/active-encounter/active-encounter.css">
+    <link rel="stylesheet" href="features/active-encounter/lighting/light-switch-manager.css">
+    <link rel="stylesheet" href="features/active-encounter/modal/instance-modal.css">
     <link rel="stylesheet" href="features/active-encounter/active-encounter-mode.css">
 
     <!-- Header / Top Bar -->
@@ -67,7 +69,7 @@
                             </summary>
                             <div class="ae-collapse-body">
                                 <div id="ae-list-background" class="ae-drawer-list"></div>
-                                <button id="btn-ae-map-remove-bg" class="ae-btn ae-btn--danger ae-btn--full">Quitar Fondo</button>
+                                <button id="btn-ae-map-remove-bg" class="ae-btn ae-btn--danger ae-btn--half" style="align-self:flex-end;font-size:0.6rem;">Quitar</button>
                                 <input type="file" id="ae-map-bg-input" accept="image/*" style="display:none;">
                             </div>
                         </details>
@@ -86,8 +88,10 @@
                                         <button type="button" class="ae-level-btn" data-brush="3">3</button>
                                     </div>
                                 </div>
-                                <button id="btn-ae-terrain-eraser" class="ae-btn ae-btn--secondary ae-btn--full" type="button">Borrador</button>
-                                <button id="btn-ae-terrain-clear" class="ae-btn ae-btn--danger ae-btn--full" type="button">Limpiar todo</button>
+                                <div class="ae-wall-mode-btns">
+                                    <button id="btn-ae-terrain-eraser" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Borrador</button>
+                                    <button id="btn-ae-terrain-clear" class="ae-btn ae-btn--danger ae-btn--half" type="button">Limpiar</button>
+                                </div>
                             </div>
                         </details>
 
@@ -113,8 +117,8 @@
                                 <div class="ae-wall-mode-btns">
                                     <button id="btn-ae-wall-draw" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Dibujar</button>
                                     <button id="btn-ae-wall-erase" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Borrar</button>
+                                    <button id="btn-ae-wall-clear" class="ae-btn ae-btn--danger ae-btn--half" type="button">Limpiar</button>
                                 </div>
-                                <button id="btn-ae-wall-clear" class="ae-btn ae-btn--danger ae-btn--full" type="button">Limpiar todo</button>
                                 <div id="ae-wall-count" class="ae-wall-count">0 segmentos</div>
                             </div>
                         </details>
@@ -169,7 +173,6 @@
                                     </div>
                                 </div>
                                 <div class="ae-fog-manual-controls">
-                                    <label class="ae-setting-label">Pincel manual</label>
                                     <div class="ae-fog-brush-btns">
                                         <button id="btn-ae-fog-reveal" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Revelar</button>
                                         <button id="btn-ae-fog-hide" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Ocultar</button>
@@ -184,7 +187,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button id="btn-ae-fog-reset" class="ae-btn ae-btn--danger ae-btn--full" type="button">Reiniciar exploración</button>
+                                <button id="btn-ae-fog-reset" class="ae-btn ae-btn--danger ae-btn--half" type="button" style="align-self:flex-end;font-size:0.6rem;">Reiniciar</button>
                             </div>
                         </details>
                     </div>
@@ -197,7 +200,7 @@
                             </summary>
                             <div class="ae-collapse-body">
                                 <div class="ae-setting-row">
-                                    <label class="ae-setting-label">Opacidad de grilla</label>
+                                    <label class="ae-setting-label">Grilla</label>
                                     <div id="ae-grid-opacity-levels" class="ae-levels">
                                         <button type="button" class="ae-level-btn" data-level="0">0</button>
                                         <button type="button" class="ae-level-btn" data-level="1">1</button>
@@ -250,6 +253,11 @@
             <!-- Floating Tools Toggle (left bottom) -->
             <button id="btn-ae-toggle-tools" class="ae-fab-tools" title="Herramientas">
                 <span>+</span>
+            </button>
+
+            <!-- Floating Timeline Toggle (right bottom) -->
+            <button id="btn-ae-toggle-timeline" class="ae-fab-timeline" title="Iniciativa">
+                <span>&#x25B6;</span>
             </button>
         </div>
 
