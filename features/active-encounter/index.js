@@ -29,6 +29,7 @@
     // Instances
     "instances/instance-manager.js",
     // Realtime
+    "realtime/token-drag-broadcast.js",
     "realtime/encounter-sync.js",
     // Encounter subsystems
     "active-encounter-turns.js",

@@ -462,6 +462,22 @@
       state.encounter?.data?.activeInstanceId || null,
     );
     state.map.setInteractionLayer(state.activeMapLayer);
+    // Live drag broadcast — all participants see token movement in real-time
+    if (window.AETokenDragBroadcast && state.encounterId && state.user) {
+      dragBroadcast?.destroy?.();
+      dragBroadcast = window.AETokenDragBroadcast.create(state.encounterId, {
+        supabase: window.supabase,
+        getMap: () => state.map,
+        userId: state.user.id,
+      });
+      state.map.onTokenDrag = (tokenId, x, y) => {
+        dragBroadcast?.broadcastDrag(tokenId, x, y);
+      };
+      state.map.onTokenDragEnd = (tokenId, x, y) => {
+        dragBroadcast?.broadcastDragEnd(tokenId, x, y);
+      };
+    }
+
     state.map.onTokenMove = async (id, x, y, oldX, oldY) => {
       const t = state.encounter.data.tokens.find((tk) => tk.id === id);
       if (t) {
@@ -553,7 +569,22 @@
 
     state.map.onSwitchToggle = (switchId) => {
       if (!state.encounter?.data) return;
+      // Player proximity check
+      if (!canEditEncounter()) {
+        var sw = (state.encounter.data.switches || []).find(s => s.id === switchId);
+        if (!sw || !isPlayerNearPosition(sw.x, sw.y, PLAYER_INTERACT_RANGE)) return;
+      }
       lightSwitchManager?.toggleSwitch(switchId);
+      // Player: persist via RPC (saveEncounter is a no-op for players)
+      if (!canEditEncounter()) {
+        state._playerInteractionUntil = Date.now() + 3000;
+        window.supabase.rpc('toggle_encounter_switch', {
+          p_encounter_id: state.encounterId,
+          p_switch_id: switchId,
+        }).then(result => {
+          if (result.error) console.error('Switch toggle RPC failed:', result.error);
+        });
+      }
     };
 
     state.map.onSwitchMove = () => {
@@ -569,10 +600,31 @@
     };
 
     state.map.onWallDoorToggle = (door) => {
-      if (!state.encounter?.data || !canEditEncounter()) return;
+      if (!state.encounter?.data) return;
+      // Player proximity check — revert if too far (tryToggleDoor already mutated)
+      if (!canEditEncounter()) {
+        var midX = (door.x1 + door.x2) / 2;
+        var midY = (door.y1 + door.y2) / 2;
+        if (!isPlayerNearPosition(midX, midY, PLAYER_INTERACT_RANGE)) {
+          door.doorOpen = !door.doorOpen;
+          state.map.draw();
+          return;
+        }
+      }
       state.map.invalidateFog?.();
       state.map.invalidateLighting?.();
-      saveEncounter();
+      if (canEditEncounter()) {
+        saveEncounter();
+      } else {
+        state._playerInteractionUntil = Date.now() + 3000;
+        window.supabase.rpc('toggle_encounter_door', {
+          p_encounter_id: state.encounterId,
+          p_x1: door.x1, p_y1: door.y1,
+          p_x2: door.x2, p_y2: door.y2,
+        }).then(result => {
+          if (result.error) console.error('Door toggle RPC failed:', result.error);
+        });
+      }
     };
 
     // ── Light placement mode ──
@@ -747,6 +799,36 @@
 
   function canEditEncounter() {
     return state.canManageEncounter;
+  }
+
+  const PLAYER_INTERACT_RANGE = 2; // cells (3m) — max distance to toggle switches/doors
+
+  function isPlayerNearPosition(targetX, targetY, maxDist) {
+    var tokens = state.encounter?.data?.tokens || [];
+    var instances = state.encounter?.data?.instances || [];
+    var userId = state.user?.id;
+    if (!userId) return false;
+    var mySheetIds = new Set(
+      state.characterSheets
+        .filter(function (s) { return s.user_id === userId; })
+        .map(function (s) { return s.id; })
+    );
+    for (var i = 0; i < tokens.length; i++) {
+      var token = tokens[i];
+      var inst = null;
+      for (var j = 0; j < instances.length; j++) {
+        if (instances[j].id === token.instanceId) { inst = instances[j]; break; }
+      }
+      if (!inst || !inst.isPC || !inst.characterSheetId) continue;
+      if (!mySheetIds.has(inst.characterSheetId)) continue;
+      var tSize = token.size || 1;
+      var cx = (parseFloat(token.x) || 0) + tSize / 2;
+      var cy = (parseFloat(token.y) || 0) + tSize / 2;
+      var dx = cx - targetX;
+      var dy = cy - targetY;
+      if (dx * dx + dy * dy <= maxDist * maxDist) return true;
+    }
+    return false;
   }
 
   function setUploadBusy(isBusy, message) {
@@ -1020,6 +1102,7 @@
 
   // --- REALTIME SYNC — delegated to realtime/encounter-sync.js ---
   let syncController = null;
+  let dragBroadcast = null;
 
   function setupRealtimeSubscription() { syncController?.setup(); }
   function teardownRealtimeSubscriptions() { syncController?.teardown(); }
@@ -1953,6 +2036,8 @@
     mapContextMenuController = null;
     modalController = null;
     syncController = null;
+    dragBroadcast?.destroy?.();
+    dragBroadcast = null;
     instanceManager = null;
     tokenActionsController = null;
 

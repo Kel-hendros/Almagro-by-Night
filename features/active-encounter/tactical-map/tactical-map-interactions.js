@@ -915,6 +915,9 @@
               if (this.onTokenMove) {
                 var oldX = this.dragStartTokenPos ? this.dragStartTokenPos.x : null;
                 var oldY = this.dragStartTokenPos ? this.dragStartTokenPos.y : null;
+                if (typeof this.onTokenDragEnd === "function") {
+                  this.onTokenDragEnd(curToken.id, curToken.x, curToken.y);
+                }
                 if (typeof this.markLocalTokenMove === "function") {
                   this.markLocalTokenMove(curToken.id, curToken.x, curToken.y);
                 }
@@ -938,10 +941,14 @@
         // Fog: only recompute when dragging a PC (NPCs don't affect visibility)
         if (dragIsPC && typeof this.invalidateFog === "function" && this._fog?.config?.enabled) {
           var now = performance.now();
-          if (!this._lastDragFogUpdate || now - this._lastDragFogUpdate > 140) {
+          if (!this._lastDragFogUpdate || now - this._lastDragFogUpdate > 200) {
             this._lastDragFogUpdate = now;
             this.invalidateFog();
           }
+        }
+        // Broadcast drag position to other clients in real-time
+        if (typeof this.onTokenDrag === "function") {
+          this.onTokenDrag(curToken.id, curToken.x, curToken.y);
         }
         this.draw();
       } else if (this.isDraggingMapEffect && this.draggedMapEffect) {
@@ -1103,6 +1110,14 @@
             oldY == null ||
             this.draggedToken.x !== oldX ||
             this.draggedToken.y !== oldY;
+          // Broadcast drag end so other clients stop the live override
+          if (moved && typeof this.onTokenDragEnd === "function") {
+            this.onTokenDragEnd(
+              this.draggedToken.id,
+              this.draggedToken.x,
+              this.draggedToken.y,
+            );
+          }
           if (moved) {
             if (typeof this.markLocalTokenMove === "function") {
               this.markLocalTokenMove(

@@ -4,7 +4,7 @@
 (function initFogVisibilityModule(global) {
   "use strict";
 
-  var DEFAULT_VISION_RADIUS = 15;
+  var DEFAULT_VISION_RADIUS = 30;
   var RAY_EPSILON = 0.00015;
 
   /**
@@ -61,45 +61,45 @@
       segments.push({ ax: w.x1, ay: w.y1, bx: w.x2, by: w.y2 });
     }
 
-    // 2. Add bounding box as segments (clips vision to radius)
-    var bMinX = ox - radius;
-    var bMinY = oy - radius;
-    var bMaxX = ox + radius;
-    var bMaxY = oy + radius;
-    segments.push({ ax: bMinX, ay: bMinY, bx: bMaxX, by: bMinY }); // top
-    segments.push({ ax: bMaxX, ay: bMinY, bx: bMaxX, by: bMaxY }); // right
-    segments.push({ ax: bMaxX, ay: bMaxY, bx: bMinX, by: bMaxY }); // bottom
-    segments.push({ ax: bMinX, ay: bMaxY, bx: bMinX, by: bMinY }); // left
-
-    // 3. Collect unique endpoints from ALL walls (including windows, open doors)
-    //    so rays are cast in every relevant direction. Intersection is only
-    //    tested against blocking segments above.
+    // 2. Collect unique ray angles from ALL wall endpoints (including
+    //    windows, open doors) so rays are cast in every relevant direction.
+    //    Intersection is only tested against blocking segments above.
     var uniqueAngles = [];
     var seenAngles = {};
-    // From ALL walls (not just blocking ones)
     for (var i = 0; i < walls.length; i++) {
       var w = walls[i];
-      addAngles(ox, oy, w.x1, w.y1, uniqueAngles, seenAngles);
-      addAngles(ox, oy, w.x2, w.y2, uniqueAngles, seenAngles);
+      // Only consider endpoints within vision range (+ margin for walls
+      // partially inside the circle).
+      var margin = radius + 2;
+      if (Math.abs(w.x1 - ox) <= margin && Math.abs(w.y1 - oy) <= margin) {
+        addAngles(ox, oy, w.x1, w.y1, uniqueAngles, seenAngles);
+      }
+      if (Math.abs(w.x2 - ox) <= margin && Math.abs(w.y2 - oy) <= margin) {
+        addAngles(ox, oy, w.x2, w.y2, uniqueAngles, seenAngles);
+      }
     }
-    // From boundary segments
-    for (var i = 0; i < 4; i++) {
-      var seg = segments[segments.length - 4 + i];
-      addAngles(ox, oy, seg.ax, seg.ay, uniqueAngles, seenAngles);
-      addAngles(ox, oy, seg.bx, seg.by, uniqueAngles, seenAngles);
+
+    // 3. Add evenly-spaced angles around the full circle to fill gaps
+    //    where no wall endpoints exist (produces smooth circular edge).
+    var CIRCLE_STEPS = 72; // every 5 degrees
+    for (var ci = 0; ci < CIRCLE_STEPS; ci++) {
+      var cAngle = (ci / CIRCLE_STEPS) * Math.PI * 2 - Math.PI;
+      var cKey = cAngle.toFixed(6);
+      if (!seenAngles[cKey]) { seenAngles[cKey] = true; uniqueAngles.push(cAngle); }
     }
 
     // 4. Sort angles
     uniqueAngles.sort(function (a, b) { return a - b; });
 
-    // 5. Cast rays and find closest intersection
+    // 5. Cast rays — clamp to circular radius instead of bounding box
+    var radiusSq = radius * radius;
     var polygon = [];
     for (var i = 0; i < uniqueAngles.length; i++) {
       var angle = uniqueAngles[i];
       var dx = Math.cos(angle);
       var dy = Math.sin(angle);
 
-      var closestT = Infinity;
+      var closestT = radius; // max distance = circle radius
       var closestX = ox + dx * radius;
       var closestY = oy + dy * radius;
 
@@ -134,29 +134,41 @@
 
   /**
    * Determine which cells are inside a polygon (for explored tracking).
-   * Checks cell centers against the polygon using ray-casting point-in-polygon test.
-   * @param {Array} polygon - array of {x, y} in grid coords
-   * @param {number} ox - viewer X
-   * @param {number} oy - viewer Y
-   * @param {number} radius - max radius
-   * @returns {Set<string>} cell keys "cx,cy"
+   * Uses scanline fill: for each row, find polygon edge intersections,
+   * sort them, and fill between pairs. O(rows * edges) instead of
+   * O(rows * cols * vertices).
    */
   function polygonToCells(polygon, ox, oy, radius) {
     var cells = new Set();
     if (!polygon || polygon.length < 3) return cells;
 
-    var minCX = Math.floor(ox - radius);
-    var maxCX = Math.ceil(ox + radius);
     var minCY = Math.floor(oy - radius);
     var maxCY = Math.ceil(oy + radius);
+    var n = polygon.length;
 
     for (var cy = minCY; cy <= maxCY; cy++) {
-      for (var cx = minCX; cx <= maxCX; cx++) {
-        // Test cell center
-        var px = cx + 0.5;
-        var py = cy + 0.5;
-        if (pointInPolygon(px, py, polygon)) {
-          cells.add(cx + "," + cy);
+      var py = cy + 0.5; // cell center Y
+      var xIntersections = [];
+
+      for (var i = 0, j = n - 1; i < n; j = i++) {
+        var yi = polygon[i].y, yj = polygon[j].y;
+        if ((yi > py) === (yj > py)) continue; // edge doesn't cross this row
+        var xi = polygon[i].x, xj = polygon[j].x;
+        var xHit = xi + (py - yi) / (yj - yi) * (xj - xi);
+        xIntersections.push(xHit);
+      }
+
+      xIntersections.sort(function (a, b) { return a - b; });
+
+      // Fill between pairs of intersections
+      for (var k = 0; k < xIntersections.length - 1; k += 2) {
+        var xLeft = Math.floor(xIntersections[k] - 0.5);
+        var xRight = Math.floor(xIntersections[k + 1] - 0.5);
+        for (var cx = xLeft; cx <= xRight; cx++) {
+          // Verify cell center is within the intersection span
+          if (cx + 0.5 >= xIntersections[k] && cx + 0.5 <= xIntersections[k + 1]) {
+            cells.add(cx + "," + cy);
+          }
         }
       }
     }

@@ -31,16 +31,21 @@
         viewerInstanceIds: null,
         _bounds: null,
       };
+      // Invalidate token visibility caches so they recompute with fresh fog state
+      this._tokenFogCacheGeneration = -1;
+      this._tokenFogTargetCache = {};
     };
 
     proto.setFogConfig = function (fogConfig) {
       if (!this._fog) this.initFog(fogConfig, true);
       this._fog.config = fogConfig || this._fog.config;
       this._fog.dirty = true;
+      this._drawDirty = true;
     };
 
     proto.invalidateFog = function () {
       if (this._fog) this._fog.dirty = true;
+      this._drawDirty = true;
     };
 
     proto.setFogViewerInstances = function (instanceIds) {
@@ -74,6 +79,7 @@
         if (fogEnabled) recomputeVisibility(this, fog);
         renderCombinedOverlay(this, fog);
         fog.dirty = false;
+        fog._cacheGen = (fog._cacheGen || 0) + 1; // bump for token visibility cache
       }
 
       var oc = fog.offscreenCanvas;
@@ -118,7 +124,7 @@
       }
     }
 
-    var result = global.FogVisibility.computeVisibility(pcTokens, map.walls || [], 15);
+    var result = global.FogVisibility.computeVisibility(pcTokens, map.walls || []);
     fog.polygons = result.polygons;
     fog.visibleCells = result.cells;
 
@@ -253,45 +259,13 @@
 
     // ══════════════════════════════════════════════════
     // STEP 3: Focal lights — reduce darkness within polygons
+    // Compute each light polygon ONCE and reuse for both
+    // the darkness removal pass and the color tint pass.
     // ══════════════════════════════════════════════════
+    map._cachedLightPolygons = [];
     if (lights.length > 0 && global.AELightVisibility) {
-      ctx.save();
-      ctx.globalCompositeOperation = "destination-out";
-      for (var li = 0; li < lights.length; li++) {
-        var light = lights[li];
-        if (light.on === false) continue; // switched off — no illumination
-        var lr = light.radius || 4;
-        var lI = Math.min(1, Math.max(0, light.intensity != null ? light.intensity : 0.8));
-        var lpoly = global.AELightVisibility.computeLightPolygon(light.x, light.y, walls, lr);
-        if (!lpoly || lpoly.length < 3) continue;
-
-        var lcx = light.x * gs + offX;
-        var lcy = light.y * gs + offY;
-        var lrpx = lr * gs;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(lpoly[0].x * gs + offX, lpoly[0].y * gs + offY);
-        for (var lk = 1; lk < lpoly.length; lk++) {
-          ctx.lineTo(lpoly[lk].x * gs + offX, lpoly[lk].y * gs + offY);
-        }
-        ctx.closePath();
-        ctx.clip();
-
-        var grad = ctx.createRadialGradient(lcx, lcy, 0, lcx, lcy, lrpx);
-        grad.addColorStop(0, "rgba(255,255,255," + lI + ")");
-        grad.addColorStop(0.5, "rgba(255,255,255," + (lI * 0.6) + ")");
-        grad.addColorStop(0.85, "rgba(255,255,255," + (lI * 0.15) + ")");
-        grad.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = grad;
-        ctx.fillRect(lcx - lrpx, lcy - lrpx, lrpx * 2, lrpx * 2);
-        ctx.restore();
-      }
-      ctx.restore();
-
-      // Light color tints
-      ctx.save();
-      ctx.globalCompositeOperation = "source-over";
+      // Pre-compute light polygons and derived values
+      var lightCache = [];
       for (var li = 0; li < lights.length; li++) {
         var light = lights[li];
         if (light.on === false) continue;
@@ -299,18 +273,57 @@
         var lI = Math.min(1, Math.max(0, light.intensity != null ? light.intensity : 0.8));
         var lpoly = global.AELightVisibility.computeLightPolygon(light.x, light.y, walls, lr);
         if (!lpoly || lpoly.length < 3) continue;
+        lightCache.push({ light: light, poly: lpoly, radius: lr, intensity: lI });
+      }
 
-        var lcx = light.x * gs + offX;
-        var lcy = light.y * gs + offY;
-        var lrpx = lr * gs;
-        var ltAlpha = lI * 0.08;
-        var lRgb = hexToRgb(light.color || "#ffcc66");
+      // Expose cached light polygons for token luminosity computation
+      map._cachedLightPolygons = lightCache;
+
+      // Pass 1: darkness removal
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-out";
+      for (var li = 0; li < lightCache.length; li++) {
+        var lc = lightCache[li];
+        var lcx = lc.light.x * gs + offX;
+        var lcy = lc.light.y * gs + offY;
+        var lrpx = lc.radius * gs;
 
         ctx.save();
         ctx.beginPath();
-        ctx.moveTo(lpoly[0].x * gs + offX, lpoly[0].y * gs + offY);
-        for (var lk = 1; lk < lpoly.length; lk++) {
-          ctx.lineTo(lpoly[lk].x * gs + offX, lpoly[lk].y * gs + offY);
+        ctx.moveTo(lc.poly[0].x * gs + offX, lc.poly[0].y * gs + offY);
+        for (var lk = 1; lk < lc.poly.length; lk++) {
+          ctx.lineTo(lc.poly[lk].x * gs + offX, lc.poly[lk].y * gs + offY);
+        }
+        ctx.closePath();
+        ctx.clip();
+
+        var grad = ctx.createRadialGradient(lcx, lcy, 0, lcx, lcy, lrpx);
+        grad.addColorStop(0, "rgba(255,255,255," + lc.intensity + ")");
+        grad.addColorStop(0.5, "rgba(255,255,255," + (lc.intensity * 0.6) + ")");
+        grad.addColorStop(0.85, "rgba(255,255,255," + (lc.intensity * 0.15) + ")");
+        grad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(lcx - lrpx, lcy - lrpx, lrpx * 2, lrpx * 2);
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // Pass 2: color tints (reuses cached polygons)
+      ctx.save();
+      ctx.globalCompositeOperation = "source-over";
+      for (var li = 0; li < lightCache.length; li++) {
+        var lc = lightCache[li];
+        var lcx = lc.light.x * gs + offX;
+        var lcy = lc.light.y * gs + offY;
+        var lrpx = lc.radius * gs;
+        var ltAlpha = lc.intensity * 0.08;
+        var lRgb = hexToRgb(lc.light.color || "#ffcc66");
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(lc.poly[0].x * gs + offX, lc.poly[0].y * gs + offY);
+        for (var lk = 1; lk < lc.poly.length; lk++) {
+          ctx.lineTo(lc.poly[lk].x * gs + offX, lc.poly[lk].y * gs + offY);
         }
         ctx.closePath();
         ctx.clip();
@@ -346,52 +359,65 @@
       var exploredCells = getExploredForViewer(config, fog);
 
       if (isPlayerView) {
-        // Player view — polygon-based fog with smooth edges:
-        // 1. Darken everything (dims explored areas, preserves lighting pattern)
-        // 2. Restore visible areas using polygons with blur (smooth edges)
-        // 3. Force non-explored cells to full black (cell-based but invisible seams: black on black)
+        // Fog canvas approach: a temp canvas that only ADDS darkness,
+        // never removes it. This ensures rooms with no light stay
+        // pitch-black even within the player's visibility polygon
+        // (visibility ≠ illumination).
 
-        // 1. Darken ALL non-visible: add 0.4 darkness everywhere
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = "rgba(0,0,0,0.45)";
-        ctx.fillRect(0, 0, pxW, pxH);
-        ctx.restore();
+        var fogTmp = fog._fogTmpCanvas;
+        var fCtx = fog._fogTmpCtx;
+        if (!fogTmp) {
+          fogTmp = document.createElement("canvas");
+          fog._fogTmpCanvas = fogTmp;
+          fCtx = fogTmp.getContext("2d");
+          fog._fogTmpCtx = fCtx;
+        }
+        if (fogTmp.width !== pxW || fogTmp.height !== pxH) {
+          fogTmp.width = pxW; fogTmp.height = pxH;
+        }
 
-        // 2. Restore visible areas with blur (undo the 0.4 darkness in visible zones)
+        // 1. Start: 0.45 darkness everywhere (dims explored-but-not-visible areas)
+        fCtx.clearRect(0, 0, pxW, pxH);
+        fCtx.fillStyle = "rgba(0,0,0,0.45)";
+        fCtx.fillRect(0, 0, pxW, pxH);
+
+        // 2. Cut out visible areas — no fog penalty where the player can see
         if (fog.polygons && fog.polygons.length > 0) {
-          ctx.save();
-          ctx.globalCompositeOperation = "destination-out";
-          try { ctx.filter = "blur(" + BLUR_RADIUS + "px)"; } catch (_e) {}
-          ctx.fillStyle = "rgba(255,255,255,0.45)";
+          fCtx.save();
+          fCtx.globalCompositeOperation = "destination-out";
+          try { fCtx.filter = "blur(" + BLUR_RADIUS + "px)"; } catch (_e) {}
+          fCtx.fillStyle = "rgba(255,255,255,1)";
           for (var p = 0; p < fog.polygons.length; p++) {
             var poly = fog.polygons[p];
             if (poly.length < 3) continue;
-            ctx.beginPath();
-            ctx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
+            fCtx.beginPath();
+            fCtx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
             for (var k = 1; k < poly.length; k++) {
-              ctx.lineTo(poly[k].x * gs + offX, poly[k].y * gs + offY);
+              fCtx.lineTo(poly[k].x * gs + offX, poly[k].y * gs + offY);
             }
-            ctx.closePath();
-            ctx.fill();
+            fCtx.closePath();
+            fCtx.fill();
           }
-          ctx.restore();
+          fCtx.restore();
         }
 
-        // 3. Force non-explored cells to full black (black-on-dark = no visible seams)
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
+        // 3. Force non-explored cells to full black on the fog layer
+        fCtx.save();
+        fCtx.globalCompositeOperation = "source-over";
         for (var cy = bounds.minY; cy < bounds.maxY; cy++) {
           for (var cx = bounds.minX; cx < bounds.maxX; cx++) {
             var key = cx + "," + cy;
             if (fog.visibleCells.has(key)) continue;
-            if (exploredCells[key]) continue; // explored — keep the darkened lighting
-            ctx.clearRect(cx * gs + offX, cy * gs + offY, gs, gs);
-            ctx.fillStyle = "rgba(0,0,0,1)";
-            ctx.fillRect(cx * gs + offX, cy * gs + offY, gs, gs);
+            if (exploredCells[key]) continue;
+            fCtx.clearRect(cx * gs + offX, cy * gs + offY, gs, gs);
+            fCtx.fillStyle = "rgba(0,0,0,1)";
+            fCtx.fillRect(cx * gs + offX, cy * gs + offY, gs, gs);
           }
         }
-        ctx.restore();
+        fCtx.restore();
+
+        // 4. Composite fog onto main overlay (source-over = only adds darkness)
+        ctx.drawImage(fogTmp, 0, 0);
 
       }
       // Narrator normal view: no fog masking — only sees lighting (Steps 1-4)

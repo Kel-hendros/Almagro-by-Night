@@ -95,7 +95,9 @@ window.TacticalMap = class TacticalMap {
     this.activeTokenAnim = null;
     this.tokenRenderState = new Map();
     this.localTokenMoveEcho = new Map();
+    this._remoteDragPositions = new Map();
     this.remoteMoveAnimMs = 280;
+    this._drawDirty = true; // dirty flag for draw loop optimization
 
     this.onTokenMove = null;
     this.onTokenSelect = null;
@@ -279,7 +281,12 @@ window.TacticalMap = class TacticalMap {
         return;
       }
 
-      if (st.targetX === t.x && st.targetY === t.y) return;
+      if (st.targetX === t.x && st.targetY === t.y) {
+        // Clear settled remote drag echo if DB position matches
+        var rdpMatch = this._remoteDragPositions && this._remoteDragPositions.get(t.id);
+        if (rdpMatch && !rdpMatch.active) this._remoteDragPositions.delete(t.id);
+        return;
+      }
 
       const isLocallyDraggingThis =
         this.isDraggingToken &&
@@ -304,6 +311,23 @@ window.TacticalMap = class TacticalMap {
           Math.abs((parseFloat(t.x) || 0) - (parseFloat(localEcho.x) || 0)) < 0.0001 &&
           Math.abs((parseFloat(t.y) || 0) - (parseFloat(localEcho.y) || 0)) < 0.0001;
         if (sameTarget) {
+          st.x = t.x;
+          st.y = t.y;
+          st.fromX = t.x;
+          st.fromY = t.y;
+          st.targetX = t.x;
+          st.targetY = t.y;
+          st.animating = false;
+          return;
+        }
+      }
+
+      // If a settled remote drag echo matches the incoming position, skip animation
+      var rdpEcho = this._remoteDragPositions && this._remoteDragPositions.get(t.id);
+      if (rdpEcho && !rdpEcho.active) {
+        var rdpMatch = Math.abs(t.x - rdpEcho.x) < 0.01 && Math.abs(t.y - rdpEcho.y) < 0.01;
+        if (rdpMatch) {
+          this._remoteDragPositions.delete(t.id);
           st.x = t.x;
           st.y = t.y;
           st.fromX = t.x;
@@ -719,6 +743,7 @@ window.TacticalMap = class TacticalMap {
 
   setInteractionLayer(layer) {
     const next = layer === "background" || layer === "decor" ? layer : "entities";
+    if (this.activeLayer === next) return;
     this.activeLayer = next;
     if (next !== "entities") {
       this.selectedTokenId = null;
@@ -961,7 +986,27 @@ window.TacticalMap = class TacticalMap {
   startLoop() {
     const loop = (timestamp) => {
       if (this._isDestroyed) return;
-      this.draw(timestamp);
+      // Only redraw when something changed: dirty flag, active animations,
+      // dragging, or token fog opacity still fading.
+      var needsDraw = this._drawDirty
+        || this.isPanning || this.isDraggingToken || this.isDraggingMapEffect
+        || this.isDraggingDesignToken || this.isResizingDesignToken
+        || this.isRotatingDesignToken || this.isDraggingBackground
+        || this.isResizingBackground
+        || this._isDraggingLight || this._isDraggingSwitch
+        || (this._fog && this._fog.dirty)
+        || (this.mapEffects && this.mapEffects.length > 0);
+      if (!needsDraw) {
+        // Check for active token animations
+        var states = this.tokenRenderState;
+        if (states && states.size > 0) {
+          states.forEach(function (st) { if (st.animating) needsDraw = true; });
+        }
+      }
+      if (needsDraw) {
+        this._drawDirty = false;
+        this.draw(timestamp);
+      }
       this._rafId = requestAnimationFrame(loop);
     };
     this._rafId = requestAnimationFrame(loop);
@@ -1007,7 +1052,50 @@ window.TacticalMap = class TacticalMap {
     );
   }
 
+  /**
+   * Compute luminosity at a grid position (analytical, no canvas sampling).
+   * Returns a value in [0, 1] where 0 = pitch black, 1 = fully illuminated.
+   */
+  computeLuminosityAt(gx, gy) {
+    var indoorCells = this._indoorCells;
+    var ambient = this._ambientLight;
+    var ambientI = ambient
+      ? Math.min(1, Math.max(0, ambient.intensity != null ? ambient.intensity : 0.5))
+      : 0.5;
+
+    var cellKey = Math.floor(gx) + "," + Math.floor(gy);
+    var isIndoor = indoorCells && indoorCells.has(cellKey);
+    var luminosity = isIndoor ? 0 : ambientI;
+
+    var lightPolygons = this._cachedLightPolygons;
+    if (lightPolygons && lightPolygons.length > 0 && window.FogVisibility) {
+      for (var i = 0; i < lightPolygons.length; i++) {
+        var lc = lightPolygons[i];
+        if (!window.FogVisibility.pointInPolygon(gx, gy, lc.poly)) continue;
+        var dx = gx - lc.light.x;
+        var dy = gy - lc.light.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var t = dist / lc.radius;
+        var contribution = 0;
+        if (t < 0.50) {
+          contribution = lc.intensity * (1 - t / 0.5 * 0.4);
+        } else if (t < 0.85) {
+          contribution = lc.intensity * (0.6 - (t - 0.5) / 0.35 * 0.45);
+        } else if (t < 1.00) {
+          contribution = lc.intensity * (0.15 - (t - 0.85) / 0.15 * 0.15);
+        }
+        luminosity += contribution;
+      }
+    }
+
+    return Math.min(1, Math.max(0, luminosity));
+  }
+
+  /** Mark the map as needing a redraw on the next animation frame. */
+  requestDraw() { this._drawDirty = true; }
+
   draw(timestamp) {
+    this._drawDirty = false;
     if (typeof this.drawGrid !== "function" || typeof this.drawTokens !== "function") {
       throw new Error(
         "TacticalMap render module not loaded (tactical-map-render.js).",
@@ -1042,7 +1130,6 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawDesignTokens === "function") {
       this.drawDesignTokens("underlay");
     }
-    this.drawTokens(timestamp);
     if (typeof this.drawDesignTokens === "function") {
       this.drawDesignTokens("overlay");
     }
@@ -1054,7 +1141,10 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawFogOfWar === "function") {
       this.drawFogOfWar();
     }
-    // Hover halo drawn AFTER overlay so it's never dimmed by lighting/fog
+    // Tokens drawn ABOVE fog/lighting overlay. Darkness-based hiding
+    // (supernatural + total darkness) and fog visibility are handled inside drawTokens.
+    this.drawTokens(timestamp);
+    // Hover halo drawn AFTER tokens
     if (typeof this.drawTokenHoverOverlay === "function") {
       this.drawTokenHoverOverlay(timestamp);
     }

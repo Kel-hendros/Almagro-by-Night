@@ -64,9 +64,13 @@
       state.lastEncounterSyncKey = buildEncounterSyncKey(updated);
       sanitizeEncounterTokens();
       ensureActiveInstance();
-      if (state.map && typeof state.map.setFogConfig === "function") {
-        state.map.setFogConfig(state.encounter.data.fog || null);
+      if (state.map) {
+        state.map.recomputeRooms?.();
+        if (typeof state.map.setFogConfig === "function") {
+          state.map.setFogConfig(state.encounter.data.fog || null);
+        }
         state.map.invalidateFog?.();
+        state.map.invalidateLighting?.();
       }
       render();
     }
@@ -138,8 +142,12 @@
 
     function startEncounterSyncPolling() {
       stopEncounterSyncPolling();
+      // Safety-net polling — realtime is the primary sync channel.
+      // Runs every 10s to catch anything realtime may have missed.
       state.encounterSyncTimer = setInterval(async function () {
         if (!state.encounterId || state.isApplyingRemoteUpdate) return;
+        // Skip during player interaction cooldown (avoid overwriting optimistic local state)
+        if (state._playerInteractionUntil && Date.now() < state._playerInteractionUntil) return;
         var result = await supabase
           .from("encounters")
           .select(state.encounterHasUpdatedAt ? "id, status, data, updated_at" : "id, status, data")
@@ -150,7 +158,7 @@
         if (!state.lastEncounterSyncKey || incomingKey !== state.lastEncounterSyncKey) {
           applyRemoteEncounterUpdate(result.data);
         }
-      }, 1500);
+      }, 10000);
     }
 
     function stopEncounterSyncPolling() {

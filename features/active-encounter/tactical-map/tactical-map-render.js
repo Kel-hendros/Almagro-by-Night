@@ -44,21 +44,9 @@
       }
       if (!token) return;
 
-      // If fog hides this token, don't show hover either
-      var fog = this._fog;
-      if (fog && fog.config && fog.config.enabled) {
-        var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
-        if (isPlayerView && fog.polygons && fog.polygons.length > 0 && window.FogVisibility) {
-          var tSize = token.size || 1;
-          var tcx = token.x + tSize * 0.5;
-          var tcy = token.y + tSize * 0.5;
-          var inView = false;
-          for (var pi = 0; pi < fog.polygons.length && !inView; pi++) {
-            if (window.FogVisibility.pointInPolygon(tcx, tcy, fog.polygons[pi])) inView = true;
-          }
-          if (!inView) return;
-        }
-      }
+      // If fog hides this token (opacity ~0), don't show hover either
+      if (this._tokenFogOpacity && this._tokenFogOpacity[token.id] != null
+          && this._tokenFogOpacity[token.id] < 0.01) return;
 
       var pos = this.getTokenRenderPosition(token, timestamp);
       var size = (token.size || 1) * this.gridSize;
@@ -672,6 +660,21 @@
         return { x: token.x, y: token.y };
       }
 
+      // Remote drag override — another client is dragging this token
+      var rdp = this._remoteDragPositions && this._remoteDragPositions.get(token.id);
+      if (rdp) {
+        if (!rdp.active && rdp.expiresAt && rdp.expiresAt < Date.now()) {
+          this._remoteDragPositions.delete(token.id);
+        } else {
+          st.x = rdp.x;
+          st.y = rdp.y;
+          st.fromX = rdp.x;
+          st.fromY = rdp.y;
+          st.animating = false;
+          return { x: rdp.x, y: rdp.y };
+        }
+      }
+
       if (!st.animating) {
         st.x = st.targetX;
         st.y = st.targetY;
@@ -693,42 +696,161 @@
     proto.drawTokens = function drawTokens(timestamp) {
       const now = typeof timestamp === "number" ? timestamp : performance.now();
 
-      // In player/impersonate view with fog enabled, fade tokens based on visibility
+      // In player/impersonate view with fog enabled, hide enemy tokens outside vision.
+      // Viewer tokens (player's own) are ALWAYS visible — fog never hides them.
       var fog = this._fog;
       var fogHidesTokens = false;
       var fogPolygons = null;
+      var viewerIdSet = null;
       if (fog && fog.config && fog.config.enabled) {
         var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
         if (isPlayerView && fog.polygons && fog.polygons.length > 0) {
           fogHidesTokens = true;
           fogPolygons = fog.polygons;
+          viewerIdSet = fog.viewerInstanceIds ? new Set(fog.viewerInstanceIds) : null;
         }
       }
+
+      // Cache fog-visibility per token — only recompute when fog changes,
+      // not every frame. Saves O(tokens * polygon_vertices) per frame.
+      if (!this._tokenFogTargetCache) this._tokenFogTargetCache = {};
+      if (this._tokenFogCacheGeneration == null) this._tokenFogCacheGeneration = -1;
+      var fogGen = fog ? (fog._cacheGen || 0) : 0;
+      var cacheStale = fogGen !== this._tokenFogCacheGeneration;
+      if (cacheStale) this._tokenFogCacheGeneration = fogGen;
+
       // Opacity tracking for smooth fade in/out
       if (!this._tokenFogOpacity) this._tokenFogOpacity = {};
       var FADE_SPEED = 0.18; // per frame (~11 frames = 180ms for full transition)
 
+      // Darkness-based visibility
+      var isNarratorView = fog && fog.isNarrator && !fog.impersonateInstanceId;
+      var hasLighting = (this.lights && this.lights.length > 0) ||
+        (this._ambientLight && this._ambientLight.intensity < 1);
+
+      // Viewer's own tokens are exempt from darkness hiding
+      var darknessViewerSet = null;
+      if (fog) {
+        if (fog.impersonateInstanceId && fog.impersonateInstanceId !== 'all') {
+          darknessViewerSet = new Set([fog.impersonateInstanceId]);
+        } else if (fog.viewerInstanceIds) {
+          darknessViewerSet = new Set(fog.viewerInstanceIds);
+        }
+      }
+
+      // Pre-compute viewer token centers for proximity sensing (1.5m = 1 cell)
+      var viewerTokenCenters = [];
+      if (!isNarratorView) {
+        for (var vi = 0; vi < this.tokens.length; vi++) {
+          var vt = this.tokens[vi];
+          var isViewer = false;
+          if (darknessViewerSet) {
+            isViewer = darknessViewerSet.has(vt.instanceId);
+          } else {
+            var vInst = null;
+            for (var vj = 0; vj < this.instances.length; vj++) {
+              if (this.instances[vj].id === vt.instanceId) { vInst = this.instances[vj]; break; }
+            }
+            isViewer = !!(vInst && vInst.isPC);
+          }
+          if (isViewer) {
+            var vtSz = vt.size || 1;
+            viewerTokenCenters.push({
+              cx: (parseFloat(vt.x) || 0) + vtSz * 0.5,
+              cy: (parseFloat(vt.y) || 0) + vtSz * 0.5,
+            });
+          }
+        }
+      }
+
+      // Recompute token luminosity cache when fog/lighting changes
+      if (!this._tokenLuminosity) this._tokenLuminosity = new Map();
+      if (hasLighting && cacheStale && typeof this.computeLuminosityAt === 'function') {
+        this._tokenLuminosity.clear();
+        for (var ti = 0; ti < this.tokens.length; ti++) {
+          var tk = this.tokens[ti];
+          var tSz = tk.size || 1;
+          var tkCX = (parseFloat(tk.x) || 0) + tSz * 0.5;
+          var tkCY = (parseFloat(tk.y) || 0) + tSz * 0.5;
+          this._tokenLuminosity.set(tk.id, { lum: this.computeLuminosityAt(tkCX, tkCY), cx: tkCX, cy: tkCY });
+        }
+      }
+
       this.tokens.forEach((token) => {
+        // Effective position: use remote drag position if another client is dragging
+        var effX = parseFloat(token.x) || 0;
+        var effY = parseFloat(token.y) || 0;
+        var rdp = this._remoteDragPositions && this._remoteDragPositions.get(token.id);
+        if (rdp) { effX = rdp.x; effY = rdp.y; }
+
         var fogTarget = 1;
         if (fogHidesTokens && window.FogVisibility) {
-          // Check if the token center is inside any visibility polygon.
-          // More accurate than cell-based check, avoids corner artifacts.
-          var tSize = token.size || 1;
-          var tokenCX = token.x + tSize * 0.5;
-          var tokenCY = token.y + tSize * 0.5;
-          var inView = false;
-          for (var pi = 0; pi < fogPolygons.length && !inView; pi++) {
-            if (window.FogVisibility.pointInPolygon(tokenCX, tokenCY, fogPolygons[pi])) {
-              inView = true;
+          // Viewer tokens (player's own characters) are always visible
+          var inst = this.instances.find(function (i) { return i.id === token.instanceId; });
+          var isViewerToken = viewerIdSet
+            ? viewerIdSet.has(token.instanceId)
+            : (inst && inst.isPC);
+          if (!isViewerToken) {
+            // Use cached result unless fog changed or token moved
+            var cached = this._tokenFogTargetCache[token.id];
+            if (!cacheStale && cached && cached.x === effX && cached.y === effY) {
+              fogTarget = cached.target;
+            } else {
+              var tSize = token.size || 1;
+              var tokenCX = effX + tSize * 0.5;
+              var tokenCY = effY + tSize * 0.5;
+              var inView = false;
+              for (var pi = 0; pi < fogPolygons.length && !inView; pi++) {
+                if (window.FogVisibility.pointInPolygon(tokenCX, tokenCY, fogPolygons[pi])) {
+                  inView = true;
+                }
+              }
+              fogTarget = inView ? 1 : 0;
+              this._tokenFogTargetCache[token.id] = { target: fogTarget, x: effX, y: effY };
             }
           }
-          fogTarget = inView ? 1 : 0;
+        }
+        // Luminosity-based visibility (independent of fog of war)
+        // Normal vision: only see tokens with >= 30% luminosity.
+        // Proximity override: tokens within 1.5m (1 cell) are always sensed.
+        // Viewer's own tokens: always visible.
+        var darknessDim = 1;
+        if (hasLighting && this._tokenLuminosity) {
+          var isMyToken = darknessViewerSet
+            ? darknessViewerSet.has(token.instanceId)
+            : false;
+          if (!isMyToken) {
+            var tSz2 = token.size || 1;
+            var tCX2 = effX + tSz2 * 0.5;
+            var tCY2 = effY + tSz2 * 0.5;
+            var lumEntry = this._tokenLuminosity.get(token.id);
+            var lum = (lumEntry && lumEntry.cx === tCX2 && lumEntry.cy === tCY2)
+              ? lumEntry.lum
+              : (typeof this.computeLuminosityAt === 'function' ? this.computeLuminosityAt(tCX2, tCY2) : 1);
+            if (lum < 0.30) {
+              var inProximity = false;
+              for (var vpi = 0; vpi < viewerTokenCenters.length && !inProximity; vpi++) {
+                var vp = viewerTokenCenters[vpi];
+                var pdx = tCX2 - vp.cx;
+                var pdy = tCY2 - vp.cy;
+                if (pdx * pdx + pdy * pdy <= 1.0) inProximity = true;
+              }
+              if (!inProximity) {
+                if (isNarratorView) {
+                  darknessDim = 0.35;
+                } else {
+                  fogTarget = 0;
+                }
+              }
+            }
+          }
         }
         // Lerp opacity toward target
         var curOpacity = this._tokenFogOpacity[token.id] != null ? this._tokenFogOpacity[token.id] : fogTarget;
         if (curOpacity < fogTarget) curOpacity = Math.min(fogTarget, curOpacity + FADE_SPEED);
         else if (curOpacity > fogTarget) curOpacity = Math.max(fogTarget, curOpacity - FADE_SPEED);
         this._tokenFogOpacity[token.id] = curOpacity;
+        if (Math.abs(curOpacity - fogTarget) > 0.01) this._drawDirty = true; // keep fading
         if (curOpacity < 0.01) return; // fully hidden
         const hoverType = this.getHoverFocusType();
         const isFocused = this.isTokenHoverFocused(token);
@@ -746,6 +868,7 @@
             ? instance.conditions
             : {};
         const isFlying = !!conditions.flying;
+        if (isFlying) this._drawDirty = true; // flying bob needs continuous frames
         const flightSeed = String(token.id || "")
           .split("")
           .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
@@ -760,7 +883,7 @@
         const visualCx = cx;
         const visualCy = cy - flightLift;
         const isNarratorHidden = instance && instance.visible === false;
-        const alpha = (isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1) * curOpacity;
+        const alpha = (isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1) * curOpacity * darknessDim;
 
         if (isFlying) {
           // Ground shadow stays on the real token position while the token body "floats".
