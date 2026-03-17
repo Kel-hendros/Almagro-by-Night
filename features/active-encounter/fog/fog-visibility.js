@@ -205,6 +205,7 @@
     var radius = visionRadius || DEFAULT_VISION_RADIUS;
     var polygons = [];
     var allCells = new Set();
+    var perTokenCells = [];
 
     for (var i = 0; i < pcTokens.length; i++) {
       var token = pcTokens[i];
@@ -213,124 +214,18 @@
       var poly = computeVisibilityPolygon(cx, cy, walls, radius);
       polygons.push(poly);
 
-      // Derive cells for explored tracking
+      // Derive cells for explored tracking (per-token + merged)
       var cells = polygonToCells(poly, cx, cy, radius);
+      perTokenCells.push(cells);
       cells.forEach(function (key) { allCells.add(key); });
     }
 
-    return { polygons: polygons, cells: allCells };
-  }
-
-  // ── Room Detection (flood fill) ──
-
-  /**
-   * Detect indoor cells by flood-filling from the map border.
-   * ALL wall segments (wall, door, window — any state) form room boundaries.
-   * Cells not reachable from the border are "indoor".
-   *
-   * @param {Array} walls - all wall segments
-   * @param {{ minX, minY, maxX, maxY }} bounds - map bounds in cell coords
-   * @returns {Set<string>} indoor cell keys "cx,cy"
-   */
-  function detectIndoorCells(walls, bounds) {
-    // Build edge set from ALL walls, decomposed into unit-length cell edges.
-    // A wall from (0,0) to (5,0) becomes 5 edges: (0,0)-(1,0), (1,0)-(2,0), etc.
-    var edges = new Set();
-    for (var i = 0; i < walls.length; i++) {
-      var w = walls[i];
-      var dx = w.x2 - w.x1;
-      var dy = w.y2 - w.y1;
-      var steps = Math.max(Math.abs(dx), Math.abs(dy));
-      if (steps === 0) continue;
-      var sx = dx / steps;
-      var sy = dy / steps;
-      for (var s = 0; s < steps; s++) {
-        var ax = Math.round(w.x1 + sx * s);
-        var ay = Math.round(w.y1 + sy * s);
-        var bx = Math.round(w.x1 + sx * (s + 1));
-        var by = Math.round(w.y1 + sy * (s + 1));
-        edges.add(ax + "," + ay + "-" + bx + "," + by);
-        edges.add(bx + "," + by + "-" + ax + "," + ay);
-      }
-    }
-
-    var minX = bounds.minX, minY = bounds.minY;
-    var maxX = bounds.maxX, maxY = bounds.maxY;
-    var outdoor = new Set();
-    var queue = [];
-
-    // Seed: all cells on the border of the map
-    for (var cx = minX; cx < maxX; cx++) {
-      queue.push(cx + "," + minY);
-      queue.push(cx + "," + (maxY - 1));
-      outdoor.add(cx + "," + minY);
-      outdoor.add(cx + "," + (maxY - 1));
-    }
-    for (var cy = minY; cy < maxY; cy++) {
-      queue.push(minX + "," + cy);
-      queue.push((maxX - 1) + "," + cy);
-      outdoor.add(minX + "," + cy);
-      outdoor.add((maxX - 1) + "," + cy);
-    }
-
-    // BFS
-    var directions = [
-      { dx: 1, dy: 0 },  // right:  wall (cx+1,cy)→(cx+1,cy+1)
-      { dx: -1, dy: 0 }, // left:   wall (cx,cy)→(cx,cy+1)
-      { dx: 0, dy: 1 },  // down:   wall (cx,cy+1)→(cx+1,cy+1)
-      { dx: 0, dy: -1 }, // up:     wall (cx,cy)→(cx+1,cy)
-    ];
-
-    while (queue.length > 0) {
-      var key = queue.shift();
-      var parts = key.split(",");
-      var cx = parseInt(parts[0], 10);
-      var cy = parseInt(parts[1], 10);
-
-      for (var d = 0; d < 4; d++) {
-        var dir = directions[d];
-        var nx = cx + dir.dx;
-        var ny = cy + dir.dy;
-        if (nx < minX || nx >= maxX || ny < minY || ny >= maxY) continue;
-
-        var nKey = nx + "," + ny;
-        if (outdoor.has(nKey)) continue;
-
-        // Check if there's a wall on the edge between (cx,cy) and (nx,ny)
-        var edgeKey = getEdgeKey(cx, cy, dir.dx, dir.dy);
-        if (edges.has(edgeKey)) continue; // wall blocks — can't cross
-
-        outdoor.add(nKey);
-        queue.push(nKey);
-      }
-    }
-
-    // Indoor = all cells in bounds NOT in outdoor
-    var indoor = new Set();
-    for (var cy = minY; cy < maxY; cy++) {
-      for (var cx = minX; cx < maxX; cx++) {
-        var k = cx + "," + cy;
-        if (!outdoor.has(k)) indoor.add(k);
-      }
-    }
-    return indoor;
-  }
-
-  /**
-   * Get the wall edge key for moving from (cx,cy) in direction (dx,dy).
-   */
-  function getEdgeKey(cx, cy, dx, dy) {
-    if (dx === 1)  return (cx + 1) + "," + cy + "-" + (cx + 1) + "," + (cy + 1); // right
-    if (dx === -1) return cx + "," + cy + "-" + cx + "," + (cy + 1);              // left
-    if (dy === 1)  return cx + "," + (cy + 1) + "-" + (cx + 1) + "," + (cy + 1); // down
-    if (dy === -1) return cx + "," + cy + "-" + (cx + 1) + "," + cy;              // up
-    return "";
+    return { polygons: polygons, cells: allCells, perTokenCells: perTokenCells };
   }
 
   global.FogVisibility = {
     computeVisibility: computeVisibility,
     computeVisibilityPolygon: computeVisibilityPolygon,
-    detectIndoorCells: detectIndoorCells,
     blocksVision: blocksVision,
     pointInPolygon: pointInPolygon,
   };

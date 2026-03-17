@@ -130,16 +130,16 @@
 
     if (!config.exploredBy) config.exploredBy = {};
     if (!config.explored) config.explored = {};
-    var contributingIds = pcTokens.map(function (t) { return t.instanceId; });
-    for (var ci = 0; ci < contributingIds.length; ci++) {
-      if (!config.exploredBy[contributingIds[ci]]) config.exploredBy[contributingIds[ci]] = {};
+    // Track explored per-token: each PC only gets their OWN visible cells
+    for (var ti = 0; ti < pcTokens.length; ti++) {
+      var instId = pcTokens[ti].instanceId;
+      if (!config.exploredBy[instId]) config.exploredBy[instId] = {};
+      var tokenCells = result.perTokenCells ? result.perTokenCells[ti] : result.cells;
+      tokenCells.forEach(function (key) {
+        config.explored[key] = true;
+        config.exploredBy[instId][key] = true;
+      });
     }
-    result.cells.forEach(function (key) {
-      config.explored[key] = true;
-      for (var ci = 0; ci < contributingIds.length; ci++) {
-        config.exploredBy[contributingIds[ci]][key] = true;
-      }
-    });
 
     var revealed = config.revealed || {};
     var hidden = config.hidden || {};
@@ -173,6 +173,11 @@
 
   function getExploredForViewer(config, fog) {
     var exploredBy = config.exploredBy || {};
+    // When impersonating a specific PC, show only that PC's explored area
+    var impersonate = fog.impersonateInstanceId;
+    if (impersonate && impersonate !== "all") {
+      return exploredBy[impersonate] || {};
+    }
     var viewerIds = fog.viewerInstanceIds;
     if (!viewerIds) return config.explored || {};
     var merged = {};
@@ -192,7 +197,7 @@
     var fogEnabled = !!(config.enabled);
     var ambient = map._ambientLight || { intensity: 0.5, color: "#8090b0" };
     var ambientI = Math.min(1, Math.max(0, ambient.intensity != null ? ambient.intensity : 0.5));
-    var indoorCells = map._indoorCells;
+    var rooms = map._rooms || [];
     var lights = map.lights || [];
     var walls = map.walls || [];
 
@@ -218,42 +223,88 @@
     ctx.fillRect(0, 0, pxW, pxH);
 
     // ══════════════════════════════════════════════════
-    // STEP 2: Ambient light — reduce darkness for OUTDOOR cells
+    // STEP 2: Ambient light — polygon-based rooms
     // ══════════════════════════════════════════════════
     if (ambientI > 0.001) {
+      // 2a: Apply ambient to the entire canvas (global outdoor light)
       ctx.save();
       ctx.globalCompositeOperation = "destination-out";
       ctx.fillStyle = "rgba(255,255,255," + ambientI + ")";
-      if (indoorCells && indoorCells.size > 0) {
-        for (var cy = bounds.minY; cy < bounds.maxY; cy++) {
-          for (var cx = bounds.minX; cx < bounds.maxX; cx++) {
-            if (indoorCells.has(cx + "," + cy)) continue;
-            ctx.fillRect(cx * gs + offX, cy * gs + offY, gs, gs);
-          }
-        }
-      } else {
-        ctx.fillRect(0, 0, pxW, pxH);
-      }
+      ctx.fillRect(0, 0, pxW, pxH);
       ctx.restore();
 
-      // Ambient color tint on outdoor cells
+      // 2b: Re-darken room polygons (rooms override outdoor ambient with their own)
+      if (rooms.length > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        for (var ri = 0; ri < rooms.length; ri++) {
+          var room = rooms[ri], poly = room.polygon;
+          if (!poly || poly.length < 3) continue;
+          var roomAmbI = (room.ambientLight && room.ambientLight.intensity != null)
+            ? Math.min(1, Math.max(0, room.ambientLight.intensity)) : 0;
+          var darken = ambientI - roomAmbI;
+          if (darken < 0.005) continue;
+          ctx.fillStyle = "rgba(0,0,0," + darken + ")";
+          ctx.beginPath();
+          ctx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
+          for (var pk = 1; pk < poly.length; pk++)
+            ctx.lineTo(poly[pk].x * gs + offX, poly[pk].y * gs + offY);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Ambient color tint (global)
       var aRgb = hexToRgb(ambient.color || "#8090b0");
       var tintAlpha = ambientI * 0.05;
       if (tintAlpha > 0.005) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
         ctx.fillStyle = "rgba(" + aRgb.r + "," + aRgb.g + "," + aRgb.b + "," + tintAlpha + ")";
-        if (indoorCells && indoorCells.size > 0) {
-          for (var cy = bounds.minY; cy < bounds.maxY; cy++) {
-            for (var cx = bounds.minX; cx < bounds.maxX; cx++) {
-              if (indoorCells.has(cx + "," + cy)) continue;
-              ctx.fillRect(cx * gs + offX, cy * gs + offY, gs, gs);
-            }
-          }
-        } else {
-          ctx.fillRect(0, 0, pxW, pxH);
-        }
+        ctx.fillRect(0, 0, pxW, pxH);
         ctx.restore();
+
+        // Suppress global tint inside rooms, then apply room's own tint
+        if (rooms.length > 0) {
+          // Remove global tint inside rooms
+          ctx.save();
+          ctx.globalCompositeOperation = "destination-out";
+          for (var ri = 0; ri < rooms.length; ri++) {
+            var room = rooms[ri], poly = room.polygon;
+            if (!poly || poly.length < 3) continue;
+            ctx.fillStyle = "rgba(255,255,255," + tintAlpha + ")";
+            ctx.beginPath();
+            ctx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
+            for (var pk = 1; pk < poly.length; pk++)
+              ctx.lineTo(poly[pk].x * gs + offX, poly[pk].y * gs + offY);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // Apply each room's own ambient tint
+          ctx.save();
+          ctx.globalCompositeOperation = "source-over";
+          for (var ri = 0; ri < rooms.length; ri++) {
+            var room = rooms[ri], poly = room.polygon;
+            if (!poly || poly.length < 3) continue;
+            var roomAmbI = (room.ambientLight && room.ambientLight.intensity != null)
+              ? Math.min(1, Math.max(0, room.ambientLight.intensity)) : 0;
+            if (roomAmbI < 0.005) continue;
+            var roomColor = (room.ambientLight && room.ambientLight.color) || "#8090b0";
+            var rRgb = hexToRgb(roomColor);
+            var roomTint = roomAmbI * 0.05;
+            ctx.fillStyle = "rgba(" + rRgb.r + "," + rRgb.g + "," + rRgb.b + "," + roomTint + ")";
+            ctx.beginPath();
+            ctx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
+            for (var pk = 1; pk < poly.length; pk++)
+              ctx.lineTo(poly[pk].x * gs + offX, poly[pk].y * gs + offY);
+            ctx.closePath();
+            ctx.fill();
+          }
+          ctx.restore();
+        }
       }
     }
 

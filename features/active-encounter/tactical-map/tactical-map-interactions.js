@@ -167,6 +167,50 @@
       });
     };
 
+    /**
+     * Find an interactive marker (door/window, light, switch, room) near a cell position.
+     * Returns { type, wall|light|sw|room } or null.
+     */
+    proto.getMarkerAt = function getMarkerAt(cellX, cellY) {
+      var THRESHOLD = 0.6;
+      // Doors / Windows
+      var walls = this.walls || [];
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        if (w.type !== "door" && w.type !== "window") continue;
+        var mx = (w.x1 + w.x2) / 2;
+        var my = (w.y1 + w.y2) / 2;
+        var dd = Math.sqrt((cellX - mx) * (cellX - mx) + (cellY - my) * (cellY - my));
+        if (dd < THRESHOLD) return { type: w.type, wall: w };
+      }
+      // Lights
+      var lights = this.lights || [];
+      for (var li = 0; li < lights.length; li++) {
+        var l = lights[li];
+        var ld = Math.sqrt((cellX - l.x) * (cellX - l.x) + (cellY - l.y) * (cellY - l.y));
+        if (ld < THRESHOLD) return { type: "light", light: l };
+      }
+      // Switches
+      var switches = this.switches || [];
+      for (var si = 0; si < switches.length; si++) {
+        var s = switches[si];
+        var sd = Math.sqrt((cellX - s.x) * (cellX - s.x) + (cellY - s.y) * (cellY - s.y));
+        if (sd < THRESHOLD) return { type: "switch", sw: s };
+      }
+      // Rooms
+      var rooms = this._rooms || [];
+      if (rooms.length > 0 && window.FogVisibility) {
+        for (var ri = 0; ri < rooms.length; ri++) {
+          var r = rooms[ri];
+          if (!r.polygon || r.polygon.length < 3) continue;
+          if (window.FogVisibility.pointInPolygon(cellX, cellY, r.polygon)) {
+            return { type: "room", room: r };
+          }
+        }
+      }
+      return null;
+    };
+
     proto.getDesignTokenRotateHandleAt = function getDesignTokenRotateHandleAt(
       worldX,
       worldY,
@@ -381,6 +425,14 @@
         }
       }
 
+      // Room drawer intercept
+      if (this._roomDrawer && this._roomDrawer.isActive()) {
+        if (this._roomDrawer.handleMouseDown(e, worldCellX, worldCellY)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
       // Fog brush intercept
       if (this._fogBrush && this._fogBrush.isActive()) {
         if (this._fogBrush.handleMouseDown(e, worldCellX, worldCellY)) {
@@ -499,6 +551,18 @@
             e.preventDefault();
             return;
           }
+        }
+      }
+
+      // Right-click on interactive markers — works from any layer
+      if (e.button === 2) {
+        var markerHit = this.getMarkerAt(worldCellX, worldCellY);
+        if (markerHit && this.onMarkerContext) {
+          e.preventDefault();
+          markerHit.clientX = e.clientX;
+          markerHit.clientY = e.clientY;
+          this.onMarkerContext(markerHit);
+          return;
         }
       }
 
@@ -812,6 +876,16 @@
         this._wallDrawer.handleMouseMove(e, wx / this.gridSize, wy / this.gridSize);
       }
 
+      // Room drawer mousemove
+      if (this._roomDrawer && this._roomDrawer.isActive()) {
+        const rectR = this.canvas.getBoundingClientRect();
+        const rmx = e.clientX - rectR.left;
+        const rmy = e.clientY - rectR.top;
+        const rwx = (rmx - this.offsetX) / this.scale;
+        const rwy = (rmy - this.offsetY) / this.scale;
+        this._roomDrawer.handleMouseMove(e, rwx / this.gridSize, rwy / this.gridSize);
+      }
+
       // Fog brush mousemove
       if (this._fogBrush && this._fogBrush.isActive()) {
         const rect3 = this.canvas.getBoundingClientRect();
@@ -1067,6 +1141,10 @@
       if (this._wallDrawer && this._wallDrawer.isActive()) {
         this._wallDrawer.handleMouseUp();
       }
+      // Room drawer mouseup
+      if (this._roomDrawer && this._roomDrawer.isActive()) {
+        this._roomDrawer.handleMouseUp();
+      }
       // Fog brush mouseup
       if (this._fogBrush && this._fogBrush.isActive()) {
         this._fogBrush.handleMouseUp();
@@ -1246,6 +1324,14 @@
       const worldCellX = worldX / this.gridSize;
       const worldCellY = worldY / this.gridSize;
 
+      // Room drawer intercept (double-click to close polygon)
+      if (this._roomDrawer && this._roomDrawer.isActive()) {
+        if (this._roomDrawer.handleDblClick(e, worldCellX, worldCellY)) {
+          e.preventDefault();
+          return;
+        }
+      }
+
       // Decor layer: rotate handle on double-click
       if (this.activeLayer === "decor") {
         const rotateHandle = this.getDesignTokenRotateHandleAt(worldX, worldY);
@@ -1274,7 +1360,8 @@
         }
       }
 
-      // Any layer: ping on double-click empty space
+      // Ping on double-click empty space (skip on background layer)
+      if (this.activeLayer === "background") return;
       var clickedToken = this.getTokenAt(worldX, worldY);
       var clickedDecor = this.getDesignTokenAt(worldX, worldY);
       if (!clickedToken && !clickedDecor && this.onPing) {

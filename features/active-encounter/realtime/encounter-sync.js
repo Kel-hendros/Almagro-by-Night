@@ -10,6 +10,7 @@
     var openModal = ctx.openModal;
     var getTilePainter = ctx.getTilePainter;
     var getWallDrawer = ctx.getWallDrawer;
+    var getRoomDrawer = ctx.getRoomDrawer;
     var getFogBrush = ctx.getFogBrush;
     var getApplyBroadcastInitiative = ctx.getApplyBroadcastInitiative;
 
@@ -39,6 +40,9 @@
         ? state.encounter.data.tileMap : null;
       var localWalls = (wallDrawer && wallDrawer.isActive())
         ? state.encounter.data.walls : null;
+      var roomDrawer = getRoomDrawer();
+      var localRooms = (roomDrawer && roomDrawer.isActive())
+        ? state.encounter.data.rooms : null;
       var localFog = (fogBrush && fogBrush.isActive())
         ? state.encounter.data.fog : null;
       var preserveLights = !!(
@@ -56,6 +60,7 @@
       }
       if (localTileMap) state.encounter.data.tileMap = localTileMap;
       if (localWalls) state.encounter.data.walls = localWalls;
+      if (localRooms) state.encounter.data.rooms = localRooms;
       if (localFog) state.encounter.data.fog = localFog;
       if (localLights) state.encounter.data.lights = localLights;
       if (state.encounterHasUpdatedAt && updated.updated_at) {

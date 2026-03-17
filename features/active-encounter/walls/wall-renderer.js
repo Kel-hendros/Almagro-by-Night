@@ -131,6 +131,16 @@
         }
 
         ctx.restore();
+
+        // Lock indicator for locked doors/windows (narrator only)
+        if (w.locked && (w.type === "door" || w.type === "window")) {
+          ctx.save();
+          ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("\uD83D\uDD12", midX, midY);
+          ctx.restore();
+        }
       }
     };
 

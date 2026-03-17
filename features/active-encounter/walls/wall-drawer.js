@@ -118,8 +118,11 @@
     }
 
     // Add the new segment itself
+    var typeLabels = { wall: "Pared", door: "Puerta", window: "Ventana" };
+    var typeCount = walls.filter(function (w) { return w.type === newType; }).length + 1;
     walls.push({
       id: generateWallId(),
+      name: (typeLabels[newType] || newType) + " " + typeCount,
       x1: nx1, y1: ny1, x2: nx2, y2: ny2,
       type: newType, doorOpen: false,
     });

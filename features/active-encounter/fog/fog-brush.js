@@ -174,6 +174,7 @@
       var fog = getFog();
       if (!fog) return;
       fog.explored = {};
+      fog.exploredBy = {};
       fog.revealed = {};
       fog.hidden = {};
       setFog(fog);

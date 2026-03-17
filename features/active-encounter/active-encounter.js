@@ -93,11 +93,14 @@
   let tilePainter = null;
   let wallDrawer = null;
   let fogBrush = null;
+  let roomDrawer = null;
+  let roomManager = null;
   let tokenActionsController = null;
   let tokenContextMenuController = null;
   let persistenceController = null;
   let designTokenMenuController = null;
   let mapContextMenuController = null;
+  let markerContextMenuController = null;
   let modalController = null;
 
   // PC_ATTR_MAP & PC_ABILITY_MAP — moved to modal/instance-modal.js
@@ -211,6 +214,14 @@
       saveEncounter: () => saveEncounter(),
       getMap: () => state.map,
     });
+    markerContextMenuController = window.AEMarkerContextMenu?.createController?.({
+      state,
+      canEditEncounter,
+      getMap: () => state.map,
+      getLightSwitchManager: () => lightSwitchManager,
+      getRoomManager: () => roomManager,
+      saveEncounter: () => saveEncounter(),
+    });
     layersController = window.AEEncounterLayers?.createController?.({
       state,
       els,
@@ -257,14 +268,11 @@
       saveEncounter: () => saveEncounter(),
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
+      getRoomDrawer: () => roomDrawer,
       getFogBrush: () => fogBrush,
       addLight: (x, y) => lightSwitchManager?.addLight(x, y),
       findLightAt: (x, y) => lightSwitchManager?.findLightAt(x, y),
-      openLightPopover: (light) => lightSwitchManager?.openLightPopover(light),
       removeLight: (id) => lightSwitchManager?.removeLight(id),
-      addSwitch: (x, y, lid) => lightSwitchManager?.addSwitch(x, y, lid),
-      findSwitchAt: (x, y) => lightSwitchManager?.findSwitchAt(x, y),
-      openSwitchPopover: (sw) => lightSwitchManager?.openSwitchPopover(sw),
       handleLinkModeClick: (x, y) => lightSwitchManager?.handleLinkModeClick(x, y),
       isLinkMode: () => lightSwitchManager?.isLinkMode() || false,
     });
@@ -331,6 +339,7 @@
       openModal: (inst) => openModal(inst),
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
+      getRoomDrawer: () => roomDrawer,
       getFogBrush: () => fogBrush,
       getApplyBroadcastInitiative: () => applyBroadcastInitiative,
     });
@@ -369,6 +378,9 @@
     if (!Array.isArray(state.encounter.data.switches)) {
       state.encounter.data.switches = [];
     }
+    if (!Array.isArray(state.encounter.data.rooms)) {
+      state.encounter.data.rooms = [];
+    }
     if (!state.encounter.data.ambientLight) {
       state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5 };
     }
@@ -383,6 +395,7 @@
         walls: state.encounter.data.walls,
         lights: state.encounter.data.lights,
         switches: state.encounter.data.switches,
+        rooms: state.encounter.data.rooms,
       },
     );
 
@@ -419,9 +432,34 @@
       state.map._wallDrawer = wallDrawer;
     }
 
+    // Init Room Manager & Room Drawer (narrator only)
+    if (window.AERoomManager) {
+      roomManager = window.AERoomManager.createManager({
+        getEncounterData: () => state.encounter?.data,
+        getMap: () => state.map,
+        saveEncounter: () => saveEncounter(),
+      });
+    }
+    if (window.RoomDrawer) {
+      roomDrawer = window.RoomDrawer.createRoomDrawer({
+        getMap: () => state.map,
+        getRooms: () => state.encounter?.data?.rooms || [],
+        setRooms: (rooms) => {
+          if (state.encounter?.data) {
+            state.encounter.data.rooms = rooms;
+            if (state.map) state.map._rooms = rooms;
+          }
+        },
+        onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLighting?.(); saveEncounter(); },
+        canEdit: canEditEncounter,
+        roomManager: roomManager,
+      });
+      state.map._roomDrawer = roomDrawer;
+    }
+
     // Ambient light reference on the map (always use the encounter data object)
     state.map._ambientLight = state.encounter.data.ambientLight;
-    state.map.recomputeRooms();
+    state.map._rooms = state.encounter.data.rooms;
 
     // Init Fog of War
     if (!state.encounter.data.fog) {
@@ -556,6 +594,10 @@
       if (!canEditEncounter()) return;
       mapContextMenuController?.open(info);
     };
+    state.map.onMarkerContext = (info) => {
+      if (!canEditEncounter()) return;
+      markerContextMenuController?.open(info);
+    };
     state.map.onPing = (info) => {
       mapContextMenuController?.sendPing(info.cellX, info.cellY);
     };
@@ -601,8 +643,13 @@
 
     state.map.onWallDoorToggle = (door) => {
       if (!state.encounter?.data) return;
-      // Player proximity check — revert if too far (tryToggleDoor already mutated)
+      // Player checks — revert if locked or too far (tryToggleDoor already mutated)
       if (!canEditEncounter()) {
+        if (door.locked) {
+          door.doorOpen = !door.doorOpen;
+          state.map.draw();
+          return;
+        }
         var midX = (door.x1 + door.x2) / 2;
         var midY = (door.y1 + door.y2) / 2;
         if (!isPlayerNearPosition(midX, midY, PLAYER_INTERACT_RANGE)) {
@@ -1238,6 +1285,7 @@
         tokenContextMenuController?.hide?.();
         designTokenMenuController?.close?.();
         mapContextMenuController?.close?.();
+        markerContextMenuController?.hide?.();
       }
 
       if (!canEditEncounter()) return;
@@ -1604,6 +1652,7 @@
         walls: state.encounter.data.walls || [],
         lights: state.encounter.data.lights || [],
         switches: state.encounter.data.switches || [],
+        rooms: state.encounter.data.rooms || [],
       });
       // Keep ambient light reference in sync (always point to the encounter data object)
       state.map._ambientLight = state.encounter.data.ambientLight;
@@ -2028,12 +2077,17 @@
     tokenContextMenuController = null;
     lightSwitchManager?.destroy?.();
     lightSwitchManager = null;
+    roomDrawer?.closeRoomPopover?.();
+    roomDrawer = null;
+    roomManager = null;
     persistenceController?.destroy?.();
     persistenceController = null;
     designTokenMenuController?.destroy?.();
     designTokenMenuController = null;
     mapContextMenuController?.destroy?.();
     mapContextMenuController = null;
+    markerContextMenuController?.destroy?.();
+    markerContextMenuController = null;
     modalController = null;
     syncController = null;
     dragBroadcast?.destroy?.();

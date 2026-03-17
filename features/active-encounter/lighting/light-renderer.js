@@ -6,6 +6,50 @@
 
   var SWITCH_PROXIMITY = 3; // cells — max distance for player to see/interact with a switch
 
+  // Interactive marker constants
+  var INTERACTIVE_BORDER_COLOR = "rgba(100, 200, 255, 0.85)";
+  var INTERACTIVE_BG_COLOR = "rgba(10, 10, 10, 0.9)";
+  var INTERACTIVE_MARKER_RADIUS = 12;
+  var MARKER_EMOJIS = { door: "\u{1F6AA}", window: "\u{1FA9F}", light: "\u{1F4A1}", switch: "\u{1F39A}\uFE0F" };
+  var LUMINOSITY_THRESHOLD = 0.30;
+
+  function drawInteractiveMarker(ctx, x, y, emoji, scale, isSelected) {
+    var r = INTERACTIVE_MARKER_RADIUS / scale;
+    ctx.save();
+
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = INTERACTIVE_BG_COLOR;
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = INTERACTIVE_BORDER_COLOR;
+    ctx.lineWidth = 1.5 / scale;
+    ctx.stroke();
+
+    // Emoji centered
+    ctx.font = Math.round(14 / scale) + "px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(emoji, x, y + 1 / scale);
+
+    ctx.restore();
+
+    // Selection ring (dashed cyan)
+    if (isSelected) {
+      ctx.save();
+      ctx.strokeStyle = INTERACTIVE_BORDER_COLOR;
+      ctx.lineWidth = 2 / scale;
+      ctx.setLineDash([4 / scale, 3 / scale]);
+      ctx.beginPath();
+      ctx.arc(x, y, r + 4 / scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -213,6 +257,93 @@
         ctx.lineTo(swx, isOn ? swy - halfSize * 0.6 : swy + halfSize * 0.6);
         ctx.stroke();
         ctx.restore();
+      }
+    };
+
+    /**
+     * Check if a marker at grid position (x, y) is visible to the current viewer.
+     * Narrator always sees all. Player/impersonate needs fog visibility + luminosity.
+     */
+    proto.isMarkerVisibleToViewer = function (x, y, adjacentCells) {
+      var fog = this._fog;
+      if (!fog || !fog.config || !fog.config.enabled) return true;
+      var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
+      if (!isPlayerView) return true;
+
+      // Cells to check — for wall markers, both sides; otherwise just the one cell
+      var cells = adjacentCells || [[Math.floor(x), Math.floor(y)]];
+
+      // Fog: at least one adjacent cell must be revealed
+      var anyVisible = false;
+      for (var i = 0; i < cells.length; i++) {
+        if (fog.visibleCells && fog.visibleCells.has(cells[i][0] + "," + cells[i][1])) {
+          anyVisible = true;
+          break;
+        }
+      }
+      if (!anyVisible) return false;
+
+      // Luminosity: use the brightest side
+      if (typeof this.computeLuminosityAt === "function") {
+        var maxLum = 0;
+        for (var i = 0; i < cells.length; i++) {
+          var lum = this.computeLuminosityAt(cells[i][0] + 0.5, cells[i][1] + 0.5);
+          if (lum > maxLum) maxLum = lum;
+        }
+        if (maxLum < LUMINOSITY_THRESHOLD) return false;
+      }
+      return true;
+    };
+
+    /**
+     * Draw emoji markers for all interactive objects (doors, windows, lights, switches).
+     * Called after drawLightIndicators so markers appear on top of dots/squares.
+     */
+    proto.drawInteractiveMarkers = function () {
+      var ctx = this.ctx;
+      var gs = this.gridSize;
+      var sc = Math.max(this.scale, 0.5);
+      var walls = this.walls || [];
+      var lights = this.lights || [];
+      var switches = this.switches || [];
+      var selectedLightId = this.selectedLightId || null;
+      var selectedSwitchId = this.selectedSwitchId || null;
+
+      // Doors and windows — marker at midpoint of wall segment
+      for (var i = 0; i < walls.length; i++) {
+        var wall = walls[i];
+        if (wall.type !== "door" && wall.type !== "window") continue;
+        var mx = (wall.x1 + wall.x2) / 2;
+        var my = (wall.y1 + wall.y2) / 2;
+        // Cells on both sides of the wall (perpendicular normal)
+        var wdx = wall.x2 - wall.x1;
+        var wdy = wall.y2 - wall.y1;
+        var wlen = Math.sqrt(wdx * wdx + wdy * wdy) || 1;
+        var nx = -wdy / wlen * 0.5;
+        var ny = wdx / wlen * 0.5;
+        var adjCells = [
+          [Math.floor(mx + nx), Math.floor(my + ny)],
+          [Math.floor(mx - nx), Math.floor(my - ny)]
+        ];
+        if (!this.isMarkerVisibleToViewer(mx, my, adjCells)) continue;
+        var emoji = wall.type === "door" ? MARKER_EMOJIS.door : MARKER_EMOJIS.window;
+        drawInteractiveMarker(ctx, mx * gs, my * gs, emoji, sc, false);
+      }
+
+      // Lights
+      for (var li = 0; li < lights.length; li++) {
+        var light = lights[li];
+        if (!this.isMarkerVisibleToViewer(light.x, light.y)) continue;
+        var isSelected = selectedLightId === light.id;
+        drawInteractiveMarker(ctx, light.x * gs, light.y * gs, MARKER_EMOJIS.light, sc, isSelected);
+      }
+
+      // Switches
+      for (var si = 0; si < switches.length; si++) {
+        var sw = switches[si];
+        if (!this.isMarkerVisibleToViewer(sw.x, sw.y)) continue;
+        var isSelected = selectedSwitchId === sw.id;
+        drawInteractiveMarker(ctx, sw.x * gs, sw.y * gs, MARKER_EMOJIS["switch"], sc, isSelected);
       }
     };
   }

@@ -18,7 +18,8 @@
       var data = getEncounterData();
       if (!data) return;
       var lights = data.lights || [];
-      lights.push({ id: generateLightId(), x: x, y: y, radius: 4, color: "#ffcc66", intensity: 0.8 });
+      var count = lights.length + 1;
+      lights.push({ id: generateLightId(), name: "Luz " + count, x: x, y: y, radius: 4, color: "#ffcc66", intensity: 0.8 });
       data.lights = lights;
       var map = getMap();
       if (map) { map.lights = lights; map.invalidateLighting?.(); map.draw(); }
@@ -131,8 +132,9 @@
     function addSwitch(x, y, linkedLightId) {
       var data = getEncounterData();
       if (!data) return null;
-      var sw = { id: generateSwitchId(), x: x, y: y, on: true, lightIds: linkedLightId ? [linkedLightId] : [] };
       if (!data.switches) data.switches = [];
+      var count = data.switches.length + 1;
+      var sw = { id: generateSwitchId(), name: "Interruptor " + count, x: x, y: y, on: true, lightIds: linkedLightId ? [linkedLightId] : [] };
       data.switches.push(sw);
       var map = getMap();
       if (map) { map.switches = data.switches; map.invalidateLighting?.(); map.draw(); }

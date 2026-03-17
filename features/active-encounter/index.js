@@ -7,6 +7,10 @@
     // Walls
     "walls/wall-renderer.js",
     "walls/wall-drawer.js",
+    // Rooms
+    "rooms/room-renderer.js",
+    "rooms/room-drawer.js",
+    "rooms/room-manager.js",
     // Lighting
     "lighting/light-renderer.js",
     "lighting/light-switch-manager.js",
@@ -24,6 +28,7 @@
     // Context menus
     "context-menus/design-token-menu.js",
     "context-menus/map-context-menu.js",
+    "context-menus/marker-context-menu.js",
     // Modal
     "modal/instance-modal.js",
     // Instances

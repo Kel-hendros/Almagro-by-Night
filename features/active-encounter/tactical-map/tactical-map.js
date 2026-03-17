@@ -53,7 +53,7 @@ window.TacticalMap = class TacticalMap {
     this.walls = [];
     this.lights = [];
     this.switches = [];
-    this._indoorCells = null;
+    this._rooms = [];
     this.selectedSwitchId = null;
     this._tilePainterHover = null;
     this._wallDrawerState = null;
@@ -109,6 +109,7 @@ window.TacticalMap = class TacticalMap {
     this.onDesignTokenSelect = null;
     this.onDesignTokenContext = null;
     this.onEmptyContext = null;
+    this.onMarkerContext = null;
     this.onPing = null;
     this.onDesignTokenChange = null;
     this.canDragDesignToken = null;
@@ -209,6 +210,9 @@ window.TacticalMap = class TacticalMap {
     }
     if (Array.isArray(extras?.switches)) {
       this.switches = extras.switches;
+    }
+    if (Array.isArray(extras?.rooms)) {
+      this._rooms = extras.rooms;
     }
 
     const preloadTokenImage = (token) => {
@@ -1034,22 +1038,7 @@ window.TacticalMap = class TacticalMap {
   }
 
   recomputeRooms() {
-    if (!window.FogVisibility?.detectIndoorCells) { this._indoorCells = null; return; }
-    var ml = this.mapLayer || {};
-    var minX = Math.floor(ml.x || 0) - 5;
-    var minY = Math.floor(ml.y || 0) - 5;
-    var maxX = Math.ceil((ml.x || 0) + (ml.widthCells || 20)) + 5;
-    var maxY = Math.ceil((ml.y || 0) + (ml.heightCells || 20)) + 5;
-    for (var i = 0; i < (this.tokens || []).length; i++) {
-      var t = this.tokens[i];
-      minX = Math.min(minX, Math.floor(t.x) - 3);
-      minY = Math.min(minY, Math.floor(t.y) - 3);
-      maxX = Math.max(maxX, Math.ceil(t.x) + 3);
-      maxY = Math.max(maxY, Math.ceil(t.y) + 3);
-    }
-    this._indoorCells = window.FogVisibility.detectIndoorCells(
-      this.walls || [], { minX: minX, minY: minY, maxX: maxX, maxY: maxY }
-    );
+    // No-op: rooms are now explicit polygons, no flood-fill detection needed.
   }
 
   /**
@@ -1057,16 +1046,27 @@ window.TacticalMap = class TacticalMap {
    * Returns a value in [0, 1] where 0 = pitch black, 1 = fully illuminated.
    */
   computeLuminosityAt(gx, gy) {
-    var indoorCells = this._indoorCells;
+    var rooms = this._rooms;
     var ambient = this._ambientLight;
     var ambientI = ambient
       ? Math.min(1, Math.max(0, ambient.intensity != null ? ambient.intensity : 0.5))
       : 0.5;
 
-    var cellKey = Math.floor(gx) + "," + Math.floor(gy);
-    var isIndoor = indoorCells && indoorCells.has(cellKey);
-    var luminosity = isIndoor ? 0 : ambientI;
+    // Default: outdoor ambient. Check rooms — first match wins.
+    var luminosity = ambientI;
+    if (rooms && rooms.length > 0 && window.FogVisibility) {
+      for (var ri = 0; ri < rooms.length; ri++) {
+        var room = rooms[ri];
+        if (!room.polygon || room.polygon.length < 3) continue;
+        if (window.FogVisibility.pointInPolygon(gx, gy, room.polygon)) {
+          luminosity = (room.ambientLight && room.ambientLight.intensity != null)
+            ? Math.min(1, Math.max(0, room.ambientLight.intensity)) : 0;
+          break;
+        }
+      }
+    }
 
+    // Light contributions (unchanged)
     var lightPolygons = this._cachedLightPolygons;
     if (lightPolygons && lightPolygons.length > 0 && window.FogVisibility) {
       for (var i = 0; i < lightPolygons.length; i++) {
@@ -1124,6 +1124,9 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawWalls === "function") {
       this.drawWalls();
     }
+    if (typeof this.drawRooms === "function") {
+      this.drawRooms();
+    }
     if (typeof this.drawMapEffects === "function") {
       this.drawMapEffects(timestamp);
     }
@@ -1140,6 +1143,14 @@ window.TacticalMap = class TacticalMap {
     // Combined overlay: handles BOTH fog (visibility) and lighting (darkness/illumination)
     if (typeof this.drawFogOfWar === "function") {
       this.drawFogOfWar();
+    }
+    // Interactive markers drawn ABOVE fog overlay (same pattern as tokens).
+    // Visibility is checked programmatically in isMarkerVisibleToViewer.
+    if (typeof this.drawInteractiveMarkers === "function") {
+      this.drawInteractiveMarkers();
+    }
+    if (typeof this.drawRoomIcons === "function") {
+      this.drawRoomIcons();
     }
     // Tokens drawn ABOVE fog/lighting overlay. Darkness-based hiding
     // (supernatural + total darkness) and fog visibility are handled inside drawTokens.
@@ -1160,6 +1171,9 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawWallDrawerPreview === "function") {
       this.drawWallDrawerPreview();
     }
+    if (typeof this.drawRoomDrawerPreview === "function") {
+      this.drawRoomDrawerPreview();
+    }
     this.ctx.restore();
     this._repositionViewPin();
     this._repositionPing();
@@ -1171,6 +1185,9 @@ if (typeof window.__applyTacticalMapLightRenderer === "function") {
 }
 if (typeof window.__applyTacticalMapWallRenderer === "function") {
   window.__applyTacticalMapWallRenderer(window.TacticalMap);
+}
+if (typeof window.__applyTacticalMapRoomRenderer === "function") {
+  window.__applyTacticalMapRoomRenderer(window.TacticalMap);
 }
 if (typeof window.__applyTacticalMapFogRenderer === "function") {
   window.__applyTacticalMapFogRenderer(window.TacticalMap);
