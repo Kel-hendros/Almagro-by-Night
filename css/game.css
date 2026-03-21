@@ -944,15 +944,14 @@ dialog.lieutenant-modal::backdrop {
     /* ← alejamiento extra al hover */
 }
 
-/* Mover atribuciones de MapLibre abajo del footer */
-.maplibregl-control-container {
-
+/* Mover atribuciones de MapLibre abajo del footer (scoped to game view) */
+#game-container .maplibregl-control-container {
     position: fixed;
     bottom: 8px !important;
     right: 8px;
 }
 
-.maplibregl-control-container summary {
+#game-container .maplibregl-control-container summary {
     display: none;
 }
 

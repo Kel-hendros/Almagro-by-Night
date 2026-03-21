@@ -2582,8 +2582,29 @@ p.chronicle-description {
         color-mix(in srgb, var(--color-bg-base) 82%, black);
 }
 
+/* Higher specificity to beat MapLibre's .maplibregl-map { position: relative } */
+.cd-territory-map.maplibregl-map {
+    position: absolute;
+    inset: 0;
+}
+
 .cd-territory-map .maplibregl-canvas {
     outline: none;
+}
+
+.cd-territory-map .maplibregl-canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.cd-territory-map .maplibregl-marker {
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 .cd-territory-overlay {
