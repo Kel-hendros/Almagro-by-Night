@@ -13,10 +13,20 @@
 
   function buildSheetUrl(sheetId) {
     if (!sheetId) return null;
+    const embedOptions = {
+      embed: "active-character-sheet",
+      layout: "preserve-desktop",
+    };
+
     if (window.ABNCharacterSheetsHost?.buildUrl) {
-      return window.ABNCharacterSheetsHost.buildUrl(sheetId);
+      return window.ABNCharacterSheetsHost.buildUrl(sheetId, embedOptions);
     }
-    return `features/character-sheets/index.html?id=${encodeURIComponent(sheetId)}`;
+
+    const params = new URLSearchParams({
+      id: sheetId,
+      ...embedOptions,
+    });
+    return `features/character-sheets/index.html?${params.toString()}`;
   }
 
   function getCurrentTheme() {

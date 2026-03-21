@@ -5207,6 +5207,134 @@ html[data-sheet-mode="play"] .attack-item:focus-within .attack-item-header {
 	}
 }
 
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] body {
+		min-width: 1180px;
+		overflow: auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .beta-shell {
+		width: clamp(1180px, 100%, 1500px);
+		max-width: none;
+		min-width: 1180px;
+		height: auto;
+		min-height: 100dvh;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .skel-grid {
+		grid-template-columns: minmax(235px, 285px) minmax(560px, 1fr) minmax(300px, 390px);
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .skel-col--right {
+		grid-column: auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .beta-header {
+		grid-template-columns: auto 1fr auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .profile-back-link {
+		width: auto;
+		height: 100%;
+		min-width: 60px;
+		min-height: 60px;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .header-actions {
+		grid-template-columns: none;
+		grid-template-rows: none;
+		width: auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .identity-grid,
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .identity-grid-primary {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .identity-grid-primary {
+		grid-template-columns: 1.4fr 0.9fr 0.6fr 1.5fr;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .identity-grid-secondary {
+		grid-template-columns: 0.7fr 0.7fr 1.5fr 1.5fr;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .beta-grid {
+		grid-template-columns: minmax(235px, 285px) minmax(560px, 1fr) minmax(300px, 390px);
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .core-column {
+		position: static;
+		overflow-y: auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .sheet-columns {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dock-tab-page,
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .quick-actions {
+		grid-template-columns: 1fr 1fr;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .sheet-row {
+		grid-template-columns: 1fr auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .willpower-track {
+		grid-template-columns: repeat(10, minmax(0, 1fr));
+		row-gap: 6px;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .main-column,
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dock-column,
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dock-content {
+		overflow-y: auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dock-column {
+		grid-column: auto;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dock-content {
+		padding: 10px 0 4px 0;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .discipline-repo-list {
+		grid-template-columns: 1fr 1fr;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dice-widget-main {
+		align-items: end;
+		gap: 10px 14px;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dice-inline-track {
+		grid-template-columns:
+			minmax(64px, 96px) auto
+			minmax(64px, 96px) auto
+			minmax(64px, 96px) auto
+			minmax(64px, 96px);
+		justify-content: space-between;
+		column-gap: 6px;
+		overflow-x: visible;
+		padding-bottom: 0;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dice-action-buttons {
+		margin-left: auto;
+		padding-left: clamp(8px, 1vw, 12px);
+		border-left: 1px solid var(--ui-border);
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dice-plus,
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dice-separator {
+		margin-top: 0;
+}
+
+html[data-embed-context="active-character-sheet"][data-sheet-layout="preserve-desktop"] .dice-result-summary {
+		font-size: 1rem;
+}
+
 /* ================================================
    REVELACIONES (DOCK PANEL)
    ================================================ */
