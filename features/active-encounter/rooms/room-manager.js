@@ -80,12 +80,133 @@
       return (data && data.rooms) || [];
     }
 
+    // ── Auto-detect closed polygons from walls ──
+
+    function vk(x, y) { return x + "," + y; }
+
+    function computeSignedArea(poly) {
+      var area = 0;
+      for (var i = 0; i < poly.length; i++) {
+        var j = (i + 1) % poly.length;
+        area += poly[i].x * poly[j].y - poly[j].x * poly[i].y;
+      }
+      return area / 2;
+    }
+
+    function computeCentroid(poly) {
+      var cx = 0, cy = 0;
+      for (var i = 0; i < poly.length; i++) { cx += poly[i].x; cy += poly[i].y; }
+      return { x: cx / poly.length, y: cy / poly.length };
+    }
+
+    /**
+     * Find all minimal enclosed faces in the wall graph using face-tracing
+     * on the planar subdivision. Returns arrays of {x,y} vertex lists.
+     */
+    function detectClosedPolygons(walls) {
+      if (!walls || walls.length < 3) return [];
+
+      // Build directed half-edges with twin references
+      var vertices = {};
+      var halfEdges = [];
+
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        var ka = vk(w.x1, w.y1), kb = vk(w.x2, w.y2);
+        if (ka === kb) continue;
+        if (!vertices[ka]) vertices[ka] = { x: w.x1, y: w.y1, out: [] };
+        if (!vertices[kb]) vertices[kb] = { x: w.x2, y: w.y2, out: [] };
+
+        var eAB = { from: ka, to: kb, used: false, twin: null };
+        var eBA = { from: kb, to: ka, used: false, twin: null };
+        eAB.twin = eBA;
+        eBA.twin = eAB;
+        vertices[ka].out.push(eAB);
+        vertices[kb].out.push(eBA);
+        halfEdges.push(eAB, eBA);
+      }
+
+      // Sort outgoing edges at each vertex by angle (CCW)
+      for (var key in vertices) {
+        var v = vertices[key];
+        v.out.sort(function (a, b) {
+          var va = vertices[a.to], vb = vertices[b.to];
+          return Math.atan2(va.y - v.y, va.x - v.x) - Math.atan2(vb.y - v.y, vb.x - v.x);
+        });
+      }
+
+      // Trace faces: for each unused half-edge, follow "next" edges
+      var faces = [];
+      for (var i = 0; i < halfEdges.length; i++) {
+        var start = halfEdges[i];
+        if (start.used) continue;
+
+        var face = [];
+        var edge = start;
+        var steps = 0;
+        var valid = true;
+
+        do {
+          if (edge.used || steps > 200) { valid = false; break; }
+          edge.used = true;
+          face.push({ x: vertices[edge.from].x, y: vertices[edge.from].y });
+
+          // At edge.to, find the twin in the sorted list, then take NEXT (CW turn)
+          var toV = vertices[edge.to];
+          var twin = edge.twin;
+          var idx = -1;
+          for (var j = 0; j < toV.out.length; j++) {
+            if (toV.out[j] === twin) { idx = j; break; }
+          }
+          if (idx === -1) { valid = false; break; }
+          // Next CW = previous in CCW-sorted list
+          edge = toV.out[(idx - 1 + toV.out.length) % toV.out.length];
+          steps++;
+        } while (edge !== start);
+
+        if (valid && face.length >= 3) {
+          var area = computeSignedArea(face);
+          // Keep interior faces only (positive area in screen coords = CW)
+          if (area > 0.5) {
+            faces.push(face);
+          }
+        }
+      }
+
+      return faces;
+    }
+
+    /**
+     * Check walls for new closed polygons and prompt to create rooms.
+     * Called after wall changes.
+     */
+    function checkAutoCreateRooms() {
+      var data = getEncounterData();
+      if (!data) return;
+      var walls = data.walls || [];
+      var polygons = detectClosedPolygons(walls);
+      if (!polygons.length) return;
+
+      for (var i = 0; i < polygons.length; i++) {
+        var poly = polygons[i];
+        var c = computeCentroid(poly);
+        // Skip if a room already covers this area
+        if (findRoomAt(c.x, c.y)) continue;
+
+        var count = (data.rooms || []).length + 1;
+        var name = prompt("Se detect\u00f3 una habitaci\u00f3n cerrada. Nombre:", "Habitaci\u00f3n " + count);
+        if (name === null) continue; // user cancelled
+        addRoom(poly, name);
+      }
+    }
+
     return {
       addRoom: addRoom,
       updateRoom: updateRoom,
       removeRoom: removeRoom,
       findRoomAt: findRoomAt,
       getRooms: getRooms,
+      checkAutoCreateRooms: checkAutoCreateRooms,
     };
   }
 

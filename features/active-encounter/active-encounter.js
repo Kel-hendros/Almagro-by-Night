@@ -92,7 +92,6 @@
   let drawerController = null;
   let tilePainter = null;
   let wallDrawer = null;
-  let fogBrush = null;
   let roomDrawer = null;
   let roomManager = null;
   let tokenActionsController = null;
@@ -269,7 +268,6 @@
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
       getRoomDrawer: () => roomDrawer,
-      getFogBrush: () => fogBrush,
       addLight: (x, y) => lightSwitchManager?.addLight(x, y),
       findLightAt: (x, y) => lightSwitchManager?.findLightAt(x, y),
       removeLight: (id) => lightSwitchManager?.removeLight(id),
@@ -340,7 +338,6 @@
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
       getRoomDrawer: () => roomDrawer,
-      getFogBrush: () => fogBrush,
       getApplyBroadcastInitiative: () => applyBroadcastInitiative,
     });
     instanceManager = window.AEInstanceManager?.createController?.({
@@ -426,7 +423,7 @@
             if (state.map) state.map.walls = walls;
           }
         },
-        onChanged: () => { state.map?.recomputeRooms?.(); state.map?.invalidateFog?.(); state.map?.invalidateLighting?.(); saveEncounter(); },
+        onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLighting?.(); saveEncounter(); roomManager?.checkAutoCreateRooms?.(); },
         canEdit: canEditEncounter,
       });
       state.map._wallDrawer = wallDrawer;
@@ -443,6 +440,7 @@
     if (window.RoomDrawer) {
       roomDrawer = window.RoomDrawer.createRoomDrawer({
         getMap: () => state.map,
+        getWalls: () => state.encounter?.data?.walls || [],
         getRooms: () => state.encounter?.data?.rooms || [],
         setRooms: (rooms) => {
           if (state.encounter?.data) {
@@ -478,22 +476,6 @@
           .map(function (inst) { return inst.id; });
         state.map.setFogViewerInstances(myInstanceIds.length ? myInstanceIds : null);
       }
-    }
-
-    // Init Fog Brush (narrator only)
-    if (window.FogBrush) {
-      fogBrush = window.FogBrush.createFogBrush({
-        getMap: () => state.map,
-        getFog: () => state.encounter?.data?.fog || {},
-        setFog: (fog) => {
-          if (state.encounter?.data) {
-            state.encounter.data.fog = fog;
-          }
-        },
-        onChanged: () => saveEncounter(),
-        canEdit: canEditEncounter,
-      });
-      state.map._fogBrush = fogBrush;
     }
 
     state.map.setActiveInstance(
@@ -848,7 +830,8 @@
     return state.canManageEncounter;
   }
 
-  const PLAYER_INTERACT_RANGE = 2; // cells (3m) — max distance to toggle switches/doors
+  const PLAYER_INTERACT_RANGE_METERS = 3;
+  const PLAYER_INTERACT_RANGE = PLAYER_INTERACT_RANGE_METERS / 1.5; // convert meters to coordinate units
 
   function isPlayerNearPosition(targetX, targetY, maxDist) {
     var tokens = state.encounter?.data?.tokens || [];

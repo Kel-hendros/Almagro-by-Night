@@ -4,7 +4,8 @@
 (function applyLightRenderer(global) {
   "use strict";
 
-  var SWITCH_PROXIMITY = 3; // cells — max distance for player to see/interact with a switch
+  var SWITCH_PROXIMITY_METERS = 4.5;
+  var SWITCH_PROXIMITY = SWITCH_PROXIMITY_METERS / 1.5; // convert meters to coordinate units
 
   // Interactive marker constants
   var INTERACTIVE_BORDER_COLOR = "rgba(100, 200, 255, 0.85)";
@@ -81,10 +82,8 @@
       var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
       if (!isPlayerView) return true; // narrator normal view
 
-      // Player/impersonate: check fog visibility
-      var scx = Math.floor(sw.x);
-      var scy = Math.floor(sw.y);
-      if (!fog.visibleCells || !fog.visibleCells.has(scx + "," + scy)) return false;
+      // Player/impersonate: check fog visibility using polygon containment
+      if (!this.isPointInVisibilityPolygons(sw.x, sw.y)) return false;
 
       // Check proximity to any viewer's PC token
       var viewerIds = fog.viewerInstanceIds;
@@ -110,8 +109,9 @@
         }
         if (!isViewerToken) continue;
 
-        var dx = token.x + 0.5 - sw.x;
-        var dy = token.y + 0.5 - sw.y;
+        var tSz = parseFloat(token.size) || 1;
+        var dx = token.x + tSz * 0.5 - sw.x;
+        var dy = token.y + tSz * 0.5 - sw.y;
         if (Math.sqrt(dx * dx + dy * dy) <= SWITCH_PROXIMITY) return true;
       }
       return false;
@@ -264,35 +264,34 @@
      * Check if a marker at grid position (x, y) is visible to the current viewer.
      * Narrator always sees all. Player/impersonate needs fog visibility + luminosity.
      */
-    proto.isMarkerVisibleToViewer = function (x, y, adjacentCells) {
+    proto.isMarkerVisibleToViewer = function (x, y) {
       var fog = this._fog;
       if (!fog || !fog.config || !fog.config.enabled) return true;
       var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
       if (!isPlayerView) return true;
 
-      // Cells to check — for wall markers, both sides; otherwise just the one cell
-      var cells = adjacentCells || [[Math.floor(x), Math.floor(y)]];
+      // Fog: point must be inside a visibility polygon
+      if (!this.isPointInVisibilityPolygons(x, y)) return false;
 
-      // Fog: at least one adjacent cell must be revealed
-      var anyVisible = false;
-      for (var i = 0; i < cells.length; i++) {
-        if (fog.visibleCells && fog.visibleCells.has(cells[i][0] + "," + cells[i][1])) {
-          anyVisible = true;
-          break;
-        }
-      }
-      if (!anyVisible) return false;
-
-      // Luminosity: use the brightest side
+      // Luminosity check at the actual point
       if (typeof this.computeLuminosityAt === "function") {
-        var maxLum = 0;
-        for (var i = 0; i < cells.length; i++) {
-          var lum = this.computeLuminosityAt(cells[i][0] + 0.5, cells[i][1] + 0.5);
-          if (lum > maxLum) maxLum = lum;
-        }
-        if (maxLum < LUMINOSITY_THRESHOLD) return false;
+        if (this.computeLuminosityAt(x, y) < LUMINOSITY_THRESHOLD) return false;
       }
       return true;
+    };
+
+    /**
+     * Check if a point is inside any of the current visibility polygons.
+     * Uses polygon containment instead of cell-key lookup.
+     */
+    proto.isPointInVisibilityPolygons = function (x, y) {
+      var fog = this._fog;
+      if (!fog || !fog.polygons || !fog.polygons.length) return false;
+      if (!window.FogVisibility) return false;
+      for (var i = 0; i < fog.polygons.length; i++) {
+        if (window.FogVisibility.pointInPolygon(x, y, fog.polygons[i])) return true;
+      }
+      return false;
     };
 
     /**
@@ -315,17 +314,7 @@
         if (wall.type !== "door" && wall.type !== "window") continue;
         var mx = (wall.x1 + wall.x2) / 2;
         var my = (wall.y1 + wall.y2) / 2;
-        // Cells on both sides of the wall (perpendicular normal)
-        var wdx = wall.x2 - wall.x1;
-        var wdy = wall.y2 - wall.y1;
-        var wlen = Math.sqrt(wdx * wdx + wdy * wdy) || 1;
-        var nx = -wdy / wlen * 0.5;
-        var ny = wdx / wlen * 0.5;
-        var adjCells = [
-          [Math.floor(mx + nx), Math.floor(my + ny)],
-          [Math.floor(mx - nx), Math.floor(my - ny)]
-        ];
-        if (!this.isMarkerVisibleToViewer(mx, my, adjCells)) continue;
+        if (!this.isMarkerVisibleToViewer(mx, my)) continue;
         var emoji = wall.type === "door" ? MARKER_EMOJIS.door : MARKER_EMOJIS.window;
         drawInteractiveMarker(ctx, mx * gs, my * gs, emoji, sc, false);
       }

@@ -30,7 +30,9 @@ const DESIGN_TOKEN_DEFAULTS = {
   zIndex: 0,
 };
 const DESIGN_TOKEN_LAYERS = new Set(["underlay", "overlay"]);
-const METERS_PER_CELL = 1.5;
+// Map unit system: 1 coordinate unit = 1.5 meters.
+// All game measurements should use meters and convert via METERS_PER_UNIT.
+const METERS_PER_UNIT = 1.5;
 const STATUS_ICON_ASSET_VERSION = "20260225a";
 const STATUS_ICON_FILES = {
   skull: "death-skull.svg",
@@ -533,7 +535,7 @@ window.TacticalMap = class TacticalMap {
         const radiusCells = Math.max(
           0,
           parseFloat(effect.radiusCells) ||
-            (radiusMeters > 0 ? radiusMeters / METERS_PER_CELL : 0),
+            (radiusMeters > 0 ? radiusMeters / METERS_PER_UNIT : 0),
         );
         if (radiusCells <= 0) return null;
         return {
@@ -1144,6 +1146,13 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawFogOfWar === "function") {
       this.drawFogOfWar();
     }
+    // Narrator (not impersonating): redraw walls and rooms ON TOP of the
+    // fog/lighting overlay so they are always fully visible and never dimmed.
+    if (this._fog && this._fog.isNarrator && !this._fog.impersonateInstanceId) {
+      if (typeof this.drawWalls === "function") this.drawWalls();
+      if (typeof this.drawRooms === "function") this.drawRooms();
+      if (typeof this.drawLightIndicators === "function") this.drawLightIndicators();
+    }
     // Interactive markers drawn ABOVE fog overlay (same pattern as tokens).
     // Visibility is checked programmatically in isMarkerVisibleToViewer.
     if (typeof this.drawInteractiveMarkers === "function") {
@@ -1158,9 +1167,6 @@ window.TacticalMap = class TacticalMap {
     // Hover halo drawn AFTER tokens
     if (typeof this.drawTokenHoverOverlay === "function") {
       this.drawTokenHoverOverlay(timestamp);
-    }
-    if (typeof this.drawFogBrushHover === "function") {
-      this.drawFogBrushHover();
     }
     if (typeof this.drawMeasurement === "function") {
       this.drawMeasurement();

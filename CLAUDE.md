@@ -1,5 +1,19 @@
 # Almagro by Night — Project Context
 
+## CRITICAL: Map Coordinate System — NO GRID IN LOGIC
+
+The map uses **continuous coordinates** where **1 unit = 1.5 meters**. The visual grid is ONLY a rendering aid for the narrator — it must **NEVER** be used in game logic.
+
+**Rules:**
+- **NEVER** snap coordinates to integers or grid intersections in game logic
+- **NEVER** use cell keys like `"x,y"` for spatial lookups in new code
+- **NEVER** use `Math.round`/`Math.floor` to quantize positions
+- Walls, doors, rooms can have any coordinates (e.g., a wall from 2.3 to 7.5 is valid)
+- Snap ONLY to existing **wall endpoints** (for connecting walls together)
+- All game measurements are in **meters** → convert via `METERS_PER_UNIT = 1.5`
+- Minimum door/window width: 1.5 meters (1 unit)
+- The `drawGrid()` function in rendering is the ONLY acceptable grid usage
+
 ## Overview
 
 Vampire: The Masquerade tabletop RPG campaign management tool. Vanilla JS SPA with Supabase backend. No build step, no framework — pure HTML/CSS/JS with CDN dependencies.

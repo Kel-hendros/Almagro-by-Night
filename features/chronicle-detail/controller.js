@@ -470,9 +470,10 @@
     const scrollContainer = document.querySelector(".content");
 
     function switchTab(target) {
-        const scrollPos = scrollContainer.scrollTop;
+        const scrollPos = scrollContainer?.scrollTop || 0;
         applyChronicleTab(target, { persist: true });
-        scrollContainer.scrollTop = scrollPos;
+        if (scrollContainer) scrollContainer.scrollTop = scrollPos;
+        ns.territory?.handleTabActivated?.(target);
     }
 
     tabButtons.forEach(btn => {
@@ -587,6 +588,19 @@
         isNarrator,
         currentUserId: session.user.id,
     });
+
+    await ns.territory?.init({
+        chronicleId,
+        currentPlayerId: currentPlayer.id,
+        currentPlayerName: currentPlayer.name || "",
+        isNarrator,
+        gameBackdrop: game?.territory || null,
+    });
+
+    const activeTab = document.querySelector("#chronicle-tabs .app-tab.active")?.dataset.tab;
+    if (activeTab) {
+        ns.territory?.handleTabActivated?.(activeTab);
+    }
 
     // Refresh lucide icons
     if (window.lucide) lucide.createIcons();

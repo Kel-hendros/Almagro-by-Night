@@ -117,85 +117,15 @@ function safeParseJSON(value) {
 }
 
 function buildZoneGeometryMap(dataset) {
-  if (!dataset?.features) return {};
-  const map = {};
-  dataset.features.forEach((feat) => {
-    if (feat.properties?.type !== "zone" || !feat.geometry) return;
-    map[feat.properties.feature_id] = feat.geometry;
-  });
-  return map;
+  return window.ABNSharedMap?.buildZoneGeometryMap?.(dataset) || {};
 }
 
 function buildLocationZoneMap(dataset) {
-  if (!dataset?.features) return {};
-  const map = {};
-  dataset.features.forEach((feat) => {
-    if (feat.properties?.type !== "location") return;
-    const locId = feat.properties.feature_id;
-    const zoneId = feat.properties.zone_id || feat.properties.zoneId;
-    if (locId && zoneId) {
-      map[locId] = zoneId;
-    }
-  });
-  return map;
-}
-
-function polygonCentroid(coords) {
-  if (!coords?.length) return null;
-  const ring = coords[0];
-  let area = 0;
-  let cx = 0;
-  let cy = 0;
-  for (let i = 0; i < ring.length - 1; i++) {
-    const [x0, y0] = ring[i];
-    const [x1, y1] = ring[i + 1];
-    const f = x0 * y1 - x1 * y0;
-    area += f;
-    cx += (x0 + x1) * f;
-    cy += (y0 + y1) * f;
-  }
-  area *= 0.5;
-  if (area === 0) {
-    const [x, y] = ring[0] || [0, 0];
-    return { lng: x, lat: y };
-  }
-  cx /= 6 * area;
-  cy /= 6 * area;
-  return { lng: cx, lat: cy };
+  return window.ABNSharedMap?.buildLocationZoneMap?.(dataset) || {};
 }
 
 function geometryCentroid(geometry) {
-  if (!geometry) return null;
-  if (geometry.type === "Polygon") {
-    return polygonCentroid(geometry.coordinates);
-  }
-  if (geometry.type === "MultiPolygon") {
-    let best = null;
-    let maxArea = -Infinity;
-    (geometry.coordinates || []).forEach((poly) => {
-      const ring = poly?.[0];
-      if (!ring) return;
-      let area = 0;
-      for (let i = 0; i < ring.length - 1; i++) {
-        const [x0, y0] = ring[i];
-        const [x1, y1] = ring[i + 1];
-        area += x0 * y1 - x1 * y0;
-      }
-      const centroid = polygonCentroid(poly);
-      if (!centroid) return;
-      const absArea = Math.abs(area);
-      if (absArea > maxArea) {
-        maxArea = absArea;
-        best = centroid;
-      }
-    });
-    return best;
-  }
-  if (geometry.type === "Point") {
-    const [lng, lat] = geometry.coordinates;
-    return { lng, lat };
-  }
-  return null;
+  return window.ABNSharedMap?.geometryCentroid?.(geometry) || null;
 }
 
 function ensureLieutenantMarkerLayer() {
@@ -1071,8 +1001,19 @@ async function initGame() {
   ]);
   window.gameFactions = factions;
 
+  try {
+    window.currentMapThemeCleanup?.();
+  } catch (_e) {}
+  window.currentMapThemeCleanup = null;
+
   // 8) Initialize MapLibre GL map and add layers
-  const map = new maplibregl.Map({
+  const map = window.ABNSharedMap?.createMap
+    ? window.ABNSharedMap.createMap({
+        container: "map",
+        center: [-58.42, -34.612],
+        zoom: 13.3,
+      })
+    : new maplibregl.Map({
     container: "map",
     style:
       "https://api.maptiler.com/maps/basic/style.json?key=3BYctVRw6IwXUy2XDK2b",
@@ -1082,146 +1023,124 @@ async function initGame() {
   // Expose map globally for later styling after configuration
   window.currentMap = map;
 
-  map.on("load", async () => {
+  const handleZoneClick = async (e) => {
+    const features = map.queryRenderedFeatures(e.point);
+    if (features.some((f) => f.layer.id === "locations-circle")) return;
+    const props = e.features[0].properties;
+    const zoneId = props.feature_id;
+    window.LastSelection.set({ type: "zone", id: zoneId });
+    await window.DetailView.renderZone(zoneId);
+    highlightFeature("zone", zoneId);
+  };
+
+  const handleLocationClick = async (e) => {
+    const locId = e.features[0].properties.feature_id;
+    window.LastSelection.set({ type: "location", id: locId });
+    if (
+      window.DetailView &&
+      typeof window.DetailView.renderLocation === "function"
+    ) {
+      await window.DetailView.renderLocation(locId);
+    } else {
+      console.warn("Renderer for locations not available yet");
+    }
+    highlightFeature("location", locId);
+  };
+
+  const handleZoneMouseEnter = () => {
+    map.getCanvas().style.cursor = "pointer";
+  };
+
+  const handleZoneMouseLeave = () => {
+    map.getCanvas().style.cursor = "";
+  };
+
+  const handleSourceData = (e) => {
+    if (e.sourceId === "zones" && e.isSourceLoaded) {
+      styleZones(map, gameId);
+    }
+  };
+
+  async function buildGameMapLayers() {
     // Read our theme colors from CSS variables
     const neutralColor = cssVar("--zone-neutral");
     const neutralOpacity = parseFloat(cssVar("--zone-neutral-opacity")) || 1;
     const neutralOutline = cssVar("--zone-outline");
     const locFill = cssVar("--location-fill");
     const locStroke = cssVar("--location-stroke");
+
     // 9) Load GeoJSON dataset of this territory and add sources/layers
     const datasetUrl = game.territory?.maptiler_dataset_url;
     if (datasetUrl) {
-      // 1) Fetch raw GeoJSON to avoid URL caching issues
-      const bustUrl = datasetUrl.includes("?")
-        ? `${datasetUrl}&_ts=${Date.now()}`
-        : `${datasetUrl}?_ts=${Date.now()}`;
-      const rawData = await fetch(bustUrl, { cache: "no-store" }).then((res) =>
-        res.json()
-      );
-      console.log("Initial features loaded:", rawData.features);
-      // 2) Add source using in-memory data
-      map.addSource("zones", {
-        type: "geojson",
-        data: rawData,
-      });
-      // Save the raw data and URL for future refresh
-      window.currentDatasetData = rawData;
-      window.currentDatasetUrl = datasetUrl;
-      window.zoneGeometryMap = buildZoneGeometryMap(rawData);
-      window.locationZoneMap = buildLocationZoneMap(rawData);
+      let rawData = window.currentDatasetData;
+      if (!rawData) {
+        rawData = window.ABNSharedMap?.fetchGeoJson
+          ? await window.ABNSharedMap.fetchGeoJson(datasetUrl)
+          : await fetch(datasetUrl, { cache: "no-store" }).then((res) => res.json());
+        // Save the raw data and URL for future refresh
+        window.currentDatasetData = rawData;
+        window.currentDatasetUrl = datasetUrl;
+        window.zoneGeometryMap = buildZoneGeometryMap(rawData);
+        window.locationZoneMap = buildLocationZoneMap(rawData);
+      }
 
-      // Draw zone polygons
-      map.addLayer({
-        id: "zones-fill",
-        type: "fill",
-        source: "zones",
-        filter: ["==", ["get", "type"], "zone"],
-        paint: {
-          "fill-color": neutralColor,
-          "fill-opacity": neutralOpacity,
-        },
-      });
+      if (window.ABNSharedMap?.addDatasetLayers) {
+        window.ABNSharedMap.addDatasetLayers(map, {
+          sourceId: "zones",
+          data: rawData,
+          zoneFillId: "zones-fill",
+          zoneOutlineId: "zones-outline",
+          locationCircleId: "locations-circle",
+          zoneHighlightId: "zones-highlight",
+          locationHighlightId: "locations-highlight",
+          zoneFillColor: neutralColor,
+          zoneFillOpacity: neutralOpacity,
+          zoneOutlineColor: neutralOutline,
+          locationFillColor: locFill,
+          locationStrokeColor: locStroke,
+          locationRadius: 6,
+          highlightLineColor: "#FFFFFF",
+          highlightLineWidth: 4,
+          highlightCircleColor: "#000000",
+          highlightCircleRadius: 10,
+          highlightCircleOpacity: 1,
+        });
+      } else {
+        map.addSource("zones", {
+          type: "geojson",
+          data: rawData,
+        });
+      }
 
-      // Outline for all zones
-      map.addLayer({
-        id: "zones-outline",
-        type: "line",
-        source: "zones",
-        filter: ["==", ["get", "type"], "zone"],
-        paint: {
-          "line-color": neutralOutline,
-          "line-width": 2,
-        },
-      });
-
-      // Draw location points as circles
-      map.addLayer({
-        id: "locations-circle",
-        type: "circle",
-        source: "zones",
-        filter: ["==", ["get", "type"], "location"],
-        paint: {
-          "circle-radius": 6,
-          "circle-color": locFill,
-          "circle-stroke-color": locStroke,
-          "circle-stroke-width": 2,
-        },
-      });
-
-      // Highlight selected zone with a bold outline
-      map.addLayer({
-        id: "zones-highlight",
-        type: "line",
-        source: "zones",
-        filter: ["==", ["get", "feature_id"], ""], // initially no feature
-        paint: {
-          "line-color": "#FFFFFF",
-          "line-width": 4,
-        },
-      });
-
-      // Highlight selected location with an outer circle
-      map.addLayer({
-        id: "locations-highlight",
-        type: "circle",
-        source: "zones",
-        filter: ["==", ["get", "feature_id"], ""], // initially no feature
-        paint: {
-          "circle-radius": 10,
-          "circle-color": "#000000",
-          "circle-opacity": 1,
-        },
-      });
-
-      // Interactivity: click on a zone
-      map.on("click", "zones-fill", async (e) => {
-        const features = map.queryRenderedFeatures(e.point);
-        if (features.some((f) => f.layer.id === "locations-circle")) return;
-        const props = e.features[0].properties;
-        const zoneId = props.feature_id;
-        window.LastSelection.set({ type: "zone", id: zoneId });
-        await window.DetailView.renderZone(zoneId);
-        highlightFeature("zone", zoneId);
-      });
-
-      // Change cursor on hover
-      map.on("mouseenter", "zones-fill", () => {
-        map.getCanvas().style.cursor = "pointer";
-      });
-      map.on("mouseleave", "zones-fill", () => {
-        map.getCanvas().style.cursor = "";
-      });
-
-      // Interactivity: click on a location
-      map.on("click", "locations-circle", async (e) => {
-        const locId = e.features[0].properties.feature_id;
-        window.LastSelection.set({ type: "location", id: locId });
-        if (
-          window.DetailView &&
-          typeof window.DetailView.renderLocation === "function"
-        ) {
-          await window.DetailView.renderLocation(locId);
-        } else {
-          console.warn("Renderer for locations not available yet");
-        }
-        highlightFeature("location", locId);
-      });
+      map.off("click", "zones-fill", handleZoneClick);
+      map.off("click", "locations-circle", handleLocationClick);
+      map.off("mouseenter", "zones-fill", handleZoneMouseEnter);
+      map.off("mouseleave", "zones-fill", handleZoneMouseLeave);
+      map.on("click", "zones-fill", handleZoneClick);
+      map.on("click", "locations-circle", handleLocationClick);
+      map.on("mouseenter", "zones-fill", handleZoneMouseEnter);
+      map.on("mouseleave", "zones-fill", handleZoneMouseLeave);
       await refreshLieutenantMarkers();
     } else {
       console.warn("No dataset URL for territory:", game);
     }
 
-    // Once the GeoJSON source is loaded, style zones based on DB state
-    map.on("sourcedata", (e) => {
-      if (e.sourceId === "zones" && e.isSourceLoaded) {
-        styleZones(map, gameId);
-      }
-    });
+    map.off("sourcedata", handleSourceData);
+    map.on("sourcedata", handleSourceData);
     map.once("idle", () => {
       styleZones(map, gameId);
     });
+  }
+
+  map.on("load", async () => {
+    await buildGameMapLayers();
   });
+
+  window.currentMapThemeCleanup = window.ABNSharedMap?.bindThemeSync?.(map, {
+    onStyleReload: () => {
+      void buildGameMapLayers();
+    },
+  }) || null;
 
   await setupTimelinePanel(game, initialTimelineDate);
 }
@@ -1242,29 +1161,24 @@ window.refreshActionLogPanel = function () {
  */
 function highlightFeature(type, id) {
   if (!window.currentMap) return;
-  if (type === "zone") {
-    window.currentMap.setFilter("zones-highlight", [
-      "==",
-      ["get", "feature_id"],
+  if (window.ABNSharedMap?.highlightFeature) {
+    window.ABNSharedMap.highlightFeature(window.currentMap, {
+      type,
       id,
-    ]);
-    window.currentMap.setFilter("locations-highlight", [
-      "==",
-      ["get", "feature_id"],
-      "",
-    ]);
-  } else {
-    window.currentMap.setFilter("locations-highlight", [
-      "==",
-      ["get", "feature_id"],
-      id,
-    ]);
-    window.currentMap.setFilter("zones-highlight", [
-      "==",
-      ["get", "feature_id"],
-      "",
-    ]);
+      zoneHighlightId: "zones-highlight",
+      locationHighlightId: "locations-highlight",
+    });
+    return;
   }
+
+  if (type === "zone") {
+    window.currentMap.setFilter("zones-highlight", ["==", ["get", "feature_id"], id]);
+    window.currentMap.setFilter("locations-highlight", ["==", ["get", "feature_id"], ""]);
+    return;
+  }
+
+  window.currentMap.setFilter("locations-highlight", ["==", ["get", "feature_id"], id]);
+  window.currentMap.setFilter("zones-highlight", ["==", ["get", "feature_id"], ""]);
 }
 
 /**

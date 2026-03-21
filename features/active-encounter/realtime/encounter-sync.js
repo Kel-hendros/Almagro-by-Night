@@ -11,7 +11,6 @@
     var getTilePainter = ctx.getTilePainter;
     var getWallDrawer = ctx.getWallDrawer;
     var getRoomDrawer = ctx.getRoomDrawer;
-    var getFogBrush = ctx.getFogBrush;
     var getApplyBroadcastInitiative = ctx.getApplyBroadcastInitiative;
 
     function extractPCHealth(charData) {
@@ -35,7 +34,6 @@
       if (!updated || !state.encounter) return;
       var tilePainter = getTilePainter();
       var wallDrawer = getWallDrawer();
-      var fogBrush = getFogBrush();
       var localTileMap = (tilePainter && tilePainter.isActive())
         ? state.encounter.data.tileMap : null;
       var localWalls = (wallDrawer && wallDrawer.isActive())
@@ -43,8 +41,6 @@
       var roomDrawer = getRoomDrawer();
       var localRooms = (roomDrawer && roomDrawer.isActive())
         ? state.encounter.data.rooms : null;
-      var localFog = (fogBrush && fogBrush.isActive())
-        ? state.encounter.data.fog : null;
       var preserveLights = !!(
         (state.map && state.map._isDraggingLight) ||
         (state._lightLocalChangeUntil && Date.now() < state._lightLocalChangeUntil)
@@ -61,7 +57,6 @@
       if (localTileMap) state.encounter.data.tileMap = localTileMap;
       if (localWalls) state.encounter.data.walls = localWalls;
       if (localRooms) state.encounter.data.rooms = localRooms;
-      if (localFog) state.encounter.data.fog = localFog;
       if (localLights) state.encounter.data.lights = localLights;
       if (state.encounterHasUpdatedAt && updated.updated_at) {
         state.encounterUpdatedAt = updated.updated_at;

@@ -3,7 +3,7 @@
 (function initRoomDrawerModule(global) {
   "use strict";
 
-  var SNAP_RADIUS = 0.45;
+  var SNAP_RADIUS = 0.45; // units — snap to wall endpoints only
   var SNAP_DISPLAY_RANGE = 3;
   var CLOSE_RADIUS = 0.45;
 
@@ -83,20 +83,42 @@
     }
 
     function findSnapIntersection(cellX, cellY) {
-      var ix = Math.round(cellX);
-      var iy = Math.round(cellY);
-      var dist = Math.sqrt((cellX - ix) * (cellX - ix) + (cellY - iy) * (cellY - iy));
-      if (dist <= SNAP_RADIUS) return { x: ix, y: iy };
-      return null;
+      // Snap to existing wall endpoints or room polygon vertices only
+      var walls = opts.getWalls ? opts.getWalls() : [];
+      var rooms = opts.getRooms ? opts.getRooms() : [];
+      var best = null, bestDist = SNAP_RADIUS;
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        var d1 = Math.sqrt((cellX - w.x1) * (cellX - w.x1) + (cellY - w.y1) * (cellY - w.y1));
+        if (d1 < bestDist) { bestDist = d1; best = { x: w.x1, y: w.y1 }; }
+        var d2 = Math.sqrt((cellX - w.x2) * (cellX - w.x2) + (cellY - w.y2) * (cellY - w.y2));
+        if (d2 < bestDist) { bestDist = d2; best = { x: w.x2, y: w.y2 }; }
+      }
+      for (var ri = 0; ri < rooms.length; ri++) {
+        var poly = rooms[ri].polygon;
+        if (!poly) continue;
+        for (var pi = 0; pi < poly.length; pi++) {
+          var dp = Math.sqrt((cellX - poly[pi].x) * (cellX - poly[pi].x) + (cellY - poly[pi].y) * (cellY - poly[pi].y));
+          if (dp < bestDist) { bestDist = dp; best = { x: poly[pi].x, y: poly[pi].y }; }
+        }
+      }
+      return best;
     }
 
     function getSnapPoints(cellX, cellY) {
+      var walls = opts.getWalls ? opts.getWalls() : [];
+      var rooms = opts.getRooms ? opts.getRooms() : [];
       var points = [];
-      var cx = Math.round(cellX);
-      var cy = Math.round(cellY);
-      for (var dy = -SNAP_DISPLAY_RANGE; dy <= SNAP_DISPLAY_RANGE; dy++) {
-        for (var dx = -SNAP_DISPLAY_RANGE; dx <= SNAP_DISPLAY_RANGE; dx++) {
-          points.push({ x: cx + dx, y: cy + dy });
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        if (Math.abs(cellX - w.x1) + Math.abs(cellY - w.y1) <= SNAP_DISPLAY_RANGE) points.push({ x: w.x1, y: w.y1 });
+        if (Math.abs(cellX - w.x2) + Math.abs(cellY - w.y2) <= SNAP_DISPLAY_RANGE) points.push({ x: w.x2, y: w.y2 });
+      }
+      for (var ri = 0; ri < rooms.length; ri++) {
+        var poly = rooms[ri].polygon;
+        if (!poly) continue;
+        for (var pi = 0; pi < poly.length; pi++) {
+          if (Math.abs(cellX - poly[pi].x) + Math.abs(cellY - poly[pi].y) <= SNAP_DISPLAY_RANGE) points.push({ x: poly[pi].x, y: poly[pi].y });
         }
       }
       return points;
@@ -136,8 +158,8 @@
       if (e.button !== 0) return false;
 
       if (mode === "draw") {
-        var snap = findSnapIntersection(cellX, cellY);
-        if (!snap) return true;
+        // Snap to wall endpoints if nearby, otherwise use raw position
+        var snap = findSnapIntersection(cellX, cellY) || { x: cellX, y: cellY };
 
         // Check if closing the polygon
         if (isCloseToFirst(snap)) {

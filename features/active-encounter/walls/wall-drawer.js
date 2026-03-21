@@ -3,9 +3,9 @@
 (function initWallDrawerModule(global) {
   "use strict";
 
-  var SNAP_RADIUS = 0.45; // in grid cells
-  var SNAP_DISPLAY_RANGE = 3; // show snap dots within N cells of cursor
-  var ERASE_DISTANCE_THRESHOLD = 0.35; // in grid cells
+  var SNAP_RADIUS = 0.45; // units — max distance to snap to a wall endpoint
+  var SNAP_DISPLAY_RANGE = 3; // units — show nearby wall endpoints within this range
+  var ERASE_DISTANCE_THRESHOLD = 0.35; // units — max distance to select a wall for erasing
 
   function generateWallId() {
     return "wall-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 6);
@@ -149,7 +149,13 @@
     var active = false;
     var wallType = "wall"; // "wall" | "door" | "window"
     var mode = "draw"; // "draw" | "erase"
+    var drawShape = "polygon"; // "polygon" | "rectangle" | "circle"
     var chainStart = null; // { x, y } grid intersection
+    var doorStart = null; // { x, y, wall, t } first click for door/window
+    var shapeOrigin = null; // { x, y } for rectangle/circle drag start
+    var shapeDragEnd = null; // { x, y } current drag position
+    var CIRCLE_SEGMENTS = 24; // number of wall segments for circle approximation
+
     var saveTimer = null;
     var SAVE_DELAY = 600;
 
@@ -195,9 +201,26 @@
       }
     }
 
+    function getDrawShape() { return drawShape; }
+    function setDrawShape(shape) {
+      drawShape = shape || "polygon";
+      chainStart = null;
+      shapeOrigin = null;
+      shapeDragEnd = null;
+      var map = getMap?.();
+      if (map && map._wallDrawerState) {
+        map._wallDrawerState.shapePreview = null;
+        map._wallDrawerState.chainStart = null;
+      }
+      map?.draw();
+    }
+
     function deactivate() {
       active = false;
       chainStart = null;
+      doorStart = null;
+      shapeOrigin = null;
+      shapeDragEnd = null;
       var map = getMap?.();
       if (map) {
         map.canvas?.classList.remove("wall-drawer-active");
@@ -234,29 +257,34 @@
     }
 
     /**
-     * Find the nearest grid intersection to a world position (in grid cells).
+     * Find the nearest existing wall endpoint to snap to.
+     * Only snaps to other wall endpoints, NOT to grid intersections.
      */
     function findSnapIntersection(cellX, cellY) {
-      var ix = Math.round(cellX);
-      var iy = Math.round(cellY);
-      var dist = Math.sqrt((cellX - ix) * (cellX - ix) + (cellY - iy) * (cellY - iy));
-      if (dist <= SNAP_RADIUS) {
-        return { x: ix, y: iy };
+      var walls = getWalls() || [];
+      var best = null, bestDist = SNAP_RADIUS;
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        var d1 = Math.sqrt((cellX - w.x1) * (cellX - w.x1) + (cellY - w.y1) * (cellY - w.y1));
+        if (d1 < bestDist) { bestDist = d1; best = { x: w.x1, y: w.y1 }; }
+        var d2 = Math.sqrt((cellX - w.x2) * (cellX - w.x2) + (cellY - w.y2) * (cellY - w.y2));
+        if (d2 < bestDist) { bestDist = d2; best = { x: w.x2, y: w.y2 }; }
       }
-      return null;
+      return best;
     }
 
     /**
-     * Get snap points to display near a world cell position.
+     * Get nearby wall endpoints for snap indicator display.
      */
     function getSnapPoints(cellX, cellY) {
+      var walls = getWalls() || [];
       var points = [];
-      var cx = Math.round(cellX);
-      var cy = Math.round(cellY);
-      for (var dy = -SNAP_DISPLAY_RANGE; dy <= SNAP_DISPLAY_RANGE; dy++) {
-        for (var dx = -SNAP_DISPLAY_RANGE; dx <= SNAP_DISPLAY_RANGE; dx++) {
-          points.push({ x: cx + dx, y: cy + dy });
-        }
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        var d1 = Math.abs(cellX - w.x1) + Math.abs(cellY - w.y1);
+        if (d1 <= SNAP_DISPLAY_RANGE) points.push({ x: w.x1, y: w.y1 });
+        var d2 = Math.abs(cellX - w.x2) + Math.abs(cellY - w.y2);
+        if (d2 <= SNAP_DISPLAY_RANGE) points.push({ x: w.x2, y: w.y2 });
       }
       return points;
     }
@@ -282,6 +310,194 @@
       return null;
     }
 
+    /**
+     * Find the nearest wall (type "wall" only) and project a point onto it.
+     * Returns { wall, t, x, y, len } or null.
+     */
+    function projectOntoWall(cellX, cellY) {
+      var walls = getWalls() || [];
+      var bestWall = null, bestDist = ERASE_DISTANCE_THRESHOLD + 0.15;
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        if (w.type !== "wall") continue;
+        var d = pointToSegmentDist(cellX, cellY, w.x1, w.y1, w.x2, w.y2);
+        if (d < bestDist) { bestDist = d; bestWall = w; }
+      }
+      if (!bestWall) return null;
+
+      var dx = bestWall.x2 - bestWall.x1;
+      var dy = bestWall.y2 - bestWall.y1;
+      var lenSq = dx * dx + dy * dy;
+      var len = Math.sqrt(lenSq);
+      if (len < 0.5) return null;
+
+      var t = ((cellX - bestWall.x1) * dx + (cellY - bestWall.y1) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      return {
+        wall: bestWall,
+        t: t,
+        x: bestWall.x1 + dx * t,
+        y: bestWall.y1 + dy * t,
+        len: len,
+      };
+    }
+
+    // Minimum door/window width: 1.5 meters = 1 coordinate unit
+    var MIN_DOOR_METERS = 1.5;
+    var MIN_DOOR_UNITS = MIN_DOOR_METERS / 1.5; // 1.5m per coordinate unit
+
+    /**
+     * Given a start point on a wall, project the cursor onto the wall
+     * to get the end point. Free-form length, minimum 1.5m enforced.
+     */
+    function projectDoorEnd(startT, wall, cellX, cellY) {
+      var dx = wall.x2 - wall.x1;
+      var dy = wall.y2 - wall.y1;
+      var lenSq = dx * dx + dy * dy;
+      var len = Math.sqrt(lenSq);
+      if (len < MIN_DOOR_UNITS * 0.5) return null;
+
+      var t = ((cellX - wall.x1) * dx + (cellY - wall.y1) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      // Enforce minimum door length
+      var dist = Math.abs(t - startT) * len;
+      if (dist < MIN_DOOR_UNITS) {
+        var sign = t >= startT ? 1 : -1;
+        t = startT + (sign * MIN_DOOR_UNITS) / len;
+        t = Math.max(0, Math.min(1, t));
+      }
+
+      return {
+        t: t,
+        x: wall.x1 + dx * t,
+        y: wall.y1 + dy * t,
+      };
+    }
+
+    /**
+     * Create the door/window segment on a wall, splitting it properly.
+     */
+    function commitDoorOnWall(wall, t1, t2, type) {
+      if (t1 > t2) { var tmp = t1; t1 = t2; t2 = tmp; }
+      if (t2 - t1 < 0.001) return false;
+
+      var dx = wall.x2 - wall.x1;
+      var dy = wall.y2 - wall.y1;
+      var x1 = wall.x1 + dx * t1;
+      var y1 = wall.y1 + dy * t1;
+      var x2 = wall.x1 + dx * t2;
+      var y2 = wall.y1 + dy * t2;
+
+      var walls = getWalls() || [];
+      var idx = walls.indexOf(wall);
+      if (idx === -1) return false;
+
+      walls.splice(idx, 1);
+
+      // Before segment
+      if (t1 > 0.01) {
+        var preCount = walls.filter(function (ww) { return ww.type === "wall"; }).length + 1;
+        walls.push({
+          id: generateWallId(),
+          name: wall.name || ("Pared " + preCount),
+          x1: wall.x1, y1: wall.y1, x2: x1, y2: y1,
+          type: "wall", doorOpen: false,
+        });
+      }
+
+      // Door/window
+      var typeLabels = { door: "Puerta", window: "Ventana" };
+      var typeCount = walls.filter(function (ww) { return ww.type === type; }).length + 1;
+      walls.push({
+        id: generateWallId(),
+        name: (typeLabels[type] || type) + " " + typeCount,
+        x1: x1, y1: y1, x2: x2, y2: y2,
+        type: type, doorOpen: false,
+      });
+
+      // After segment
+      if (t2 < 0.99) {
+        var postCount = walls.filter(function (ww) { return ww.type === "wall"; }).length + 1;
+        walls.push({
+          id: generateWallId(),
+          name: wall.name || ("Pared " + postCount),
+          x1: x2, y1: y2, x2: wall.x2, y2: wall.y2,
+          type: "wall", doorOpen: false,
+        });
+      }
+
+      setWalls(walls);
+      var map = getMap?.();
+      if (map) map.walls = walls;
+      scheduleSave();
+      return true;
+    }
+
+    /**
+     * Create wall segments forming a rectangle and return the polygon vertices.
+     */
+    function createRectangleWalls(x1, y1, x2, y2) {
+      var walls = getWalls() || [];
+      var corners = [
+        { x: Math.min(x1, x2), y: Math.min(y1, y2) },
+        { x: Math.max(x1, x2), y: Math.min(y1, y2) },
+        { x: Math.max(x1, x2), y: Math.max(y1, y2) },
+        { x: Math.min(x1, x2), y: Math.max(y1, y2) },
+      ];
+      var polygon = [];
+      for (var i = 0; i < 4; i++) {
+        var j = (i + 1) % 4;
+        var count = walls.filter(function (w) { return w.type === "wall"; }).length + 1;
+        walls.push({
+          id: generateWallId(),
+          name: "Pared " + count,
+          x1: corners[i].x, y1: corners[i].y,
+          x2: corners[j].x, y2: corners[j].y,
+          type: "wall", doorOpen: false,
+        });
+        polygon.push({ x: corners[i].x, y: corners[i].y });
+      }
+      setWalls(walls);
+      var map = getMap?.();
+      if (map) map.walls = walls;
+      scheduleSave();
+      return polygon;
+    }
+
+    /**
+     * Create wall segments approximating a circle and return the polygon vertices.
+     */
+    function createCircleWalls(cx, cy, radius) {
+      if (radius < 0.3) return null;
+      var walls = getWalls() || [];
+      var polygon = [];
+      for (var i = 0; i < CIRCLE_SEGMENTS; i++) {
+        var angle = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
+        polygon.push({
+          x: cx + Math.cos(angle) * radius,
+          y: cy + Math.sin(angle) * radius,
+        });
+      }
+      for (var i = 0; i < CIRCLE_SEGMENTS; i++) {
+        var j = (i + 1) % CIRCLE_SEGMENTS;
+        var count = walls.filter(function (w) { return w.type === "wall"; }).length + 1;
+        walls.push({
+          id: generateWallId(),
+          name: "Pared " + count,
+          x1: polygon[i].x, y1: polygon[i].y,
+          x2: polygon[j].x, y2: polygon[j].y,
+          type: "wall", doorOpen: false,
+        });
+      }
+      setWalls(walls);
+      var map = getMap?.();
+      if (map) map.walls = walls;
+      scheduleSave();
+      return polygon;
+    }
+
     // ── Mouse Handlers ──
 
     function handleMouseDown(e, cellX, cellY) {
@@ -289,7 +505,12 @@
 
       // Only handle left-click
       if (e.button === 2) {
-        // Right-click: cancel chain or deactivate
+        // Right-click: cancel door placement or chain
+        if (doorStart) {
+          doorStart = null;
+          updatePreview(cellX, cellY);
+          return true;
+        }
         if (chainStart) {
           chainStart = null;
           updatePreview(cellX, cellY);
@@ -318,9 +539,38 @@
         return true; // Consume click anyway in erase mode
       }
 
-      // Draw mode
-      var snap = findSnapIntersection(cellX, cellY);
-      if (!snap) return true; // Consume but don't act if no snap
+      // Door/window: two-click placement on existing wall
+      if (wallType === "door" || wallType === "window") {
+        if (!doorStart) {
+          // First click: set start point on a wall
+          var proj = projectOntoWall(cellX, cellY);
+          if (proj) {
+            doorStart = { x: proj.x, y: proj.y, wall: proj.wall, t: proj.t };
+          }
+          updatePreview(cellX, cellY);
+        } else {
+          // Second click: commit the door
+          var endSnap = projectDoorEnd(doorStart.t, doorStart.wall, cellX, cellY);
+          if (endSnap) {
+            commitDoorOnWall(doorStart.wall, doorStart.t, endSnap.t, wallType);
+          }
+          doorStart = null;
+          updatePreview(cellX, cellY);
+        }
+        return true;
+      }
+
+      // Rectangle / Circle: drag-based shape creation
+      if (drawShape === "rectangle" || drawShape === "circle") {
+        shapeOrigin = { x: cellX, y: cellY };
+        shapeDragEnd = { x: cellX, y: cellY };
+        updatePreview(cellX, cellY);
+        return true;
+      }
+
+      // Polygon wall draw mode (chain-based)
+      // Snap to existing wall endpoints if nearby, otherwise use raw position
+      var snap = findSnapIntersection(cellX, cellY) || { x: cellX, y: cellY };
 
       if (!chainStart) {
         // Start chain
@@ -349,13 +599,39 @@
 
     function handleMouseMove(e, cellX, cellY) {
       if (!active) return false;
+      if (shapeOrigin) {
+        shapeDragEnd = { x: cellX, y: cellY };
+      }
       updatePreview(cellX, cellY);
-      return false; // Don't consume mousemove (allow hover effects)
+      return false;
     }
 
     function handleMouseUp(e, cellX, cellY) {
-      // Wall drawer doesn't need mouseup handling (click-based, not drag-based)
-      return false;
+      if (!active || !shapeOrigin) return false;
+      var endPt = { x: cellX, y: cellY };
+      var polygon = null;
+
+      if (drawShape === "rectangle") {
+        var dx = Math.abs(endPt.x - shapeOrigin.x);
+        var dy = Math.abs(endPt.y - shapeOrigin.y);
+        if (dx > 0.3 && dy > 0.3) {
+          polygon = createRectangleWalls(shapeOrigin.x, shapeOrigin.y, endPt.x, endPt.y);
+        }
+      } else if (drawShape === "circle") {
+        var rdx = endPt.x - shapeOrigin.x;
+        var rdy = endPt.y - shapeOrigin.y;
+        var radius = Math.sqrt(rdx * rdx + rdy * rdy);
+        if (radius > 0.3) {
+          polygon = createCircleWalls(shapeOrigin.x, shapeOrigin.y, radius);
+        }
+      }
+
+      shapeOrigin = null;
+      shapeDragEnd = null;
+      var map = getMap?.();
+      if (map && map._wallDrawerState) map._wallDrawerState.shapePreview = null;
+      map?.draw();
+      return !!polygon;
     }
 
     function updatePreview(cellX, cellY) {
@@ -364,12 +640,76 @@
       var st = map._wallDrawerState;
       if (!st) return;
 
-      if (mode === "draw") {
-        st.snapTarget = findSnapIntersection(cellX, cellY);
-        st.snapPoints = getSnapPoints(cellX, cellY);
-        st.chainStart = chainStart;
+      if (mode === "draw" && (wallType === "door" || wallType === "window")) {
+        var proj = projectOntoWall(cellX, cellY);
         st.wallType = wallType;
         st.eraseHoverWallId = null;
+        st.snapTarget = null;
+        st.snapPoints = [];
+        st.chainStart = null;
+        st.doorCursorEnabled = !!proj;
+        st.doorCursorX = cellX;
+        st.doorCursorY = cellY;
+
+        if (doorStart) {
+          // Second phase: show segment from start to snapped end
+          var endSnap = projectDoorEnd(doorStart.t, doorStart.wall, cellX, cellY);
+          if (endSnap) {
+            var sT = doorStart.t, eT = endSnap.t;
+            if (sT > eT) { var tmp = sT; sT = eT; eT = tmp; }
+            var w = doorStart.wall;
+            var ddx = w.x2 - w.x1, ddy = w.y2 - w.y1;
+            st.doorPreview = {
+              x1: w.x1 + ddx * sT, y1: w.y1 + ddy * sT,
+              x2: w.x1 + ddx * eT, y2: w.y1 + ddy * eT,
+            };
+          } else {
+            st.doorPreview = null;
+          }
+          st.doorStartPoint = { x: doorStart.x, y: doorStart.y };
+        } else {
+          // First phase: show snap point on wall
+          st.doorPreview = null;
+          st.doorStartPoint = null;
+          st.doorSnapPoint = proj ? { x: proj.x, y: proj.y } : null;
+        }
+      } else if (mode === "draw") {
+        st.doorPreview = null;
+        st.doorStartPoint = null;
+        st.doorSnapPoint = null;
+        st.doorCursorEnabled = false;
+        st.wallType = wallType;
+        st.eraseHoverWallId = null;
+
+        // Shape preview for rectangle/circle drag
+        if (shapeOrigin && shapeDragEnd) {
+          if (drawShape === "rectangle") {
+            st.shapePreview = {
+              type: "rectangle",
+              x1: Math.min(shapeOrigin.x, shapeDragEnd.x),
+              y1: Math.min(shapeOrigin.y, shapeDragEnd.y),
+              x2: Math.max(shapeOrigin.x, shapeDragEnd.x),
+              y2: Math.max(shapeOrigin.y, shapeDragEnd.y),
+            };
+          } else if (drawShape === "circle") {
+            var cdx = shapeDragEnd.x - shapeOrigin.x;
+            var cdy = shapeDragEnd.y - shapeOrigin.y;
+            st.shapePreview = {
+              type: "circle",
+              cx: shapeOrigin.x,
+              cy: shapeOrigin.y,
+              radius: Math.sqrt(cdx * cdx + cdy * cdy),
+            };
+          }
+          st.snapTarget = null;
+          st.snapPoints = [];
+          st.chainStart = null;
+        } else {
+          st.shapePreview = null;
+          st.snapTarget = findSnapIntersection(cellX, cellY);
+          st.snapPoints = getSnapPoints(cellX, cellY);
+          st.chainStart = chainStart;
+        }
       } else {
         // Erase mode: highlight nearest wall
         var near = findNearestWall(cellX, cellY);
@@ -384,6 +724,12 @@
     function handleKeyDown(e) {
       if (!active) return false;
       if (e.key === "Escape") {
+        if (doorStart) {
+          doorStart = null;
+          var map = getMap?.();
+          if (map) map.draw();
+          return true;
+        }
         if (chainStart) {
           chainStart = null;
           var map = getMap?.();
@@ -418,10 +764,12 @@
       isActive: isActive,
       getType: getType,
       getMode: getMode,
+      getDrawShape: getDrawShape,
       activate: activate,
       deactivate: deactivate,
       setType: setType,
       setMode: setMode,
+      setDrawShape: setDrawShape,
       handleMouseDown: handleMouseDown,
       handleMouseMove: handleMouseMove,
       handleMouseUp: handleMouseUp,

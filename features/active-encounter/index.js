@@ -18,7 +18,6 @@
     // Fog
     "fog/fog-visibility.js",
     "fog/fog-renderer.js",
-    "fog/fog-brush.js",
     // Tactical Map
     "tactical-map/tactical-map-render.js",
     "tactical-map/tactical-map-interactions.js",

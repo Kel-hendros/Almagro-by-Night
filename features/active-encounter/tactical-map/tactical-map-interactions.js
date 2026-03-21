@@ -433,13 +433,6 @@
         }
       }
 
-      // Fog brush intercept
-      if (this._fogBrush && this._fogBrush.isActive()) {
-        if (this._fogBrush.handleMouseDown(e, worldCellX, worldCellY)) {
-          e.preventDefault();
-          return;
-        }
-      }
 
       if (this.measureToolActive) {
         if (e.button === 0) {
@@ -886,16 +879,6 @@
         this._roomDrawer.handleMouseMove(e, rwx / this.gridSize, rwy / this.gridSize);
       }
 
-      // Fog brush mousemove
-      if (this._fogBrush && this._fogBrush.isActive()) {
-        const rect3 = this.canvas.getBoundingClientRect();
-        const fmx = e.clientX - rect3.left;
-        const fmy = e.clientY - rect3.top;
-        const fwx = (fmx - this.offsetX) / this.scale;
-        const fwy = (fmy - this.offsetY) / this.scale;
-        if (this._fogBrush.handleMouseMove(fwx / this.gridSize, fwy / this.gridSize)) return;
-      }
-
       // Switch drag
       if (this._isDraggingSwitch && this._draggedSwitch) {
         const sRect = this.canvas.getBoundingClientRect();
@@ -1132,22 +1115,23 @@
       }
     };
 
-    proto.handleMouseUp = function handleMouseUp() {
+    proto.handleMouseUp = function handleMouseUp(e) {
       // Tile painter intercept
       if (this._tilePainter && this._tilePainter.isActive()) {
         this._tilePainter.handleMouseUp();
       }
-      // Wall drawer: no drag, but call handleMouseUp for completeness
+      // Wall drawer mouseup (needed for rectangle/circle shape drag)
       if (this._wallDrawer && this._wallDrawer.isActive()) {
-        this._wallDrawer.handleMouseUp();
+        var wRect = this.canvas.getBoundingClientRect();
+        var wmx = (e?.clientX || 0) - wRect.left;
+        var wmy = (e?.clientY || 0) - wRect.top;
+        var wwx = (wmx - this.offsetX) / this.scale;
+        var wwy = (wmy - this.offsetY) / this.scale;
+        this._wallDrawer.handleMouseUp(e, wwx / this.gridSize, wwy / this.gridSize);
       }
       // Room drawer mouseup
       if (this._roomDrawer && this._roomDrawer.isActive()) {
         this._roomDrawer.handleMouseUp();
-      }
-      // Fog brush mouseup
-      if (this._fogBrush && this._fogBrush.isActive()) {
-        this._fogBrush.handleMouseUp();
       }
 
       // Switch drag end

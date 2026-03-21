@@ -39,6 +39,7 @@
             <button class="app-tab active" data-tab="resumen">Resumen</button>
             <button class="app-tab" data-tab="jugadores">Jugadores</button>
             <button class="app-tab" data-tab="diario">Diario</button>
+            <button class="app-tab" data-tab="territorio">Territorio</button>
             <button class="app-tab" data-tab="mesa">Mesa Virtual</button>
         </div>
     </div>
@@ -195,6 +196,137 @@
                 <span class="cd-card-muted">Cargando encuentros...</span>
             </div>
         </div>
+        <div class="cd-tab-panel" data-panel="territorio">
+            <div class="cd-territory-stage">
+                <div id="cd-territory-map" class="cd-territory-map">
+                    <span class="cd-card-muted">Cargando mapa…</span>
+                </div>
+
+                <div class="cd-territory-overlay cd-territory-overlay--title">
+                    <h3 id="cd-territory-title" class="cd-territory-title">Territorio de la Crónica</h3>
+                    <div id="cd-territory-backdrop-toggle-row" class="cd-territory-toggle-row hidden">
+                        <span class="cd-territory-toggle-label">Ver territorios</span>
+                        <label class="doc-switch" for="cd-territory-backdrop-toggle" aria-label="Ver territorios">
+                            <input id="cd-territory-backdrop-toggle" type="checkbox" checked>
+                            <span class="doc-switch-track" aria-hidden="true"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="cd-territory-overlay cd-territory-overlay--actions">
+                    <button id="cd-territory-add-poi" class="btn-icon btn-icon--primary" type="button" title="Agregar punto de interés">
+                        <i data-lucide="map-pin-plus"></i>
+                    </button>
+                    <button id="cd-territory-open-config" class="btn-icon" type="button" title="Configurar territorio">
+                        <i data-lucide="settings-2"></i>
+                    </button>
+                    <button id="cd-territory-focus-map" class="btn-icon" type="button" title="Maximizar mapa">
+                        <i data-lucide="maximize-2"></i>
+                    </button>
+                </div>
+
+                <div id="cd-territory-map-status" class="cd-territory-overlay cd-territory-overlay--status hidden"></div>
+
+                <section id="cd-territory-poi-card" class="cd-territory-overlay cd-territory-overlay--poi hidden">
+                    <div class="cd-territory-card-head">
+                        <span class="cd-section-label">PUNTO DE INTERÉS</span>
+                        <button id="cd-territory-cancel-edit" class="btn-icon" type="button" title="Cerrar">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                    <div class="cd-territory-poi-summary">
+                        <div id="cd-territory-poi-kind-pill" class="cd-territory-poi-kind-pill">
+                            <span id="cd-territory-poi-kind-icon" class="cd-territory-poi-kind-icon">
+                                <i data-lucide="map-pinned"></i>
+                            </span>
+                            <span id="cd-territory-poi-kind-label" class="cd-territory-poi-kind-label">Interés</span>
+                        </div>
+                        <div class="cd-territory-poi-meta">
+                            <span id="cd-territory-poi-author" class="cd-territory-poi-meta-item">Autor: —</span>
+                            <span id="cd-territory-poi-visibility-label" class="cd-territory-poi-meta-item">Pública</span>
+                        </div>
+                    </div>
+                    <div id="cd-territory-poi-view" class="cd-territory-poi-view hidden">
+                        <div id="cd-territory-poi-body" class="doc-markdown cd-territory-poi-body"></div>
+                        <div id="cd-territory-poi-view-coords" class="cd-territory-poi-view-coords"></div>
+                    </div>
+                    <div id="cd-territory-poi-edit-fields">
+                        <div class="cd-territory-form-grid">
+                            <label class="app-label" for="cd-territory-poi-title">Nombre</label>
+                            <input id="cd-territory-poi-title" class="app-input" type="text" placeholder="Elysium, Refugio, Contacto…">
+
+                            <label class="app-label" for="cd-territory-poi-kind">Tipo</label>
+                            <select id="cd-territory-poi-kind" class="app-input">
+                                <option value="interest">Interés</option>
+                                <option value="haven">Refugio</option>
+                                <option value="threat">Amenaza</option>
+                                <option value="ally">Aliado</option>
+                                <option value="hq">Sede</option>
+                            </select>
+
+                            <label class="app-label" for="cd-territory-poi-visibility">Visibilidad</label>
+                            <select id="cd-territory-poi-visibility" class="app-input">
+                                <option value="public">Pública</option>
+                                <option value="private">Privada</option>
+                            </select>
+
+                            <label class="app-label" for="cd-territory-poi-description">Descripción Markdown</label>
+                            <textarea id="cd-territory-poi-description" class="app-input cd-territory-textarea" placeholder="Podés usar **negrita**, listas, enlaces o [[wikilinks]]."></textarea>
+                        </div>
+                        <div class="cd-territory-coords">
+                            <input id="cd-territory-poi-coords" class="app-input cd-territory-coords-input" type="text" placeholder="-34.58804236830945, -58.388969568647106" spellcheck="false" autocomplete="off">
+                            <button id="cd-territory-pick-on-map" class="btn btn--ghost" type="button">Marcar en el mapa</button>
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button id="cd-territory-edit-poi" class="btn btn--secondary hidden" type="button">Editar</button>
+                        <button id="cd-territory-save-poi" class="btn btn--primary" type="button">Guardar punto</button>
+                        <button id="cd-territory-delete-poi" class="btn btn--danger hidden" type="button">Eliminar</button>
+                    </div>
+                </section>
+            </div>
+
+            <div id="cd-territory-config-modal" class="app-modal-overlay" aria-hidden="true">
+                <div class="app-modal cd-territory-config-modal" role="dialog" aria-modal="true" aria-labelledby="cd-territory-config-title">
+                    <div class="app-modal-header">
+                        <h3 id="cd-territory-config-title" class="app-modal-title">Configurar territorio</h3>
+                        <button id="cd-territory-config-close" class="btn-modal-close" type="button" aria-label="Cerrar">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                    <label class="app-label" for="cd-territory-center-label">Nombre:</label>
+                    <input id="cd-territory-center-label" class="app-input" type="text" placeholder="Buenos Aires">
+
+                    <div class="cd-territory-config-position">
+                        <div class="cd-territory-config-position-copy">
+                            <h4 class="cd-territory-config-section-title">Vista base:</h4>
+                            <div class="cd-territory-config-stats">
+                                <div class="cd-territory-config-stat">
+                                    <span class="cd-territory-config-stat-label">Lat:</span>
+                                    <span id="cd-territory-config-lat" class="cd-territory-config-stat-value">-34.60370</span>
+                                </div>
+                                <div class="cd-territory-config-stat">
+                                    <span class="cd-territory-config-stat-label">Long:</span>
+                                    <span id="cd-territory-config-lng" class="cd-territory-config-stat-value">-58.38160</span>
+                                </div>
+                                <div class="cd-territory-config-stat">
+                                    <span class="cd-territory-config-stat-label">Zoom:</span>
+                                    <span id="cd-territory-config-zoom" class="cd-territory-config-stat-value">11.0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="cd-territory-use-map-view" class="btn btn--ghost" type="button">Usar vista actual</button>
+                    </div>
+
+                    <p id="cd-territory-config-note" class="cd-territory-note hidden"></p>
+
+                    <div class="app-modal-actions">
+                        <button id="cd-territory-config-cancel" class="btn btn--ghost" type="button">Cancelar</button>
+                        <button id="cd-territory-save-config" class="btn btn--primary" type="button">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal: Character Picker -->
@@ -246,5 +378,6 @@
 <script src="features/chronicle-detail/recaps.js"></script>
 <script src="features/chronicle-detail/notes.js"></script>
 <script src="features/chronicle-detail/mesa.js"></script>
+<script src="features/chronicle-detail/territory.js"></script>
 <script src="features/chronicle-detail/controller.js"></script>
 <script src="features/chronicle-detail/index.js"></script>

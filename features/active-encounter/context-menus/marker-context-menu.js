@@ -137,7 +137,8 @@
       bodyEl.innerHTML =
         renderHeader(emoji, label) +
         '<button class="ae-token-context-action" data-action="toggle-door">' + btnLabel + '</button>' +
-        '<button class="ae-token-context-action' + (isLocked ? ' is-active' : '') + '" data-action="toggle-lock">\uD83D\uDD12 ' + lockLabel + '</button>';
+        '<button class="ae-token-context-action' + (isLocked ? ' is-active' : '') + '" data-action="toggle-lock">\uD83D\uDD12 ' + lockLabel + '</button>' +
+        '<button class="ae-token-context-action ae-token-context-action--danger" data-action="delete">Eliminar</button>';
 
       bodyEl.querySelector('[data-action="toggle-door"]').addEventListener("click", function (e) {
         e.stopPropagation();
@@ -156,6 +157,18 @@
         saveEncounter?.();
         renderDoorWindow(wall);
         reposition();
+      });
+      bodyEl.querySelector('[data-action="delete"]')?.addEventListener("click", function (e) {
+        e.stopPropagation();
+        hide();
+        // Convert back to wall segment (don't leave a gap)
+        wall.type = "wall";
+        wall.doorOpen = false;
+        wall.locked = false;
+        wall.name = "Pared";
+        var map = getMap?.();
+        if (map) { map.invalidateFog?.(); map.invalidateLighting?.(); map.draw(); }
+        saveEncounter?.();
       });
       bindHeaderRename(function (val) { wall.name = val; saveEncounter?.(); });
     }

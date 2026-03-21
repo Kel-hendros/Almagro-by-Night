@@ -15,7 +15,6 @@
       getTilePainter,
       getWallDrawer,
       getRoomDrawer,
-      getFogBrush,
       addLight,
       findLightAt,
       removeLight,
@@ -167,7 +166,7 @@
       // Light tools
       bindLightEvents();
 
-      // Fog tools
+      // Fog tools (toggle + mode only, brush removed)
       bindFogEvents();
 
       setDrawerTab("entities");
@@ -289,13 +288,6 @@
           refreshRoomUI();
         }
       }
-      if (except !== "fogBrush") {
-        var fb = getFogBrush?.();
-        if (fb?.isActive()) {
-          fb.deactivate();
-          refreshFogUI();
-        }
-      }
       if (except !== "lightPlacer" && lightPlaceMode) {
         deactivateLightPlacer();
       }
@@ -319,6 +311,15 @@
             wd.activate(type);
             wd.setMode("draw");
           }
+          refreshWallUI();
+        });
+      });
+
+      document.querySelectorAll("[data-wall-shape]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var wd = getWallDrawer?.();
+          if (!wd) return;
+          wd.setDrawShape(btn.dataset.wallShape);
           refreshWallUI();
         });
       });
@@ -384,6 +385,11 @@
       var eraseBtn = document.getElementById("btn-ae-wall-erase");
       if (drawBtn) drawBtn.classList.toggle("active", isActive && currentMode === "draw");
       if (eraseBtn) eraseBtn.classList.toggle("active", isActive && currentMode === "erase");
+
+      var currentShape = wd?.getDrawShape() || "polygon";
+      document.querySelectorAll("[data-wall-shape]").forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.wallShape === currentShape);
+      });
 
       var countEl = document.getElementById("ae-wall-count");
       if (countEl) {
@@ -643,77 +649,31 @@
         });
       });
 
-      // Reveal brush
-      document.getElementById("btn-ae-fog-reveal")?.addEventListener("click", function () {
-        if (!requireAdminAction()) return;
-        var fb = getFogBrush?.();
-        if (!fb) return;
-        if (fb.isActive() && fb.getBrushType() === "reveal") {
-          fb.deactivate();
-        } else {
-          deactivateOtherTools("fogBrush");
-          fb.setBrushType("reveal");
-          fb.activate("reveal");
-        }
-        refreshFogUI();
-      });
-
-      // Hide brush
-      document.getElementById("btn-ae-fog-hide")?.addEventListener("click", function () {
-        if (!requireAdminAction()) return;
-        var fb = getFogBrush?.();
-        if (!fb) return;
-        if (fb.isActive() && fb.getBrushType() === "hide") {
-          fb.deactivate();
-        } else {
-          deactivateOtherTools("fogBrush");
-          fb.setBrushType("hide");
-          fb.activate("hide");
-        }
-        refreshFogUI();
-      });
-
-      // Fog brush sizes
-      var fogBrushSizes = document.getElementById("ae-fog-brush-sizes");
-      if (fogBrushSizes) {
-        fogBrushSizes.addEventListener("click", function (e) {
-          var btn = e.target.closest("[data-fog-brush]");
-          if (!btn) return;
-          var fb = getFogBrush?.();
-          if (!fb) return;
-          fb.setBrushSize(parseInt(btn.dataset.fogBrush, 10) || 1);
-          refreshFogUI();
-        });
-      }
-
       // Reset exploration
       document.getElementById("btn-ae-fog-reset")?.addEventListener("click", function () {
         if (!requireAdminAction()) return;
-        var fb = getFogBrush?.();
-        if (fb) fb.resetExploration();
+        var fog = state.encounter?.data?.fog;
+        if (!fog) return;
+        if (!confirm("\u00bfReiniciar toda la exploraci\u00f3n? Los jugadores perder\u00e1n el mapa descubierto.")) return;
+        fog.explored = {};
+        fog.exploredBy = {};
+        fog.revealed = {};
+        fog.hidden = {};
+        var map = getMap?.();
+        if (map) {
+          map.setFogConfig?.(fog);
+          map.invalidateFog?.();
+          map.draw();
+        }
+        ctx.saveEncounter?.();
       });
     }
 
     function refreshFogUI() {
-      var fb = getFogBrush?.();
-      var isActive = fb?.isActive() || false;
-      var brushType = isActive ? fb.getBrushType() : null;
-      var brushSize = fb?.getBrushSize() || 1;
-
-      var revealBtn = document.getElementById("btn-ae-fog-reveal");
-      var hideBtn = document.getElementById("btn-ae-fog-hide");
-      if (revealBtn) revealBtn.classList.toggle("active", isActive && brushType === "reveal");
-      if (hideBtn) hideBtn.classList.toggle("active", isActive && brushType === "hide");
-
       // Fog mode buttons
       var currentMode = state.encounter?.data?.fog?.mode || "auto";
       document.querySelectorAll("[data-fog-mode]").forEach(function (btn) {
         btn.classList.toggle("active", btn.dataset.fogMode === currentMode);
-      });
-
-      // Fog brush size buttons
-      document.querySelectorAll("#ae-fog-brush-sizes [data-fog-brush]").forEach(function (btn) {
-        btn.classList.toggle("active", parseInt(btn.dataset.fogBrush, 10) === brushSize);
       });
 
       // Fog enabled checkbox

@@ -195,6 +195,109 @@
           ctx.restore();
         }
       }
+
+      // Rectangle / circle shape preview
+      if (st.shapePreview) {
+        var sp = st.shapePreview;
+        ctx.save();
+        ctx.strokeStyle = "rgba(212, 165, 116, 0.7)";
+        ctx.lineWidth = 3 / Math.max(scale, 0.5);
+        ctx.setLineDash([6 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
+        ctx.fillStyle = "rgba(212, 165, 116, 0.06)";
+        if (sp.type === "rectangle") {
+          var rx = sp.x1 * gs, ry = sp.y1 * gs;
+          var rw = (sp.x2 - sp.x1) * gs, rh = (sp.y2 - sp.y1) * gs;
+          ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeRect(rx, ry, rw, rh);
+        } else if (sp.type === "circle") {
+          var rpx = sp.radius * gs;
+          ctx.beginPath();
+          ctx.arc(sp.cx * gs, sp.cy * gs, rpx, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          // Radius line
+          ctx.setLineDash([]);
+          ctx.lineWidth = 1.5 / Math.max(scale, 0.5);
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(sp.cx * gs, sp.cy * gs);
+          ctx.lineTo(sp.cx * gs + rpx, sp.cy * gs);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      // Door/window: cursor icon near mouse
+      if ((st.wallType === "door" || st.wallType === "window") && st.doorCursorX != null) {
+        var cursorEmoji = st.wallType === "door" ? "\u{1F6AA}" : "\u{1FA9F}";
+        var mx = st.doorCursorX * gs;
+        var my = st.doorCursorY * gs;
+        var ir = 10 / scale;
+        ctx.save();
+        ctx.globalAlpha = st.doorCursorEnabled ? 0.9 : 0.3;
+        ctx.beginPath();
+        ctx.arc(mx - ir * 1.5, my - ir * 1.5, ir, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(10,10,10,0.85)";
+        ctx.fill();
+        ctx.strokeStyle = "rgba(100,200,255,0.7)";
+        ctx.lineWidth = 1.2 / scale;
+        ctx.stroke();
+        ctx.font = Math.round(12 / scale) + "px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(cursorEmoji, mx - ir * 1.5, my - ir * 1.5 + 0.5 / scale);
+        ctx.restore();
+      }
+
+      // Door/window: snap point on wall (first click target)
+      if (st.doorSnapPoint) {
+        var sp = st.doorSnapPoint;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sp.x * gs, sp.y * gs, 5 / Math.max(scale, 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(100,200,255,0.8)";
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Door/window: locked start point
+      if (st.doorStartPoint) {
+        var dsp = st.doorStartPoint;
+        var typeColor = WALL_COLORS[st.wallType] || WALL_COLORS.door;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(dsp.x * gs, dsp.y * gs, 5 / Math.max(scale, 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = typeColor;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Door/window: segment preview (start to snapped end)
+      if (st.doorPreview) {
+        var dp = st.doorPreview;
+        var typeColor = WALL_COLORS[st.wallType] || WALL_COLORS.door;
+        ctx.save();
+        ctx.strokeStyle = typeColor;
+        ctx.globalAlpha = 0.7;
+        ctx.lineWidth = 6 / Math.max(scale, 0.5);
+        ctx.lineCap = "round";
+        ctx.setLineDash([4 / Math.max(scale, 0.5), 3 / Math.max(scale, 0.5)]);
+        ctx.beginPath();
+        ctx.moveTo(dp.x1 * gs, dp.y1 * gs);
+        ctx.lineTo(dp.x2 * gs, dp.y2 * gs);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Endpoint dots
+        ctx.fillStyle = typeColor;
+        ctx.beginPath();
+        ctx.arc(dp.x1 * gs, dp.y1 * gs, 4 / Math.max(scale, 0.5), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dp.x2 * gs, dp.y2 * gs, 4 / Math.max(scale, 0.5), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     };
   }
 

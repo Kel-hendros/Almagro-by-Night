@@ -490,7 +490,7 @@
       const ey = end.y * this.gridSize;
       const dxCells = end.x - start.x;
       const dyCells = end.y - start.y;
-      const meters = Math.hypot(dxCells, dyCells) * 1.5;
+      const meters = Math.hypot(dxCells, dyCells) * METERS_PER_UNIT;
       const midX = (sx + ex) / 2;
       const midY = (sy + ey) / 2;
 
@@ -738,7 +738,7 @@
         }
       }
 
-      // Pre-compute viewer token centers for proximity sensing (1.5m = 1 cell)
+      // Pre-compute viewer token centers for proximity sensing (1.5m = 1 unit)
       var viewerTokenCenters = [];
       if (!isNarratorView) {
         for (var vi = 0; vi < this.tokens.length; vi++) {
@@ -812,7 +812,7 @@
         }
         // Luminosity-based visibility (independent of fog of war)
         // Normal vision: only see tokens with >= 30% luminosity.
-        // Proximity override: tokens within 1.5m (1 cell) are always sensed.
+        // Proximity override: tokens within 1.5m (1 unit) are always sensed.
         // Viewer's own tokens: always visible.
         var darknessDim = 1;
         if (hasLighting && this._tokenLuminosity) {

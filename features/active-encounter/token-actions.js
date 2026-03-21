@@ -8,7 +8,7 @@
       render,
       saveEncounter,
     } = ctx;
-    const METERS_PER_CELL = 1.5;
+    const METERS_PER_UNIT = 1.5;
     const DISCIPLINE_ID_BY_ALIAS = (() => {
       const fallbackAliases = {
         5: ["celeridad", "celerity"],
@@ -300,7 +300,7 @@
         parseFloat(action.diameterMeters) ||
         radiusMeters * 2;
       const radiusCells =
-        radiusMeters > 0 ? radiusMeters / METERS_PER_CELL : parseFloat(action.radiusCells) || 0;
+        radiusMeters > 0 ? radiusMeters / METERS_PER_UNIT : parseFloat(action.radiusCells) || 0;
       const sourceInstanceId = token.instanceId;
       const sourceTokenId = token.id;
       const effectId = `${effectType}:${sourceInstanceId}`;

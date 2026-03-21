@@ -2534,7 +2534,21 @@ html.embed-mode .ae-vtt-layout {
 }
 
 /* ── Marker Context Menu ── */
+.ae-marker-context-menu {
+    width: 210px;
+    min-width: 210px;
+    max-width: 210px;
+}
+.ae-marker-context-menu.is-expanded {
+    width: 460px;
+    max-width: 460px;
+}
 .ae-marker-context-menu .ae-token-context-primary {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+}
+.ae-marker-context-menu.is-expanded .ae-token-context-primary {
     flex: 0 0 198px;
     width: 198px;
     min-width: 198px;

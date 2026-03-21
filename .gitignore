@@ -1,6 +1,8 @@
 # macOS / editor noise
 .DS_Store
 **/.DS_Store
+*.swp
+*.swo
 
 # Local scratch / backups
 Por si a caso/

@@ -209,8 +209,9 @@
 
     for (var i = 0; i < pcTokens.length; i++) {
       var token = pcTokens[i];
-      var cx = token.x + 0.5; // center of token cell
-      var cy = token.y + 0.5;
+      var tSize = parseFloat(token.size) || 1;
+      var cx = token.x + tSize * 0.5; // center of token
+      var cy = token.y + tSize * 0.5;
       var poly = computeVisibilityPolygon(cx, cy, walls, radius);
       polygons.push(poly);
 

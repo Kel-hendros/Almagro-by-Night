@@ -130,7 +130,11 @@
           .from("encounters")
           .select("id", { count: "exact", head: true })
           .eq("chronicle_id", chronicleId),
-        supabase.from("games").select("id, name").eq("chronicle_id", chronicleId).limit(1),
+        supabase
+          .from("games")
+          .select("id, name, territory_id, territory:territories(id, name, maptiler_dataset_url)")
+          .eq("chronicle_id", chronicleId)
+          .limit(1),
         supabase
           .from("session_recaps")
           .select("id, session_number, title, body, session_date, created_at")
@@ -152,6 +156,194 @@
       game: gameResult.data?.[0] || null,
       latestRecap: recapResult.data || null,
     };
+  }
+
+  async function fetchChronicleTerritory(chronicleId) {
+    const [configResult, poisResult] = await Promise.all([
+      supabase
+        .from("chronicle_territories")
+        .select("chronicle_id, center_label, center_lat, center_lng, zoom, updated_at")
+        .eq("chronicle_id", chronicleId)
+        .maybeSingle(),
+      supabase
+        .from("chronicle_territory_pois")
+        .select(
+          "id, chronicle_id, created_by_player_id, title, description, kind, visibility, lat, lng, linked_document_type, linked_document_id, created_at, updated_at"
+        )
+        .eq("chronicle_id", chronicleId)
+        .order("updated_at", { ascending: false }),
+    ]);
+
+    const pois = poisResult.data || [];
+    const authorIds = [...new Set(pois.map((poi) => poi.created_by_player_id).filter(Boolean))];
+    let authorMap = {};
+    if (authorIds.length) {
+      const { data: authors, error: authorsError } = await supabase
+        .from("players")
+        .select("id, name")
+        .in("id", authorIds);
+      if (authorsError) {
+        console.error("chronicle-detail.service.fetchChronicleTerritory.authors:", authorsError);
+      } else {
+        authorMap = Object.fromEntries((authors || []).map((author) => [author.id, author.name || "—"]));
+      }
+    }
+
+    return {
+      config: configResult.data || null,
+      pois: pois.map((poi) => ({
+        ...poi,
+        author_name: authorMap[poi.created_by_player_id] || "—",
+      })),
+      error: configResult.error || poisResult.error || null,
+    };
+  }
+
+  async function upsertChronicleTerritoryConfig({
+    chronicleId,
+    playerId,
+    centerLabel,
+    centerLat,
+    centerLng,
+    zoom,
+  }) {
+    const payload = {
+      chronicle_id: chronicleId,
+      center_label: centerLabel,
+      center_lat: centerLat,
+      center_lng: centerLng,
+      zoom,
+      created_by: playerId,
+      updated_by: playerId,
+    };
+
+    const { data, error } = await supabase
+      .from("chronicle_territories")
+      .upsert(payload, { onConflict: "chronicle_id" })
+      .select("chronicle_id, center_label, center_lat, center_lng, zoom, updated_at")
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
+  async function createChronicleTerritoryPoi({
+    chronicleId,
+    currentPlayerId,
+    title,
+    description,
+    kind,
+    visibility,
+    lat,
+    lng,
+  }) {
+    const { data, error } = await supabase
+      .from("chronicle_territory_pois")
+      .insert({
+        chronicle_id: chronicleId,
+        created_by_player_id: currentPlayerId,
+        title,
+        description,
+        kind,
+        visibility,
+        lat,
+        lng,
+      })
+      .select(
+        "id, chronicle_id, created_by_player_id, title, description, kind, visibility, lat, lng, linked_document_type, linked_document_id, created_at, updated_at"
+      )
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
+  async function updateChronicleTerritoryPoi({
+    poiId,
+    chronicleId,
+    title,
+    description,
+    kind,
+    visibility,
+    lat,
+    lng,
+  }) {
+    const { data, error } = await supabase
+      .from("chronicle_territory_pois")
+      .update({
+        title,
+        description,
+        kind,
+        visibility,
+        lat,
+        lng,
+      })
+      .eq("id", poiId)
+      .eq("chronicle_id", chronicleId)
+      .select(
+        "id, chronicle_id, created_by_player_id, title, description, kind, visibility, lat, lng, linked_document_type, linked_document_id, created_at, updated_at"
+      )
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
+  async function deleteChronicleTerritoryPoi({ poiId, chronicleId }) {
+    const { error } = await supabase
+      .from("chronicle_territory_pois")
+      .delete()
+      .eq("id", poiId)
+      .eq("chronicle_id", chronicleId);
+
+    return { error: error || null };
+  }
+
+  function subscribeChronicleTerritory({ chronicleId, onChange }) {
+    if (!chronicleId || !global.supabase) return null;
+    return global.supabase
+      .channel(`chronicle-territory-${chronicleId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chronicle_territories",
+          filter: `chronicle_id=eq.${chronicleId}`,
+        },
+        () => {
+          if (typeof onChange === "function") onChange();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chronicle_territory_pois",
+          filter: `chronicle_id=eq.${chronicleId}`,
+        },
+        () => {
+          if (typeof onChange === "function") onChange();
+        }
+      )
+      .subscribe();
+  }
+
+  function unsubscribeChannel(channel) {
+    if (!channel) return;
+    try {
+      channel.unsubscribe?.();
+    } catch (_e) {}
+    try {
+      global.supabase?.removeChannel?.(channel);
+    } catch (_e) {}
   }
 
   async function fetchEncountersForChronicle({ chronicleId, isNarrator }) {
@@ -234,6 +426,13 @@
     removeBannerFileByUrl,
     uploadBannerFile,
     fetchDashboardData,
+    fetchChronicleTerritory,
+    upsertChronicleTerritoryConfig,
+    createChronicleTerritoryPoi,
+    updateChronicleTerritoryPoi,
+    deleteChronicleTerritoryPoi,
+    subscribeChronicleTerritory,
+    unsubscribeChannel,
     fetchEncountersForChronicle,
     createEncounter,
     updateEncounterStatus,
