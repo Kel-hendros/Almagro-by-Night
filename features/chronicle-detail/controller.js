@@ -594,7 +594,6 @@
         currentPlayerId: currentPlayer.id,
         currentPlayerName: currentPlayer.name || "",
         isNarrator,
-        gameBackdrop: game?.territory || null,
     });
 
     const activeTab = document.querySelector("#chronicle-tabs .app-tab.active")?.dataset.tab;

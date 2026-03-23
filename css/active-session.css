@@ -223,13 +223,11 @@
 }
 
 .as-avatar {
-  flex: 0 0 auto;
-  align-self: stretch;
-  height: auto;
-  aspect-ratio: 1 / 1;
-  min-width: 52px;
-  max-width: 72px;
-  border-radius: 999px;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  align-self: center;
+  border-radius: 50%;
   overflow: hidden;
   border: 1px solid var(--theme-border-divider);
   background: var(--theme-bg-surface);

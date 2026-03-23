@@ -117,9 +117,15 @@
 
       state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
 
-      if (global.AERollFeed) {
-        global.AERollFeed.destroy();
-        global.AERollFeed.create(state.encounterId, {
+      // Use global roll notifications component (skip if embedded in iframe - parent handles it)
+      var isEmbedded = global.self !== global.top;
+      var chronicleId = state.encounter?.chronicle_id || null;
+      if (!isEmbedded && global.ABNRollNotifications && chronicleId) {
+        global.ABNRollNotifications.destroy();
+        var mapContainer = document.getElementById("ae-map-container");
+        global.ABNRollNotifications.create({
+          chronicleId: chronicleId,
+          container: mapContainer,
           onInitiativeRoll: getApplyBroadcastInitiative(),
         });
       }
@@ -128,8 +134,9 @@
     }
 
     function teardownRealtimeSubscriptions() {
-      if (global.AERollFeed) {
-        global.AERollFeed.destroy();
+      var isEmbedded = global.self !== global.top;
+      if (!isEmbedded && global.ABNRollNotifications) {
+        global.ABNRollNotifications.destroy();
       }
       if (!Array.isArray(state.realtimeChannels) || state.realtimeChannels.length === 0) return;
       state.realtimeChannels.forEach(function (channel) {

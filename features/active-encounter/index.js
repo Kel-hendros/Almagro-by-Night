@@ -44,7 +44,7 @@
     "encounter-powers.js",
     "token-actions.js",
     "token-context-menu.js",
-    "roll-feed.js",
+    // roll-feed.js removed - using global ABNRollNotifications instead
     // Orchestrator
     "active-encounter.js",
   ];

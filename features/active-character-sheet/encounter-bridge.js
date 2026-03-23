@@ -236,9 +236,10 @@
       return;
     }
 
-    // Dice roll result from character sheet — broadcast to encounter
+    // Dice roll result from character sheet — broadcast to encounter and/or chronicle
     if (data.type === "abn-dice-roll-result") {
-      if (state.connected && state.encounterId) {
+      // Broadcast if connected to encounter OR if we have a chronicle ID
+      if ((state.connected && state.encounterId) || state.chronicleId) {
         broadcastDiceRoll(data);
       }
       return;
@@ -255,15 +256,15 @@
     callExtraActionsRPC(encId, sId, count);
   }
 
-  // --- Dice roll broadcast channel ---
+  // --- Dice roll broadcast channel (chronicle-level) ---
   let rollBroadcastChannel = null;
 
   function ensureRollBroadcastChannel() {
     if (rollBroadcastChannel) return rollBroadcastChannel;
     const sb = getSupabase();
-    if (!sb || !state.encounterId) return null;
+    if (!sb || !state.chronicleId) return null;
     rollBroadcastChannel = sb
-      .channel("encounter-rolls-" + state.encounterId)
+      .channel("chronicle-rolls-" + state.chronicleId)
       .subscribe();
     return rollBroadcastChannel;
   }

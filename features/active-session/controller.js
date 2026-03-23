@@ -207,6 +207,11 @@
     handleEncounterState(null);
     bindUIActions();
 
+    // Mount roll notifications feed (chronicle-level)
+    if (global.ABNRollNotifications) {
+      global.ABNRollNotifications.create({ chronicleId: state.chronicleId });
+    }
+
     await reconnectEncounterBridge();
     state.encountersChannel = service().subscribeSessionEncounters({
       chronicleId: state.chronicleId,
@@ -217,6 +222,11 @@
   }
 
   function destroyPage() {
+    // Destroy roll notifications
+    if (global.ABNRollNotifications) {
+      global.ABNRollNotifications.destroy();
+    }
+
     state.encounterBridge?.destroy?.();
     state.encounterBridge = null;
     service().unsubscribeChannel(state.encountersChannel);

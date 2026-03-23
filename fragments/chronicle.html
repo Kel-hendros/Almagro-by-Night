@@ -39,7 +39,7 @@
             <button class="app-tab active" data-tab="resumen">Resumen</button>
             <button class="app-tab" data-tab="jugadores">Jugadores</button>
             <button class="app-tab" data-tab="diario">Diario</button>
-            <button class="app-tab" data-tab="territorio">Territorio</button>
+            <button class="app-tab" data-tab="territorio">Mapa</button>
             <button class="app-tab" data-tab="mesa">Mesa Virtual</button>
         </div>
     </div>
@@ -198,92 +198,258 @@
         </div>
         <div class="cd-tab-panel" data-panel="territorio">
             <div class="cd-territory-stage">
-                <div id="cd-territory-map" class="cd-territory-map">
-                    <span class="cd-card-muted">Cargando mapa…</span>
-                </div>
-
-                <div class="cd-territory-overlay cd-territory-overlay--title">
-                    <h3 id="cd-territory-title" class="cd-territory-title">Territorio de la Crónica</h3>
-                    <div id="cd-territory-backdrop-toggle-row" class="cd-territory-toggle-row hidden">
-                        <span class="cd-territory-toggle-label">Ver territorios</span>
-                        <label class="doc-switch" for="cd-territory-backdrop-toggle" aria-label="Ver territorios">
-                            <input id="cd-territory-backdrop-toggle" type="checkbox" checked>
-                            <span class="doc-switch-track" aria-hidden="true"></span>
-                        </label>
+                <!-- Left drawer: POI list -->
+                <aside id="cd-territory-list-drawer" class="cd-territory-list-drawer">
+                    <header class="cd-territory-list-header">
+                        <h3 id="cd-territory-title" class="cd-territory-list-title">Mapa</h3>
+                        <div class="cd-territory-list-actions">
+                            <button id="cd-territory-open-config" class="btn-icon hidden" type="button" title="Configurar territorio">
+                                <i data-lucide="settings-2"></i>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="cd-territory-list-search">
+                        <i data-lucide="search" class="cd-territory-search-icon"></i>
+                        <input id="cd-territory-search" class="cd-territory-search-input" type="text" placeholder="Buscar lugares…">
+                        <button id="cd-territory-search-clear" class="cd-territory-search-clear hidden" type="button" title="Limpiar">
+                            <i data-lucide="x"></i>
+                        </button>
                     </div>
-                </div>
+                    <div id="cd-territory-list-content" class="cd-territory-list-content">
+                        <!-- Zones section (accordion) -->
+                        <section id="cd-territory-zones-section" class="cd-territory-drawer-section cd-territory-accordion collapsed" data-accordion="zones">
+                            <button class="cd-territory-accordion-header" type="button">
+                                <span class="cd-territory-accordion-arrow"><i data-lucide="chevron-down"></i></span>
+                                <span class="cd-territory-accordion-title">Zonas</span>
+                                <span id="cd-territory-toggle-zones" class="btn-icon btn-icon--ghost cd-territory-accordion-action cd-territory-layer-toggle" title="Mostrar/ocultar zonas">
+                                    <i data-lucide="eye"></i>
+                                </span>
+                                <span id="cd-territory-add-zone" class="btn-icon btn-icon--primary cd-territory-accordion-action hidden" title="Agregar zona">
+                                    <i data-lucide="plus"></i>
+                                </span>
+                            </button>
+                            <div class="cd-territory-accordion-body">
+                                <div id="cd-territory-zone-list-grouped" class="cd-territory-list-grouped"></div>
+                                <div id="cd-territory-zone-list-empty" class="cd-territory-list-empty hidden">
+                                    <span>No hay zonas todavía</span>
+                                </div>
+                            </div>
+                        </section>
+                        <!-- POIs section (accordion) -->
+                        <section id="cd-territory-pois-section" class="cd-territory-drawer-section cd-territory-accordion" data-accordion="pois">
+                            <button class="cd-territory-accordion-header" type="button">
+                                <span class="cd-territory-accordion-arrow"><i data-lucide="chevron-down"></i></span>
+                                <span class="cd-territory-accordion-title">Lugares</span>
+                                <span id="cd-territory-toggle-pois" class="btn-icon btn-icon--ghost cd-territory-accordion-action cd-territory-layer-toggle" title="Mostrar/ocultar lugares">
+                                    <i data-lucide="eye"></i>
+                                </span>
+                                <span id="cd-territory-add-poi" class="btn-icon btn-icon--primary cd-territory-accordion-action" title="Agregar lugar">
+                                    <i data-lucide="plus"></i>
+                                </span>
+                            </button>
+                            <div class="cd-territory-accordion-body">
+                                <div id="cd-territory-list-grouped" class="cd-territory-list-grouped"></div>
+                                <div id="cd-territory-list-results" class="cd-territory-list-results hidden"></div>
+                                <div id="cd-territory-list-empty" class="cd-territory-list-empty hidden">
+                                    <span>No hay lugares todavía</span>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </aside>
 
-                <div class="cd-territory-overlay cd-territory-overlay--actions">
-                    <button id="cd-territory-add-poi" class="btn-icon btn-icon--primary" type="button" title="Agregar punto de interés">
-                        <i data-lucide="map-pin-plus"></i>
-                    </button>
-                    <button id="cd-territory-open-config" class="btn-icon" type="button" title="Configurar territorio">
-                        <i data-lucide="settings-2"></i>
-                    </button>
-                    <button id="cd-territory-focus-map" class="btn-icon" type="button" title="Maximizar mapa">
-                        <i data-lucide="maximize-2"></i>
-                    </button>
-                </div>
+                <!-- Map area -->
+                <div class="cd-territory-map-area">
+                    <div id="cd-territory-map" class="cd-territory-map">
+                        <span class="cd-card-muted">Cargando mapa…</span>
+                    </div>
+
+                    <div class="cd-territory-overlay cd-territory-overlay--actions">
+                        <button id="cd-territory-focus-map" class="btn-icon" type="button" title="Maximizar mapa">
+                            <i data-lucide="maximize-2"></i>
+                        </button>
+                    </div>
 
                 <div id="cd-territory-map-status" class="cd-territory-overlay cd-territory-overlay--status hidden"></div>
 
                 <section id="cd-territory-poi-card" class="cd-territory-overlay cd-territory-overlay--poi hidden">
-                    <div class="cd-territory-card-head">
+                    <header class="cd-territory-card-head">
                         <span class="cd-section-label">PUNTO DE INTERÉS</span>
                         <button id="cd-territory-cancel-edit" class="btn-icon" type="button" title="Cerrar">
                             <i data-lucide="x"></i>
                         </button>
-                    </div>
-                    <div class="cd-territory-poi-summary">
-                        <div id="cd-territory-poi-kind-pill" class="cd-territory-poi-kind-pill">
-                            <span id="cd-territory-poi-kind-icon" class="cd-territory-poi-kind-icon">
-                                <i data-lucide="map-pinned"></i>
-                            </span>
-                            <span id="cd-territory-poi-kind-label" class="cd-territory-poi-kind-label">Interés</span>
-                        </div>
-                        <div class="cd-territory-poi-meta">
-                            <span id="cd-territory-poi-author" class="cd-territory-poi-meta-item">Autor: —</span>
-                            <span id="cd-territory-poi-visibility-label" class="cd-territory-poi-meta-item">Pública</span>
-                        </div>
-                    </div>
-                    <div id="cd-territory-poi-view" class="cd-territory-poi-view hidden">
-                        <div id="cd-territory-poi-body" class="doc-markdown cd-territory-poi-body"></div>
-                        <div id="cd-territory-poi-view-coords" class="cd-territory-poi-view-coords"></div>
-                    </div>
-                    <div id="cd-territory-poi-edit-fields">
-                        <div class="cd-territory-form-grid">
-                            <label class="app-label" for="cd-territory-poi-title">Nombre</label>
+                    </header>
+
+                    <div class="cd-territory-poi-form">
+                        <div class="cd-territory-field cd-territory-field--name">
+                            <label class="cd-territory-field-label" for="cd-territory-poi-title">Nombre</label>
                             <input id="cd-territory-poi-title" class="app-input" type="text" placeholder="Elysium, Refugio, Contacto…">
-
-                            <label class="app-label" for="cd-territory-poi-kind">Tipo</label>
-                            <select id="cd-territory-poi-kind" class="app-input">
-                                <option value="interest">Interés</option>
-                                <option value="haven">Refugio</option>
-                                <option value="threat">Amenaza</option>
-                                <option value="ally">Aliado</option>
-                                <option value="hq">Sede</option>
-                            </select>
-
-                            <label class="app-label" for="cd-territory-poi-visibility">Visibilidad</label>
-                            <select id="cd-territory-poi-visibility" class="app-input">
-                                <option value="public">Pública</option>
-                                <option value="private">Privada</option>
-                            </select>
-
-                            <label class="app-label" for="cd-territory-poi-description">Descripción Markdown</label>
-                            <textarea id="cd-territory-poi-description" class="app-input cd-territory-textarea" placeholder="Podés usar **negrita**, listas, enlaces o [[wikilinks]]."></textarea>
                         </div>
-                        <div class="cd-territory-coords">
-                            <input id="cd-territory-poi-coords" class="app-input cd-territory-coords-input" type="text" placeholder="-34.58804236830945, -58.388969568647106" spellcheck="false" autocomplete="off">
-                            <button id="cd-territory-pick-on-map" class="btn btn--ghost" type="button">Marcar en el mapa</button>
+
+                        <div class="cd-territory-field-row">
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label">Tipo</label>
+                                <div id="cd-territory-poi-kind" class="cd-territory-kind-select">
+                                    <button type="button" class="cd-territory-kind-select-btn" aria-haspopup="listbox" aria-expanded="false">
+                                        <span class="cd-territory-kind-dot" data-kind="interest"></span>
+                                        <span class="cd-territory-kind-select-label">Interés</span>
+                                        <span class="cd-territory-kind-select-arrow"><i data-lucide="chevron-down"></i></span>
+                                    </button>
+                                    <div class="cd-territory-kind-dropdown" role="listbox">
+                                        <button type="button" class="cd-territory-kind-option selected" data-kind="interest" role="option">
+                                            <span class="cd-territory-kind-dot" data-kind="interest"></span>
+                                            <span>Interés</span>
+                                        </button>
+                                        <button type="button" class="cd-territory-kind-option" data-kind="haven" role="option">
+                                            <span class="cd-territory-kind-dot" data-kind="haven"></span>
+                                            <span>Refugio</span>
+                                        </button>
+                                        <button type="button" class="cd-territory-kind-option" data-kind="threat" role="option">
+                                            <span class="cd-territory-kind-dot" data-kind="threat"></span>
+                                            <span>Amenaza</span>
+                                        </button>
+                                        <button type="button" class="cd-territory-kind-option" data-kind="ally" role="option">
+                                            <span class="cd-territory-kind-dot" data-kind="ally"></span>
+                                            <span>Aliado</span>
+                                        </button>
+                                        <button type="button" class="cd-territory-kind-option" data-kind="hq" role="option">
+                                            <span class="cd-territory-kind-dot" data-kind="hq"></span>
+                                            <span>Sede</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label" for="cd-territory-poi-visibility">Visibilidad</label>
+                                <select id="cd-territory-poi-visibility" class="app-input">
+                                    <option value="public">Pública</option>
+                                    <option value="private">Privada</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cd-territory-field cd-territory-field--description">
+                            <label class="cd-territory-field-label">Descripción</label>
+                            <div id="cd-territory-poi-description-view" class="cd-territory-description-view doc-markdown"></div>
+                            <textarea id="cd-territory-poi-description" class="app-input cd-territory-description-input" placeholder="Descripción del punto de interés…"></textarea>
+                        </div>
+
+                        <div class="cd-territory-field cd-territory-field--location">
+                            <label class="cd-territory-field-label">Localización</label>
+                            <div class="cd-territory-location-row">
+                                <input id="cd-territory-poi-coords" class="app-input" type="text" placeholder="-34.588042, -58.388969" spellcheck="false" autocomplete="off">
+                                <span id="cd-territory-poi-no-location" class="cd-territory-no-location hidden">Sin ubicación conocida</span>
+                                <button id="cd-territory-pick-on-map" class="btn-icon" type="button" title="Marcar en el mapa">
+                                    <i data-lucide="map-pin"></i>
+                                </button>
+                                <a id="cd-territory-open-gmaps" class="btn-icon hidden" href="#" target="_blank" rel="noopener" title="Abrir en Google Maps">
+                                    <i data-lucide="external-link"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                    <div class="btn-row">
-                        <button id="cd-territory-edit-poi" class="btn btn--secondary hidden" type="button">Editar</button>
-                        <button id="cd-territory-save-poi" class="btn btn--primary" type="button">Guardar punto</button>
-                        <button id="cd-territory-delete-poi" class="btn btn--danger hidden" type="button">Eliminar</button>
-                    </div>
+
+                    <footer class="cd-territory-poi-footer">
+                        <span id="cd-territory-poi-author" class="cd-territory-poi-author">Autor: —</span>
+                        <div class="cd-territory-poi-actions">
+                            <button id="cd-territory-delete-poi" class="btn-icon btn-icon--danger hidden" type="button" title="Eliminar">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                            <button id="cd-territory-edit-poi" class="btn btn--secondary hidden" type="button">Editar</button>
+                            <button id="cd-territory-save-poi" class="btn btn--primary" type="button">Guardar</button>
+                        </div>
+                    </footer>
                 </section>
+
+                <!-- Zone Card -->
+                <section id="cd-territory-zone-card" class="cd-territory-overlay cd-territory-overlay--zone hidden">
+                    <header class="cd-territory-card-head">
+                        <span class="cd-section-label">ZONA</span>
+                        <button id="cd-territory-cancel-zone-edit" class="btn-icon" type="button" title="Cerrar">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </header>
+
+                    <div class="cd-territory-zone-form">
+                        <div class="cd-territory-field cd-territory-field--name">
+                            <label class="cd-territory-field-label" for="cd-territory-zone-nombre">Nombre</label>
+                            <input id="cd-territory-zone-nombre" class="app-input" type="text" placeholder="Dominio del Príncipe, Coto de Caza Norte…">
+                        </div>
+
+                        <div class="cd-territory-field-row">
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label" for="cd-territory-zone-tipo">Tipo</label>
+                                <select id="cd-territory-zone-tipo" class="app-input">
+                                    <option value="territorio">Territorio</option>
+                                    <option value="dominio">Dominio</option>
+                                    <option value="coto_de_caza">Coto de Caza</option>
+                                </select>
+                            </div>
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label" for="cd-territory-zone-estado">Estado</label>
+                                <select id="cd-territory-zone-estado" class="app-input">
+                                    <option value="libre">Libre</option>
+                                    <option value="controlado">Controlado</option>
+                                    <option value="disputado">Disputado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cd-territory-field-row">
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label" for="cd-territory-zone-regente">Regente</label>
+                                <input id="cd-territory-zone-regente" class="app-input" type="text" placeholder="Nombre del regente…">
+                            </div>
+                            <div class="cd-territory-field cd-territory-field--color">
+                                <label class="cd-territory-field-label" for="cd-territory-zone-color">Color</label>
+                                <input id="cd-territory-zone-color" class="app-input cd-territory-color-input" type="color" value="#c41e3a">
+                            </div>
+                        </div>
+
+                        <div class="cd-territory-field-row">
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label" for="cd-territory-zone-visibility">Visibilidad</label>
+                                <select id="cd-territory-zone-visibility" class="app-input">
+                                    <option value="public">Pública</option>
+                                    <option value="private">Privada</option>
+                                </select>
+                            </div>
+                            <div class="cd-territory-field">
+                                <label class="cd-territory-field-label" for="cd-territory-zone-parent">Zona padre</label>
+                                <select id="cd-territory-zone-parent" class="app-input">
+                                    <option value="">— Sin padre —</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cd-territory-field cd-territory-field--description">
+                            <label class="cd-territory-field-label">Descripción</label>
+                            <div id="cd-territory-zone-description-view" class="cd-territory-description-view doc-markdown"></div>
+                            <textarea id="cd-territory-zone-description" class="app-input cd-territory-description-input" placeholder="Descripción de la zona…"></textarea>
+                        </div>
+                    </div>
+
+                    <footer class="cd-territory-zone-footer">
+                        <span id="cd-territory-zone-vertex-count" class="cd-territory-zone-vertex-count">0 vértices</span>
+                        <div class="cd-territory-zone-actions">
+                            <button id="cd-territory-draw-zone" class="btn btn--ghost hidden" type="button">Dibujar</button>
+                            <button id="cd-territory-delete-zone" class="btn-icon btn-icon--danger hidden" type="button" title="Eliminar">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                            <button id="cd-territory-edit-zone" class="btn btn--secondary hidden" type="button">Editar</button>
+                            <button id="cd-territory-save-zone" class="btn btn--primary" type="button">Guardar</button>
+                        </div>
+                    </footer>
+                </section>
+
+                <!-- Context menu -->
+                <div id="cd-territory-context-menu" class="cd-territory-context-menu hidden">
+                    <button id="cd-territory-ctx-gmaps" class="cd-territory-context-item" type="button">
+                        <i data-lucide="external-link"></i>
+                        <span>Abrir en Google Maps</span>
+                    </button>
+                </div>
+                </div><!-- .cd-territory-map-area -->
             </div>
 
             <div id="cd-territory-config-modal" class="app-modal-overlay" aria-hidden="true">

@@ -1,35 +1,62 @@
-(function initAERollFeed(global) {
-  const DISMISS_MS = 15000;
-  const MAX_NOTIFICATIONS = 10;
+/**
+ * Roll Notifications - Global dice roll feed component
+ * Can subscribe to chronicle-level or encounter-level channels
+ * Displays floating notifications for dice rolls in the top-right corner
+ */
+(function initRollNotifications(global) {
+  var DISMISS_MS = 15000;
+  var MAX_NOTIFICATIONS = 10;
 
-  let feedEl = null;
-  let channel = null;
-  let notifications = [];
-  let currentChronicleId = null;
-  let onInitiativeRoll = null;
+  var feedEl = null;
+  var channel = null;
+  var notifications = [];
+  var currentSubscription = null;
+  var onInitiativeRoll = null;
 
   function getSupabase() {
     return global.supabase || null;
   }
 
-  function create(chronicleId, options) {
-    if (!chronicleId) return;
-    currentChronicleId = chronicleId;
-    onInitiativeRoll = (options && typeof options.onInitiativeRoll === "function")
-      ? options.onInitiativeRoll
-      : null;
+  /**
+   * Create and mount the roll feed
+   * @param {Object} options
+   * @param {string} options.chronicleId - Subscribe to chronicle-level rolls
+   * @param {HTMLElement} [options.container] - Container to mount to (defaults to body with fixed positioning)
+   * @param {Function} [options.onInitiativeRoll] - Callback for initiative rolls
+   */
+  function create(options) {
+    options = options || {};
+    var chronicleId = options.chronicleId;
+    var container = options.container;
 
+    if (!chronicleId) return;
+
+    onInitiativeRoll =
+      typeof options.onInitiativeRoll === "function"
+        ? options.onInitiativeRoll
+        : null;
+
+    // Destroy previous instance if exists
+    destroy();
+
+    // Create feed element
     feedEl = document.createElement("div");
-    feedEl.className = "ae-roll-feed";
-    var mapArea = document.getElementById("ae-map-container");
-    if (mapArea) {
-      mapArea.appendChild(feedEl);
+    feedEl.className = "abn-roll-feed";
+
+    // Mount to container or body
+    if (container && container instanceof HTMLElement) {
+      feedEl.classList.add("abn-roll-feed--relative");
+      container.appendChild(feedEl);
+    } else {
+      feedEl.classList.add("abn-roll-feed--fixed");
+      document.body.appendChild(feedEl);
     }
 
     var sb = getSupabase();
     if (!sb) return;
 
-    // Subscribe to chronicle-level roll channel (shared with active-session)
+    // Subscribe to chronicle-level roll channel
+    currentSubscription = { type: "chronicle", id: chronicleId };
     channel = sb
       .channel("chronicle-rolls-" + chronicleId)
       .on("broadcast", { event: "dice-roll" }, function (msg) {
@@ -41,6 +68,7 @@
   function addNotification(data) {
     if (!feedEl) return;
 
+    // Handle initiative rolls
     if (data.rollType === "initiative" && onInitiativeRoll) {
       onInitiativeRoll({
         sheetId: data.sheetId || null,
@@ -55,7 +83,7 @@
     feedEl.appendChild(el);
 
     requestAnimationFrame(function () {
-      el.classList.add("ae-roll-notif-enter");
+      el.classList.add("abn-roll-notif-enter");
     });
 
     var timer = setTimeout(function () {
@@ -63,6 +91,7 @@
     }, DISMISS_MS);
     notifications.push({ id: id, el: el, timer: timer });
 
+    // Enforce max notifications
     while (notifications.length > MAX_NOTIFICATIONS) {
       var oldest = notifications.shift();
       clearTimeout(oldest.timer);
@@ -83,7 +112,7 @@
     if (idx === -1) return;
     var notif = notifications[idx];
     clearTimeout(notif.timer);
-    notif.el.classList.add("ae-roll-notif-exit");
+    notif.el.classList.add("abn-roll-notif-exit");
     notif.el.addEventListener(
       "animationend",
       function () {
@@ -96,7 +125,7 @@
 
   function buildNotificationEl(id, data) {
     var el = document.createElement("div");
-    el.className = "ae-roll-notif ae-roll-notif--" + (data.status || "success");
+    el.className = "abn-roll-notif abn-roll-notif--" + (data.status || "success");
     el.dataset.rollId = id;
 
     if (data.rollType === "initiative") {
@@ -105,7 +134,7 @@
       el.innerHTML = buildDiceRollHTML(data);
     }
 
-    var closeBtn = el.querySelector(".ae-roll-notif-close");
+    var closeBtn = el.querySelector(".abn-roll-notif-close");
     if (closeBtn) {
       closeBtn.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -113,12 +142,12 @@
       });
     }
 
-    var toggleBtn = el.querySelector(".ae-roll-notif-toggle");
-    var detail = el.querySelector(".ae-roll-notif-detail");
+    var toggleBtn = el.querySelector(".abn-roll-notif-toggle");
+    var detail = el.querySelector(".abn-roll-notif-detail");
     if (toggleBtn && detail) {
       toggleBtn.addEventListener("click", function () {
-        var isExpanded = !detail.classList.contains("ae-hidden");
-        detail.classList.toggle("ae-hidden");
+        var isExpanded = !detail.classList.contains("abn-hidden");
+        detail.classList.toggle("abn-hidden");
         toggleBtn.textContent = isExpanded ? "Ver detalle \u25BE" : "Ocultar \u25B4";
       });
     }
@@ -130,7 +159,7 @@
     var name = esc(data.characterName || "???");
     var hasAvatar = !!data.avatarUrl;
     var avatarSide = hasAvatar
-      ? '<img class="ae-roll-notif-portrait" src="' +
+      ? '<img class="abn-roll-notif-portrait" src="' +
         esc(data.avatarUrl) +
         '" alt="">'
       : "";
@@ -149,14 +178,14 @@
     if (data.potencia) mods.push("Potencia");
     var modsLine =
       mods.length > 0
-        ? '<div class="ae-roll-notif-mods">' + esc(mods.join(" · ")) + "</div>"
+        ? '<div class="abn-roll-notif-mods">' + esc(mods.join(" \u00B7 ")) + "</div>"
         : "";
 
     var difficulty = data.difficulty || 6;
     var rolls = data.rolls || [];
     var diceChips = rolls
       .map(function (r) {
-        var cls = "ae-roll-die";
+        var cls = "abn-roll-die";
         if (r === 1) cls += " botch";
         else if (r >= difficulty) cls += " success";
         else cls += " fail";
@@ -167,7 +196,7 @@
     if (data.potencia && data.potenciaLevel > 0) {
       for (var p = 0; p < data.potenciaLevel; p++) {
         diceChips =
-          '<span class="ae-roll-die success ae-roll-die-potencia" title="Potencia">P</span>' +
+          '<span class="abn-roll-die success abn-roll-die-potencia" title="Potencia">P</span>' +
           diceChips;
       }
     }
@@ -184,28 +213,28 @@
     var poolBreakdown = poolParts.join(" + ");
 
     var body =
-      '<div class="ae-roll-notif-body">' +
-      '<div class="ae-roll-notif-top">' +
-      '<span class="ae-roll-notif-name">' +
+      '<div class="abn-roll-notif-body">' +
+      '<div class="abn-roll-notif-top">' +
+      '<span class="abn-roll-notif-name">' +
       name +
       "</span>" +
-      '<button class="ae-roll-notif-close" aria-label="Cerrar">&times;</button>' +
+      '<button class="abn-roll-notif-close" aria-label="Cerrar">&times;</button>' +
       "</div>" +
-      '<div class="ae-roll-notif-pool">' +
+      '<div class="abn-roll-notif-pool">' +
       esc(poolLabel) +
       " (" +
       poolCount +
       ")</div>" +
       modsLine +
-      '<div class="ae-roll-notif-result">' +
+      '<div class="abn-roll-notif-result">' +
       esc(data.result || "?") +
       "</div>" +
-      '<button class="ae-roll-notif-toggle">Ver detalle \u25BE</button>' +
-      '<div class="ae-roll-notif-detail ae-hidden">';
+      '<button class="abn-roll-notif-toggle">Ver detalle \u25BE</button>' +
+      '<div class="abn-roll-notif-detail abn-hidden">';
 
     if (poolBreakdown) {
       body +=
-        '<div class="ae-roll-detail-line">' +
+        '<div class="abn-roll-detail-line">' +
         poolBreakdown +
         " = " +
         (data.totalPool || "?") +
@@ -213,10 +242,10 @@
     }
 
     body +=
-      '<div class="ae-roll-detail-line">Dificultad: ' +
+      '<div class="abn-roll-detail-line">Dificultad: ' +
       difficulty +
       "</div>" +
-      '<div class="ae-roll-dice-row">' +
+      '<div class="abn-roll-dice-row">' +
       diceChips +
       "</div>" +
       "</div>" +
@@ -229,26 +258,26 @@
     var name = esc(data.characterName || "???");
     var hasAvatar = !!data.avatarUrl;
     var avatarSide = hasAvatar
-      ? '<img class="ae-roll-notif-portrait" src="' +
+      ? '<img class="abn-roll-notif-portrait" src="' +
         esc(data.avatarUrl) +
         '" alt="">'
       : "";
 
     var body =
-      '<div class="ae-roll-notif-body">' +
-      '<div class="ae-roll-notif-top">' +
-      '<span class="ae-roll-notif-name">' +
+      '<div class="abn-roll-notif-body">' +
+      '<div class="abn-roll-notif-top">' +
+      '<span class="abn-roll-notif-name">' +
       name +
       "</span>" +
-      '<button class="ae-roll-notif-close" aria-label="Cerrar">&times;</button>' +
+      '<button class="abn-roll-notif-close" aria-label="Cerrar">&times;</button>' +
       "</div>" +
-      '<div class="ae-roll-notif-pool">Iniciativa</div>' +
-      '<div class="ae-roll-notif-result">' +
+      '<div class="abn-roll-notif-pool">Iniciativa</div>' +
+      '<div class="abn-roll-notif-result">' +
       esc(String(data.total)) +
       "</div>" +
-      '<button class="ae-roll-notif-toggle">Ver detalle \u25BE</button>' +
-      '<div class="ae-roll-notif-detail ae-hidden">' +
-      '<div class="ae-roll-detail-line">' +
+      '<button class="abn-roll-notif-toggle">Ver detalle \u25BE</button>' +
+      '<div class="abn-roll-notif-detail abn-hidden">' +
+      '<div class="abn-roll-detail-line">' +
       esc(data.breakdown || "") +
       "</div>" +
       "</div>" +
@@ -286,9 +315,28 @@
       feedEl = null;
     }
 
-    currentChronicleId = null;
+    currentSubscription = null;
     onInitiativeRoll = null;
   }
 
-  global.AERollFeed = { create: create, destroy: destroy };
+  /**
+   * Manually add a notification (for local rolls)
+   */
+  function notify(data) {
+    addNotification(data);
+  }
+
+  /**
+   * Check if currently subscribed
+   */
+  function isActive() {
+    return feedEl !== null && channel !== null;
+  }
+
+  global.ABNRollNotifications = {
+    create: create,
+    destroy: destroy,
+    notify: notify,
+    isActive: isActive,
+  };
 })(window);

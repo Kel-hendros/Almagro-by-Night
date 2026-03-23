@@ -159,7 +159,7 @@
   }
 
   async function fetchChronicleTerritory(chronicleId) {
-    const [configResult, poisResult] = await Promise.all([
+    const [configResult, poisResult, zonesResult] = await Promise.all([
       supabase
         .from("chronicle_territories")
         .select("chronicle_id, center_label, center_lat, center_lng, zoom, updated_at")
@@ -172,10 +172,22 @@
         )
         .eq("chronicle_id", chronicleId)
         .order("updated_at", { ascending: false }),
+      supabase
+        .from("chronicle_territory_zones")
+        .select(
+          "id, chronicle_id, created_by_player_id, parent_id, nombre, descripcion, tipo, estado, regente, color, visibility, polygon, created_at, updated_at"
+        )
+        .eq("chronicle_id", chronicleId)
+        .order("updated_at", { ascending: false }),
     ]);
 
     const pois = poisResult.data || [];
-    const authorIds = [...new Set(pois.map((poi) => poi.created_by_player_id).filter(Boolean))];
+    const zones = zonesResult.data || [];
+    const allAuthorIds = [
+      ...pois.map((poi) => poi.created_by_player_id),
+      ...zones.map((zone) => zone.created_by_player_id),
+    ].filter(Boolean);
+    const authorIds = [...new Set(allAuthorIds)];
     let authorMap = {};
     if (authorIds.length) {
       const { data: authors, error: authorsError } = await supabase
@@ -195,7 +207,11 @@
         ...poi,
         author_name: authorMap[poi.created_by_player_id] || "—",
       })),
-      error: configResult.error || poisResult.error || null,
+      zones: zones.map((zone) => ({
+        ...zone,
+        author_name: authorMap[zone.created_by_player_id] || "—",
+      })),
+      error: configResult.error || poisResult.error || zonesResult.error || null,
     };
   }
 
@@ -305,6 +321,94 @@
     return { error: error || null };
   }
 
+  async function createChronicleTerritoryZone({
+    chronicleId,
+    currentPlayerId,
+    nombre,
+    descripcion,
+    tipo,
+    estado,
+    regente,
+    color,
+    visibility,
+    polygon,
+    parentId,
+  }) {
+    const { data, error } = await supabase
+      .from("chronicle_territory_zones")
+      .insert({
+        chronicle_id: chronicleId,
+        created_by_player_id: currentPlayerId,
+        nombre,
+        descripcion,
+        tipo,
+        estado,
+        regente,
+        color,
+        visibility,
+        polygon,
+        parent_id: parentId || null,
+      })
+      .select(
+        "id, chronicle_id, created_by_player_id, parent_id, nombre, descripcion, tipo, estado, regente, color, visibility, polygon, created_at, updated_at"
+      )
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
+  async function updateChronicleTerritoryZone({
+    zoneId,
+    chronicleId,
+    nombre,
+    descripcion,
+    tipo,
+    estado,
+    regente,
+    color,
+    visibility,
+    polygon,
+    parentId,
+  }) {
+    const { data, error } = await supabase
+      .from("chronicle_territory_zones")
+      .update({
+        nombre,
+        descripcion,
+        tipo,
+        estado,
+        regente,
+        color,
+        visibility,
+        polygon,
+        parent_id: parentId !== undefined ? (parentId || null) : undefined,
+      })
+      .eq("id", zoneId)
+      .eq("chronicle_id", chronicleId)
+      .select(
+        "id, chronicle_id, created_by_player_id, parent_id, nombre, descripcion, tipo, estado, regente, color, visibility, polygon, created_at, updated_at"
+      )
+      .maybeSingle();
+
+    return {
+      data: data || null,
+      error: error || null,
+    };
+  }
+
+  async function deleteChronicleTerritoryZone({ zoneId, chronicleId }) {
+    const { error } = await supabase
+      .from("chronicle_territory_zones")
+      .delete()
+      .eq("id", zoneId)
+      .eq("chronicle_id", chronicleId);
+
+    return { error: error || null };
+  }
+
   function subscribeChronicleTerritory({ chronicleId, onChange }) {
     if (!chronicleId || !global.supabase) return null;
     return global.supabase
@@ -327,6 +431,18 @@
           event: "*",
           schema: "public",
           table: "chronicle_territory_pois",
+          filter: `chronicle_id=eq.${chronicleId}`,
+        },
+        () => {
+          if (typeof onChange === "function") onChange();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chronicle_territory_zones",
           filter: `chronicle_id=eq.${chronicleId}`,
         },
         () => {
@@ -431,6 +547,9 @@
     createChronicleTerritoryPoi,
     updateChronicleTerritoryPoi,
     deleteChronicleTerritoryPoi,
+    createChronicleTerritoryZone,
+    updateChronicleTerritoryZone,
+    deleteChronicleTerritoryZone,
     subscribeChronicleTerritory,
     unsubscribeChannel,
     fetchEncountersForChronicle,
