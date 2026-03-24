@@ -1061,10 +1061,11 @@ html.embed-mode .app-theme-modal-overlay { display: none !important; }
 .abn-roll-feed {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 6px;
     max-height: calc(100dvh - 100px);
     overflow-y: auto;
-    width: 290px;
+    width: min(400px, 90vw);
     pointer-events: none;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
@@ -1072,8 +1073,9 @@ html.embed-mode .app-theme-modal-overlay { display: none !important; }
 
 .abn-roll-feed--fixed {
     position: fixed;
-    top: 60px;
-    right: 20px;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 9000;
 }
 
@@ -1082,6 +1084,8 @@ html.embed-mode .app-theme-modal-overlay { display: none !important; }
     top: 60px;
     right: 12px;
     z-index: 25;
+    width: 290px;
+    align-items: stretch;
 }
 
 .abn-roll-notif {
@@ -1091,25 +1095,26 @@ html.embed-mode .app-theme-modal-overlay { display: none !important; }
     border-radius: 8px;
     backdrop-filter: blur(10px);
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateY(-20px);
     transition: opacity 0.3s ease, transform 0.3s ease;
     display: flex;
     overflow: hidden;
+    width: 100%;
 }
 
 .abn-roll-notif.abn-roll-notif-enter {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
 }
 
 .abn-roll-notif.abn-roll-notif-exit {
-    animation: abn-roll-slide-out 0.3s ease forwards;
+    animation: abn-roll-slide-out 0.25s ease forwards;
 }
 
 @keyframes abn-roll-slide-out {
     to {
         opacity: 0;
-        transform: translateX(30px);
+        transform: translateY(-20px);
     }
 }
 

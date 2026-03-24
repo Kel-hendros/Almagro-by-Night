@@ -277,6 +277,24 @@
       event: "dice-roll",
       payload: Object.assign({}, data, { sheetId: state.sheetId }),
     });
+
+    // Persist roll as notification (full payload for toast rendering)
+    if (window.ABNNotifications?.controller && state.chronicleId) {
+      var rollLabel = data.rollType || data.rollName || "Tirada";
+      var rollPayload = Object.assign({}, data, { sheetId: state.sheetId });
+      // Strip postMessage overhead
+      delete rollPayload.type;
+      delete rollPayload.source;
+      window.ABNNotifications.controller.pushNotification({
+        chronicleId: state.chronicleId,
+        type: "dice_roll",
+        title: (data.characterName || "?") + " — " + rollLabel,
+        body: data.result || "",
+        icon: "dices",
+        metadata: rollPayload,
+        visibility: "all",
+      });
+    }
   }
 
   function teardownRollBroadcastChannel() {

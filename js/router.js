@@ -328,6 +328,14 @@ function updateSidebar() {
     if (liChronicles) {
       liChronicles.classList.remove("hidden");
     }
+    // Notifications bell — show when logged in, connect globally
+    const liNotifications = document.getElementById("menu-notifications");
+    if (liNotifications) {
+      liNotifications.classList.remove("hidden");
+      if (window.ABNNotifications?.controller) {
+        window.ABNNotifications.controller.connect();
+      }
+    }
   } else {
     liWelcome?.classList.remove("hidden");
     liUser?.classList.add("hidden");
@@ -339,6 +347,10 @@ function updateSidebar() {
     document.getElementById("menu-tools")?.classList.add("hidden");
     document.getElementById("menu-chars")?.classList.add("hidden");
     document.getElementById("menu-chronicles")?.classList.add("hidden");
+    document.getElementById("menu-notifications")?.classList.add("hidden");
+    if (window.ABNNotifications?.controller) {
+      window.ABNNotifications.controller.disconnect();
+    }
   }
 }
 

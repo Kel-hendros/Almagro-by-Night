@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/document-list.css">
     <link rel="stylesheet" href="css/revelation-screen.css">
     <link rel="stylesheet" href="css/shared-tags.css">
+    <link rel="stylesheet" href="css/notifications.css">
 </head>
 
 <body>
@@ -50,6 +51,12 @@
                     </li>
                     <li id="menu-settings" class="hidden"><a href="#settings"><i
                                 data-lucide="settings"></i><span>Configuración</span></a>
+                    </li>
+                    <li id="menu-notifications" class="hidden">
+                        <a href="#" id="notifications-bell" class="notif-bell-link">
+                            <i data-lucide="bell"></i>
+                            <span>Avisos</span>
+                        </a>
                     </li>
                     <li class="grabado">`</li>
                     <li id="menu-quick-actions" class="nav-quick-actions hidden">
@@ -256,6 +263,10 @@
     <script src="features/shared/revelation-screen.js"></script>
     <script src="features/shared/object-screen.js"></script>
     <script src="features/shared/roll-notifications.js"></script>
+    <script src="features/notifications/service.js"></script>
+    <script src="features/notifications/view.js"></script>
+    <script src="features/notifications/controller.js"></script>
+    <script src="features/notifications/index.js"></script>
     <script src="features/public-recap/service.js"></script>
     <script src="features/public-recap/controller.js"></script>
     <script src="features/public-recap/index.js"></script>

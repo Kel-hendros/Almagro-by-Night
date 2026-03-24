@@ -311,6 +311,8 @@
       }
     }
 
+    // Notification is generated automatically by DB trigger on revelation_players insert.
+
     return { handout: revelation, error: null };
   }
 

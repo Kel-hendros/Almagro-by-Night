@@ -1554,6 +1554,9 @@
     }
     state.encounter.status = nextStatus;
     render();
+
+    // Notification is generated automatically by DB trigger on encounters status change.
+
     if (nextStatus === ENCOUNTER_STATUS.ARCHIVED) {
       navigateAway("chronicle");
       return true;

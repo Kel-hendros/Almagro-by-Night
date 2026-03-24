@@ -117,26 +117,32 @@
 
       state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
 
-      // Use global roll notifications component (skip if embedded in iframe - parent handles it)
+      // Listen for initiative rolls via the global notification system.
+      // Roll toast display is handled globally by ABNNotifications.
       var isEmbedded = global.self !== global.top;
-      var chronicleId = state.encounter?.chronicle_id || null;
-      if (!isEmbedded && global.ABNRollNotifications && chronicleId) {
-        global.ABNRollNotifications.destroy();
-        var mapContainer = document.getElementById("ae-map-container");
-        global.ABNRollNotifications.create({
-          chronicleId: chronicleId,
-          container: mapContainer,
-          onInitiativeRoll: getApplyBroadcastInitiative(),
-        });
+      if (!isEmbedded) {
+        state._initiativeHandler = function (e) {
+          var data = e.detail;
+          if (!data || data.rollType !== "initiative") return;
+          var applyFn = getApplyBroadcastInitiative();
+          if (applyFn) {
+            applyFn({
+              sheetId: data.sheetId || null,
+              characterName: data.characterName || null,
+              total: data.total,
+            });
+          }
+        };
+        global.addEventListener("abn-roll-notification", state._initiativeHandler);
       }
 
       startEncounterSyncPolling();
     }
 
     function teardownRealtimeSubscriptions() {
-      var isEmbedded = global.self !== global.top;
-      if (!isEmbedded && global.ABNRollNotifications) {
-        global.ABNRollNotifications.destroy();
+      if (state._initiativeHandler) {
+        global.removeEventListener("abn-roll-notification", state._initiativeHandler);
+        state._initiativeHandler = null;
       }
       if (!Array.isArray(state.realtimeChannels) || state.realtimeChannels.length === 0) return;
       state.realtimeChannels.forEach(function (channel) {

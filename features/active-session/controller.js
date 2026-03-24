@@ -207,10 +207,8 @@
     handleEncounterState(null);
     bindUIActions();
 
-    // Mount roll notifications feed (chronicle-level)
-    if (global.ABNRollNotifications) {
-      global.ABNRollNotifications.create({ chronicleId: state.chronicleId });
-    }
+    // Roll notifications are now handled globally by ABNNotifications.
+    // No need to mount per-view.
 
     await reconnectEncounterBridge();
     state.encountersChannel = service().subscribeSessionEncounters({
@@ -222,11 +220,6 @@
   }
 
   function destroyPage() {
-    // Destroy roll notifications
-    if (global.ABNRollNotifications) {
-      global.ABNRollNotifications.destroy();
-    }
-
     state.encounterBridge?.destroy?.();
     state.encounterBridge = null;
     service().unsubscribeChannel(state.encountersChannel);

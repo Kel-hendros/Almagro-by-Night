@@ -320,14 +320,36 @@
   }
 
   /**
-   * Manually add a notification (for local rolls)
+   * Mount the feed element without subscribing to any channel.
+   * Used for global mode where notifications come via the notification system.
+   * @param {HTMLElement} [container] - Container to mount to (defaults to body)
+   */
+  function mount(container) {
+    if (feedEl) return; // already mounted
+
+    feedEl = document.createElement("div");
+    feedEl.className = "abn-roll-feed";
+
+    if (container && container instanceof HTMLElement) {
+      feedEl.classList.add("abn-roll-feed--relative");
+      container.appendChild(feedEl);
+    } else {
+      feedEl.classList.add("abn-roll-feed--fixed");
+      document.body.appendChild(feedEl);
+    }
+  }
+
+  /**
+   * Manually add a notification (for local rolls or notification-driven)
+   * Auto-mounts to body if not already mounted.
    */
   function notify(data) {
+    if (!feedEl) mount();
     addNotification(data);
   }
 
   /**
-   * Check if currently subscribed
+   * Check if currently subscribed to a broadcast channel
    */
   function isActive() {
     return feedEl !== null && channel !== null;
@@ -336,6 +358,7 @@
   global.ABNRollNotifications = {
     create: create,
     destroy: destroy,
+    mount: mount,
     notify: notify,
     isActive: isActive,
   };

@@ -1,0 +1,577 @@
+/* ── Notification Drawer + Badge ──
+   Global notification system: sidebar bell badge, right-side drawer,
+   notification cards, mobile adaptations.
+   ──────────────────────────────────────────────────────────────────── */
+
+/* ── Bell Icon — unread highlight ── */
+
+.notif-bell-link.has-unread .lucide {
+  color: var(--theme-accent, #c62828);
+  filter: drop-shadow(0 0 6px var(--theme-accent, #c62828));
+}
+
+/* ── Drawer Backdrop ── */
+
+.notif-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(12, 11, 16, 0.5);
+  background: color-mix(in srgb, #0c0b10 50%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: none;
+  justify-content: flex-end;
+}
+
+.notif-drawer-backdrop.open {
+  display: flex;
+}
+
+/* ── Drawer Panel ── */
+
+.notif-drawer {
+  width: min(380px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-bg-primary, #1c1b1f);
+  border-left: 1px solid var(--theme-border-divider, #4d4d54);
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.4);
+  animation: notif-slide-in 0.25s ease-out;
+  overflow: hidden;
+}
+
+@keyframes notif-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Header ── */
+
+.notif-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--theme-border-divider, #4d4d54);
+  flex-shrink: 0;
+}
+
+.notif-drawer-title {
+  margin: 0;
+  font-size: 1rem;
+  font-family: var(--app-font-heading, var(--app-font-body));
+  color: var(--theme-text-primary, #f2f2f2);
+}
+
+/* ── Filter Chips ── */
+
+.notif-drawer-filters {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.notif-filter-chip {
+  padding: 4px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--theme-border-primary, #3a3a3c);
+  background: transparent;
+  color: var(--theme-text-secondary, #a0a0a2);
+  font-family: var(--app-font-body);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.notif-filter-chip:hover {
+  border-color: var(--theme-accent, #c62828);
+  color: var(--theme-text-primary, #f2f2f2);
+}
+
+.notif-filter-chip.active {
+  background: color-mix(in srgb, var(--theme-accent, #c62828) 20%, transparent);
+  border-color: var(--theme-accent, #c62828);
+  color: var(--theme-text-primary, #f2f2f2);
+}
+
+/* ── Notification List ── */
+
+.notif-drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Empty State ── */
+
+.notif-drawer-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 18px;
+  color: var(--theme-text-tertiary, #6e6e70);
+  font-family: var(--app-font-body);
+  font-size: 13px;
+}
+
+.notif-drawer-empty.hidden {
+  display: none;
+}
+
+/* ── Loading Indicator ── */
+
+.notif-drawer-loading {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  flex-shrink: 0;
+}
+
+.notif-drawer-loading.hidden {
+  display: none;
+}
+
+.notif-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--theme-border-primary, #3a3a3c);
+  border-top-color: var(--theme-accent, #c62828);
+  border-radius: 50%;
+  animation: notif-spin 0.6s linear infinite;
+}
+
+@keyframes notif-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Notification Card ── */
+
+.notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--theme-bg-surface, #242426);
+  border: 1px solid transparent;
+  transition: background 0.15s;
+}
+
+.notif-card--unread {
+  border-left: 3px solid var(--theme-accent, #c62828);
+}
+
+.notif-card--clickable {
+  cursor: pointer;
+}
+
+.notif-card--clickable:hover {
+  background: color-mix(in srgb, var(--theme-bg-surface, #242426) 80%, var(--theme-accent, #c62828));
+}
+
+/* ── Card Icon ── */
+
+.notif-card-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--theme-accent, #c62828) 15%, transparent);
+  color: var(--theme-accent, #c62828);
+}
+
+.notif-card-icon .lucide {
+  width: 16px;
+  height: 16px;
+}
+
+.notif-card--roll .notif-card-icon {
+  background: color-mix(in srgb, var(--theme-text-secondary, #a0a0a2) 15%, transparent);
+  color: var(--theme-text-secondary, #a0a0a2);
+}
+
+.notif-card--revelation .notif-card-icon {
+  background: color-mix(in srgb, var(--color-info, #4a7c8e) 18%, transparent);
+  color: var(--color-info, #4a7c8e);
+}
+
+.notif-card--encounter .notif-card-icon {
+  background: color-mix(in srgb, var(--color-danger, #c62828) 15%, transparent);
+  color: var(--color-danger, #c62828);
+}
+
+/* ── Chronicle Group Header ── */
+
+.notif-group-header {
+  font-size: 11px;
+  font-family: var(--app-font-heading, var(--app-font-body));
+  color: var(--theme-accent, #c62828);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 10px 4px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border-divider, #4d4d54) 50%, transparent);
+  margin-bottom: 2px;
+}
+
+.notif-group-header:first-child {
+  padding-top: 2px;
+}
+
+/* ── Rich Roll Card ── */
+
+.notif-card--roll-rich {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.notif-card--roll-rich.notif-card--roll-success {
+  border-left: 3px solid #4caf50;
+}
+
+.notif-card--roll-rich.notif-card--roll-fail {
+  border-left: 3px solid #555;
+}
+
+.notif-card--roll-rich.notif-card--roll-botch {
+  border-left: 3px solid #c62828;
+}
+
+.notif-roll-avatar {
+  width: 52px;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+  border-radius: 8px 0 0 8px;
+}
+
+.notif-roll-avatar-placeholder {
+  width: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--theme-bg-elevated, #2a2a2c) 80%, transparent);
+  color: var(--theme-text-tertiary, #6e6e70);
+}
+
+.notif-roll-avatar-placeholder .lucide {
+  width: 18px;
+  height: 18px;
+}
+
+.notif-roll-body {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.notif-roll-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.notif-roll-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-text-secondary, #ccc);
+  font-family: var(--app-font-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-roll-pool {
+  font-size: 11px;
+  color: var(--theme-text-tertiary, #888);
+  font-family: var(--app-font-body);
+}
+
+.notif-roll-result {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--app-font-body);
+  padding: 1px 0;
+}
+
+.notif-roll-result--success { color: #4caf50; }
+.notif-roll-result--fail    { color: #777; }
+.notif-roll-result--botch   { color: #e53935; }
+
+.notif-roll-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.notif-roll-die {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--app-font-body);
+  background: rgba(255, 255, 255, 0.06);
+  color: #555;
+}
+
+.notif-roll-die.success {
+  background: rgba(76, 175, 80, 0.18);
+  color: #4caf50;
+}
+
+.notif-roll-die.botch {
+  background: rgba(198, 40, 40, 0.18);
+  color: #e53935;
+}
+
+.notif-roll-die.fail {
+  background: rgba(255, 255, 255, 0.04);
+  color: #555;
+}
+
+.notif-roll-die.potencia {
+  background: rgba(255, 193, 7, 0.18);
+  color: #ffc107;
+}
+
+/* ── Card Body ── */
+
+.notif-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notif-card-title {
+  font-size: 13px;
+  font-family: var(--app-font-body);
+  color: var(--theme-text-primary, #f2f2f2);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-card-text {
+  font-size: 11px;
+  font-family: var(--app-font-body);
+  color: var(--theme-text-tertiary, #6e6e70);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Card Timestamp ── */
+
+.notif-card-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-family: var(--app-font-body);
+  color: var(--theme-text-tertiary, #6e6e70);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Mobile: < 980px ── */
+
+@media (max-width: 980px) {
+  /* Hide settings on mobile, show notifications instead */
+  #menu-settings {
+    display: none !important;
+  }
+
+  .notif-drawer-backdrop {
+    justify-content: stretch;
+    align-items: flex-end;
+  }
+
+  .notif-drawer {
+    width: 100%;
+    height: 85vh;
+    max-height: 85vh;
+    border-left: none;
+    border-top: 1px solid var(--theme-border-divider, #4d4d54);
+    border-radius: 18px 18px 0 0;
+    animation: notif-slide-up 0.25s ease-out;
+  }
+
+  @keyframes notif-slide-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0.6;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* ── Slim Sidebar: badge positioning ── */
+
+/* ── Global Toast (floating, auto-dismiss) ── */
+
+.notif-toast-container {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  width: min(400px, 90vw);
+}
+
+.notif-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(12, 12, 12, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.notif-toast.notif-toast-enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.notif-toast.notif-toast-exit {
+  animation: notif-toast-out 0.25s ease forwards;
+}
+
+@keyframes notif-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+.notif-toast--clickable {
+  cursor: pointer;
+}
+
+.notif-toast--clickable:hover {
+  border-color: var(--theme-accent, #c62828);
+}
+
+.notif-toast-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--theme-accent, #c62828) 15%, transparent);
+  color: var(--theme-accent, #c62828);
+}
+
+.notif-toast-icon .lucide {
+  width: 16px;
+  height: 16px;
+}
+
+.notif-toast--revelation .notif-toast-icon {
+  background: color-mix(in srgb, var(--color-info, #4a7c8e) 18%, transparent);
+  color: var(--color-info, #4a7c8e);
+}
+
+.notif-toast--encounter_status .notif-toast-icon {
+  background: color-mix(in srgb, var(--color-danger, #c62828) 15%, transparent);
+  color: var(--color-danger, #c62828);
+}
+
+.notif-toast-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.notif-toast-chronicle {
+  font-size: 9px;
+  font-family: var(--app-font-body);
+  color: var(--theme-accent, #c62828);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.notif-toast-title {
+  font-size: 13px;
+  font-family: var(--app-font-body);
+  color: #f2f2f2;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-toast-text {
+  font-size: 11px;
+  font-family: var(--app-font-body);
+  color: #999;
+}
+
+.notif-toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.notif-toast-close:hover {
+  color: #eee;
+}
+
