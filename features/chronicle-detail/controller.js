@@ -413,6 +413,7 @@
   }
 
   async function initPage() {
+    ns.territory?.destroy?.();
     const { chronicleIdFromQuery, recapIdFromQuery } = getChronicleContextFromHash();
     applyChronicleTab(recapIdFromQuery ? "diario" : getSavedChronicleTab() || "resumen");
     renderLoadingState();
