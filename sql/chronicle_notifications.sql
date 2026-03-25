@@ -11,7 +11,7 @@ create table if not exists public.chronicle_notifications (
   id              uuid primary key default gen_random_uuid(),
   chronicle_id    uuid not null references public.chronicles(id) on delete cascade,
   type            text not null check (type in (
-    'dice_roll', 'revelation', 'encounter_status', 'session_start',
+    'dice_roll', 'revelation', 'session_start',
     'session_end', 'player_joined', 'system'
   )),
   title           text not null check (char_length(title) <= 200),
@@ -248,50 +248,6 @@ $$;
 -- ============================================================
 -- 8. Triggers — notificaciones automáticas desde DB
 -- ============================================================
-
--- Encounter status change → notification (solo in_game / archived)
-create or replace function public.trg_notify_encounter_status()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  status_label text;
-begin
-  if OLD.status = NEW.status then
-    return NEW;
-  end if;
-
-  if NEW.status not in ('in_game', 'archived') then
-    return NEW;
-  end if;
-
-  if NEW.status = 'in_game' then
-    status_label := 'En Juego';
-  elsif NEW.status = 'archived' then
-    status_label := 'Archivado';
-  end if;
-
-  insert into public.chronicle_notifications (
-    chronicle_id, type, title, icon, metadata, visibility
-  ) values (
-    NEW.chronicle_id,
-    'encounter_status',
-    coalesce(NEW.name, 'Encuentro') || ' — ' || status_label,
-    'swords',
-    jsonb_build_object('encounterId', NEW.id, 'newStatus', NEW.status),
-    'all'
-  );
-
-  return NEW;
-end;
-$$;
-
-drop trigger if exists trg_encounter_status_notification on public.encounters;
-create trigger trg_encounter_status_notification
-after update of status on public.encounters
-for each row execute function public.trg_notify_encounter_status();
 
 -- Revelation delivery → targeted notification per player
 create or replace function public.trg_notify_revelation_delivery()

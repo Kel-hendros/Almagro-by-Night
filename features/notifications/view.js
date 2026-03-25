@@ -21,11 +21,6 @@
       icon: "scroll",
       cssClass: "notif-card--revelation",
     },
-    encounter_status: {
-      label: "Encuentro",
-      icon: "swords",
-      cssClass: "notif-card--encounter",
-    },
     session_start: {
       label: "Sesion",
       icon: "play-circle",
@@ -48,7 +43,6 @@
     { key: null, label: "Todas" },
     { key: "dice_roll", label: "Tiradas" },
     { key: "revelation", label: "Revelaciones" },
-    { key: "encounter_status", label: "Encuentros" },
   ];
 
   /**
