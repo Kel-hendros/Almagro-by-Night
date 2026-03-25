@@ -1,20 +1,20 @@
 :root {
     /* Core theme tokens (minimal semantic set) */
     --color-bg-base: #1a1a1c;
-    --color-bg-surface: #242426;
-    --color-bg-raised: #2e2e31;
+    --color-bg-surface: #131111;
+    --color-bg-raised: #141414;
     --color-text-primary: #f5f5f0;
     --color-text-secondary: #9a9aa0;
     --color-text-muted: #6e6e76;
-    --color-border-subtle: #2f2f33;
+    --color-border-subtle: #363636;
     --color-border-strong: #44444a;
-    --color-accent: #c62828;
-    --color-accent-soft: #8b1c1c;
+    --color-accent: #a6a6a6;
+    --color-accent-soft: #303030;
     --color-success: #6e9e6e;
     --color-warning: #d4a14a;
     --color-danger: #c62828;
     --color-danger-soft: #8b1c1c;
-    --color-text-on-accent: #f5f5f0;
+    --color-text-on-accent: #ffffff;
     --color-info: #4a90c4;
     --color-info-soft: #1a3a5c;
 
@@ -24,8 +24,8 @@
     --color-dmg-aggravated: #bb1515;
 
     --color-bg-decorative:
-        radial-gradient(60% 50% at 15% 10%, rgba(191, 90, 61, 0.18), transparent 60%),
-        radial-gradient(45% 35% at 90% 75%, rgba(120, 30, 30, 0.22), transparent 60%),
+        radial-gradient(60% 50% at 15% 10%, rgba(255, 255, 255, 0.04), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(255, 255, 255, 0.03), transparent 60%),
         linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%);
 
     /* App typography */
@@ -61,48 +61,34 @@
     --theme-info: var(--color-info);
     --theme-info-soft: var(--color-info-soft);
 
-    /* Legacy layout aliases */
-    --content-theme-bg: var(--color-bg-base);
-    --content-theme-bg-gradient: var(--color-bg-decorative);
-    --sidebar-bg: var(--color-bg-surface);
-    --sidebar-text: var(--color-text-muted);
-    --sidebar-text-active: var(--color-accent);
-    --sidebar-border: var(--color-border-subtle);
-    --sidebar-action-bg: color-mix(in srgb, var(--color-bg-base) 40%, transparent);
-    --sidebar-shadow-outer: rgba(0, 0, 0, 0.35);
-    --sidebar-shadow-inner: rgba(0, 0, 0, 0.2);
-    --sidebar-logo-shadow: drop-shadow(0 4px 2px rgba(191, 174, 174, 0.23)) drop-shadow(0 -8px 3px rgba(0, 0, 0, 0.69));
-    --sidebar-sigil-color: var(--color-text-muted);
-    --sidebar-sigil-shadow: drop-shadow(0 2px 2px color-mix(in srgb, var(--color-accent) 35%, transparent)) drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.55));
 }
 
 :root[data-app-theme="light"],
 :root[data-theme="light"],
 body[data-app-theme="light"],
 body[data-theme="light"] {
-    --color-bg-base: #f5f0e7;
-    --color-bg-surface: #ebe5da;
-    --color-bg-raised: #ddd5c8;
-    --color-text-primary: #2a1f14;
-    --color-text-secondary: #6e6456;
-    --color-text-muted: #9a8f81;
-    --color-border-subtle: #d8cfc2;
-    --color-border-strong: #b9ac9a;
-    --color-accent: #7a3b2e;
-    --color-accent-soft: #a26759;
+    --color-bg-base: #f4f4f4;
+    --color-bg-surface: #eaeaea;
+    --color-bg-raised: #adadad;
+    --color-text-primary: #1f1f1f;
+    --color-text-secondary: #5c5c5c;
+    --color-text-muted: #616161;
+    --color-border-subtle: #d6d6d6;
+    --color-border-strong: #a6a6a6;
+    --color-accent: #1c1c1c;
+    --color-accent-soft: #ffffff;
     --color-success: #2e7d32;
-    --color-warning: #7b5d29;
+    --color-warning: #cf642a;
     --color-danger: #b71c1c;
     --color-danger-soft: #ffcdd2;
+    --color-text-on-accent: #f5f5f0;
     --color-info: #1565c0;
     --color-info-soft: #bbdefb;
     --color-bg-decorative:
-        radial-gradient(60% 50% at 15% 10%, rgba(122, 59, 46, 0.08), transparent 60%),
-        radial-gradient(45% 35% at 90% 75%, rgba(123, 75, 55, 0.1), transparent 60%),
-        linear-gradient(135deg, #f5f0e7 0%, #fffaf1 35%, #f0ebe2 100%);
+        radial-gradient(60% 50% at 15% 10%, rgba(0, 0, 0, 0.03), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(0, 0, 0, 0.04), transparent 60%),
+        linear-gradient(135deg, #f4f4f4 0%, #fafafa 35%, #f0f0f0 100%);
 
-    /* Keep same shadow geometry but with stronger opacity so it reads over light gradients */
-    --sidebar-shadow-outer: rgba(0, 0, 0, 0.42);
 }
 
 :root[data-app-theme="camarilla"],
@@ -126,36 +112,37 @@ body[data-theme="camarilla"] {
     --color-info: #3e7ba8;
     --color-info-soft: #1a3a5c;
     --color-bg-decorative:
-        radial-gradient(70% 55% at 10% 15%, rgba(45, 107, 63, 0.12), transparent 60%),
-        radial-gradient(50% 40% at 85% 80%, rgba(30, 90, 50, 0.1), transparent 55%),
-        radial-gradient(40% 30% at 50% 50%, rgba(60, 120, 70, 0.06), transparent 50%),
-        linear-gradient(160deg, #e2ebe0 0%, #e8ede6 30%, #dfe8dc 60%, #e5ece3 100%);
+        radial-gradient(70% 55% at 10% 15%, rgba(35, 100, 55, 0.2), transparent 60%),
+        radial-gradient(50% 40% at 85% 80%, rgba(25, 85, 45, 0.16), transparent 55%),
+        radial-gradient(40% 30% at 50% 50%, rgba(50, 110, 60, 0.1), transparent 50%),
+        linear-gradient(160deg, #dbe8d6 0%, #e0ead8 30%, #d4e2cd 60%, #dde9d8 100%);
 }
 
 :root[data-app-theme="sabbat"],
 :root[data-theme="sabbat"],
 body[data-app-theme="sabbat"],
 body[data-theme="sabbat"] {
-    --color-bg-base: #0f0505;
-    --color-bg-surface: #150808;
-    --color-bg-raised: #1f0b0b;
+    --color-bg-base: #270e0c;
+    --color-bg-surface: #0c0303;
+    --color-bg-raised: #272020;
     --color-text-primary: #e0d0d0;
-    --color-text-secondary: #9a6f6f;
-    --color-text-muted: #755656;
-    --color-border-subtle: #250f0f;
+    --color-text-secondary: #ddbbbb;
+    --color-text-muted: #ba7373;
+    --color-border-subtle: #2a0909;
     --color-border-strong: #4b2222;
-    --color-accent: #8b0000;
-    --color-accent-soft: #b02020;
+    --color-accent: #d90202;
+    --color-accent-soft: #e5b3b3;
     --color-success: #4e9f3d;
     --color-warning: #bfa06a;
     --color-danger: #d32f2f;
     --color-danger-soft: #7f1010;
+    --color-text-on-accent: #ffffff;
     --color-info: #5c9bd1;
     --color-info-soft: #152535;
     --color-bg-decorative:
-        radial-gradient(60% 50% at 15% 10%, rgba(139, 0, 0, 0.22), transparent 60%),
-        radial-gradient(45% 35% at 90% 75%, rgba(80, 10, 10, 0.25), transparent 60%),
-        linear-gradient(135deg, #0a0303 0%, #0f0505 35%, #0a0404 100%);
+        radial-gradient(60% 50% at 15% 10%, rgba(160, 10, 10, 0.18), transparent 60%),
+        radial-gradient(45% 35% at 90% 75%, rgba(100, 5, 5, 0.2), transparent 60%),
+        linear-gradient(135deg, #180606 0%, #1e0a0a 35%, #150505 100%);
 }
 
 :root[data-app-theme="anarquista"],

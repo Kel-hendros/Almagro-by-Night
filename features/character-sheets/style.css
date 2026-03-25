@@ -60,7 +60,7 @@ body[data-theme] {
 	--accent: var(--theme-accent, #c62828);
 	--accent-strong: color-mix(in srgb, var(--theme-accent, #c62828) 70%, #ffffff);
 	--ok: var(--theme-success, #6e9e6e);
-	--shadow: var(--sidebar-shadow-outer, rgba(0, 0, 0, 0.35));
+	--shadow: rgba(0, 0, 0, 0.35);
 	--fail: var(--theme-text-tertiary, #6e6e76);
 	--danger: var(--theme-accent, #c62828);
 	--customPointer: url('images/pointer.png'), pointer;
@@ -175,7 +175,7 @@ textarea::placeholder {
 .beta-bg {
 	position: fixed;
 	inset: 0;
-	background: var(--content-theme-bg-gradient, linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%));
+	background: var(--color-bg-decorative, linear-gradient(135deg, #0f0f0f 0%, #171717 35%, #121212 100%));
 	z-index: -1;
 }
 

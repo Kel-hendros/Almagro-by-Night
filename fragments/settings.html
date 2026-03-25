@@ -8,14 +8,14 @@
         font-family: var(--app-font-heading);
         font-size: 2.15rem;
         line-height: 1.1;
-        color: var(--sidebar-text-active);
+        color: var(--color-accent);
         font-weight: 700;
     }
 
     .settings-subtitle {
         margin-top: 0.25rem;
         margin-bottom: 1rem;
-        color: var(--sidebar-text);
+        color: var(--color-text-muted);
         font-size: 0.75rem;
         letter-spacing: 0.04em;
     }
@@ -23,11 +23,11 @@
     .settings-card {
         width: 100%;
         max-width: 860px;
-        border: 1px solid var(--sidebar-border);
+        border: 1px solid var(--color-border-subtle);
         border-radius: 12px;
-        background: color-mix(in srgb, var(--content-theme-bg) 72%, transparent);
+        background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
         padding: 14px 16px;
-        box-shadow: 0 10px 28px -10px var(--sidebar-shadow-outer);
+        box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.35);
         backdrop-filter: blur(4px);
     }
 
@@ -47,11 +47,11 @@
         font-weight: 600;
         letter-spacing: 1.5px;
         text-transform: uppercase;
-        color: var(--sidebar-text-active);
+        color: var(--color-accent);
     }
 
     .settings-value {
-        color: var(--sidebar-text);
+        color: var(--color-text-muted);
         font-size: 0.82rem;
     }
 
@@ -66,9 +66,9 @@
         width: 20px;
         height: 20px;
         border-radius: 6px;
-        border: 1px solid var(--sidebar-text);
-        background: var(--sidebar-action-bg);
-        color: var(--sidebar-text);
+        border: 1px solid var(--color-text-muted);
+        background: color-mix(in srgb, var(--color-bg-base) 40%, transparent);
+        color: var(--color-text-muted);
         display: inline-flex;
         justify-content: center;
         align-items: center;
@@ -77,8 +77,8 @@
     }
 
     .settings-edit-inline:hover {
-        color: var(--sidebar-text-active);
-        border-color: var(--sidebar-text-active);
+        color: var(--color-accent);
+        border-color: var(--color-accent);
     }
 
     .settings-edit-inline .lucide {
@@ -100,9 +100,9 @@
         height: 28px;
         min-width: 220px;
         border-radius: 8px;
-        border: 1px solid var(--sidebar-border);
-        background: var(--sidebar-action-bg);
-        color: var(--sidebar-text);
+        border: 1px solid var(--color-border-subtle);
+        background: color-mix(in srgb, var(--color-bg-base) 40%, transparent);
+        color: var(--color-text-muted);
         font-family: var(--app-font-body);
         font-size: 0.8rem;
         padding: 0 10px;
@@ -110,16 +110,16 @@
     }
 
     .settings-name-input:focus {
-        border-color: var(--sidebar-text-active);
+        border-color: var(--color-accent);
     }
 
     .settings-inline-btn {
         height: 28px;
         min-width: 62px;
         border-radius: 8px;
-        border: 1px solid var(--sidebar-text);
-        background: var(--sidebar-action-bg);
-        color: var(--sidebar-text);
+        border: 1px solid var(--color-text-muted);
+        background: color-mix(in srgb, var(--color-bg-base) 40%, transparent);
+        color: var(--color-text-muted);
         font-size: 0.72rem;
         font-family: var(--app-font-body);
         cursor: pointer;
@@ -127,15 +127,15 @@
     }
 
     .settings-inline-btn:hover {
-        border-color: var(--sidebar-text-active);
-        color: var(--sidebar-text-active);
+        border-color: var(--color-accent);
+        color: var(--color-accent);
     }
 
     .settings-name-msg {
         margin-top: 6px;
         font-size: 0.72rem;
         min-height: 1em;
-        color: var(--sidebar-text);
+        color: var(--color-text-muted);
     }
 
     .settings-name-msg.error {
@@ -158,9 +158,9 @@
         min-width: 190px;
         height: 30px;
         border-radius: 8px;
-        border: 1px solid var(--sidebar-text);
-        background: var(--sidebar-action-bg);
-        color: var(--sidebar-text);
+        border: 1px solid var(--color-text-muted);
+        background: color-mix(in srgb, var(--color-bg-base) 40%, transparent);
+        color: var(--color-text-muted);
         font-size: 0.68rem;
         font-family: var(--app-font-body);
         cursor: pointer;
@@ -168,8 +168,8 @@
     }
 
     .settings-reset-btn:hover {
-        border-color: var(--sidebar-text-active);
-        color: var(--sidebar-text-active);
+        border-color: var(--color-accent);
+        color: var(--color-accent);
     }
 
     .settings-password-field {
