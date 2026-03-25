@@ -567,3 +567,142 @@
   color: #eee;
 }
 
+/* ══════════════════════════════════════════════
+   Muestra — Drawer card
+   ══════════════════════════════════════════════ */
+
+.notif-card--muestra {
+  gap: 10px;
+}
+
+.notif-muestra-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--theme-bg-elevated, #2a2a2c);
+}
+
+.notif-muestra-thumb-placeholder {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--theme-bg-elevated, #2a2a2c);
+  color: var(--theme-text-tertiary, #6e6e70);
+}
+
+/* ══════════════════════════════════════════════
+   Muestra — Toast (larger, image inline)
+   ══════════════════════════════════════════════ */
+
+.notif-toast--muestra {
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  width: min(520px, 90vw);
+  max-width: 520px;
+  overflow: hidden;
+}
+
+.notif-toast--muestra .notif-toast-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.notif-muestra-toast-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notif-muestra-toast-label {
+  font-size: 13px;
+  font-family: var(--app-font-body);
+  font-weight: 600;
+  color: #f2f2f2;
+}
+
+.notif-muestra-toast-img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  min-height: 80px;
+}
+
+.notif-muestra-toast-desc {
+  font-size: 12px;
+  font-family: var(--app-font-body);
+  color: #bbb;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════════
+   Muestra — View modal (inside document-screen)
+   ══════════════════════════════════════════════ */
+
+.mu-view-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.mu-view-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.mu-view-desc {
+  font-size: 15px;
+  font-family: var(--app-font-body);
+  color: var(--theme-text-secondary, #b0b0b0);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 600px;
+  margin: 0;
+}
+
+/* ══════════════════════════════════════════════
+   Muestra — Create form (inside document-screen)
+   ══════════════════════════════════════════════ */
+
+.mu-form-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.mu-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mu-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text-primary, #e0e0e0);
+  font-family: var(--app-font-body);
+}
+
+.mu-hint {
+  font-weight: 400;
+  color: var(--theme-text-tertiary, #6e6e70);
+  font-size: 11px;
+}
+

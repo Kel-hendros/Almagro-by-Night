@@ -14,6 +14,7 @@
     backBtnHandler: null,
     openArchiveBtnHandler: null,
     createRevelacionBtnHandler: null,
+    createMuestraBtnHandler: null,
     encounterListChangeHandler: null,
   };
 
@@ -66,6 +67,19 @@
         });
       };
       createRevBtn.addEventListener("click", state.createRevelacionBtnHandler);
+    }
+
+    const createMuestraBtn = document.getElementById("as-create-muestra");
+    if (createMuestraBtn) {
+      state.createMuestraBtnHandler = () => {
+        if (global.ABNMuestra?.openCreate) {
+          global.ABNMuestra.openCreate({
+            chronicleId: state.chronicleId,
+            currentPlayerId: state.currentPlayerId,
+          });
+        }
+      };
+      createMuestraBtn.addEventListener("click", state.createMuestraBtnHandler);
     }
 
     const encountersList = document.getElementById("as-encounters-list");
@@ -124,6 +138,12 @@
       createRevBtn.removeEventListener("click", state.createRevelacionBtnHandler);
     }
     state.createRevelacionBtnHandler = null;
+
+    const createMuestraBtn = document.getElementById("as-create-muestra");
+    if (createMuestraBtn && state.createMuestraBtnHandler) {
+      createMuestraBtn.removeEventListener("click", state.createMuestraBtnHandler);
+    }
+    state.createMuestraBtnHandler = null;
 
     const encountersList = document.getElementById("as-encounters-list");
     if (encountersList && state.encounterListChangeHandler) {

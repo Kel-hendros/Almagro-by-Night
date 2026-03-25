@@ -37,12 +37,14 @@
       cssClass: "notif-card--player",
     },
     system: { label: "Sistema", icon: "info", cssClass: "notif-card--system" },
+    muestra: { label: "Muestra", icon: "eye", cssClass: "notif-card--muestra" },
   };
 
   var FILTER_CHIPS = [
     { key: null, label: "Todas" },
     { key: "dice_roll", label: "Tiradas" },
     { key: "revelation", label: "Revelaciones" },
+    { key: "muestra", label: "Muestras" },
   ];
 
   /**
@@ -151,6 +153,9 @@
   function buildCard(notif) {
     if (notif.type === "dice_roll" && notif.metadata) {
       return buildRollCard(notif);
+    }
+    if (notif.type === "muestra" && notif.metadata) {
+      return buildMuestraCard(notif);
     }
     return buildGenericCard(notif);
   }
@@ -286,6 +291,126 @@
     var div = document.createElement("div");
     div.textContent = str || "";
     return div.innerHTML;
+  }
+
+  /**
+   * Card for muestra notifications — thumbnail + description.
+   */
+  function buildMuestraCard(notif) {
+    var meta = notif.metadata || {};
+    var isUnread =
+      _lastSeenAt && new Date(notif.created_at) > new Date(_lastSeenAt);
+
+    var card = document.createElement("div");
+    card.className = "notif-card notif-card--muestra notif-card--clickable";
+    if (isUnread) card.classList.add("notif-card--unread");
+
+    var thumbUrl = meta.signedUrl || "";
+
+    // Build thumbnail imperatively to avoid inline onerror style
+    var thumbEl;
+    if (thumbUrl) {
+      thumbEl = document.createElement("img");
+      thumbEl.className = "notif-muestra-thumb";
+      thumbEl.alt = "";
+      thumbEl.src = thumbUrl;
+      thumbEl.addEventListener("error", function () {
+        var placeholder = document.createElement("div");
+        placeholder.className = "notif-muestra-thumb-placeholder";
+        placeholder.innerHTML = '<i data-lucide="eye"></i>';
+        thumbEl.replaceWith(placeholder);
+        if (global.lucide) global.lucide.createIcons({ nodes: [placeholder] });
+      }, { once: true });
+    } else {
+      thumbEl = document.createElement("div");
+      thumbEl.className = "notif-muestra-thumb-placeholder";
+      thumbEl.innerHTML = '<i data-lucide="eye"></i>';
+    }
+
+    card.appendChild(thumbEl);
+
+    var bodyWrap = document.createElement("div");
+    bodyWrap.className = "notif-card-body";
+    bodyWrap.innerHTML =
+      '<span class="notif-card-title">Muestra del Narrador</span>' +
+      (notif.body
+        ? '<span class="notif-card-text">' + escapeHtml(notif.body) + "</span>"
+        : "");
+    card.appendChild(bodyWrap);
+
+    var timeEl = document.createElement("span");
+    timeEl.className = "notif-card-time";
+    timeEl.textContent = timeAgo(notif.created_at);
+    card.appendChild(timeEl);
+
+    card.addEventListener("click", function () {
+      if (global.ABNMuestra?.showMuestra) {
+        global.ABNMuestra.showMuestra({
+          imageRef: meta.imageRef || "",
+          signedUrl: meta.signedUrl || "",
+          description: notif.body || "",
+        });
+      }
+    });
+
+    return card;
+  }
+
+  /**
+   * Larger toast for muestra — shows image inline.
+   */
+  var MUESTRA_TOAST_DISMISS_MS = 15000;
+
+  function showMuestraToast(notif) {
+    ensureToastContainer();
+
+    var meta = notif.metadata || {};
+    var chronicleName = notif.chronicles?.name || "";
+
+    var toast = document.createElement("div");
+    toast.className = "notif-toast notif-toast--muestra notif-toast--clickable";
+
+    toast.innerHTML =
+      '<div class="notif-muestra-toast-body">' +
+        (chronicleName
+          ? '<span class="notif-toast-chronicle">' + escapeHtml(chronicleName) + "</span>"
+          : "") +
+        '<span class="notif-muestra-toast-label">El narrador muestra algo...</span>' +
+        (meta.signedUrl
+          ? '<img class="notif-muestra-toast-img" src="' + escapeHtml(meta.signedUrl) + '" alt="">'
+          : "") +
+        (notif.body
+          ? '<p class="notif-muestra-toast-desc">' + escapeHtml(notif.body) + "</p>"
+          : "") +
+      "</div>" +
+      '<button class="notif-toast-close" aria-label="Cerrar">&times;</button>';
+
+    toast.querySelector(".notif-toast-close").addEventListener("click", function () {
+      dismissToast(toast);
+    });
+
+    toast.addEventListener("click", function (e) {
+      if (e.target.closest(".notif-toast-close")) return;
+      if (global.ABNMuestra?.showMuestra) {
+        global.ABNMuestra.showMuestra({
+          imageRef: meta.imageRef || "",
+          signedUrl: meta.signedUrl || "",
+          description: notif.body || "",
+        });
+      }
+      dismissToast(toast);
+    });
+
+    toastContainerEl.appendChild(toast);
+    if (global.lucide) global.lucide.createIcons({ nodes: [toast] });
+
+    requestAnimationFrame(function () {
+      toast.classList.add("notif-toast-enter");
+    });
+
+    setTimeout(function () {
+      dismissToast(toast);
+    }, MUESTRA_TOAST_DISMISS_MS);
   }
 
   // ---- Public API ----
@@ -469,6 +594,7 @@
     showLoading: showLoading,
     updateBadge: updateBadge,
     showToast: showToast,
+    showMuestraToast: showMuestraToast,
     getActiveFilter: getActiveFilter,
     resetFilters: resetFilters,
     destroy: destroy,

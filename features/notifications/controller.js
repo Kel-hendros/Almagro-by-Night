@@ -96,6 +96,8 @@
           new CustomEvent("abn-roll-notification", { detail: rollData }),
         );
       }
+    } else if (row.type === "muestra" && !isOwnAction) {
+      ns.view.showMuestraToast(row);
     } else if (row.type !== "dice_roll" && !isOwnAction) {
       ns.view.showToast(row);
     }
