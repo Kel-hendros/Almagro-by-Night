@@ -14,6 +14,7 @@
   var INTERACTIVE_MARKER_RADIUS = 12;
   var MARKER_EMOJIS = { door: "\u{1F6AA}", window: "\u{1FA9F}", light: "\u{1F4A1}", switch: "\u{1F39A}\uFE0F" };
   var LUMINOSITY_THRESHOLD = 0.30;
+  var LIGHT_MASK_BLUR_RADIUS = 6;
   var DEFAULT_VIEWER_VISION_PROFILE = {
     visibilityThreshold: LUMINOSITY_THRESHOLD,
     luminosityMultiplier: 1,
@@ -829,7 +830,14 @@
     var visibleState =
       typeof map.getFogVisibleState === "function"
         ? map.getFogVisibleState()
-        : { enabled: false, isPlayerView: false, currentAreas: [], revealedAreas: [], hiddenAreas: [] };
+        : {
+            enabled: false,
+            isPlayerView: false,
+            currentAreas: [],
+            revealedAreas: [],
+            hiddenAreas: [],
+            exploredAreas: [],
+          };
     if (!visibleState.enabled || !visibleState.isPlayerView) return;
 
     var maskCanvas = lighting.maskCanvas;
@@ -845,7 +853,14 @@
     var maskCtx = lighting.maskCtx;
     maskCtx.clearRect(0, 0, pxW, pxH);
     maskCtx.fillStyle = "rgba(255,255,255,1)";
-    appendAreasPath(maskCtx, visibleState.currentAreas, gs, offX, offY);
+    if (visibleState.currentAreas && visibleState.currentAreas.length > 0) {
+      maskCtx.save();
+      try { maskCtx.filter = "blur(" + LIGHT_MASK_BLUR_RADIUS + "px)"; } catch (_e) {}
+      appendAreasPath(maskCtx, visibleState.currentAreas, gs, offX, offY);
+      maskCtx.restore();
+      appendAreasPath(maskCtx, visibleState.currentAreas, gs, offX, offY);
+    }
+    appendAreasPath(maskCtx, visibleState.exploredAreas, gs, offX, offY);
     appendAreasPath(maskCtx, visibleState.revealedAreas, gs, offX, offY);
     if (visibleState.hiddenAreas && visibleState.hiddenAreas.length > 0) {
       maskCtx.fillStyle = "rgba(0,0,0,1)";
