@@ -4,6 +4,7 @@
     encounter: null,
     templates: [],
     characterSheets: [],
+    characterSheetsLoaded: false,
     user: null,
     currentPlayer: null,
     canManageEncounter: false,
@@ -196,6 +197,7 @@
       state,
       supabase,
       canEditEncounter,
+      pruneEncounterRoster: () => pruneEncounterRoster(),
       normalizeMapLayerData,
       normalizeDesignTokensData,
       normalizeMapEffectsData,
@@ -331,6 +333,8 @@
       els,
       supabase,
       normalizeEncounterStatus,
+      loadCharacterSheets: () => loadCharacterSheets(),
+      pruneEncounterRoster: () => pruneEncounterRoster(),
       sanitizeEncounterTokens: () => sanitizeEncounterTokens(),
       ensureActiveInstance: () => ensureActiveInstance(),
       render: () => render(),
@@ -352,9 +356,15 @@
 
     setupListeners();
 
-    await loadCharacterSheets();
     const ok = await loadEncounterData();
     if (!ok) return false;
+    await loadCharacterSheets();
+    const rosterResult = pruneEncounterRoster();
+    syncEncounterPCDataFromSheets();
+    render();
+    if (rosterResult.changed && canEditEncounter()) {
+      await saveEncounter();
+    }
     await loadTemplates();
     await loadDesignAssets();
     setupRealtimeSubscription();
@@ -1358,13 +1368,156 @@
   }
 
   async function loadCharacterSheets() {
-    const { data } = await supabase
-      .from("character_sheets")
-      .select("id, name, data, avatar_url, user_id")
-      .order("name");
-    if (data) {
-      state.characterSheets = data;
+    state.characterSheetsLoaded = false;
+
+    if (state.encounter?.chronicle_id) {
+      const { data, error } = await supabase
+        .from("chronicle_characters")
+        .select(
+          "character_sheet:character_sheets(id, name, data, avatar_url, user_id)",
+        )
+        .eq("chronicle_id", state.encounter.chronicle_id);
+
+      if (error) {
+        console.error("Error loading chronicle character sheets:", error);
+        state.characterSheets = [];
+        return false;
+      }
+
+      state.characterSheets = (data || [])
+        .map((row) => row.character_sheet)
+        .filter(Boolean)
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
+      state.characterSheetsLoaded = true;
+      return true;
     }
+
+    state.characterSheets = [];
+    return false;
+  }
+
+  function pruneEncounterRoster() {
+    const data = state.encounter?.data;
+    if (!data || !state.characterSheetsLoaded) {
+      return { changed: false, removedInstanceIds: [], removedTokenIds: [] };
+    }
+
+    const validSheetIds = new Set(
+      state.characterSheets.map((sheet) => sheet.id).filter(Boolean),
+    );
+    const removedInstanceIds = [];
+    const nextInstances = [];
+
+    (data.instances || []).forEach((instance) => {
+      if (!instance) return;
+
+      const shouldRemove =
+        instance.isPC === true &&
+        (!instance.characterSheetId || !validSheetIds.has(instance.characterSheetId));
+
+      if (shouldRemove) {
+        if (instance.id) removedInstanceIds.push(instance.id);
+        return;
+      }
+
+      nextInstances.push(instance);
+    });
+
+    if (!removedInstanceIds.length) {
+      return { changed: false, removedInstanceIds: [], removedTokenIds: [] };
+    }
+
+    const removedInstanceIdSet = new Set(removedInstanceIds);
+    const removedTokenIds = [];
+    const nextTokens = (data.tokens || []).filter((token) => {
+      const remove = token && removedInstanceIdSet.has(token.instanceId);
+      if (remove && token.id) removedTokenIds.push(token.id);
+      return !remove;
+    });
+    const removedTokenIdSet = new Set(removedTokenIds);
+
+    data.instances = nextInstances;
+    data.tokens = nextTokens;
+
+    if (Array.isArray(data.mapEffects)) {
+      data.mapEffects = data.mapEffects.filter((effect) => {
+        if (!effect) return false;
+        if (
+          effect.sourceInstanceId &&
+          removedInstanceIdSet.has(effect.sourceInstanceId)
+        ) {
+          return false;
+        }
+        if (effect.sourceTokenId && removedTokenIdSet.has(effect.sourceTokenId)) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (data.activeInstanceId && removedInstanceIdSet.has(data.activeInstanceId)) {
+      data.activeInstanceId = null;
+    }
+
+    if (data.fog && Array.isArray(data.fog.viewerInstanceIds)) {
+      data.fog.viewerInstanceIds = data.fog.viewerInstanceIds.filter(
+        (instanceId) => !removedInstanceIdSet.has(instanceId),
+      );
+    }
+    if (
+      data.fog?.impersonateInstanceId &&
+      removedInstanceIdSet.has(data.fog.impersonateInstanceId)
+    ) {
+      data.fog.impersonateInstanceId = null;
+    }
+
+    if (
+      state.selectedTokenId &&
+      removedTokenIdSet.has(state.selectedTokenId)
+    ) {
+      state.selectedTokenId = null;
+      if (state.map) state.map.selectedTokenId = null;
+    }
+
+    if (
+      state.selectedInstanceId &&
+      removedInstanceIdSet.has(state.selectedInstanceId)
+    ) {
+      closeModal();
+    }
+
+    ensureActiveInstance();
+
+    sanitizeEncounterTokens();
+
+    return {
+      changed: true,
+      removedInstanceIds: removedInstanceIds,
+      removedTokenIds: removedTokenIds,
+    };
+  }
+
+  function syncEncounterPCDataFromSheets() {
+    if (!state.encounter?.data?.instances || !state.characterSheetsLoaded) return;
+
+    state.encounter.data.instances.forEach((inst) => {
+      if (!inst.isPC) return;
+
+      const sheet = state.characterSheets.find(
+        (s) => s.id === inst.characterSheetId,
+      );
+      if (!sheet) return;
+
+      inst.pcHealth = extractPCHealth(sheet.data);
+      inst.avatarUrl = sheet.avatar_url || inst.avatarUrl;
+
+      const token = state.encounter.data.tokens.find(
+        (t) => t.instanceId === inst.id,
+      );
+      if (token && sheet.avatar_url) {
+        token.imgUrl = sheet.avatar_url;
+      }
+    });
   }
 
   async function loadEncounterData() {
@@ -1444,26 +1597,7 @@
 
     const { changed } = sanitizeEncounterTokens();
 
-    // Sync PC data from character sheets on load
-    state.encounter.data.instances.forEach((inst) => {
-      if (inst.isPC) {
-        const sheet = state.characterSheets.find(
-          (s) => s.id === inst.characterSheetId,
-        );
-        if (sheet) {
-          inst.pcHealth = extractPCHealth(sheet.data);
-          inst.avatarUrl = sheet.avatar_url || inst.avatarUrl;
-
-          // Also update token imgUrl
-          const token = state.encounter.data.tokens.find(
-            (t) => t.instanceId === inst.id,
-          );
-          if (token && sheet.avatar_url) {
-            token.imgUrl = sheet.avatar_url;
-          }
-        }
-      }
-    });
+    syncEncounterPCDataFromSheets();
 
     ensureActiveInstance();
 

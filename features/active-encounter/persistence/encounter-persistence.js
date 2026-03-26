@@ -3,6 +3,7 @@
     var state = ctx.state;
     var supabase = ctx.supabase;
     var canEditEncounter = ctx.canEditEncounter;
+    var pruneEncounterRoster = ctx.pruneEncounterRoster;
     var normalizeMapLayerData = ctx.normalizeMapLayerData;
     var normalizeDesignTokensData = ctx.normalizeDesignTokensData;
     var normalizeMapEffectsData = ctx.normalizeMapEffectsData;
@@ -48,6 +49,9 @@
     async function saveEncounter() {
       if (!state.encounter) return;
       if (!canEditEncounter()) return;
+      if (typeof pruneEncounterRoster === "function") {
+        pruneEncounterRoster();
+      }
       sanitizeEncounterTokens();
       var btn = document.getElementById("btn-ae-save");
       var prevText = (btn && btn.textContent) || "";

@@ -4,6 +4,8 @@
     var els = ctx.els;
     var supabase = ctx.supabase;
     var normalizeEncounterStatus = ctx.normalizeEncounterStatus;
+    var loadCharacterSheets = ctx.loadCharacterSheets;
+    var pruneEncounterRoster = ctx.pruneEncounterRoster;
     var sanitizeEncounterTokens = ctx.sanitizeEncounterTokens;
     var ensureActiveInstance = ctx.ensureActiveInstance;
     var render = ctx.render;
@@ -85,11 +87,9 @@
         }, function (payload) {
           var updatedSheet = payload.new;
           var sheetIdx = state.characterSheets.findIndex(function (s) { return s.id === updatedSheet.id; });
-          if (sheetIdx !== -1) {
-            state.characterSheets[sheetIdx] = updatedSheet;
-          } else {
-            state.characterSheets.push(updatedSheet);
-          }
+          if (sheetIdx === -1) return;
+
+          state.characterSheets[sheetIdx] = updatedSheet;
           var d = state.encounter && state.encounter.data;
           if (d && d.instances) {
             var inst = d.instances.find(function (i) { return i.characterSheetId === updatedSheet.id; });
@@ -102,6 +102,26 @@
             }
           }
         }).subscribe();
+
+      var chronicleCharactersChannel = null;
+      if (state.encounter?.chronicle_id) {
+        chronicleCharactersChannel = supabase
+          .channel("encounter-" + state.encounterId + "-chronicle-characters")
+          .on("postgres_changes", {
+            event: "*",
+            schema: "public",
+            table: "chronicle_characters",
+            filter: "chronicle_id=eq." + state.encounter.chronicle_id,
+          }, async function () {
+            if (typeof loadCharacterSheets === "function") {
+              await loadCharacterSheets();
+            }
+            if (typeof pruneEncounterRoster === "function") {
+              pruneEncounterRoster();
+            }
+            render();
+          }).subscribe();
+      }
 
       var encounterChannel = supabase
         .channel("encounter-" + state.encounterId + "-changes")
@@ -116,6 +136,9 @@
         }).subscribe();
 
       state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
+      if (chronicleCharactersChannel) {
+        state.realtimeChannels.push(chronicleCharactersChannel);
+      }
 
       // Listen for initiative rolls via the global notification system.
       // Roll toast display is handled globally by ABNNotifications.
