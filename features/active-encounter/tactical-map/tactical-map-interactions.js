@@ -1154,10 +1154,9 @@
             if (this.instances[ui].id === this.draggedToken.instanceId) { upInst = this.instances[ui]; break; }
           }
           if (upInst && upInst.isPC) {
-            // Drag preview is only a transient buffer during movement.
-            // On release we recompute from the final token position so the
-            // image never "changes mode" between dragging and standing still.
-            this.clearFogDragPreview?.();
+            // Persist what the viewer discovered during the drag so explored
+            // memory matches what was already visible while moving.
+            this.commitFogDragPreview?.();
             this.invalidateFog();
           } else {
             this.clearFogDragPreview?.();
