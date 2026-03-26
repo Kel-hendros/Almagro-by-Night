@@ -61,6 +61,14 @@
     });
   }
 
+  function unloadManagedScripts() {
+    document
+      .querySelectorAll('script[data-ae-managed="1"]')
+      .forEach((script) => script.parentNode?.removeChild(script));
+    global.__activeEncounterScriptsLoaded = false;
+    global.__ActiveEncounterFeatureModule = null;
+  }
+
   async function ensureScriptsLoaded() {
     if (global.__activeEncounterScriptsLoaded) return;
     for (const file of CHAIN) {
@@ -80,6 +88,7 @@
     if (global.__ActiveEncounterFeatureModule?.destroy) {
       await global.__ActiveEncounterFeatureModule.destroy();
     }
+    unloadManagedScripts();
   }
 
   global.ActiveEncounterFeature = { boot, destroy };
