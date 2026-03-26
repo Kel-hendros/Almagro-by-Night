@@ -7,6 +7,7 @@
   var SWITCH_PROXIMITY_METERS = 4.5;
   var SWITCH_PROXIMITY = SWITCH_PROXIMITY_METERS / 1.5; // convert meters to coordinate units
   var TOKEN_PROXIMITY_REVEAL_DISTANCE = 1;
+  var WALL_MARKER_VISIBILITY_OFFSET = 0.16;
 
   // Interactive marker constants
   var INTERACTIVE_BORDER_COLOR = "rgba(100, 200, 255, 0.85)";
@@ -608,6 +609,26 @@
       return this.isPointVisibleByLight(x, y);
     };
 
+    proto.isWallMarkerVisibleToViewer = function (wall) {
+      if (!wall) return false;
+      var mx = (wall.x1 + wall.x2) / 2;
+      var my = (wall.y1 + wall.y2) / 2;
+      var dx = (wall.x2 || 0) - (wall.x1 || 0);
+      var dy = (wall.y2 || 0) - (wall.y1 || 0);
+      var len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 1e-6) {
+        return this.isMarkerVisibleToViewer(mx, my);
+      }
+
+      var nx = (-dy / len) * WALL_MARKER_VISIBILITY_OFFSET;
+      var ny = (dx / len) * WALL_MARKER_VISIBILITY_OFFSET;
+      return (
+        this.isMarkerVisibleToViewer(mx, my) ||
+        this.isMarkerVisibleToViewer(mx + nx, my + ny) ||
+        this.isMarkerVisibleToViewer(mx - nx, my - ny)
+      );
+    };
+
     /**
      * Check if a point is inside any of the current visibility polygons.
      * Uses polygon containment instead of cell-key lookup.
@@ -642,7 +663,7 @@
         if (wall.type !== "door" && wall.type !== "window") continue;
         var mx = (wall.x1 + wall.x2) / 2;
         var my = (wall.y1 + wall.y2) / 2;
-        if (!this.isMarkerVisibleToViewer(mx, my)) continue;
+        if (!this.isWallMarkerVisibleToViewer(wall)) continue;
         if (wall.type === "door") {
           var doorImage = wall.doorOpen ? DOOR_MARKER_IMAGES.open : DOOR_MARKER_IMAGES.closed;
           drawInteractiveImageMarker(ctx, mx * gs, my * gs, doorImage, sc, false);
