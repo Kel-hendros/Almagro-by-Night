@@ -513,13 +513,15 @@
     if (!ds) return;
 
     const resolveAndShow = async () => {
-      let url = signedUrl || "";
-      if (imageRef && !url) {
+      let url = "";
+      // Always resolve a fresh signed URL — the one in metadata may be expired
+      if (imageRef) {
         const api = handouts();
         if (api?.resolveImageSignedUrl) {
           url = await api.resolveImageSignedUrl(imageRef);
         }
       }
+      if (!url) url = signedUrl || "";
 
       ds.open({
         docType: "muestra",

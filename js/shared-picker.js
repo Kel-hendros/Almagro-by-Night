@@ -52,18 +52,16 @@
     pickerOverlay.style.display = "block";
     picker.style.display = "grid"; // Grid for keypad
 
-    // Position logic
-    const rect = targetEl.getBoundingClientRect();
-    let top = rect.bottom + 5;
-    let left = rect.left;
+    // Anchor positioning — attach picker to the clicked element
+    // Remove previous anchor
+    const prevAnchor = document.querySelector('[style*="anchor-name"]');
+    if (prevAnchor) prevAnchor.style.anchorName = "";
 
-    // Boundary checks
-    // Approx dimensions: width 140, height 220
-    if (left + 160 > window.innerWidth) left = window.innerWidth - 170;
-    if (top + 230 > window.innerHeight) top = rect.top - 240; // Flip up
-
-    picker.style.top = `${top}px`;
-    picker.style.left = `${left}px`;
+    targetEl.style.anchorName = "--picker-anchor";
+    picker.style.positionAnchor = "--picker-anchor";
+    // Clear any old inline position values
+    picker.style.top = "";
+    picker.style.left = "";
 
     // Highlight current
     const btns = picker.querySelectorAll(".ae-picker-btn");
@@ -76,6 +74,9 @@
   function closePicker() {
     if (pickerOverlay) pickerOverlay.style.display = "none";
     if (picker) picker.style.display = "none";
+    // Clean up anchor
+    const anchored = document.querySelector('[style*="anchor-name"]');
+    if (anchored) anchored.style.anchorName = "";
     currentCallback = null;
   }
 

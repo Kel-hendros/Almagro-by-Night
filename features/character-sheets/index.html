@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="../../css/modal-close.css">
     <link rel="stylesheet" href="../../css/document-screen.css">
     <link rel="stylesheet" href="../../css/shared-tags.css">
+    <link rel="stylesheet" href="../../css/contact-screen.css">
     <link rel="stylesheet" href="../../css/ghoul.css">
     <script src="../../js/ghoul.js" defer></script>
     <link rel="stylesheet" type="text/css" href="style.css">
@@ -679,7 +680,7 @@
                         <button class="dock-tab" data-panel="panel-meritos-defectos">Méritos y Defectos</button>
                         <button class="dock-tab" data-panel="panel-rituales">Rituales</button>
                         <button class="dock-tab" data-panel="panel-objetos">Objetos</button>
-                        <div class="dock-tab-placeholder"></div>
+                        <button class="dock-tab" data-panel="panel-contactos">Contactos</button>
                         <div class="dock-tab-placeholder"></div>
                     </div>
                 </div>
@@ -913,13 +914,34 @@
                                 </div>
                             </div>
                             <div class="objeto-type-filters">
-                                <button class="objeto-type-filter active" data-type="all" type="button">Todos</button>
                                 <button class="objeto-type-filter" data-type="arma" type="button">Armas</button>
                                 <button class="objeto-type-filter" data-type="equipo" type="button">Equipo</button>
                                 <button class="objeto-type-filter" data-type="utilidad" type="button">Utilidad</button>
                                 <button class="objeto-type-filter" data-type="consumible" type="button">Consumible</button>
                             </div>
                             <div id="objeto-list" class="objeto-list"></div>
+                        </div>
+                    </section>
+
+                    <!-- TAB: CONTACTOS -->
+                    <section class="dock-panel" id="panel-contactos">
+                        <div class="objetos-pane">
+                            <div class="discipline-powers-header">
+                                <h3>Contactos</h3>
+                                <div class="discipline-powers-actions">
+                                    <button id="contacto-archive-btn" class="discipline-power-header-add note-archive-btn" type="button"
+                                        aria-label="Abrir archivo de contactos">Archivo</button>
+                                    <button id="contacto-new-btn" class="discipline-power-header-add" type="button"
+                                        aria-label="Agregar contacto">+</button>
+                                </div>
+                            </div>
+                            <div class="objeto-type-filters">
+                                <button class="objeto-type-filter" data-type="mortal" type="button">Mortales</button>
+                                <button class="objeto-type-filter" data-type="animal" type="button">Animales</button>
+                                <button class="objeto-type-filter" data-type="sobrenatural" type="button">Sobrenaturales</button>
+                                <button class="objeto-type-filter" data-type="otro" type="button">Otros</button>
+                            </div>
+                            <div id="contacto-list" class="objeto-list"></div>
                         </div>
                     </section>
 
@@ -1302,11 +1324,14 @@
     <script src="../../features/shared/tags.js"></script>
     <script src="../../features/shared/note-screen.js"></script>
     <script src="../../features/shared/object-screen.js"></script>
+    <script src="../../js/shared-picker.js"></script>
+    <script src="../../features/shared/contact-screen.js"></script>
     <script src="../../features/shared/handouts.js"></script>
     <script src="../../features/shared/document-types/registry.js"></script>
     <script src="../../features/shared/document-types/note.js"></script>
     <script src="../../features/shared/document-types/revelation.js"></script>
     <script src="../../features/shared/document-types/objeto.js"></script>
+    <script src="../../features/shared/document-types/contacto.js"></script>
     <script src="modules/theme-discord.js"></script>
     <script src="modules/clan-header.js"></script>
     <script src="modules/attribute-boost.js"></script>
@@ -1334,6 +1359,7 @@
     <script src="modules/attacks.js"></script>
     <script src="modules/revelaciones.js"></script>
     <script src="modules/objetos.js"></script>
+    <script src="modules/contactos.js"></script>
     <script src="modules/dock.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="script.js"></script>

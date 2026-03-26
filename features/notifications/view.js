@@ -307,24 +307,55 @@
 
     var thumbUrl = meta.signedUrl || "";
 
-    // Build thumbnail imperatively to avoid inline onerror style
+    // Build thumbnail — try stored URL first, resolve fresh on error
     var thumbEl;
-    if (thumbUrl) {
+    var imageRef = meta.imageRef || "";
+
+    function buildPlaceholder() {
+      var ph = document.createElement("div");
+      ph.className = "notif-muestra-thumb-placeholder";
+      ph.innerHTML = '<i data-lucide="eye"></i>';
+      if (global.lucide) global.lucide.createIcons({ nodes: [ph] });
+      return ph;
+    }
+
+    if (thumbUrl || imageRef) {
       thumbEl = document.createElement("img");
       thumbEl.className = "notif-muestra-thumb";
       thumbEl.alt = "";
-      thumbEl.src = thumbUrl;
+      if (thumbUrl) thumbEl.src = thumbUrl;
+
       thumbEl.addEventListener("error", function () {
-        var placeholder = document.createElement("div");
-        placeholder.className = "notif-muestra-thumb-placeholder";
-        placeholder.innerHTML = '<i data-lucide="eye"></i>';
-        thumbEl.replaceWith(placeholder);
-        if (global.lucide) global.lucide.createIcons({ nodes: [placeholder] });
+        // Signed URL expired — try resolving a fresh one from imageRef
+        if (imageRef && global.ABNShared?.handouts?.resolveImageSignedUrl) {
+          global.ABNShared.handouts.resolveImageSignedUrl(imageRef).then(function (freshUrl) {
+            if (freshUrl) {
+              thumbEl.src = freshUrl;
+              // If the fresh URL also fails, show placeholder
+              thumbEl.addEventListener("error", function () {
+                thumbEl.replaceWith(buildPlaceholder());
+              }, { once: true });
+            } else {
+              thumbEl.replaceWith(buildPlaceholder());
+            }
+          });
+        } else {
+          thumbEl.replaceWith(buildPlaceholder());
+        }
       }, { once: true });
+
+      // If no stored URL but we have imageRef, resolve immediately
+      if (!thumbUrl && imageRef && global.ABNShared?.handouts?.resolveImageSignedUrl) {
+        global.ABNShared.handouts.resolveImageSignedUrl(imageRef).then(function (freshUrl) {
+          if (freshUrl) {
+            thumbEl.src = freshUrl;
+          } else {
+            thumbEl.replaceWith(buildPlaceholder());
+          }
+        });
+      }
     } else {
-      thumbEl = document.createElement("div");
-      thumbEl.className = "notif-muestra-thumb-placeholder";
-      thumbEl.innerHTML = '<i data-lucide="eye"></i>';
+      thumbEl = buildPlaceholder();
     }
 
     card.appendChild(thumbEl);

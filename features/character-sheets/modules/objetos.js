@@ -161,7 +161,8 @@
   }
 
   function setActiveTypeFilter(nextType) {
-    state.activeTypeFilter = OBJECT_TYPE_LABELS[nextType] ? nextType : "all";
+    var valid = OBJECT_TYPE_LABELS[nextType] ? nextType : "all";
+    state.activeTypeFilter = (valid === state.activeTypeFilter) ? "all" : valid;
     const filters = document.querySelectorAll(".objeto-type-filter");
     filters.forEach((btn) => {
       const isActive = btn.getAttribute("data-type") === state.activeTypeFilter;

@@ -11,18 +11,12 @@
       .replace(/'/g, "&#039;");
   }
 
-  function setHeader({ chronicleName, systemId }) {
+  function setHeader({ chronicleName }) {
     const title = document.getElementById("as-title");
-    const subtitle = document.getElementById("as-subtitle");
     if (title) {
       title.textContent = chronicleName
         ? `Sesion Activa · ${chronicleName}`
         : "Sesion Activa";
-    }
-    if (subtitle) {
-      subtitle.textContent = systemId
-        ? `Hub operativo del narrador · Sistema: ${systemId}`
-        : "Hub operativo del narrador";
     }
   }
 

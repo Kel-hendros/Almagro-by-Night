@@ -453,6 +453,16 @@ if (sheetLoaderModule) {
         void objetosApi.refresh?.();
       }
 
+      const contactosApi = window.ABNSheetContactos;
+      if (contactosApi) {
+        contactosApi.setContext({
+          sheetId: id,
+          chronicleId: revChronicleId || null,
+          userId: sheetOwnerUserId,
+        });
+        void contactosApi.refresh?.();
+      }
+
       persistenceModule?.setSheetMeta?.({
         userId: sheetOwnerUserId,
         chronicleId: revChronicleId || null,
@@ -1798,6 +1808,22 @@ function initObjetos() {
 
 // Initialize on load
 initObjetos();
+
+// ====== CONTACTS SYSTEM ====== //
+
+const contactosModule = window.ABNSheetContactos;
+if (contactosModule) {
+  contactosModule.configure({
+    supabaseClient: window.supabase,
+  });
+}
+
+function initContactos() {
+  void contactosModule?.init();
+}
+
+// Initialize on load
+initContactos();
 
 // ====== SAVED ROLLS (TIRADAS RÁPIDAS) ====== //
 

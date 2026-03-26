@@ -1,0 +1,645 @@
+/* =============================================================
+   Contact Screen — Badges, Vínculo de Sangre, Mini Stat Grid
+   ============================================================= */
+
+/* ── Form scroll override (contact forms are taller than typical docs) ── */
+
+.ds-body[data-doc-type="contacto"] {
+  overflow-y: auto;
+}
+
+.ds-body.doc-view-body[data-doc-type="contacto"] .doc-view-card {
+  flex: 0 0 auto;
+}
+
+/* ── Contact form description (compact, 2 lines) ── */
+
+.contacto-form-description {
+  min-height: auto !important;
+  height: 3.6em;
+  resize: vertical;
+}
+
+/* ── Type Badges ── */
+
+.contacto-type-badge {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.contacto-type-badge--mortal {
+  background: color-mix(in srgb, var(--theme-warning, #d4a14a) 15%, transparent);
+  color: var(--theme-warning, #d4a14a);
+}
+
+.contacto-type-badge--animal {
+  background: color-mix(in srgb, var(--theme-success, #6e9e6e) 15%, transparent);
+  color: var(--theme-success, #6e9e6e);
+}
+
+.contacto-type-badge--sobrenatural {
+  background: color-mix(in srgb, var(--theme-danger, #c62828) 15%, transparent);
+  color: var(--theme-danger, #c62828);
+}
+
+.contacto-type-badge--otro {
+  background: color-mix(in srgb, var(--theme-text-tertiary) 15%, transparent);
+  color: var(--theme-text-tertiary);
+}
+
+/* ── Vínculo de Sangre Indicator ── */
+
+.contacto-vinculo {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.contacto-vinculo-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-danger, #c62828) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-danger, #c62828) 40%, transparent);
+  transition: background 0.15s;
+}
+
+.contacto-vinculo-dot--filled {
+  background: var(--theme-danger, #c62828);
+  border-color: var(--theme-danger, #c62828);
+}
+
+/* ── Vínculo de Sangre: Interactive Rating Dots (form) ── */
+
+.contacto-vinculo-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contacto-vinculo-rating-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid color-mix(in srgb, var(--theme-danger, #c62828) 40%, transparent);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.contacto-vinculo-rating-dot:hover {
+  border-color: var(--theme-danger, #c62828);
+}
+
+.contacto-vinculo-rating-dot--filled {
+  background: var(--theme-danger, #c62828);
+  border-color: var(--theme-danger, #c62828);
+}
+
+/* ── 3-column form row (Tipo + Vínculo + Domitor) ── */
+
+.doc-form-row--3col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.contacto-vinculo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 0;
+}
+
+.contacto-vinculo-level-label {
+  font-size: 0.7rem;
+  color: var(--theme-text-secondary, #aaa);
+  min-width: 90px;
+}
+
+/* ── Avatar (form input + viewer + archive card) ── */
+
+.contacto-avatar-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.contacto-avatar-input-row .doc-form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.contacto-avatar-cropper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--theme-bg-surface, #1a1a1a);
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: 100%;
+  border: 2px dashed var(--theme-border-divider, rgba(255,255,255,0.15));
+  cursor: default;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.contacto-avatar-cropper--active {
+  border-style: solid;
+  border-color: var(--theme-accent, #c62828);
+  cursor: grab;
+}
+
+.contacto-avatar-cropper--active:active {
+  cursor: grabbing;
+}
+
+.contacto-avatar-cropper-hint {
+  font-size: 0.55rem;
+  color: var(--theme-text-tertiary);
+  text-align: center;
+  padding: 8px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* ── Tags in body (viewer) ── */
+
+.contacto-body-tags {
+  margin-bottom: 12px;
+  margin-top: -4px;
+}
+
+.contacto-body-tags .ds-tag {
+  background: var(--abn-tag-bg);
+  color: var(--abn-tag-text-color);
+  border: 1px solid var(--abn-tag-border);
+  font-family: var(--abn-tag-font-family);
+  font-size: var(--abn-tag-font-size);
+  font-weight: var(--abn-tag-font-weight);
+  letter-spacing: var(--abn-tag-letter-spacing);
+  padding: var(--abn-tag-padding-y) var(--abn-tag-padding-x);
+  border-radius: var(--abn-tag-radius);
+}
+
+/* (archive card layout merged below) */
+
+.contacto-archive-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.contacto-archive-avatar {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: var(--theme-bg-surface, #1a1a1a);
+  background-repeat: no-repeat;
+  border: 2px solid var(--theme-border-divider, rgba(255,255,255,0.1));
+}
+
+.contacto-archive-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Lightbox */
+.contacto-lightbox {
+  position: fixed;
+  z-index: 30000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 24px;
+}
+
+.contacto-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.doc-form-link {
+  color: var(--theme-accent, #c62828);
+  text-decoration: none;
+}
+
+.doc-form-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Archive Card (vertical box layout) ── */
+
+.contacto-archive-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--theme-border-divider, rgba(255,255,255,0.08));
+  border-radius: 10px;
+  background: var(--theme-bg-surface, #1e1e20);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.contacto-archive-card:hover {
+  border-color: var(--theme-accent, #c62828);
+  background: color-mix(in srgb, var(--theme-bg-surface, #1e1e20) 85%, var(--theme-accent, #c62828));
+}
+
+.contacto-archive-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.contacto-archive-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--theme-text-primary, #f0f0f0);
+  font-family: var(--app-font-heading, 'Special Elite', cursive);
+}
+
+.contacto-archive-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--theme-text-tertiary);
+}
+
+.contacto-archive-preview {
+  margin: 6px 0;
+  font-size: 0.8rem;
+  color: var(--theme-text-secondary, #aaa);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.contacto-archive-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-border-divider, rgba(255,255,255,0.08));
+  font-size: 0.78rem;
+  color: var(--theme-text-secondary, #aaa);
+}
+
+.contacto-archive-footer-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.contacto-archive-footer .ct-blood-track {
+  display: inline-flex;
+}
+
+.contacto-archive-footer .ct-blood-square {
+  width: 10px;
+  height: 10px;
+  cursor: pointer;
+}
+
+/* ── Mini Stat Sheet ── */
+
+.ct-stats-section {
+  margin-top: 20px;
+}
+
+/* ── Discipline dynamic rows ── */
+
+/* ── Blood Track (Vitae) ── */
+
+.ct-blood-track-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+  padding: 2px 0;
+}
+
+.ct-blood-track {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.ct-blood-square {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 2px solid color-mix(in srgb, var(--theme-danger, #c62828) 40%, transparent);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.ct-blood-square:hover {
+  border-color: var(--theme-danger, #c62828);
+}
+
+.ct-blood-square--filled {
+  background: var(--theme-danger, #c62828);
+  border-color: var(--theme-danger, #c62828);
+}
+
+.ct-discipline-name {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--theme-border-divider, rgba(255,255,255,0.1));
+  color: var(--theme-text-primary, #f0f0f0);
+  font-size: 0.9rem;
+  padding: 1px 0;
+  outline: none;
+}
+
+.ct-discipline-name:focus {
+  border-bottom-color: var(--theme-accent, #c62828);
+}
+
+.ct-discipline-name::placeholder {
+  color: var(--theme-text-tertiary);
+  font-style: italic;
+}
+
+.ct-stat-fieldset {
+  border: 1px solid var(--theme-border-divider, rgba(255,255,255,0.1));
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-bg-surface, #1a1a1a) 50%, transparent);
+}
+
+.ct-stat-fieldset legend {
+  padding: 0 8px;
+  color: var(--theme-accent, #c62828);
+  font-family: var(--app-font-heading, 'Special Elite', cursive);
+  font-size: 1rem;
+}
+
+.ct-stat-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.ct-stat-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.ct-stat-col h4 {
+  color: var(--theme-text-tertiary);
+  margin: 0 0 6px 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--theme-border-divider, rgba(255,255,255,0.08));
+  padding-bottom: 3px;
+}
+
+.ct-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+  padding: 2px 0;
+}
+
+.ct-stat-row .stat-label {
+  color: var(--theme-text-secondary, #aaa);
+}
+
+.ct-stat-row .stat-val {
+  color: var(--theme-text-primary, #f0f0f0);
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
+
+.ct-stat-row .stat-val--editable {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.ct-stat-row .stat-val--editable:hover {
+  background: color-mix(in srgb, var(--theme-accent, #c62828) 20%, transparent);
+}
+
+/* ── Floating Numpad Picker (for contexts without instance-modal.css) ── */
+
+.ae-stat-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20000;
+  display: none;
+}
+
+.ae-stat-picker {
+  position: fixed;
+  position-anchor: --picker-anchor;
+  inset: auto;
+  bottom: anchor(top);
+  left: anchor(left);
+  position-try-fallbacks: flip-block;
+  margin-bottom: 5px;
+  background: #1a1a1c;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 6px;
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  z-index: 20001;
+  min-width: 100px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.ae-picker-btn {
+  background: #2a2a2e;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e0e0e0;
+  border-radius: 4px;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: center;
+  transition: all 0.1s;
+  min-width: 28px;
+}
+
+.ae-picker-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent, #c62828) 30%, #2a2a2e);
+  border-color: var(--theme-accent, #c62828);
+  color: var(--theme-accent, #c62828);
+}
+
+.ae-picker-btn.active {
+  background: var(--theme-accent, #c62828);
+  color: var(--theme-text-on-accent, #f5f5f0);
+  border-color: var(--theme-accent, #c62828);
+}
+
+/* ── Viewer: Header — avatar | title+subtitle | close+actions ── */
+
+.ds-overlay[data-doc-type="contacto"] .ds-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: stretch;
+}
+
+.ds-overlay[data-doc-type="contacto"] .contacto-header-avatar {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-title-wrap {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  justify-content: space-between;
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-close-btn {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-actions {
+  grid-column: 3;
+  grid-row: 2;
+  align-self: end;
+}
+
+.contacto-header-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--theme-bg-surface, #1a1a1a);
+  background-repeat: no-repeat;
+  border: 2px solid var(--theme-border-divider, rgba(255,255,255,0.1));
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.contacto-header-avatar:hover {
+  border-color: var(--theme-accent, #c62828);
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-close-btn {
+  align-self: start;
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-actions {
+  align-self: end;
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-title {
+  font-size: 2rem;
+}
+
+.ds-overlay[data-doc-type="contacto"] .ds-subtitle {
+  font-size: 0.95rem;
+}
+
+/* ── Vínculo dots: inline variant (for subtitle text flow) ── */
+
+.contacto-vinculo-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.contacto-vinculo-dot-inline {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid color-mix(in srgb, var(--theme-danger, #c62828) 40%, transparent);
+}
+
+.contacto-vinculo-dot-inline--filled {
+  background: var(--theme-danger, #c62828);
+  border-color: var(--theme-danger, #c62828);
+}
+
+.contacto-vinculo-label {
+  font-size: 0.7rem;
+  color: var(--theme-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 700px) {
+  .doc-form-row--3col {
+    grid-template-columns: 1fr;
+  }
+
+  .ct-stat-grid-3col,
+  .ct-stat-grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .contacto-header-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .contacto-type-filters {
+    gap: 3px;
+  }
+
+  .contacto-type-filter {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+}
