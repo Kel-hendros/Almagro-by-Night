@@ -799,12 +799,9 @@
               var tSize = token.size || 1;
               var tokenCX = effX + tSize * 0.5;
               var tokenCY = effY + tSize * 0.5;
-              var inView = false;
-              for (var pi = 0; pi < fogPolygons.length && !inView; pi++) {
-                if (window.FogVisibility.pointInPolygon(tokenCX, tokenCY, fogPolygons[pi])) {
-                  inView = true;
-                }
-              }
+              var inView = typeof this.isPointVisibleToFogViewer === "function"
+                ? this.isPointVisibleToFogViewer(tokenCX, tokenCY)
+                : false;
               fogTarget = inView ? 1 : 0;
               this._tokenFogTargetCache[token.id] = { target: fogTarget, x: effX, y: effY };
             }

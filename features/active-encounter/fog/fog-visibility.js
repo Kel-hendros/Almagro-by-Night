@@ -133,49 +133,6 @@
   }
 
   /**
-   * Determine which cells are inside a polygon (for explored tracking).
-   * Uses scanline fill: for each row, find polygon edge intersections,
-   * sort them, and fill between pairs. O(rows * edges) instead of
-   * O(rows * cols * vertices).
-   */
-  function polygonToCells(polygon, ox, oy, radius) {
-    var cells = new Set();
-    if (!polygon || polygon.length < 3) return cells;
-
-    var minCY = Math.floor(oy - radius);
-    var maxCY = Math.ceil(oy + radius);
-    var n = polygon.length;
-
-    for (var cy = minCY; cy <= maxCY; cy++) {
-      var py = cy + 0.5; // cell center Y
-      var xIntersections = [];
-
-      for (var i = 0, j = n - 1; i < n; j = i++) {
-        var yi = polygon[i].y, yj = polygon[j].y;
-        if ((yi > py) === (yj > py)) continue; // edge doesn't cross this row
-        var xi = polygon[i].x, xj = polygon[j].x;
-        var xHit = xi + (py - yi) / (yj - yi) * (xj - xi);
-        xIntersections.push(xHit);
-      }
-
-      xIntersections.sort(function (a, b) { return a - b; });
-
-      // Fill between pairs of intersections
-      for (var k = 0; k < xIntersections.length - 1; k += 2) {
-        var xLeft = Math.floor(xIntersections[k] - 0.5);
-        var xRight = Math.floor(xIntersections[k + 1] - 0.5);
-        for (var cx = xLeft; cx <= xRight; cx++) {
-          // Verify cell center is within the intersection span
-          if (cx + 0.5 >= xIntersections[k] && cx + 0.5 <= xIntersections[k + 1]) {
-            cells.add(cx + "," + cy);
-          }
-        }
-      }
-    }
-    return cells;
-  }
-
-  /**
    * Ray-casting point-in-polygon test.
    */
   function pointInPolygon(px, py, polygon) {
@@ -199,13 +156,12 @@
    * @param {Array} pcTokens - tokens with .x, .y (cell positions, top-left)
    * @param {Array} walls - wall segments
    * @param {number} [visionRadius]
-   * @returns {{ polygons: Array<Array<{x,y}>>, cells: Set<string> }}
+   * @returns {{ polygons: Array<Array<{x,y}>>, perTokenPolygons: Array<Array<{x,y}>> }}
    */
   function computeVisibility(pcTokens, walls, visionRadius) {
     var radius = visionRadius || DEFAULT_VISION_RADIUS;
     var polygons = [];
-    var allCells = new Set();
-    var perTokenCells = [];
+    var perTokenPolygons = [];
 
     for (var i = 0; i < pcTokens.length; i++) {
       var token = pcTokens[i];
@@ -214,14 +170,10 @@
       var cy = token.y + tSize * 0.5;
       var poly = computeVisibilityPolygon(cx, cy, walls, radius);
       polygons.push(poly);
-
-      // Derive cells for explored tracking (per-token + merged)
-      var cells = polygonToCells(poly, cx, cy, radius);
-      perTokenCells.push(cells);
-      cells.forEach(function (key) { allCells.add(key); });
+      perTokenPolygons.push(poly);
     }
 
-    return { polygons: polygons, cells: allCells, perTokenCells: perTokenCells };
+    return { polygons: polygons, perTokenPolygons: perTokenPolygons };
   }
 
   global.FogVisibility = {

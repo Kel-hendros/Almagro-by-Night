@@ -642,10 +642,10 @@
         var fog = state.encounter?.data?.fog;
         if (!fog) return;
         if (!confirm("\u00bfReiniciar toda la exploraci\u00f3n? Los jugadores perder\u00e1n el mapa descubierto.")) return;
-        fog.explored = {};
+        fog.exploredAreas = [];
         fog.exploredBy = {};
-        fog.revealed = {};
-        fog.hidden = {};
+        fog.revealedAreas = [];
+        fog.hiddenAreas = [];
         var map = getMap?.();
         if (map) {
           map.setFogConfig?.(fog);

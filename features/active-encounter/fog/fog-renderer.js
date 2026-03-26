@@ -19,12 +19,12 @@
     var proto = TacticalMap.prototype;
 
     proto.initFog = function initFog(fogConfig, isNarrator) {
+      var normalizedConfig = normalizeFogConfig(fogConfig);
       this._fog = {
-        config: fogConfig || { enabled: false, mode: "auto", revealed: {}, hidden: {}, explored: {} },
+        config: normalizedConfig,
         isNarrator: !!isNarrator,
         dirty: true,
         polygons: [],
-        visibleCells: new Set(),
         offscreenCanvas: null,
         offscreenCtx: null,
         impersonateInstanceId: null,
@@ -38,7 +38,7 @@
 
     proto.setFogConfig = function (fogConfig) {
       if (!this._fog) this.initFog(fogConfig, true);
-      this._fog.config = fogConfig || this._fog.config;
+      this._fog.config = normalizeFogConfig(fogConfig || this._fog.config);
       this._fog.dirty = true;
       this._drawDirty = true;
     };
@@ -58,6 +58,19 @@
       if (!this._fog) return;
       this._fog.impersonateInstanceId = instanceId || null;
       this._fog.dirty = true;
+    };
+
+    proto.isPointVisibleToFogViewer = function (x, y) {
+      var fog = this._fog;
+      if (!fog || !fog.config || !fog.config.enabled) return true;
+      var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
+      if (!isPlayerView) return true;
+
+      var config = normalizeFogConfig(fog.config);
+      if (pointInAnyArea(x, y, config.hiddenAreas)) return false;
+      if (pointInAnyArea(x, y, config.revealedAreas)) return true;
+      if (config.mode === "manual") return false;
+      return pointInAnyPolygon(x, y, fog.polygons);
     };
 
     /**
@@ -91,15 +104,13 @@
   // ── Visibility computation (unchanged) ──
 
   function recomputeVisibility(map, fog) {
-    var config = fog.config;
+    var config = normalizeFogConfig(fog.config);
+    fog.config = config;
     if (config.mode === "manual") {
       fog.polygons = [];
-      fog.visibleCells = new Set();
-      var revealed = config.revealed || {};
-      for (var key in revealed) { if (revealed[key]) fog.visibleCells.add(key); }
       return;
     }
-    if (!global.FogVisibility) { fog.polygons = []; fog.visibleCells = new Set(); return; }
+    if (!global.FogVisibility) { fog.polygons = []; return; }
 
     var pcTokens = [];
     var impersonate = fog.impersonateInstanceId;
@@ -126,25 +137,15 @@
 
     var result = global.FogVisibility.computeVisibility(pcTokens, map.walls || []);
     fog.polygons = result.polygons;
-    fog.visibleCells = result.cells;
 
-    if (!config.exploredBy) config.exploredBy = {};
-    if (!config.explored) config.explored = {};
-    // Track explored per-token: each PC only gets their OWN visible cells
     for (var ti = 0; ti < pcTokens.length; ti++) {
       var instId = pcTokens[ti].instanceId;
-      if (!config.exploredBy[instId]) config.exploredBy[instId] = {};
-      var tokenCells = result.perTokenCells ? result.perTokenCells[ti] : result.cells;
-      tokenCells.forEach(function (key) {
-        config.explored[key] = true;
-        config.exploredBy[instId][key] = true;
-      });
+      var poly = result.perTokenPolygons ? result.perTokenPolygons[ti] : null;
+      if (!poly || poly.length < 3) continue;
+      if (!Array.isArray(config.exploredBy[instId])) config.exploredBy[instId] = [];
+      pushUniquePolygon(config.exploredAreas, poly);
+      pushUniquePolygon(config.exploredBy[instId], poly);
     }
-
-    var revealed = config.revealed || {};
-    var hidden = config.hidden || {};
-    for (var rKey in revealed) { if (revealed[rKey]) fog.visibleCells.add(rKey); }
-    for (var hKey in hidden) { if (hidden[hKey]) fog.visibleCells.delete(hKey); }
   }
 
   // ── Combined overlay rendering ──
@@ -176,15 +177,17 @@
     // When impersonating a specific PC, show only that PC's explored area
     var impersonate = fog.impersonateInstanceId;
     if (impersonate && impersonate !== "all") {
-      return exploredBy[impersonate] || {};
+      return normalizeAreaList(exploredBy[impersonate]);
     }
     var viewerIds = fog.viewerInstanceIds;
-    if (!viewerIds) return config.explored || {};
-    var merged = {};
+    if (!viewerIds) return normalizeAreaList(config.exploredAreas);
+    var merged = [];
     for (var i = 0; i < viewerIds.length; i++) {
-      var instExplored = exploredBy[viewerIds[i]];
+      var instExplored = normalizeAreaList(exploredBy[viewerIds[i]]);
       if (!instExplored) continue;
-      for (var key in instExplored) { if (instExplored[key]) merged[key] = true; }
+      for (var j = 0; j < instExplored.length; j++) {
+        merged.push(cloneArea(instExplored[j]));
+      }
     }
     return merged;
   }
@@ -407,14 +410,12 @@
     // for areas the viewer can't see.
     // ══════════════════════════════════════════════════
     if (fogEnabled) {
-      var exploredCells = getExploredForViewer(config, fog);
+      config = normalizeFogConfig(config);
+      var exploredAreas = getExploredForViewer(config, fog);
+      var revealedAreas = normalizeAreaList(config.revealedAreas);
+      var hiddenAreas = normalizeAreaList(config.hiddenAreas);
 
       if (isPlayerView) {
-        // Fog canvas approach: a temp canvas that only ADDS darkness,
-        // never removes it. This ensures rooms with no light stay
-        // pitch-black even within the player's visibility polygon
-        // (visibility ≠ illumination).
-
         var fogTmp = fog._fogTmpCanvas;
         var fCtx = fog._fogTmpCtx;
         if (!fogTmp) {
@@ -427,49 +428,40 @@
           fogTmp.width = pxW; fogTmp.height = pxH;
         }
 
-        // 1. Start: 0.45 darkness everywhere (dims explored-but-not-visible areas)
         fCtx.clearRect(0, 0, pxW, pxH);
-        fCtx.fillStyle = "rgba(0,0,0,0.45)";
+        fCtx.fillStyle = "rgba(0,0,0,1)";
         fCtx.fillRect(0, 0, pxW, pxH);
 
-        // 2. Cut out visible areas — no fog penalty where the player can see
+        if (exploredAreas.length > 0) {
+          fCtx.save();
+          fCtx.globalCompositeOperation = "destination-out";
+          fillAreas(fCtx, exploredAreas, gs, offX, offY, "rgba(255,255,255,0.55)");
+          fCtx.restore();
+        }
+
         if (fog.polygons && fog.polygons.length > 0) {
           fCtx.save();
           fCtx.globalCompositeOperation = "destination-out";
           try { fCtx.filter = "blur(" + BLUR_RADIUS + "px)"; } catch (_e) {}
-          fCtx.fillStyle = "rgba(255,255,255,1)";
-          for (var p = 0; p < fog.polygons.length; p++) {
-            var poly = fog.polygons[p];
-            if (poly.length < 3) continue;
-            fCtx.beginPath();
-            fCtx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
-            for (var k = 1; k < poly.length; k++) {
-              fCtx.lineTo(poly[k].x * gs + offX, poly[k].y * gs + offY);
-            }
-            fCtx.closePath();
-            fCtx.fill();
-          }
+          fillAreas(fCtx, fog.polygons, gs, offX, offY, "rgba(255,255,255,1)");
           fCtx.restore();
         }
 
-        // 3. Force non-explored cells to full black on the fog layer
-        fCtx.save();
-        fCtx.globalCompositeOperation = "source-over";
-        for (var cy = bounds.minY; cy < bounds.maxY; cy++) {
-          for (var cx = bounds.minX; cx < bounds.maxX; cx++) {
-            var key = cx + "," + cy;
-            if (fog.visibleCells.has(key)) continue;
-            if (exploredCells[key]) continue;
-            fCtx.clearRect(cx * gs + offX, cy * gs + offY, gs, gs);
-            fCtx.fillStyle = "rgba(0,0,0,1)";
-            fCtx.fillRect(cx * gs + offX, cy * gs + offY, gs, gs);
-          }
+        if (revealedAreas.length > 0) {
+          fCtx.save();
+          fCtx.globalCompositeOperation = "destination-out";
+          fillAreas(fCtx, revealedAreas, gs, offX, offY, "rgba(255,255,255,1)");
+          fCtx.restore();
         }
-        fCtx.restore();
 
-        // 4. Composite fog onto main overlay (source-over = only adds darkness)
+        if (hiddenAreas.length > 0) {
+          fCtx.save();
+          fCtx.globalCompositeOperation = "source-over";
+          fillAreas(fCtx, hiddenAreas, gs, offX, offY, "rgba(0,0,0,1)");
+          fCtx.restore();
+        }
+
         ctx.drawImage(fogTmp, 0, 0);
-
       }
       // Narrator normal view: no fog masking — only sees lighting (Steps 1-4)
 
@@ -481,22 +473,13 @@
   }
 
   function drawManualOverrides(ctx, config, gs, offX, offY) {
-    var revealed = config.revealed || {};
-    var hidden = config.hidden || {};
+    config = normalizeFogConfig(config);
     ctx.save();
     ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(46, 166, 99, 0.6)";
-    for (var rKey in revealed) {
-      if (!revealed[rKey]) continue;
-      var rp = rKey.split(",");
-      ctx.strokeRect(parseInt(rp[0], 10) * gs + offX + 1, parseInt(rp[1], 10) * gs + offY + 1, gs - 2, gs - 2);
-    }
+    strokeAreas(ctx, config.revealedAreas, gs, offX, offY);
     ctx.strokeStyle = "rgba(207, 95, 95, 0.6)";
-    for (var hKey in hidden) {
-      if (!hidden[hKey]) continue;
-      var hp = hKey.split(",");
-      ctx.strokeRect(parseInt(hp[0], 10) * gs + offX + 1, parseInt(hp[1], 10) * gs + offY + 1, gs - 2, gs - 2);
-    }
+    strokeAreas(ctx, config.hiddenAreas, gs, offX, offY);
     ctx.restore();
   }
 
@@ -508,9 +491,9 @@
       var ctx = this.ctx;
       var gs = this.gridSize;
       var size = hover.size || 1;
-      var half = Math.floor(size / 2);
-      var x = (hover.cellX - half) * gs;
-      var y = (hover.cellY - half) * gs;
+      var half = size * 0.5;
+      var x = (hover.x - half) * gs;
+      var y = (hover.y - half) * gs;
       ctx.save();
       ctx.strokeStyle = hover.type === "reveal" ? "rgba(46, 166, 99, 0.7)" : "rgba(207, 95, 95, 0.7)";
       ctx.lineWidth = 2 / Math.max(this.scale, 0.5);
@@ -526,6 +509,214 @@
     _origApply(TacticalMap);
     addFogBrushHover(TacticalMap);
   };
+
+  function normalizeFogConfig(config) {
+    var normalized = config || {};
+    if (normalized.enabled == null) normalized.enabled = false;
+    if (!normalized.mode) normalized.mode = "auto";
+
+    normalized.revealedAreas = normalizeAreaList(normalized.revealedAreas);
+    normalized.hiddenAreas = normalizeAreaList(normalized.hiddenAreas);
+    normalized.exploredAreas = normalizeAreaList(normalized.exploredAreas);
+
+    var rawExploredBy =
+      normalized.exploredBy && typeof normalized.exploredBy === "object" && !Array.isArray(normalized.exploredBy)
+        ? normalized.exploredBy
+        : {};
+    normalized.exploredBy = {};
+    for (var instId in rawExploredBy) {
+      var normalizedAreas = normalizeAreaList(rawExploredBy[instId]);
+      migrateLegacyCellMap(rawExploredBy[instId], normalizedAreas);
+      normalized.exploredBy[instId] = normalizedAreas;
+    }
+
+    migrateLegacyCellMap(normalized.revealed, normalized.revealedAreas);
+    migrateLegacyCellMap(normalized.hidden, normalized.hiddenAreas);
+    migrateLegacyCellMap(normalized.explored, normalized.exploredAreas);
+
+    delete normalized.revealed;
+    delete normalized.hidden;
+    delete normalized.explored;
+    return normalized;
+  }
+
+  function migrateLegacyCellMap(source, target) {
+    if (!source || typeof source !== "object" || Array.isArray(source)) return;
+    for (var key in source) {
+      if (!source[key] || key.indexOf(",") === -1) continue;
+      var parts = key.split(",");
+      var x = parseFloat(parts[0]);
+      var y = parseFloat(parts[1]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      pushArea(target, { type: "rect", x: x, y: y, width: 1, height: 1 });
+    }
+  }
+
+  function normalizeAreaList(list) {
+    if (!Array.isArray(list)) return [];
+    var normalized = [];
+    for (var i = 0; i < list.length; i++) {
+      var area = normalizeArea(list[i]);
+      if (area) normalized.push(area);
+    }
+    return normalized;
+  }
+
+  function normalizeArea(area) {
+    if (!area) return null;
+    if (Array.isArray(area)) {
+      var poly = [];
+      for (var i = 0; i < area.length; i++) {
+        var point = area[i];
+        if (!point) continue;
+        var x = parseFloat(point.x);
+        var y = parseFloat(point.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        poly.push({ x: x, y: y });
+      }
+      return poly.length >= 3 ? poly : null;
+    }
+    if (area.type === "rect") {
+      var rx = parseFloat(area.x);
+      var ry = parseFloat(area.y);
+      var rw = parseFloat(area.width);
+      var rh = parseFloat(area.height);
+      if (!Number.isFinite(rx) || !Number.isFinite(ry) || !Number.isFinite(rw) || !Number.isFinite(rh)) return null;
+      if (rw <= 0 || rh <= 0) return null;
+      return { type: "rect", x: rx, y: ry, width: rw, height: rh };
+    }
+    return null;
+  }
+
+  function cloneArea(area) {
+    if (Array.isArray(area)) {
+      return area.map(function (point) { return { x: point.x, y: point.y }; });
+    }
+    return {
+      type: area.type,
+      x: area.x,
+      y: area.y,
+      width: area.width,
+      height: area.height,
+    };
+  }
+
+  function pushArea(list, area) {
+    var normalized = normalizeArea(area);
+    if (!normalized) return;
+    if (Array.isArray(normalized)) {
+      pushUniquePolygon(list, normalized);
+      return;
+    }
+    for (var i = 0; i < list.length; i++) {
+      var existing = list[i];
+      if (!existing || Array.isArray(existing)) continue;
+      if (Math.abs(existing.x - normalized.x) < 0.001 &&
+          Math.abs(existing.y - normalized.y) < 0.001 &&
+          Math.abs(existing.width - normalized.width) < 0.001 &&
+          Math.abs(existing.height - normalized.height) < 0.001) {
+        return;
+      }
+    }
+    list.push(normalized);
+  }
+
+  function pushUniquePolygon(list, polygon) {
+    var normalized = normalizeArea(polygon);
+    if (!normalized || !Array.isArray(normalized)) return;
+    var normalizedArea = polygonArea(normalized);
+    var normalizedCentroid = polygonCentroid(normalized);
+    for (var i = 0; i < list.length; i++) {
+      var existing = list[i];
+      if (!Array.isArray(existing) || existing.length !== normalized.length) continue;
+      var areaDelta = Math.abs(polygonArea(existing) - normalizedArea);
+      var centroid = polygonCentroid(existing);
+      var dx = centroid.x - normalizedCentroid.x;
+      var dy = centroid.y - normalizedCentroid.y;
+      if (areaDelta < 0.2 && dx * dx + dy * dy < 0.04) return;
+    }
+    list.push(normalized);
+  }
+
+  function polygonArea(poly) {
+    var area = 0;
+    for (var i = 0; i < poly.length; i++) {
+      var next = poly[(i + 1) % poly.length];
+      area += poly[i].x * next.y - next.x * poly[i].y;
+    }
+    return Math.abs(area * 0.5);
+  }
+
+  function polygonCentroid(poly) {
+    var sumX = 0;
+    var sumY = 0;
+    for (var i = 0; i < poly.length; i++) {
+      sumX += poly[i].x;
+      sumY += poly[i].y;
+    }
+    return { x: sumX / poly.length, y: sumY / poly.length };
+  }
+
+  function pointInAnyPolygon(x, y, polygons) {
+    if (!window.FogVisibility || typeof window.FogVisibility.pointInPolygon !== "function") return false;
+    if (!Array.isArray(polygons)) return false;
+    for (var i = 0; i < polygons.length; i++) {
+      var poly = polygons[i];
+      if (!Array.isArray(poly) || poly.length < 3) continue;
+      if (window.FogVisibility.pointInPolygon(x, y, poly)) return true;
+    }
+    return false;
+  }
+
+  function pointInAnyArea(x, y, areas) {
+    var list = normalizeAreaList(areas);
+    for (var i = 0; i < list.length; i++) {
+      var area = list[i];
+      if (Array.isArray(area)) {
+        if (pointInAnyPolygon(x, y, [area])) return true;
+      } else if (x >= area.x && x <= area.x + area.width && y >= area.y && y <= area.y + area.height) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function fillAreas(ctx, areas, gs, offX, offY, fillStyle) {
+    var list = normalizeAreaList(areas);
+    ctx.fillStyle = fillStyle;
+    for (var i = 0; i < list.length; i++) {
+      var area = list[i];
+      if (Array.isArray(area)) {
+        ctx.beginPath();
+        ctx.moveTo(area[0].x * gs + offX, area[0].y * gs + offY);
+        for (var j = 1; j < area.length; j++) {
+          ctx.lineTo(area[j].x * gs + offX, area[j].y * gs + offY);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillRect(area.x * gs + offX, area.y * gs + offY, area.width * gs, area.height * gs);
+      }
+    }
+  }
+
+  function strokeAreas(ctx, areas, gs, offX, offY) {
+    var list = normalizeAreaList(areas);
+    for (var i = 0; i < list.length; i++) {
+      var area = list[i];
+      if (Array.isArray(area)) {
+        ctx.beginPath();
+        ctx.moveTo(area[0].x * gs + offX, area[0].y * gs + offY);
+        for (var j = 1; j < area.length; j++) {
+          ctx.lineTo(area[j].x * gs + offX, area[j].y * gs + offY);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(area.x * gs + offX + 1, area.y * gs + offY + 1, area.width * gs - 2, area.height * gs - 2);
+      }
+    }
+  }
 
   global.__applyTacticalMapFogRenderer = apply;
   if (global.TacticalMap) { apply(global.TacticalMap); }

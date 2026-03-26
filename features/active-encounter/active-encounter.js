@@ -471,7 +471,14 @@
 
     // Init Fog of War
     if (!state.encounter.data.fog) {
-      state.encounter.data.fog = { enabled: false, mode: "auto", revealed: {}, hidden: {}, explored: {} };
+      state.encounter.data.fog = {
+        enabled: false,
+        mode: "auto",
+        revealedAreas: [],
+        hiddenAreas: [],
+        exploredAreas: [],
+        exploredBy: {},
+      };
     }
     if (typeof state.map.initFog === "function") {
       state.map.initFog(state.encounter.data.fog, canEditEncounter());

@@ -1,6 +1,6 @@
 // Fog of War manual brush tool.
 // Follows the same factory-function pattern as tile-painter.js.
-// Paints into fog.revealed{} or fog.hidden{} dictionaries.
+// Paints continuous rectangular areas into fog.revealedAreas / fog.hiddenAreas.
 (function initFogBrushModule(global) {
   "use strict";
 
@@ -24,6 +24,8 @@
     var brushType = "reveal"; // "reveal" | "hide"
     var brushSize = 1;
     var isPainting = false;
+    var paintEraseMode = false;
+    var lastPaintPoint = null;
     var saveTimer = null;
     var SAVE_DELAY = 800;
 
@@ -77,34 +79,33 @@
     }
 
     /**
-     * Apply brush at a cell position.
+     * Apply brush at a world position (grid units, but continuous).
      */
-    function applyBrush(cellX, cellY, isErase) {
+    function applyBrush(worldX, worldY, isErase) {
       var fog = getFog();
       if (!fog) return;
-      if (!fog.revealed) fog.revealed = {};
-      if (!fog.hidden) fog.hidden = {};
+      if (!Array.isArray(fog.revealedAreas)) fog.revealedAreas = [];
+      if (!Array.isArray(fog.hiddenAreas)) fog.hiddenAreas = [];
 
-      var half = Math.floor(brushSize / 2);
-      for (var dy = 0; dy < brushSize; dy++) {
-        for (var dx = 0; dx < brushSize; dx++) {
-          var cx = Math.floor(cellX) - half + dx;
-          var cy = Math.floor(cellY) - half + dy;
-          var key = cx + "," + cy;
+      var area = createBrushArea(worldX, worldY, brushSize);
 
-          if (isErase) {
-            // Right-click: remove manual override, let auto determine
-            delete fog.revealed[key];
-            delete fog.hidden[key];
-          } else if (brushType === "reveal") {
-            fog.revealed[key] = true;
-            delete fog.hidden[key];
-          } else {
-            // hide
-            fog.hidden[key] = true;
-            delete fog.revealed[key];
-          }
-        }
+      if (isErase) {
+        fog.revealedAreas = fog.revealedAreas.filter(function (existing) {
+          return !areasIntersect(existing, area);
+        });
+        fog.hiddenAreas = fog.hiddenAreas.filter(function (existing) {
+          return !areasIntersect(existing, area);
+        });
+      } else if (brushType === "reveal") {
+        fog.hiddenAreas = fog.hiddenAreas.filter(function (existing) {
+          return !areasIntersect(existing, area);
+        });
+        pushArea(fog.revealedAreas, area);
+      } else {
+        fog.revealedAreas = fog.revealedAreas.filter(function (existing) {
+          return !areasIntersect(existing, area);
+        });
+        pushArea(fog.hiddenAreas, area);
       }
 
       setFog(fog);
@@ -124,13 +125,17 @@
       if (e.button === 0) {
         // Left click: paint reveal or hide
         isPainting = true;
-        applyBrush(cellX, cellY, false);
+        paintEraseMode = false;
+        lastPaintPoint = null;
+        paintAt(cellX, cellY, false);
         return true;
       }
       if (e.button === 2) {
         // Right click: erase manual override
         isPainting = true;
-        applyBrush(cellX, cellY, true);
+        paintEraseMode = true;
+        lastPaintPoint = null;
+        paintAt(cellX, cellY, true);
         return true;
       }
       return false;
@@ -143,17 +148,15 @@
       var map = getMap?.();
       if (map) {
         map._fogBrushHover = {
-          cellX: Math.floor(cellX),
-          cellY: Math.floor(cellY),
+          x: cellX,
+          y: cellY,
           size: brushSize,
           type: brushType,
         };
       }
 
       if (isPainting) {
-        // Continue painting while dragging
-        // Determine if right-click drag (erase) — we track this via the brushType
-        applyBrush(cellX, cellY, false);
+        paintAt(cellX, cellY, paintEraseMode);
         return true;
       }
 
@@ -165,6 +168,8 @@
     function handleMouseUp() {
       if (isPainting) {
         isPainting = false;
+        paintEraseMode = false;
+        lastPaintPoint = null;
         scheduleSave();
       }
     }
@@ -173,10 +178,10 @@
       if (!confirm("¿Reiniciar toda la exploración? Los jugadores perderán el mapa descubierto.")) return;
       var fog = getFog();
       if (!fog) return;
-      fog.explored = {};
+      fog.exploredAreas = [];
       fog.exploredBy = {};
-      fog.revealed = {};
-      fog.hidden = {};
+      fog.revealedAreas = [];
+      fog.hiddenAreas = [];
       setFog(fog);
       var map = getMap?.();
       if (map) {
@@ -200,6 +205,53 @@
       handleMouseUp: handleMouseUp,
       resetExploration: resetExploration,
     };
+
+    function paintAt(x, y, isErase) {
+      var minStep = Math.max(0.18, brushSize * 0.22);
+      if (lastPaintPoint) {
+        var dx = x - lastPaintPoint.x;
+        var dy = y - lastPaintPoint.y;
+        if (dx * dx + dy * dy < minStep * minStep) return;
+      }
+      lastPaintPoint = { x: x, y: y };
+      applyBrush(x, y, isErase);
+    }
+
+    function createBrushArea(x, y, size) {
+      var half = size * 0.5;
+      return {
+        type: "rect",
+        x: x - half,
+        y: y - half,
+        width: size,
+        height: size,
+      };
+    }
+
+    function areasIntersect(a, b) {
+      if (!a || !b) return false;
+      return !(
+        a.x + a.width <= b.x ||
+        b.x + b.width <= a.x ||
+        a.y + a.height <= b.y ||
+        b.y + b.height <= a.y
+      );
+    }
+
+    function pushArea(list, area) {
+      for (var i = list.length - 1; i >= 0; i--) {
+        var existing = list[i];
+        if (
+          Math.abs(existing.x - area.x) < 0.001 &&
+          Math.abs(existing.y - area.y) < 0.001 &&
+          Math.abs(existing.width - area.width) < 0.001 &&
+          Math.abs(existing.height - area.height) < 0.001
+        ) {
+          return;
+        }
+      }
+      list.push(area);
+    }
   }
 
   global.FogBrush = {

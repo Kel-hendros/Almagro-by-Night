@@ -270,8 +270,11 @@
       var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
       if (!isPlayerView) return true;
 
-      // Fog: point must be inside a visibility polygon
-      if (!this.isPointInVisibilityPolygons(x, y)) return false;
+      if (typeof this.isPointVisibleToFogViewer === "function") {
+        if (!this.isPointVisibleToFogViewer(x, y)) return false;
+      } else if (!this.isPointInVisibilityPolygons(x, y)) {
+        return false;
+      }
 
       // Luminosity check at the actual point
       if (typeof this.computeLuminosityAt === "function") {
