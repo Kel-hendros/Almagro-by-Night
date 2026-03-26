@@ -695,6 +695,11 @@
 
     proto.drawTokens = function drawTokens(timestamp) {
       const now = typeof timestamp === "number" ? timestamp : performance.now();
+      var isLuminosityVisible = function (luminosity) {
+        var lum = Number.isFinite(luminosity) ? luminosity : 0;
+        lum = Math.min(1, Math.max(0, lum));
+        return Math.round(lum * 100) >= 25;
+      };
 
       // In player/impersonate view with fog enabled, hide enemy tokens outside vision.
       // Viewer tokens (player's own) are ALWAYS visible — fog never hides them.
@@ -828,7 +833,7 @@
             var lum = (lumEntry && lumEntry.cx === tCX2 && lumEntry.cy === tCY2)
               ? lumEntry.lum
               : (typeof this.computeLuminosityAt === 'function' ? this.computeLuminosityAt(tCX2, tCY2) : 1);
-            if (lum < 0.25) {
+            if (!isLuminosityVisible(lum)) {
               var inProximity = false;
               for (var vpi = 0; vpi < viewerTokenCenters.length && !inProximity; vpi++) {
                 var vp = viewerTokenCenters[vpi];

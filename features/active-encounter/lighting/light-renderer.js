@@ -14,6 +14,12 @@
   var MARKER_EMOJIS = { door: "\u{1F6AA}", window: "\u{1FA9F}", light: "\u{1F4A1}", switch: "\u{1F39A}\uFE0F" };
   var LUMINOSITY_THRESHOLD = 0.25;
 
+  function isLuminosityVisible(luminosity) {
+    var lum = Number.isFinite(luminosity) ? luminosity : 0;
+    lum = Math.min(1, Math.max(0, lum));
+    return Math.round(lum * 100) >= Math.round(LUMINOSITY_THRESHOLD * 100);
+  }
+
   function drawInteractiveMarker(ctx, x, y, emoji, scale, isSelected) {
     var r = INTERACTIVE_MARKER_RADIUS / scale;
     ctx.save();
@@ -281,7 +287,7 @@
 
       // Luminosity check at the actual point
       if (typeof this.computeLuminosityAt === "function") {
-        if (this.computeLuminosityAt(x, y) < LUMINOSITY_THRESHOLD) return false;
+        if (!isLuminosityVisible(this.computeLuminosityAt(x, y))) return false;
       }
       return true;
     };
