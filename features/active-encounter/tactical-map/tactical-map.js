@@ -127,7 +127,7 @@ window.TacticalMap = class TacticalMap {
     this.selectedMapEffectId = null;
     this.selectedBackground = false;
     this.hoverFocus = null;
-    this.freeMovement = false;
+    // freeMovement removed — coordinates are always continuous (no grid snapping)
     this.measureToolActive = false;
     this.measureStart = null;
     this.measureEnd = null;

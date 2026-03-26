@@ -52,6 +52,7 @@
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
       this.stepZoom(direction, mouseX, mouseY);
+      this.draw();
 
       this.lastWheelStepAt = now;
       this.wheelDeltaAccumulator = 0;
@@ -934,8 +935,8 @@
         const rawGridX = (worldX - this.dragTokenOffset.x) / this.gridSize;
         const rawGridY = (worldY - this.dragTokenOffset.y) / this.gridSize;
 
-        var nextX = this.freeMovement ? rawGridX : Math.round(rawGridX);
-        var nextY = this.freeMovement ? rawGridY : Math.round(rawGridY);
+        var nextX = rawGridX;
+        var nextY = rawGridY;
 
         const liveToken = (this.tokens || []).find(
           (token) => token.id === this.draggedToken.id,
@@ -961,8 +962,8 @@
               prevX, prevY, nextX, nextY, this.walls, curToken.size || 1,
             );
             if (collision.blocked) {
-              var stopX = this.freeMovement ? collision.lastX : Math.round(collision.lastX);
-              var stopY = this.freeMovement ? collision.lastY : Math.round(collision.lastY);
+              var stopX = collision.lastX;
+              var stopY = collision.lastY;
               curToken.x = stopX;
               curToken.y = stopY;
               if (liveToken) this.draggedToken = liveToken;

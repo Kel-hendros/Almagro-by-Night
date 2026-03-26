@@ -308,7 +308,7 @@
       let effectY = null;
 
       if (effectType === "night_shroud") {
-        const spawn = findNearestMapEffectSpawnCell(token);
+        const spawn = findNearestMapEffectSpawnPosition(token);
         if (spawn) {
           effectX = spawn.x + 0.5;
           effectY = spawn.y + 0.5;
@@ -346,12 +346,11 @@
       return true;
     }
 
-    function findNearestMapEffectSpawnCell(casterToken) {
+    function findNearestMapEffectSpawnPosition(casterToken) {
       if (!casterToken) return null;
-      const originX = Math.round(parseFloat(casterToken.x) || 0);
-      const originY = Math.round(parseFloat(casterToken.y) || 0);
-      const occupied = getOccupiedCells();
-      const picks = findNearestFreeCellsAround(originX, originY, 1, 1, occupied);
+      const originX = parseFloat(casterToken.x) || 0;
+      const originY = parseFloat(casterToken.y) || 0;
+      const picks = findNearestFreePositions(originX, originY, 1, 1);
       return picks[0] || null;
     }
 
@@ -483,63 +482,61 @@
       };
     }
 
-    function getOccupiedCells(ignoreTokenId = null) {
-      const occupied = new Set();
-      const tokens = state.encounter?.data?.tokens || [];
-      tokens.forEach((token) => {
-        if (!token || token.id === ignoreTokenId) return;
-        const size = Math.max(1, Math.round(parseFloat(token.size) || 1));
-        const baseX = Math.round(parseFloat(token.x) || 0);
-        const baseY = Math.round(parseFloat(token.y) || 0);
-        for (let dx = 0; dx < size; dx += 1) {
-          for (let dy = 0; dy < size; dy += 1) {
-            occupied.add(`${baseX + dx},${baseY + dy}`);
-          }
-        }
-      });
-      return occupied;
+    /**
+     * Check if two axis-aligned bounding boxes overlap (continuous coordinates).
+     */
+    function boundsOverlap(ax, ay, aSize, bx, by, bSize) {
+      return ax < bx + bSize && ax + aSize > bx &&
+             ay < by + bSize && ay + aSize > by;
     }
 
-    function isAreaFree(occupied, x, y, size) {
-      for (let dx = 0; dx < size; dx += 1) {
-        for (let dy = 0; dy < size; dy += 1) {
-          if (occupied.has(`${x + dx},${y + dy}`)) return false;
+    /**
+     * Check if a position is free of overlapping tokens (continuous coordinates).
+     * Also checks against already-picked placements.
+     */
+    function isPositionFree(x, y, size, ignoreTokenId, extraPlacements) {
+      const tokens = state.encounter?.data?.tokens || [];
+      for (let i = 0; i < tokens.length; i++) {
+        const t = tokens[i];
+        if (!t || t.id === ignoreTokenId) continue;
+        const tSize = parseFloat(t.size) || 1;
+        if (boundsOverlap(x, y, size, parseFloat(t.x) || 0, parseFloat(t.y) || 0, tSize)) {
+          return false;
         }
+      }
+      for (let i = 0; i < extraPlacements.length; i++) {
+        const p = extraPlacements[i];
+        if (boundsOverlap(x, y, size, p.x, p.y, size)) return false;
       }
       return true;
     }
 
-    function markAreaOccupied(occupied, x, y, size) {
-      for (let dx = 0; dx < size; dx += 1) {
-        for (let dy = 0; dy < size; dy += 1) {
-          occupied.add(`${x + dx},${y + dy}`);
-        }
-      }
-    }
-
-    function findNearestFreeCellsAround(originX, originY, neededCount, tokenSize, occupied) {
+    /**
+     * Find nearest free positions around an origin using continuous coordinates.
+     * Searches outward in rings spaced by tokenSize units.
+     */
+    function findNearestFreePositions(originX, originY, neededCount, tokenSize) {
       const picks = [];
+      const step = tokenSize;
       const maxRadius = 40;
-      for (let radius = 1; radius <= maxRadius && picks.length < neededCount; radius += 1) {
+      for (let radius = 1; radius <= maxRadius && picks.length < neededCount; radius++) {
         const ringCandidates = [];
-        for (let dy = -radius; dy <= radius; dy += 1) {
-          for (let dx = -radius; dx <= radius; dx += 1) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
             if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
             ringCandidates.push({
-              x: originX + dx,
-              y: originY + dy,
+              x: originX + dx * step,
+              y: originY + dy * step,
               distance: Math.hypot(dx, dy),
             });
           }
         }
-        ringCandidates
-          .sort((a, b) => a.distance - b.distance)
-          .forEach((candidate) => {
-            if (picks.length >= neededCount) return;
-            if (!isAreaFree(occupied, candidate.x, candidate.y, tokenSize)) return;
-            picks.push({ x: candidate.x, y: candidate.y });
-            markAreaOccupied(occupied, candidate.x, candidate.y, tokenSize);
-          });
+        ringCandidates.sort((a, b) => a.distance - b.distance);
+        for (const candidate of ringCandidates) {
+          if (picks.length >= neededCount) break;
+          if (!isPositionFree(candidate.x, candidate.y, tokenSize, null, picks)) continue;
+          picks.push({ x: candidate.x, y: candidate.y });
+        }
       }
       return picks;
     }
@@ -590,16 +587,14 @@
       const count = promptTentaclesCount(action);
       if (!count) return false;
 
-      const tokenSize = Math.max(1, Math.round(parseFloat(action?.tokenSize) || 1));
-      const originX = Math.round(parseFloat(casterToken.x) || 0);
-      const originY = Math.round(parseFloat(casterToken.y) || 0);
-      const occupied = getOccupiedCells();
-      const placements = findNearestFreeCellsAround(
+      const tokenSize = Math.max(1, parseFloat(action?.tokenSize) || 1);
+      const originX = parseFloat(casterToken.x) || 0;
+      const originY = parseFloat(casterToken.y) || 0;
+      const placements = findNearestFreePositions(
         originX,
         originY,
         count,
         tokenSize,
-        occupied,
       );
       while (placements.length < count) {
         placements.push({

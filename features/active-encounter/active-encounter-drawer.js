@@ -138,20 +138,7 @@
           });
         });
 
-      var freeMovCheck = document.getElementById("ae-free-movement-check");
-      if (freeMovCheck) {
-        freeMovCheck.checked = !!state.encounter?.data?.freeMovement;
-        freeMovCheck.disabled = !canEditEncounter();
-        freeMovCheck.addEventListener("change", function () {
-          if (!canEditEncounter()) return;
-          if (state.encounter?.data) {
-            state.encounter.data.freeMovement = freeMovCheck.checked;
-          }
-          var map = getMap?.();
-          if (map) map.freeMovement = freeMovCheck.checked;
-          if (typeof ctx.saveEncounter === "function") ctx.saveEncounter();
-        });
-      }
+      // freeMovement toggle removed — coordinates are always continuous (no grid snapping)
 
       // Terrain palette
       renderTerrainPalette();
@@ -854,11 +841,7 @@
       });
       refreshGridOpacityButtons();
 
-      var freeMovCheck = document.getElementById("ae-free-movement-check");
-      if (freeMovCheck) {
-        freeMovCheck.disabled = !canEditEncounter();
-        freeMovCheck.checked = !!state.encounter?.data?.freeMovement;
-      }
+      // freeMovement toggle removed — coordinates are always continuous
     }
 
     return {

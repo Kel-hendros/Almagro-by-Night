@@ -84,8 +84,8 @@
       // Add back non-overlapping portions of the existing wall
       // Portion BEFORE the new segment: [0, tMin]
       if (tMin > 0.01) {
-        var bx = Math.round(w.x1 + wdx * tMin);
-        var by = Math.round(w.y1 + wdy * tMin);
+        var bx = w.x1 + wdx * tMin;
+        var by = w.y1 + wdy * tMin;
         if (bx !== w.x1 || by !== w.y1) {
           toAdd.push({
             id: generateWallId(), x1: w.x1, y1: w.y1, x2: bx, y2: by,
@@ -95,8 +95,8 @@
       }
       // Portion AFTER the new segment: [tMax, 1]
       if (tMax < 0.99) {
-        var ax = Math.round(w.x1 + wdx * tMax);
-        var ay = Math.round(w.y1 + wdy * tMax);
+        var ax = w.x1 + wdx * tMax;
+        var ay = w.y1 + wdy * tMax;
         if (ax !== w.x2 || ay !== w.y2) {
           toAdd.push({
             id: generateWallId(), x1: ax, y1: ay, x2: w.x2, y2: w.y2,
@@ -856,18 +856,19 @@
 
     // Step 1: Check CENTER against blocking walls.
     // If center can pass → token passes (even through tight openings like 1-cell doors).
+    // Save the closest center intersection t for fallback in step 2.
     var cx1 = oldX + half, cy1 = oldY + half;
     var cx2 = newX + half, cy2 = newY + half;
-    var centerBlocked = false;
+    var centerClosestT = Infinity;
     for (var i = 0; i < walls.length; i++) {
       var w = walls[i];
       if (!blocksMovement(w)) continue;
-      if (segmentIntersect(cx1, cy1, cx2, cy2, w.x1, w.y1, w.x2, w.y2)) {
-        centerBlocked = true;
-        break;
+      var cHit = segmentIntersect(cx1, cy1, cx2, cy2, w.x1, w.y1, w.x2, w.y2);
+      if (cHit && cHit.t < centerClosestT) {
+        centerClosestT = cHit.t;
       }
     }
-    if (!centerBlocked) return { blocked: false };
+    if (centerClosestT === Infinity) return { blocked: false };
 
     // Step 2: Center IS blocked by a solid wall. Use all 4 corners to find
     // the exact stop position so the FULL token stays on this side.
@@ -891,13 +892,16 @@
       }
     }
 
-    if (closestT === Infinity) return { blocked: false };
+    // Use corners if found, otherwise fall back to center intersection.
+    // Fallback handles grid-snapped mode where corners land exactly on a wall
+    // (t=0 or t=1 excluded by segmentIntersect epsilon).
+    var effectiveT = closestT < Infinity ? closestT : centerClosestT;
 
     // Back off a fixed distance (0.06 cells ≈ 3px) before the wall,
     // regardless of movement speed, so the token never touches the wall.
     var moveDist = Math.sqrt(mdx * mdx + mdy * mdy);
-    var backOffT = moveDist > 0 ? Math.min(0.06 / moveDist, closestT) : 0;
-    var stopT = Math.max(0, closestT - backOffT);
+    var backOffT = moveDist > 0 ? Math.min(0.06 / moveDist, effectiveT) : 0;
+    var stopT = Math.max(0, effectiveT - backOffT);
 
     return {
       blocked: true,
