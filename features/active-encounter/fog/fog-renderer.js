@@ -5,6 +5,7 @@
 
   var BLUR_RADIUS = 6;
   var BLUR_PAD = 2;
+  var EXPLORED_MEMORY_BLUR_RADIUS = 1.5;
   // Explored memory should preserve the underlying map art and only dim it
   // heavily; a neutral gray tint turns remembered terrain into a flat blob.
   var EXPLORED_MEMORY_FILL = "rgba(0,0,0,0.72)";
@@ -317,6 +318,7 @@
         // illuminated than the currently visible cone.
         fCtx.save();
         fCtx.globalCompositeOperation = "source-over";
+        try { fCtx.filter = "blur(" + EXPLORED_MEMORY_BLUR_RADIUS + "px)"; } catch (_e) {}
         fillAreas(fCtx, exploredAreas, gs, offX, offY, EXPLORED_MEMORY_FILL);
         fCtx.restore();
       }
