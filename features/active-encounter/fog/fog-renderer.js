@@ -5,7 +5,7 @@
 
   var BLUR_RADIUS = 6;
   var BLUR_PAD = 2;
-  var EXPLORED_MEMORY_FILL = "rgba(36,36,36,0.82)";
+  var EXPLORED_MEMORY_FILL = "rgba(24,24,24,0.42)";
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
