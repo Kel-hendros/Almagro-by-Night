@@ -9,9 +9,9 @@
     window: "#7bb3d4",
   };
   var WALL_WIDTHS = {
-    wall:   9,
-    door:   10,
-    window: 7,
+    wall:   0.22,
+    door:   0.24,
+    window: 0.18,
   };
   var ERASE_HOVER_COLOR = "#e53935";
 
@@ -199,11 +199,11 @@
     var midY = (py1 + py2) / 2;
     var isEraseHover = eraseHoverId === wall.id;
     var baseColor = WALL_COLORS[wall.type] || WALL_COLORS.wall;
-    var lineWidth = (WALL_WIDTHS[wall.type] || WALL_WIDTHS.wall) / Math.max(scale, 0.5);
+    var lineWidth = (WALL_WIDTHS[wall.type] || WALL_WIDTHS.wall) * gs;
 
     if (isEraseHover) {
       baseColor = ERASE_HOVER_COLOR;
-      lineWidth += 1 / Math.max(scale, 0.5);
+      lineWidth += Math.max(1.5 / Math.max(scale, 0.5), gs * 0.03);
     }
 
     ctx.save();
@@ -231,7 +231,7 @@
       var dx = px2 - px1;
       var dy = py2 - py1;
       var len = Math.sqrt(dx * dx + dy * dy);
-      var gapHalf = Math.min(len * 0.15, 6 / Math.max(scale, 0.5));
+      var gapHalf = Math.min(len * 0.15, lineWidth * 0.7);
       if (len > 0) {
         var nx = dx / len;
         var ny = dy / len;
