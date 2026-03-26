@@ -742,30 +742,9 @@
         }
       }
 
-      // Pre-compute viewer token centers for proximity sensing (1.5m = 1 unit)
-      var viewerTokenCenters = [];
-      if (!isNarratorView) {
-        for (var vi = 0; vi < this.tokens.length; vi++) {
-          var vt = this.tokens[vi];
-          var isViewer = false;
-          if (darknessViewerSet) {
-            isViewer = darknessViewerSet.has(vt.instanceId);
-          } else {
-            var vInst = null;
-            for (var vj = 0; vj < this.instances.length; vj++) {
-              if (this.instances[vj].id === vt.instanceId) { vInst = this.instances[vj]; break; }
-            }
-            isViewer = !!(vInst && vInst.isPC);
-          }
-          if (isViewer) {
-            var vtSz = vt.size || 1;
-            viewerTokenCenters.push({
-              cx: (parseFloat(vt.x) || 0) + vtSz * 0.5,
-              cy: (parseFloat(vt.y) || 0) + vtSz * 0.5,
-            });
-          }
-        }
-      }
+      // Pre-compute viewer token centers for proximity sensing.
+      var viewerTokenCenters =
+        typeof this.getViewerTokenCenters === "function" ? this.getViewerTokenCenters() : [];
 
       // Recompute token luminosity cache only when lighting changes.
       if (!this._tokenLuminosity) this._tokenLuminosity = new Map();
@@ -811,11 +790,9 @@
             }
           }
         }
-        // Luminosity-based visibility (independent of fog of war)
-        // Normal vision: only see tokens with >= 30% luminosity.
-        // Proximity override: tokens within 1.5m (1 unit) are always sensed.
-        // Viewer's own tokens: always visible.
+        // Resolve darkness/observer-vision separately from fog.
         var darknessDim = 1;
+        var lightVisible = true;
         if (hasLighting && this._tokenLuminosity) {
           var isMyToken = darknessViewerSet
             ? darknessViewerSet.has(token.instanceId)
@@ -828,30 +805,30 @@
             var lum = (lumEntry && lumEntry.cx === tCX2 && lumEntry.cy === tCY2)
               ? lumEntry.lum
               : (typeof this.computeLuminosityAt === 'function' ? this.computeLuminosityAt(tCX2, tCY2) : 1);
-            if (lum < 0.30) {
-              var inProximity = false;
-              for (var vpi = 0; vpi < viewerTokenCenters.length && !inProximity; vpi++) {
-                var vp = viewerTokenCenters[vpi];
-                var pdx = tCX2 - vp.cx;
-                var pdy = tCY2 - vp.cy;
-                if (pdx * pdx + pdy * pdy <= 1.0) inProximity = true;
-              }
-              if (!inProximity) {
-                if (isNarratorView) {
-                  darknessDim = 0.35;
-                } else {
-                  fogTarget = 0;
-                }
+            var canSeeByLight =
+              typeof this.isPointVisibleByLight === "function"
+                ? this.isPointVisibleByLight(tCX2, tCY2, {
+                    rawLuminosity: lum,
+                    allowProximity: true,
+                    viewerTokenCenters: viewerTokenCenters,
+                  })
+                : lum >= 0.30;
+            if (!canSeeByLight) {
+              if (isNarratorView) {
+                darknessDim = 0.35;
+              } else {
+                lightVisible = false;
               }
             }
           }
         }
+        var visibilityTarget = fogTarget * (lightVisible ? 1 : 0);
         // Lerp opacity toward target
-        var curOpacity = this._tokenFogOpacity[token.id] != null ? this._tokenFogOpacity[token.id] : fogTarget;
-        if (curOpacity < fogTarget) curOpacity = Math.min(fogTarget, curOpacity + FADE_SPEED);
-        else if (curOpacity > fogTarget) curOpacity = Math.max(fogTarget, curOpacity - FADE_SPEED);
+        var curOpacity = this._tokenFogOpacity[token.id] != null ? this._tokenFogOpacity[token.id] : visibilityTarget;
+        if (curOpacity < visibilityTarget) curOpacity = Math.min(visibilityTarget, curOpacity + FADE_SPEED);
+        else if (curOpacity > visibilityTarget) curOpacity = Math.max(visibilityTarget, curOpacity - FADE_SPEED);
         this._tokenFogOpacity[token.id] = curOpacity;
-        if (Math.abs(curOpacity - fogTarget) > 0.01) this._drawDirty = true; // keep fading
+        if (Math.abs(curOpacity - visibilityTarget) > 0.01) this._drawDirty = true; // keep fading
         if (curOpacity < 0.01) return; // fully hidden
         const hoverType = this.getHoverFocusType();
         const isFocused = this.isTokenHoverFocused(token);

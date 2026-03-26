@@ -497,7 +497,7 @@
           if (!al) return;
           al.color = ambientColor.value;
           var map = getMap?.();
-          if (map) { map.invalidateLighting?.(); map.invalidateFog?.(); map.draw(); }
+          if (map) { map.invalidateLighting?.(); map.draw(); }
           debouncedSaveAmbient();
         });
       }
@@ -509,7 +509,7 @@
           al.intensity = parseFloat(ambientIntensity.value) || 0;
           if (ambientVal) ambientVal.textContent = Math.round(al.intensity * 100) + "%";
           var map = getMap?.();
-          if (map) { map.invalidateLighting?.(); map.invalidateFog?.(); map.draw(); }
+          if (map) { map.invalidateLighting?.(); map.draw(); }
           debouncedSaveAmbient();
         });
       }

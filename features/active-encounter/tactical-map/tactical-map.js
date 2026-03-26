@@ -1044,7 +1044,7 @@ window.TacticalMap = class TacticalMap {
   }
 
   /**
-   * Compute luminosity at a grid position (analytical, no canvas sampling).
+   * Compute luminosity at a continuous map position (analytical, no canvas sampling).
    * Returns a value in [0, 1] where 0 = pitch black, 1 = fully illuminated.
    */
   computeLuminosityAt(gx, gy) {
@@ -1142,9 +1142,14 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawLightIndicators === "function") {
       this.drawLightIndicators();
     }
-    // Combined overlay: handles BOTH fog (visibility) and lighting (darkness/illumination)
+    // Fog / current visibility + exploration memory.
     if (typeof this.drawFogOfWar === "function") {
       this.drawFogOfWar();
+    }
+    // Lighting/darkness is rendered separately from fog so observer vision,
+    // explored memory and line-of-sight can evolve independently.
+    if (typeof this.drawLightingOverlay === "function") {
+      this.drawLightingOverlay();
     }
     // Narrator (not impersonating): redraw walls and rooms ON TOP of the
     // fog/lighting overlay so they are always fully visible and never dimmed.
@@ -1161,8 +1166,8 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawRoomIcons === "function") {
       this.drawRoomIcons();
     }
-    // Tokens drawn ABOVE fog/lighting overlay. Darkness-based hiding
-    // (supernatural + total darkness) and fog visibility are handled inside drawTokens.
+    // Tokens drawn ABOVE fog/lighting overlays. Fog and light visibility are
+    // resolved independently inside drawTokens.
     this.drawTokens(timestamp);
     // Hover halo drawn AFTER tokens
     if (typeof this.drawTokenHoverOverlay === "function") {

@@ -458,7 +458,7 @@
             if (state.map) state.map._rooms = rooms;
           }
         },
-        onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLighting?.(); saveEncounter(); },
+        onChanged: () => { state.map?.invalidateLighting?.(); saveEncounter(); },
         canEdit: canEditEncounter,
         roomManager: roomManager,
       });

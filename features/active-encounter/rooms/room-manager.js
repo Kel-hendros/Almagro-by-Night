@@ -26,7 +26,6 @@
       var map = getMap();
       if (map) {
         map._rooms = data.rooms;
-        map.invalidateFog?.();
         map.invalidateLighting?.();
         map.draw();
       }
@@ -42,7 +41,6 @@
       for (var key in patch) room[key] = patch[key];
       var map = getMap();
       if (map) {
-        map.invalidateFog?.();
         map.invalidateLighting?.();
         map.draw();
       }
@@ -56,7 +54,6 @@
       var map = getMap();
       if (map) {
         map._rooms = data.rooms;
-        map.invalidateFog?.();
         map.invalidateLighting?.();
         map.draw();
       }
