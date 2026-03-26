@@ -982,10 +982,11 @@
           this.draggedToken.x = nextX;
           this.draggedToken.y = nextY;
         }
-        // Fog: only recompute when dragging a PC (NPCs don't affect visibility)
+        // Fog: update at frame cadence while dragging a PC so the visibility
+        // cone tracks the token continuously instead of jumping on drop.
         if (dragIsPC && typeof this.invalidateFog === "function" && this._fog?.config?.enabled) {
           var now = performance.now();
-          if (!this._lastDragFogUpdate || now - this._lastDragFogUpdate > 200) {
+          if (!this._lastDragFogUpdate || now - this._lastDragFogUpdate > 16) {
             this._lastDragFogUpdate = now;
             this.invalidateFog();
           }
