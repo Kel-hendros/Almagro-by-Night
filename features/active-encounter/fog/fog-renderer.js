@@ -562,37 +562,47 @@
 
   function fillAreas(ctx, areas, gs, offX, offY, fillStyle) {
     var list = normalizeAreaList(areas);
+    if (!list.length) return;
     ctx.fillStyle = fillStyle;
-    for (var i = 0; i < list.length; i++) {
-      var area = list[i];
-      if (Array.isArray(area)) {
-        ctx.beginPath();
-        ctx.moveTo(area[0].x * gs + offX, area[0].y * gs + offY);
-        for (var j = 1; j < area.length; j++) {
-          ctx.lineTo(area[j].x * gs + offX, area[j].y * gs + offY);
-        }
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.fillRect(area.x * gs + offX, area.y * gs + offY, area.width * gs, area.height * gs);
-      }
-    }
+    ctx.beginPath();
+    appendAreasPath(ctx, list, gs, offX, offY);
+    ctx.fill();
   }
 
   function strokeAreas(ctx, areas, gs, offX, offY) {
     var list = normalizeAreaList(areas);
-    for (var i = 0; i < list.length; i++) {
-      var area = list[i];
+    if (!list.length) return;
+    ctx.beginPath();
+    appendAreasStrokePath(ctx, list, gs, offX, offY);
+    ctx.stroke();
+  }
+
+  function appendAreasPath(ctx, areas, gs, offX, offY) {
+    for (var i = 0; i < areas.length; i++) {
+      var area = areas[i];
       if (Array.isArray(area)) {
-        ctx.beginPath();
         ctx.moveTo(area[0].x * gs + offX, area[0].y * gs + offY);
         for (var j = 1; j < area.length; j++) {
           ctx.lineTo(area[j].x * gs + offX, area[j].y * gs + offY);
         }
         ctx.closePath();
-        ctx.stroke();
       } else {
-        ctx.strokeRect(area.x * gs + offX + 1, area.y * gs + offY + 1, area.width * gs - 2, area.height * gs - 2);
+        ctx.rect(area.x * gs + offX, area.y * gs + offY, area.width * gs, area.height * gs);
+      }
+    }
+  }
+
+  function appendAreasStrokePath(ctx, areas, gs, offX, offY) {
+    for (var i = 0; i < areas.length; i++) {
+      var area = areas[i];
+      if (Array.isArray(area)) {
+        ctx.moveTo(area[0].x * gs + offX, area[0].y * gs + offY);
+        for (var j = 1; j < area.length; j++) {
+          ctx.lineTo(area[j].x * gs + offX, area[j].y * gs + offY);
+        }
+        ctx.closePath();
+      } else {
+        ctx.rect(area.x * gs + offX + 1, area.y * gs + offY + 1, area.width * gs - 2, area.height * gs - 2);
       }
     }
   }
