@@ -1154,7 +1154,7 @@
             if (this.instances[ui].id === this.draggedToken.instanceId) { upInst = this.instances[ui]; break; }
           }
           if (upInst && upInst.isPC) {
-            this.commitFogDragPreview?.();
+            this.clearFogDragPreview?.();
             this.invalidateFog();
           } else {
             this.clearFogDragPreview?.();
