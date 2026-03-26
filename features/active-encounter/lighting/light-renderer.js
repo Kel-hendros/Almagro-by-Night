@@ -7,7 +7,7 @@
   var SWITCH_PROXIMITY_METERS = 4.5;
   var SWITCH_PROXIMITY = SWITCH_PROXIMITY_METERS / 1.5; // convert meters to coordinate units
   var TOKEN_PROXIMITY_REVEAL_DISTANCE = 1;
-  var WALL_MARKER_VISIBILITY_OFFSET = 0.16;
+  var WALL_MARKER_VISIBILITY_OFFSET = 0.32;
 
   // Interactive marker constants
   var INTERACTIVE_BORDER_COLOR = "rgba(100, 200, 255, 0.85)";
@@ -86,7 +86,7 @@
     ctx.stroke();
 
     if (img && img.complete && img.naturalWidth > 0) {
-      var size = r * 1.45;
+      var size = r * 1.8;
       ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
     }
 
@@ -611,21 +611,34 @@
 
     proto.isWallMarkerVisibleToViewer = function (wall) {
       if (!wall) return false;
+      var fog = this._fog;
+      if (!fog) return true;
+      var fogEnabled = !!(fog.config && fog.config.enabled);
+      var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
+      if (!isPlayerView) return true;
+
       var mx = (wall.x1 + wall.x2) / 2;
       var my = (wall.y1 + wall.y2) / 2;
       var dx = (wall.x2 || 0) - (wall.x1 || 0);
       var dy = (wall.y2 || 0) - (wall.y1 || 0);
       var len = Math.sqrt(dx * dx + dy * dy);
       if (len < 1e-6) {
-        return this.isMarkerVisibleToViewer(mx, my);
+        if (!fogEnabled) return true;
+        return typeof this.isPointVisibleToFogViewer === "function"
+          ? this.isPointVisibleToFogViewer(mx, my)
+          : this.isPointInVisibilityPolygons(mx, my);
       }
 
       var nx = (-dy / len) * WALL_MARKER_VISIBILITY_OFFSET;
       var ny = (dx / len) * WALL_MARKER_VISIBILITY_OFFSET;
+      if (!fogEnabled) return true;
+      var isVisible = typeof this.isPointVisibleToFogViewer === "function"
+        ? this.isPointVisibleToFogViewer.bind(this)
+        : this.isPointInVisibilityPolygons.bind(this);
       return (
-        this.isMarkerVisibleToViewer(mx, my) ||
-        this.isMarkerVisibleToViewer(mx + nx, my + ny) ||
-        this.isMarkerVisibleToViewer(mx - nx, my - ny)
+        isVisible(mx, my) ||
+        isVisible(mx + nx, my + ny) ||
+        isVisible(mx - nx, my - ny)
       );
     };
 
