@@ -79,7 +79,6 @@
       object_type: row.object_type || "equipo",
       location: row.location || "",
       tags: Array.isArray(row.tags) ? row.tags : [],
-      is_archived: Boolean(row.is_archived),
       is_favorite: Boolean(row.is_favorite),
       created_at: row.created_at || new Date().toISOString(),
       updated_at: row.updated_at || row.created_at || new Date().toISOString(),
@@ -162,7 +161,6 @@
   function renderCard(row) {
     const plain = toPlainText(row.description || "");
     const preview = plain.length > 140 ? `${plain.slice(0, 140)}…` : plain;
-    const archivedLabel = row.is_archived ? '<span class="da-inline-badge">Archivado</span>' : "";
     const locationBadge = row.location
       ? `<span class="objeto-location-badge">${escapeHtml(row.location)}</span>`
       : "";
@@ -179,7 +177,6 @@
             <button type="button" class="objeto-fav-btn${favClass}" data-fav-id="${escapeHtml(row.id)}" title="${row.is_favorite ? "Quitar de favoritos" : "Marcar como favorito"}" aria-label="${row.is_favorite ? "Quitar de favoritos" : "Marcar como favorito"}">
               <i data-lucide="${row.is_favorite ? "star" : "star"}" class="objeto-fav-icon"></i>
             </button>
-            ${archivedLabel}
           </div>
         </div>
         <p class="abn-note-card-meta">

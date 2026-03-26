@@ -88,6 +88,16 @@ All previously flagged inline styles in resource-manager.js and resource-manager
 - `style="display:none"` on the file input in HTML — ACCEPTABLE EXCEPTION (documented)
 - Hidden `<img>` elements use `.hidden` class correctly (not inline style)
 
+## Settings Feature (fragments/settings.html, css/theme-tuner.css, features/shared/theme-tuner.js)
+- CSS Ownership: inline `<style>` block inside `fragments/settings.html` (no separate CSS file)
+- Namespace prefix: `settings-` for all component classes
+- UNRESOLVED violations as of Mar 2026:
+  - `settings.html` line 142: `.settings-name-msg.error { color: var(--theme-accent) }` — WRONG TOKEN. Error states must use `var(--color-danger)` not `--theme-accent` (accent varies by theme)
+  - `settings.html` lines 251–252: `editBtn.style.display` and `nameEl.style.display` — inline style show/hide. Fix: `classList.toggle("hidden", editing)`
+- `theme-tuner.css`: all hardcoded values are INTENTIONAL — the panel is a developer overlay that must remain readable when app theme is broken. Do NOT flag.
+- `theme-tuner.js` drag positioning (`el.style.left/top/right/bottom`) — ACCEPTABLE EXCEPTION (runtime mouse coords)
+- `theme-tuner.js` `resolveToHex` helper (`tmp.style.color`) — ACCEPTABLE EXCEPTION (programmatic color resolution)
+
 ## Active Session Feature (css/active-session.css, features/active-session/, fragments/active-session.html)
 - CSS Ownership: `css/active-session.css`, loaded via `<link>` inside `fragments/active-session.html`
 - Namespace prefix: `as-` for all component classes

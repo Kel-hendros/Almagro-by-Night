@@ -190,7 +190,7 @@ button,
 
 .sidebar .nav li:not(.nav-quick-actions) > a {
     margin: 0;
-    padding: 0 4px;
+    padding: 0 8px;
     display: flex;
     flex-direction: row;
     justify-content: flex-start;
@@ -200,9 +200,10 @@ button,
     color: inherit;
     font-size: 1rem;
     line-height: 1;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, color 0.2s;
     gap: 8px;
     min-height: 40px;
+    border-radius: 8px;
 }
 
 .sidebar .nav li:not(.nav-quick-actions) > a .lucide {
@@ -234,9 +235,16 @@ button,
     color: var(--color-accent);
 }
 
-/* Override link hover to defer styling to list item */
+.sidebar .nav li.active:not(.nav-quick-actions) > a {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.sidebar .nav li:not(.nav-quick-actions):hover > a {
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+/* Override link hover to defer color styling to list item */
 .sidebar .nav li:not(.nav-quick-actions) > a:hover {
-    background-color: transparent !important;
     color: inherit !important;
 }
 
@@ -720,9 +728,11 @@ button.gameButton.secondary:hover {
 .sidebar.sidebar-slim-mode .nav li:not(.nav-quick-actions) > a {
     padding: 0;
     min-height: 40px;
+    min-width: 40px;
     justify-content: center;
     gap: 0;
     font-size: 0;
+    border-radius: 8px;
 }
 
 .sidebar.sidebar-slim-mode .nav li:not(.nav-quick-actions) > a > :not(.lucide) {

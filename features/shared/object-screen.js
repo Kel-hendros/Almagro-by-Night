@@ -141,7 +141,6 @@
           object_type: payload.objectType,
           location: payload.location,
           tags: payload.tags,
-          is_archived: payload.archived,
           updated_at: new Date().toISOString(),
         })
         .eq("id", payload.objectId)
@@ -159,7 +158,6 @@
           object_type: payload.objectType,
           location: payload.location,
           tags: payload.tags,
-          is_archived: false,
         })
         .select("id")
         .maybeSingle();
@@ -200,29 +198,6 @@
 
           object.favorite = nextFav;
           screenApi?.updateAction?.("favorite", favActionPatch(object.favorite));
-        },
-      });
-    }
-
-    const archiveActionPatch = (archived) => ({
-      variant: archived ? "primary" : "ghost",
-      icon: archived ? "archive-restore" : "archive",
-      title: archived ? "Desarchivar" : "Archivar",
-      ariaLabel: archived ? "Desarchivar" : "Archivar",
-    });
-
-    if (typeof options.onToggleArchive === "function") {
-      actions.push({
-        id: "archive",
-        kind: "icon",
-        ...archiveActionPatch(Boolean(object.archived)),
-        onClick: async (screenApi) => {
-          const nextArchived = !Boolean(object.archived);
-          const ok = await options.onToggleArchive(object, nextArchived);
-          if (ok === false) return;
-
-          object.archived = nextArchived;
-          screenApi?.updateAction?.("archive", archiveActionPatch(object.archived));
         },
       });
     }
@@ -346,8 +321,6 @@
       const location = document.getElementById("shared-object-form-location")?.value.trim() || "";
       const tagsRaw = document.getElementById("shared-object-form-tags")?.value || "";
       const description = document.getElementById("shared-object-form-description")?.value.trim() || "";
-      const archived = Boolean(object?.archived);
-
       if (!nextName) {
         global.alert("El nombre es obligatorio.");
         return;
@@ -362,7 +335,6 @@
         tags: hasSharedTagEditor
           ? parseTags(formState.tags, { lowercase: tagsLowercase })
           : parseTags(tagsRaw, { lowercase: tagsLowercase }),
-        archived,
       };
 
       saving = true;
@@ -470,7 +442,6 @@
       objectType: objData.object_type || "equipo",
       location: objData.location || "",
       tags: Array.isArray(objData.tags) ? objData.tags : [],
-      archived: Boolean(objData.is_archived),
       favorite: Boolean(objData.is_favorite),
       createdAt: objData.created_at,
       updatedAt: objData.updated_at,
@@ -524,23 +495,6 @@
             }
           },
         });
-      },
-      onToggleArchive: async (row, nextArchived) => {
-        const { error: archErr } = await supabase
-          .from("character_objects")
-          .update({
-            is_archived: nextArchived,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", object.id);
-
-        if (archErr) {
-          global.alert("Error al archivar: " + archErr.message);
-          return false;
-        }
-        object.archived = nextArchived;
-        if (typeof onSaved === "function") onSaved();
-        return true;
       },
       onDelete: async () => {
         const ok = await (root.modal?.confirm?.(

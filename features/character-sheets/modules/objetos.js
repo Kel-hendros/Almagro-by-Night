@@ -117,9 +117,8 @@
   }
 
   function getFilteredRows() {
-    const active = state.rows.filter((row) => !row.is_archived);
-    if (state.activeTypeFilter === "all") return active;
-    return active.filter((row) => row.object_type === state.activeTypeFilter);
+    if (state.activeTypeFilter === "all") return state.rows;
+    return state.rows.filter((row) => row.object_type === state.activeTypeFilter);
   }
 
   function renderObjects() {
