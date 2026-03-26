@@ -227,13 +227,17 @@
 
   function getExploredForViewer(config, fog) {
     var exploredBy = config.exploredBy || {};
+    var dragPreview = fog && fog.dragPreview ? fog.dragPreview : null;
     // When impersonating a specific PC, show only that PC's explored area
     var impersonate = fog.impersonateInstanceId;
     if (impersonate && impersonate !== "all") {
-      return normalizeAreaList(exploredBy[impersonate]);
+      var impersonatedAreas = normalizeAreaList(exploredBy[impersonate]);
+      return mergePreviewAreas(impersonatedAreas, dragPreview, [impersonate]);
     }
     var viewerIds = fog.viewerInstanceIds;
-    if (!viewerIds) return normalizeAreaList(config.exploredAreas);
+    if (!viewerIds) {
+      return mergePreviewAreas(normalizeAreaList(config.exploredAreas), dragPreview, null);
+    }
     var merged = [];
     for (var i = 0; i < viewerIds.length; i++) {
       var instExplored = normalizeAreaList(exploredBy[viewerIds[i]]);
@@ -241,6 +245,18 @@
       for (var j = 0; j < instExplored.length; j++) {
         merged.push(cloneArea(instExplored[j]));
       }
+    }
+    return mergePreviewAreas(merged, dragPreview, viewerIds);
+  }
+
+  function mergePreviewAreas(baseAreas, dragPreview, viewerIds) {
+    var merged = normalizeAreaList(baseAreas);
+    if (!dragPreview || !Array.isArray(dragPreview.pendingExploredAreas)) return merged;
+    if (Array.isArray(viewerIds) && viewerIds.length > 0) {
+      if (viewerIds.indexOf(dragPreview.instanceId) === -1) return merged;
+    }
+    for (var i = 0; i < dragPreview.pendingExploredAreas.length; i++) {
+      pushArea(merged, dragPreview.pendingExploredAreas[i]);
     }
     return merged;
   }
