@@ -5,6 +5,7 @@
 
   var BLUR_RADIUS = 6;
   var BLUR_PAD = 2;
+  var EXPLORED_MEMORY_FILL = "rgba(36,36,36,0.82)";
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -290,7 +291,15 @@
       if (exploredAreas.length > 0) {
         fCtx.save();
         fCtx.globalCompositeOperation = "destination-out";
-        fillAreas(fCtx, exploredAreas, gs, offX, offY, "rgba(255,255,255,0.55)");
+        fillAreas(fCtx, exploredAreas, gs, offX, offY, "rgba(255,255,255,1)");
+        fCtx.restore();
+
+        // Explored memory stays visible as a dark, neutral-tinted layer so it
+        // reads as recollection rather than live sight, and never looks more
+        // illuminated than the currently visible cone.
+        fCtx.save();
+        fCtx.globalCompositeOperation = "source-over";
+        fillAreas(fCtx, exploredAreas, gs, offX, offY, EXPLORED_MEMORY_FILL);
         fCtx.restore();
       }
 
