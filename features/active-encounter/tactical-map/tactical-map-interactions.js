@@ -962,28 +962,14 @@
               prevX, prevY, nextX, nextY, this.walls, curToken.size || 1,
             );
             if (collision.blocked) {
-              var stopX = collision.lastX;
-              var stopY = collision.lastY;
-              curToken.x = stopX;
-              curToken.y = stopY;
-              if (liveToken) this.draggedToken = liveToken;
-              this.isDraggingToken = false;
-              this._lastDragFogUpdate = 0;
-              if (typeof this.invalidateFog === "function") this.invalidateFog();
-              if (this.onTokenMove) {
-                var oldX = this.dragStartTokenPos ? this.dragStartTokenPos.x : null;
-                var oldY = this.dragStartTokenPos ? this.dragStartTokenPos.y : null;
-                if (typeof this.onTokenDragEnd === "function") {
-                  this.onTokenDragEnd(curToken.id, curToken.x, curToken.y);
-                }
-                if (typeof this.markLocalTokenMove === "function") {
-                  this.markLocalTokenMove(curToken.id, curToken.x, curToken.y);
-                }
-                this.onTokenMove(curToken.id, curToken.x, curToken.y, oldX, oldY);
-              }
-              this.draggedToken = null;
-              this.draw();
-              return;
+              nextX = collision.lastX;
+              nextY = collision.lastY;
+              // Keep drag alive after impact so the player can slide or pull back
+              // without having to release and grab the token again.
+              this.dragTokenOffset = {
+                x: worldX - nextX * this.gridSize,
+                y: worldY - nextY * this.gridSize,
+              };
             }
           }
         }

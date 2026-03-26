@@ -9,11 +9,13 @@
     window: "#7bb3d4",
   };
   var WALL_WIDTHS = {
-    wall:   4,
-    door:   6,
-    window: 3,
+    wall:   6,
+    door:   7,
+    window: 4,
   };
   var ERASE_HOVER_COLOR = "#e53935";
+  var WALL_OVERLAY_SAMPLE_STEP = 0.18;
+  var WALL_OVERLAY_PADDING_CELLS = 0.18;
 
   function apply(TacticalMap) {
     var proto = TacticalMap.prototype;
@@ -21,7 +23,8 @@
     /**
      * Draw all wall segments on the canvas.
      */
-    proto.drawWalls = function drawWalls() {
+    proto.drawWalls = function drawWalls(options) {
+      options = options || {};
       var walls = this.walls;
       if (!walls || !walls.length) return;
       var ctx = this.ctx;
@@ -31,115 +34,48 @@
 
       for (var i = 0; i < walls.length; i++) {
         var w = walls[i];
-        var px1 = w.x1 * gs;
-        var py1 = w.y1 * gs;
-        var px2 = w.x2 * gs;
-        var py2 = w.y2 * gs;
-        var midX = (px1 + px2) / 2;
-        var midY = (py1 + py2) / 2;
-        var isEraseHover = eraseHoverId === w.id;
-        var baseColor = WALL_COLORS[w.type] || WALL_COLORS.wall;
-        var lineWidth = (WALL_WIDTHS[w.type] || 4) / Math.max(scale, 0.5);
+        drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, eraseHoverId, options);
+      }
+    };
 
-        if (isEraseHover) {
-          baseColor = ERASE_HOVER_COLOR;
-          lineWidth += 1 / Math.max(scale, 0.5);
+    proto.drawVisibleWallsOverlay = function drawVisibleWallsOverlay() {
+      var fog = this._fog;
+      var walls = this.walls;
+      if (!fog || !walls || !walls.length) return;
+      if ((!fog.polygons || !fog.polygons.length) && !(fog.visibleCells && fog.visibleCells.size)) return;
+
+      var ctx = this.ctx;
+      var gs = this.gridSize;
+      var scale = this.scale;
+      var eraseHoverId = this._wallDrawerState?.eraseHoverWallId || null;
+
+      for (var i = 0; i < walls.length; i++) {
+        var wall = walls[i];
+        var intervals = getVisibleWallIntervals(wall, fog, WALL_OVERLAY_PADDING_CELLS);
+        if (!intervals.length) continue;
+        for (var j = 0; j < intervals.length; j++) {
+          var interval = intervals[j];
+          var startX = lerp(wall.x1, wall.x2, interval.start) * gs;
+          var startY = lerp(wall.y1, wall.y2, interval.start) * gs;
+          var endX = lerp(wall.x1, wall.x2, interval.end) * gs;
+          var endY = lerp(wall.y1, wall.y2, interval.end) * gs;
+          drawWallSegment(ctx, wall, startX, startY, endX, endY, gs, scale, eraseHoverId, {
+            overlayMode: true,
+            suppressLockedIndicator: true,
+          });
         }
 
-        ctx.save();
-
-        // Shadow for depth
-        if (!isEraseHover) {
-          ctx.shadowColor = "rgba(0,0,0,0.4)";
-          ctx.shadowBlur = 2 / Math.max(scale, 0.5);
-          ctx.shadowOffsetY = 1 / Math.max(scale, 0.5);
-        } else {
-          ctx.shadowColor = "rgba(229,57,53,0.6)";
-          ctx.shadowBlur = 8 / Math.max(scale, 0.5);
-        }
-
-        if (w.type === "door" && w.doorOpen) {
-          // Open door: dashed line, semi-transparent
-          ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : "rgba(197,160,89,0.5)";
-          ctx.lineWidth = (lineWidth * 0.6);
-          ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
-          ctx.beginPath();
-          ctx.moveTo(px1, py1);
-          ctx.lineTo(px2, py2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          // Draw open door arc indicator
-          drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, true, isEraseHover);
-        } else if (w.type === "door") {
-          // Closed door: solid line with gap + arc
-          var dx = px2 - px1;
-          var dy = py2 - py1;
-          var len = Math.sqrt(dx * dx + dy * dy);
-          var gapHalf = Math.min(len * 0.15, 6 / Math.max(scale, 0.5));
-          if (len > 0) {
-            var nx = dx / len;
-            var ny = dy / len;
-            // First segment (before gap)
-            ctx.strokeStyle = baseColor;
-            ctx.lineWidth = lineWidth;
-            ctx.lineCap = "round";
-            ctx.beginPath();
-            ctx.moveTo(px1, py1);
-            ctx.lineTo(midX - nx * gapHalf, midY - ny * gapHalf);
-            ctx.stroke();
-            // Second segment (after gap)
-            ctx.beginPath();
-            ctx.moveTo(midX + nx * gapHalf, midY + ny * gapHalf);
-            ctx.lineTo(px2, py2);
-            ctx.stroke();
+        if (wall.locked && (wall.type === "door" || wall.type === "window")) {
+          var midX = (wall.x1 + wall.x2) * 0.5;
+          var midY = (wall.y1 + wall.y2) * 0.5;
+          if (isWallPointVisible(midX, midY, fog, WALL_OVERLAY_PADDING_CELLS)) {
+            ctx.save();
+            ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("\uD83D\uDD12", midX * gs, midY * gs);
+            ctx.restore();
           }
-          // Door arc indicator
-          drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, false, isEraseHover);
-        } else if (w.type === "window" && w.doorOpen) {
-          // Window open (curtain raised): dashed line, semi-transparent
-          ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : "rgba(123,179,212,0.45)";
-          ctx.lineWidth = lineWidth * 0.6;
-          ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(px1, py1);
-          ctx.lineTo(px2, py2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          // Tick marks (faded)
-          drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : "rgba(123,179,212,0.4)");
-        } else if (w.type === "window") {
-          // Window closed: solid line with perpendicular tick marks
-          ctx.strokeStyle = baseColor;
-          ctx.lineWidth = lineWidth;
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(px1, py1);
-          ctx.lineTo(px2, py2);
-          ctx.stroke();
-          // Tick marks
-          drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : baseColor);
-        } else {
-          // Wall: solid line
-          ctx.strokeStyle = baseColor;
-          ctx.lineWidth = lineWidth;
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(px1, py1);
-          ctx.lineTo(px2, py2);
-          ctx.stroke();
-        }
-
-        ctx.restore();
-
-        // Lock indicator for locked doors/windows (narrator only)
-        if (w.locked && (w.type === "door" || w.type === "window")) {
-          ctx.save();
-          ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("\uD83D\uDD12", midX, midY);
-          ctx.restore();
         }
       }
     };
@@ -302,6 +238,189 @@
   }
 
   // ── Helpers ──
+
+  function drawWallSegment(ctx, wall, px1, py1, px2, py2, gs, scale, eraseHoverId, options) {
+    options = options || {};
+    var midX = (px1 + px2) / 2;
+    var midY = (py1 + py2) / 2;
+    var isEraseHover = eraseHoverId === wall.id;
+    var baseColor = WALL_COLORS[wall.type] || WALL_COLORS.wall;
+    var lineWidth = (WALL_WIDTHS[wall.type] || WALL_WIDTHS.wall) / Math.max(scale, 0.5);
+
+    if (options.overlayMode) {
+      lineWidth += 1.25 / Math.max(scale, 0.5);
+    }
+
+    if (isEraseHover) {
+      baseColor = ERASE_HOVER_COLOR;
+      lineWidth += 1 / Math.max(scale, 0.5);
+    }
+
+    ctx.save();
+
+    if (!isEraseHover) {
+      ctx.shadowColor = options.overlayMode ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.4)";
+      ctx.shadowBlur = (options.overlayMode ? 3.5 : 2) / Math.max(scale, 0.5);
+      ctx.shadowOffsetY = 1 / Math.max(scale, 0.5);
+    } else {
+      ctx.shadowColor = "rgba(229,57,53,0.6)";
+      ctx.shadowBlur = 8 / Math.max(scale, 0.5);
+    }
+
+    if (wall.type === "door" && wall.doorOpen) {
+      ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : "rgba(197,160,89,0.5)";
+      ctx.lineWidth = (lineWidth * 0.6);
+      ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, true, isEraseHover);
+    } else if (wall.type === "door") {
+      var dx = px2 - px1;
+      var dy = py2 - py1;
+      var len = Math.sqrt(dx * dx + dy * dy);
+      var gapHalf = Math.min(len * 0.15, 6 / Math.max(scale, 0.5));
+      if (len > 0) {
+        var nx = dx / len;
+        var ny = dy / len;
+        ctx.strokeStyle = baseColor;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(px1, py1);
+        ctx.lineTo(midX - nx * gapHalf, midY - ny * gapHalf);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(midX + nx * gapHalf, midY + ny * gapHalf);
+        ctx.lineTo(px2, py2);
+        ctx.stroke();
+      }
+      drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, false, isEraseHover);
+    } else if (wall.type === "window" && wall.doorOpen) {
+      ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : "rgba(123,179,212,0.45)";
+      ctx.lineWidth = lineWidth * 0.6;
+      ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : "rgba(123,179,212,0.4)");
+    } else if (wall.type === "window") {
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
+      drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : baseColor);
+    } else {
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    if (!options.suppressLockedIndicator && wall.locked && (wall.type === "door" || wall.type === "window")) {
+      ctx.save();
+      ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("\uD83D\uDD12", midX, midY);
+      ctx.restore();
+    }
+  }
+
+  function getVisibleWallIntervals(wall, fog, paddingCells) {
+    var dx = wall.x2 - wall.x1;
+    var dy = wall.y2 - wall.y1;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return [];
+
+    var steps = Math.max(1, Math.ceil(len / WALL_OVERLAY_SAMPLE_STEP));
+    var intervals = [];
+    var startT = null;
+
+    for (var i = 0; i < steps; i++) {
+      var t0 = i / steps;
+      var t1 = (i + 1) / steps;
+      var tm = (t0 + t1) * 0.5;
+      var px = lerp(wall.x1, wall.x2, tm);
+      var py = lerp(wall.y1, wall.y2, tm);
+      var visible = isWallPointVisible(px, py, fog, paddingCells);
+
+      if (visible && startT == null) startT = t0;
+      if (!visible && startT != null) {
+        intervals.push({ start: startT, end: t0 });
+        startT = null;
+      }
+    }
+
+    if (startT != null) {
+      intervals.push({ start: startT, end: 1 });
+    }
+
+    return intervals;
+  }
+
+  function isWallPointVisible(px, py, fog, paddingCells) {
+    var polygons = fog && fog.polygons;
+    if (polygons && polygons.length && global.FogVisibility && typeof global.FogVisibility.pointInPolygon === "function") {
+      for (var i = 0; i < polygons.length; i++) {
+        var poly = polygons[i];
+        if (!poly || poly.length < 3) continue;
+        if (global.FogVisibility.pointInPolygon(px, py, poly)) return true;
+        if (paddingCells > 0 && distancePointToPolygonEdges(px, py, poly) <= paddingCells) return true;
+      }
+      return false;
+    }
+
+    var visibleCells = fog && fog.visibleCells;
+    if (!visibleCells || !visibleCells.size) return false;
+    return visibleCells.has(Math.floor(px) + "," + Math.floor(py));
+  }
+
+  function distancePointToPolygonEdges(px, py, polygon) {
+    var minDist = Infinity;
+    for (var i = 0; i < polygon.length; i++) {
+      var a = polygon[i];
+      var b = polygon[(i + 1) % polygon.length];
+      var dist = distancePointToSegment(px, py, a.x, a.y, b.x, b.y);
+      if (dist < minDist) minDist = dist;
+    }
+    return minDist;
+  }
+
+  function distancePointToSegment(px, py, ax, ay, bx, by) {
+    var dx = bx - ax;
+    var dy = by - ay;
+    var lenSq = dx * dx + dy * dy;
+    if (lenSq <= 0) {
+      var ddx = px - ax;
+      var ddy = py - ay;
+      return Math.sqrt(ddx * ddx + ddy * ddy);
+    }
+    var t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    var cx = ax + dx * t;
+    var cy = ay + dy * t;
+    var ddx = px - cx;
+    var ddy = py - cy;
+    return Math.sqrt(ddx * ddx + ddy * ddy);
+  }
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
 
   function drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, isOpen, isEraseHover) {
     var dx = px2 - px1;

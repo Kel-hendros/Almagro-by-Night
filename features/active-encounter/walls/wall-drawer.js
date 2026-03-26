@@ -836,6 +836,56 @@
     return { t: t, x: ax1 + dax * t, y: ay1 + day * t };
   }
 
+  function segmentIntersectsRect(ax1, ay1, ax2, ay2, left, top, right, bottom) {
+    var dx = ax2 - ax1;
+    var dy = ay2 - ay1;
+    var t0 = 0;
+    var t1 = 1;
+
+    function clip(p, q) {
+      if (Math.abs(p) < 1e-10) return q >= 0;
+      var r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+      return true;
+    }
+
+    if (!clip(-dx, ax1 - left)) return false;
+    if (!clip(dx, right - ax1)) return false;
+    if (!clip(-dy, ay1 - top)) return false;
+    if (!clip(dy, bottom - ay1)) return false;
+
+    return t0 <= t1;
+  }
+
+  function tokenOverlapsBlockingWall(x, y, walls, tokenSize) {
+    if (!walls || !walls.length) return false;
+
+    var size = tokenSize || 1;
+    var epsilon = Math.min(1e-4, size * 0.25);
+    var left = x + epsilon;
+    var top = y + epsilon;
+    var right = x + size - epsilon;
+    var bottom = y + size - epsilon;
+
+    if (left >= right || top >= bottom) return false;
+
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      if (!blocksMovement(w)) continue;
+      if (segmentIntersectsRect(w.x1, w.y1, w.x2, w.y2, left, top, right, bottom)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /**
    * Check if a token movement from (oldX, oldY) to (newX, newY) crosses any
    * movement-blocking wall. Token coords are cell top-left.
@@ -849,64 +899,38 @@
   function checkMovementCollision(oldX, oldY, newX, newY, walls, tokenSize) {
     if (!walls || !walls.length) return { blocked: false };
     var size = tokenSize || 1;
-    var half = size * 0.5;
-
     var mdx = newX - oldX, mdy = newY - oldY;
     if (mdx === 0 && mdy === 0) return { blocked: false };
 
-    // Step 1: Check CENTER against blocking walls.
-    // If center can pass → token passes (even through tight openings like 1-cell doors).
-    // Save the closest center intersection t for fallback in step 2.
-    var cx1 = oldX + half, cy1 = oldY + half;
-    var cx2 = newX + half, cy2 = newY + half;
-    var centerClosestT = Infinity;
-    for (var i = 0; i < walls.length; i++) {
-      var w = walls[i];
-      if (!blocksMovement(w)) continue;
-      var cHit = segmentIntersect(cx1, cy1, cx2, cy2, w.x1, w.y1, w.x2, w.y2);
-      if (cHit && cHit.t < centerClosestT) {
-        centerClosestT = cHit.t;
-      }
-    }
-    if (centerClosestT === Infinity) return { blocked: false };
-
-    // Step 2: Center IS blocked by a solid wall. Use all 4 corners to find
-    // the exact stop position so the FULL token stays on this side.
-    var corners = [
-      [oldX,        oldY,        newX,        newY],
-      [oldX + size, oldY,        newX + size, newY],
-      [oldX,        oldY + size, newX,        newY + size],
-      [oldX + size, oldY + size, newX + size, newY + size],
-    ];
-
-    var closestT = Infinity;
-    for (var c = 0; c < 4; c++) {
-      var co = corners[c];
-      for (var i = 0; i < walls.length; i++) {
-        var w = walls[i];
-        if (!blocksMovement(w)) continue;
-        var hit = segmentIntersect(co[0], co[1], co[2], co[3], w.x1, w.y1, w.x2, w.y2);
-        if (hit && hit.t < closestT) {
-          closestT = hit.t;
-        }
-      }
+    if (!tokenOverlapsBlockingWall(newX, newY, walls, size)) {
+      return { blocked: false };
     }
 
-    // Use corners if found, otherwise fall back to center intersection.
-    // Fallback handles grid-snapped mode where corners land exactly on a wall
-    // (t=0 or t=1 excluded by segmentIntersect epsilon).
-    var effectiveT = closestT < Infinity ? closestT : centerClosestT;
+    if (tokenOverlapsBlockingWall(oldX, oldY, walls, size)) {
+      return {
+        blocked: true,
+        lastX: oldX,
+        lastY: oldY,
+      };
+    }
 
-    // Back off a fixed distance (0.06 cells ≈ 3px) before the wall,
-    // regardless of movement speed, so the token never touches the wall.
-    var moveDist = Math.sqrt(mdx * mdx + mdy * mdy);
-    var backOffT = moveDist > 0 ? Math.min(0.06 / moveDist, effectiveT) : 0;
-    var stopT = Math.max(0, effectiveT - backOffT);
+    var low = 0;
+    var high = 1;
+    for (var iter = 0; iter < 18; iter++) {
+      var mid = (low + high) * 0.5;
+      var testX = oldX + mdx * mid;
+      var testY = oldY + mdy * mid;
+      if (tokenOverlapsBlockingWall(testX, testY, walls, size)) {
+        high = mid;
+      } else {
+        low = mid;
+      }
+    }
 
     return {
       blocked: true,
-      lastX: oldX + mdx * stopT,
-      lastY: oldY + mdy * stopT,
+      lastX: oldX + mdx * low,
+      lastY: oldY + mdy * low,
     };
   }
 
