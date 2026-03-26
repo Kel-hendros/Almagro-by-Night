@@ -716,8 +716,8 @@
       if (!this._tokenFogTargetCache) this._tokenFogTargetCache = {};
       if (this._tokenFogCacheGeneration == null) this._tokenFogCacheGeneration = -1;
       var fogGen = fog ? (fog._cacheGen || 0) : 0;
-      var cacheStale = fogGen !== this._tokenFogCacheGeneration;
-      if (cacheStale) this._tokenFogCacheGeneration = fogGen;
+      var fogCacheStale = fogGen !== this._tokenFogCacheGeneration;
+      if (fogCacheStale) this._tokenFogCacheGeneration = fogGen;
 
       // Opacity tracking for smooth fade in/out
       if (!this._tokenFogOpacity) this._tokenFogOpacity = {};
@@ -727,6 +727,10 @@
       var isNarratorView = fog && fog.isNarrator && !fog.impersonateInstanceId;
       var hasLighting = (this.lights && this.lights.length > 0) ||
         (this._ambientLight && this._ambientLight.intensity < 1);
+      if (this._tokenLightingCacheGeneration == null) this._tokenLightingCacheGeneration = -1;
+      var lightingGen = this._lighting ? (this._lighting.cacheGen || 0) : 0;
+      var lightingCacheStale = lightingGen !== this._tokenLightingCacheGeneration;
+      if (lightingCacheStale) this._tokenLightingCacheGeneration = lightingGen;
 
       // Viewer's own tokens are exempt from darkness hiding
       var darknessViewerSet = null;
@@ -763,9 +767,9 @@
         }
       }
 
-      // Recompute token luminosity cache when fog/lighting changes
+      // Recompute token luminosity cache only when lighting changes.
       if (!this._tokenLuminosity) this._tokenLuminosity = new Map();
-      if (hasLighting && cacheStale && typeof this.computeLuminosityAt === 'function') {
+      if (hasLighting && lightingCacheStale && typeof this.computeLuminosityAt === 'function') {
         this._tokenLuminosity.clear();
         for (var ti = 0; ti < this.tokens.length; ti++) {
           var tk = this.tokens[ti];
@@ -793,7 +797,7 @@
           if (!isViewerToken) {
             // Use cached result unless fog changed or token moved
             var cached = this._tokenFogTargetCache[token.id];
-            if (!cacheStale && cached && cached.x === effX && cached.y === effY) {
+            if (!fogCacheStale && cached && cached.x === effX && cached.y === effY) {
               fogTarget = cached.target;
             } else {
               var tSize = token.size || 1;
@@ -808,7 +812,7 @@
           }
         }
         // Luminosity-based visibility (independent of fog of war)
-        // Normal vision: only see tokens with >= 30% luminosity.
+        // Normal vision: only see tokens with >= 25% luminosity.
         // Proximity override: tokens within 1.5m (1 unit) are always sensed.
         // Viewer's own tokens: always visible.
         var darknessDim = 1;
@@ -824,7 +828,7 @@
             var lum = (lumEntry && lumEntry.cx === tCX2 && lumEntry.cy === tCY2)
               ? lumEntry.lum
               : (typeof this.computeLuminosityAt === 'function' ? this.computeLuminosityAt(tCX2, tCY2) : 1);
-            if (lum < 0.30) {
+            if (lum < 0.25) {
               var inProximity = false;
               for (var vpi = 0; vpi < viewerTokenCenters.length && !inProximity; vpi++) {
                 var vp = viewerTokenCenters[vpi];

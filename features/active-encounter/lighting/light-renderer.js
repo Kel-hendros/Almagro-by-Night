@@ -12,7 +12,7 @@
   var INTERACTIVE_BG_COLOR = "rgba(10, 10, 10, 0.9)";
   var INTERACTIVE_MARKER_RADIUS = 12;
   var MARKER_EMOJIS = { door: "\u{1F6AA}", window: "\u{1FA9F}", light: "\u{1F4A1}", switch: "\u{1F39A}\uFE0F" };
-  var LUMINOSITY_THRESHOLD = 0.30;
+  var LUMINOSITY_THRESHOLD = 0.25;
 
   function drawInteractiveMarker(ctx, x, y, emoji, scale, isSelected) {
     var r = INTERACTIVE_MARKER_RADIUS / scale;
@@ -64,12 +64,15 @@
     var proto = TacticalMap.prototype;
 
     proto.initLighting = function () {
-      this._lighting = { dirty: true };
+      this._lighting = { dirty: true, cacheGen: 0 };
     };
 
     proto.invalidateLighting = function () {
-      if (this._lighting) this._lighting.dirty = true;
+      if (!this._lighting) this._lighting = { dirty: true, cacheGen: 0 };
+      this._lighting.dirty = true;
+      this._lighting.cacheGen = (this._lighting.cacheGen || 0) + 1;
       if (this._fog) this._fog.dirty = true;
+      this._drawDirty = true;
     };
 
     /**
