@@ -695,11 +695,6 @@
 
     proto.drawTokens = function drawTokens(timestamp) {
       const now = typeof timestamp === "number" ? timestamp : performance.now();
-      var isLuminosityVisible = function (luminosity) {
-        var lum = isFinite(luminosity) ? luminosity : 0;
-        lum = Math.min(1, Math.max(0, lum));
-        return lum + 1e-6 >= 0.25;
-      };
 
       // In player/impersonate view with fog enabled, hide enemy tokens outside vision.
       // Viewer tokens (player's own) are ALWAYS visible — fog never hides them.
@@ -817,7 +812,7 @@
           }
         }
         // Luminosity-based visibility (independent of fog of war)
-        // Normal vision: only see tokens with >= 25% luminosity.
+        // Normal vision: only see tokens with >= 30% luminosity.
         // Proximity override: tokens within 1.5m (1 unit) are always sensed.
         // Viewer's own tokens: always visible.
         var darknessDim = 1;
@@ -833,7 +828,7 @@
             var lum = (lumEntry && lumEntry.cx === tCX2 && lumEntry.cy === tCY2)
               ? lumEntry.lum
               : (typeof this.computeLuminosityAt === 'function' ? this.computeLuminosityAt(tCX2, tCY2) : 1);
-            if (!isLuminosityVisible(lum)) {
+            if (lum < 0.30) {
               var inProximity = false;
               for (var vpi = 0; vpi < viewerTokenCenters.length && !inProximity; vpi++) {
                 var vp = viewerTokenCenters[vpi];
