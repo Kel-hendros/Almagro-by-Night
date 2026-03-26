@@ -22,16 +22,34 @@
      * Draw all wall segments on the canvas.
      */
     proto.drawWalls = function drawWalls() {
-      var walls = this.walls;
-      if (!walls || !walls.length) return;
+      drawWallsInternal(this, 1);
+    };
+
+    proto.drawWallsForFogState = function drawWallsForFogState(visibleState) {
+      var state = visibleState || null;
+      if (!state || !state.isPlayerView) {
+        drawWallsInternal(this, 1);
+        return;
+      }
+
       var ctx = this.ctx;
       var gs = this.gridSize;
-      var scale = this.scale;
-      var eraseHoverId = this._wallDrawerState?.eraseHoverWallId || null;
+      var currentAreas = [].concat(state.currentAreas || [], state.revealedAreas || []);
+      var exploredAreas = state.exploredAreas || [];
+      var hiddenAreas = state.hiddenAreas || [];
 
-      for (var i = 0; i < walls.length; i++) {
-        var w = walls[i];
-        drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, eraseHoverId);
+      if (currentAreas.length) {
+        ctx.save();
+        clipToAreas(ctx, currentAreas, hiddenAreas, gs);
+        drawWallsInternal(this, 0.95);
+        ctx.restore();
+      }
+
+      if (exploredAreas.length) {
+        ctx.save();
+        clipToAreas(ctx, exploredAreas, currentAreas.concat(hiddenAreas), gs);
+        drawWallsInternal(this, 0.42);
+        ctx.restore();
       }
     };
 
@@ -287,6 +305,50 @@
       ctx.textBaseline = "middle";
       ctx.fillText("\uD83D\uDD12", midX, midY);
       ctx.restore();
+    }
+  }
+
+  function drawWallsInternal(map, alpha) {
+    var walls = map.walls;
+    if (!walls || !walls.length) return;
+    var ctx = map.ctx;
+    var gs = map.gridSize;
+    var scale = map.scale;
+    var eraseHoverId = map._wallDrawerState?.eraseHoverWallId || null;
+
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, eraseHoverId);
+    }
+    ctx.restore();
+  }
+
+  function clipToAreas(ctx, includeAreas, excludeAreas, gs) {
+    ctx.beginPath();
+    appendAreasPath(ctx, includeAreas, gs);
+    appendAreasPath(ctx, excludeAreas, gs);
+    try {
+      ctx.clip("evenodd");
+    } catch (_err) {
+      ctx.clip();
+    }
+  }
+
+  function appendAreasPath(ctx, areas, gs) {
+    if (!Array.isArray(areas)) return;
+    for (var i = 0; i < areas.length; i++) {
+      var area = areas[i];
+      if (Array.isArray(area) && area.length >= 3) {
+        ctx.moveTo(area[0].x * gs, area[0].y * gs);
+        for (var j = 1; j < area.length; j++) {
+          ctx.lineTo(area[j].x * gs, area[j].y * gs);
+        }
+        ctx.closePath();
+      } else if (area && area.type === "rect") {
+        ctx.rect(area.x * gs, area.y * gs, area.width * gs, area.height * gs);
+      }
     }
   }
 

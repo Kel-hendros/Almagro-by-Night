@@ -1151,6 +1151,15 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawLightingOverlay === "function") {
       this.drawLightingOverlay();
     }
+    if (this._fog && (!this._fog.isNarrator || this._fog.impersonateInstanceId)) {
+      var visibleState =
+        typeof this.getFogVisibleState === "function"
+          ? this.getFogVisibleState()
+          : null;
+      if (typeof this.drawWallsForFogState === "function") {
+        this.drawWallsForFogState(visibleState);
+      }
+    }
     // Narrator (not impersonating): redraw walls and rooms ON TOP of the
     // fog/lighting overlay so they are always fully visible and never dimmed.
     if (this._fog && this._fog.isNarrator && !this._fog.impersonateInstanceId) {
