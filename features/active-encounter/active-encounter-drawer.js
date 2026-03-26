@@ -646,10 +646,13 @@
         fog.exploredBy = {};
         fog.revealedAreas = [];
         fog.hiddenAreas = [];
+        fog.resetVersion = (parseInt(fog.resetVersion, 10) || 0) + 1;
         var map = getMap?.();
         if (map) {
+          map.clearFogDragPreview?.();
           map.setFogConfig?.(fog);
           map.invalidateFog?.();
+          map.invalidateLighting?.();
           map.draw();
         }
         ctx.saveEncounter?.();

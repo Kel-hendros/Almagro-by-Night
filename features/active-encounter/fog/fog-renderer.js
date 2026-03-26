@@ -393,6 +393,7 @@
     var normalized = config || {};
     if (normalized.enabled == null) normalized.enabled = false;
     if (!normalized.mode) normalized.mode = "auto";
+    if (!Number.isFinite(parseInt(normalized.resetVersion, 10))) normalized.resetVersion = 0;
 
     normalized.revealedAreas = normalizeAreaList(normalized.revealedAreas);
     normalized.hiddenAreas = normalizeAreaList(normalized.hiddenAreas);

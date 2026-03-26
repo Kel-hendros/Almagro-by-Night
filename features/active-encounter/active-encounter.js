@@ -479,6 +479,7 @@
         hiddenAreas: [],
         exploredAreas: [],
         exploredBy: {},
+        resetVersion: 0,
       };
     }
     if (typeof state.map.initFog === "function") {

@@ -70,6 +70,14 @@
       var remote = remoteFog && typeof remoteFog === "object" ? cloneJson(remoteFog) : {};
       var local = localFog && typeof localFog === "object" ? localFog : null;
       if (!local) return remote;
+      var remoteResetVersion = parseInt(remote.resetVersion, 10) || 0;
+      var localResetVersion = parseInt(local.resetVersion, 10) || 0;
+      if (remoteResetVersion > localResetVersion) {
+        return remote;
+      }
+      if (localResetVersion > remoteResetVersion) {
+        remote.resetVersion = localResetVersion;
+      }
       remote.exploredAreas = mergeUniqueAreas(remote.exploredAreas, local.exploredAreas);
       remote.exploredBy = mergeExploredBy(remote.exploredBy, local.exploredBy);
       return remote;
