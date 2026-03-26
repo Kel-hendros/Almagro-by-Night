@@ -25,6 +25,7 @@
         isNarrator: !!isNarrator,
         dirty: true,
         polygons: [],
+        dragPreview: null,
         offscreenCanvas: null,
         offscreenCtx: null,
         impersonateInstanceId: null,
@@ -58,6 +59,39 @@
       if (!this._fog) return;
       this._fog.impersonateInstanceId = instanceId || null;
       this._fog.dirty = true;
+    };
+
+    proto.beginFogDragPreview = function (instanceId) {
+      if (!this._fog || !instanceId) return;
+      this._fog.config = normalizeFogConfig(this._fog.config);
+      this._fog.dragPreview = {
+        instanceId: instanceId,
+        pendingExploredAreas: [],
+        pendingExploredBy: [],
+      };
+    };
+
+    proto.commitFogDragPreview = function () {
+      var fog = this._fog;
+      if (!fog || !fog.dragPreview) return;
+      var preview = fog.dragPreview;
+      var config = normalizeFogConfig(fog.config);
+      for (var i = 0; i < preview.pendingExploredAreas.length; i++) {
+        pushUniquePolygon(config.exploredAreas, preview.pendingExploredAreas[i]);
+      }
+      if (!Array.isArray(config.exploredBy[preview.instanceId])) {
+        config.exploredBy[preview.instanceId] = [];
+      }
+      for (var j = 0; j < preview.pendingExploredBy.length; j++) {
+        pushUniquePolygon(config.exploredBy[preview.instanceId], preview.pendingExploredBy[j]);
+      }
+      fog.config = config;
+      fog.dragPreview = null;
+    };
+
+    proto.clearFogDragPreview = function () {
+      if (!this._fog) return;
+      this._fog.dragPreview = null;
     };
 
     proto.isPointVisibleToFogViewer = function (x, y) {
@@ -137,11 +171,17 @@
 
     var result = global.FogVisibility.computeVisibility(pcTokens, map.walls || []);
     fog.polygons = result.polygons;
+    var dragPreview = fog.dragPreview || null;
 
     for (var ti = 0; ti < pcTokens.length; ti++) {
       var instId = pcTokens[ti].instanceId;
       var poly = result.perTokenPolygons ? result.perTokenPolygons[ti] : null;
       if (!poly || poly.length < 3) continue;
+      if (dragPreview && dragPreview.instanceId === instId) {
+        pushUniquePolygon(dragPreview.pendingExploredAreas, poly);
+        pushUniquePolygon(dragPreview.pendingExploredBy, poly);
+        continue;
+      }
       if (!Array.isArray(config.exploredBy[instId])) config.exploredBy[instId] = [];
       pushUniquePolygon(config.exploredAreas, poly);
       pushUniquePolygon(config.exploredBy[instId], poly);

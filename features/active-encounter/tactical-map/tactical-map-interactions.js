@@ -787,6 +787,11 @@
           this.isDraggingToken = canDrag;
           this.selectedTokenId = clickedToken.id;
           this.draggedToken = canDrag ? clickedToken : null;
+          if (canDrag && clickedInstance?.isPC) {
+            this.beginFogDragPreview?.(clickedInstance.id);
+          } else {
+            this.clearFogDragPreview?.();
+          }
           if (canDrag) {
             this.dragStartTokenPos = { x: clickedToken.x, y: clickedToken.y };
           } else {
@@ -1148,7 +1153,14 @@
           for (var ui = 0; ui < (this.instances || []).length; ui++) {
             if (this.instances[ui].id === this.draggedToken.instanceId) { upInst = this.instances[ui]; break; }
           }
-          if (upInst && upInst.isPC) this.invalidateFog();
+          if (upInst && upInst.isPC) {
+            this.commitFogDragPreview?.();
+            this.invalidateFog();
+          } else {
+            this.clearFogDragPreview?.();
+          }
+        } else {
+          this.clearFogDragPreview?.();
         }
         if (this.onTokenMove && this.draggedToken) {
           const oldX = this.dragStartTokenPos ? this.dragStartTokenPos.x : null;
