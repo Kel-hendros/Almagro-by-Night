@@ -13,6 +13,10 @@
   var INTERACTIVE_BG_COLOR = "rgba(10, 10, 10, 0.9)";
   var INTERACTIVE_MARKER_RADIUS = 12;
   var MARKER_EMOJIS = { door: "\u{1F6AA}", window: "\u{1FA9F}", light: "\u{1F4A1}", switch: "\u{1F39A}\uFE0F" };
+  var DOOR_MARKER_IMAGES = {
+    open: createMarkerImage("images/svgs/door-open.svg"),
+    closed: createMarkerImage("images/svgs/door-closed.svg"),
+  };
   var LUMINOSITY_THRESHOLD = 0.30;
   var LIGHT_MASK_BLUR_RADIUS = 6;
   var DEFAULT_VIEWER_VISION_PROFILE = {
@@ -47,6 +51,46 @@
     ctx.restore();
 
     // Selection ring (dashed cyan)
+    if (isSelected) {
+      ctx.save();
+      ctx.strokeStyle = INTERACTIVE_BORDER_COLOR;
+      ctx.lineWidth = 2 / scale;
+      ctx.setLineDash([4 / scale, 3 / scale]);
+      ctx.beginPath();
+      ctx.arc(x, y, r + 4 / scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  function createMarkerImage(src) {
+    if (typeof Image === "undefined") return null;
+    var img = new Image();
+    img.src = src;
+    return img;
+  }
+
+  function drawInteractiveImageMarker(ctx, x, y, img, scale, isSelected) {
+    var r = INTERACTIVE_MARKER_RADIUS / scale;
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = INTERACTIVE_BG_COLOR;
+    ctx.fill();
+
+    ctx.strokeStyle = INTERACTIVE_BORDER_COLOR;
+    ctx.lineWidth = 1.5 / scale;
+    ctx.stroke();
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      var size = r * 1.45;
+      ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+    }
+
+    ctx.restore();
+
     if (isSelected) {
       ctx.save();
       ctx.strokeStyle = INTERACTIVE_BORDER_COLOR;
@@ -599,8 +643,12 @@
         var mx = (wall.x1 + wall.x2) / 2;
         var my = (wall.y1 + wall.y2) / 2;
         if (!this.isMarkerVisibleToViewer(mx, my)) continue;
-        var emoji = wall.type === "door" ? MARKER_EMOJIS.door : MARKER_EMOJIS.window;
-        drawInteractiveMarker(ctx, mx * gs, my * gs, emoji, sc, false);
+        if (wall.type === "door") {
+          var doorImage = wall.doorOpen ? DOOR_MARKER_IMAGES.open : DOOR_MARKER_IMAGES.closed;
+          drawInteractiveImageMarker(ctx, mx * gs, my * gs, doorImage, sc, false);
+        } else {
+          drawInteractiveMarker(ctx, mx * gs, my * gs, MARKER_EMOJIS.window, sc, false);
+        }
       }
 
       // Lights
