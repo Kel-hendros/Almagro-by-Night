@@ -3,6 +3,7 @@
     var state = ctx.state;
     var els = ctx.els;
     var supabase = ctx.supabase;
+    var canEditEncounter = ctx.canEditEncounter;
     var normalizeEncounterStatus = ctx.normalizeEncounterStatus;
     var loadCharacterSheets = ctx.loadCharacterSheets;
     var pruneEncounterRoster = ctx.pruneEncounterRoster;
@@ -32,6 +33,48 @@
       });
     }
 
+    function cloneJson(value) {
+      if (value == null) return value;
+      try {
+        return JSON.parse(JSON.stringify(value));
+      } catch (_err) {
+        return value;
+      }
+    }
+
+    function mergeUniqueAreas(baseAreas, extraAreas) {
+      var merged = Array.isArray(baseAreas) ? cloneJson(baseAreas) : [];
+      if (!Array.isArray(extraAreas) || extraAreas.length === 0) return merged;
+      var seen = new Set(merged.map(function (area) { return JSON.stringify(area); }));
+      for (var i = 0; i < extraAreas.length; i++) {
+        var key = JSON.stringify(extraAreas[i]);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(cloneJson(extraAreas[i]));
+      }
+      return merged;
+    }
+
+    function mergeExploredBy(remoteExploredBy, localExploredBy) {
+      var merged = {};
+      var remote = remoteExploredBy && typeof remoteExploredBy === "object" ? remoteExploredBy : {};
+      var local = localExploredBy && typeof localExploredBy === "object" ? localExploredBy : {};
+      var ids = new Set(Object.keys(remote).concat(Object.keys(local)));
+      ids.forEach(function (id) {
+        merged[id] = mergeUniqueAreas(remote[id], local[id]);
+      });
+      return merged;
+    }
+
+    function mergeFogMemory(remoteFog, localFog) {
+      var remote = remoteFog && typeof remoteFog === "object" ? cloneJson(remoteFog) : {};
+      var local = localFog && typeof localFog === "object" ? localFog : null;
+      if (!local) return remote;
+      remote.exploredAreas = mergeUniqueAreas(remote.exploredAreas, local.exploredAreas);
+      remote.exploredBy = mergeExploredBy(remote.exploredBy, local.exploredBy);
+      return remote;
+    }
+
     function applyRemoteEncounterUpdate(updated) {
       if (!updated || !state.encounter) return;
       var tilePainter = getTilePainter();
@@ -50,9 +93,16 @@
       var localLights = preserveLights
         ? state.encounter.data.lights
         : null;
+      var preserveLocalFogMemory = !canEditEncounter();
+      var localFog = preserveLocalFogMemory
+        ? state.encounter.data.fog
+        : null;
 
       state.encounter.status = normalizeEncounterStatus(updated.status);
       state.encounter.data = updated.data || state.encounter.data;
+      if (preserveLocalFogMemory) {
+        state.encounter.data.fog = mergeFogMemory(state.encounter.data.fog, localFog);
+      }
       if (!state.encounter.data.ambientLight) {
         state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5 };
       }

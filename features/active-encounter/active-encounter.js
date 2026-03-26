@@ -332,6 +332,7 @@
       state,
       els,
       supabase,
+      canEditEncounter,
       normalizeEncounterStatus,
       loadCharacterSheets: () => loadCharacterSheets(),
       pruneEncounterRoster: () => pruneEncounterRoster(),
@@ -529,6 +530,7 @@
         }
 
         try {
+          state._playerInteractionUntil = Date.now() + 3000;
           await moveTokenViaRpc(id, x, y);
         } catch (err) {
           t.x = oldX ?? t.x;
