@@ -836,7 +836,6 @@
             currentAreas: [],
             revealedAreas: [],
             hiddenAreas: [],
-            exploredAreas: [],
           };
     if (!visibleState.enabled || !visibleState.isPlayerView) return;
 
@@ -860,7 +859,6 @@
       maskCtx.restore();
       appendAreasPath(maskCtx, visibleState.currentAreas, gs, offX, offY);
     }
-    appendAreasPath(maskCtx, visibleState.exploredAreas, gs, offX, offY);
     appendAreasPath(maskCtx, visibleState.revealedAreas, gs, offX, offY);
     if (visibleState.hiddenAreas && visibleState.hiddenAreas.length > 0) {
       maskCtx.fillStyle = "rgba(0,0,0,1)";
