@@ -6,6 +6,7 @@
 
   var DEFAULT_VISION_RADIUS = 30;
   var RAY_EPSILON = 0.00015;
+  var WALL_OCCLUSION_THICKNESS = 0.22;
 
   /**
    * Does this wall block vision?
@@ -34,6 +35,34 @@
     return { t: t, x: ox + dx * t, y: oy + dy * t };
   }
 
+  function appendWallOccluderSegments(list, wall) {
+    if (!wall) return;
+    var ax = parseFloat(wall.x1);
+    var ay = parseFloat(wall.y1);
+    var bx = parseFloat(wall.x2);
+    var by = parseFloat(wall.y2);
+    if (![ax, ay, bx, by].every(Number.isFinite)) return;
+
+    var dx = bx - ax;
+    var dy = by - ay;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1e-6) return;
+
+    var half = WALL_OCCLUSION_THICKNESS * 0.5;
+    var nx = (-dy / len) * half;
+    var ny = (dx / len) * half;
+
+    var p1 = { x: ax + nx, y: ay + ny };
+    var p2 = { x: bx + nx, y: by + ny };
+    var p3 = { x: bx - nx, y: by - ny };
+    var p4 = { x: ax - nx, y: ay - ny };
+
+    list.push({ ax: p1.x, ay: p1.y, bx: p2.x, by: p2.y });
+    list.push({ ax: p2.x, ay: p2.y, bx: p3.x, by: p3.y });
+    list.push({ ax: p3.x, ay: p3.y, bx: p4.x, by: p4.y });
+    list.push({ ax: p4.x, ay: p4.y, bx: p1.x, by: p1.y });
+  }
+
   /**
    * Compute a visibility polygon from a single origin point.
    * @param {number} ox - viewer X (grid coordinates, e.g. cell center)
@@ -58,24 +87,22 @@
         if (w.type === "door" && w.doorOpen) continue;
         if (w.type === "window" && w.doorOpen) continue;
       }
-      segments.push({ ax: w.x1, ay: w.y1, bx: w.x2, by: w.y2 });
+      appendWallOccluderSegments(segments, w);
     }
 
-    // 2. Collect unique ray angles from ALL wall endpoints (including
-    //    windows, open doors) so rays are cast in every relevant direction.
-    //    Intersection is only tested against blocking segments above.
+    // 2. Collect unique ray angles from the thick occluder outline so rays
+    //    respect doorway jambs and wall thickness instead of infinitely thin
+    //    center lines.
     var uniqueAngles = [];
     var seenAngles = {};
-    for (var i = 0; i < walls.length; i++) {
-      var w = walls[i];
-      // Only consider endpoints within vision range (+ margin for walls
-      // partially inside the circle).
+    for (var si = 0; si < segments.length; si++) {
+      var seg = segments[si];
       var margin = radius + 2;
-      if (Math.abs(w.x1 - ox) <= margin && Math.abs(w.y1 - oy) <= margin) {
-        addAngles(ox, oy, w.x1, w.y1, uniqueAngles, seenAngles);
+      if (Math.abs(seg.ax - ox) <= margin && Math.abs(seg.ay - oy) <= margin) {
+        addAngles(ox, oy, seg.ax, seg.ay, uniqueAngles, seenAngles);
       }
-      if (Math.abs(w.x2 - ox) <= margin && Math.abs(w.y2 - oy) <= margin) {
-        addAngles(ox, oy, w.x2, w.y2, uniqueAngles, seenAngles);
+      if (Math.abs(seg.bx - ox) <= margin && Math.abs(seg.by - oy) <= margin) {
+        addAngles(ox, oy, seg.bx, seg.by, uniqueAngles, seenAngles);
       }
     }
 

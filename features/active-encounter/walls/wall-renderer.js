@@ -9,9 +9,9 @@
     window: "#7bb3d4",
   };
   var WALL_WIDTHS = {
-    wall:   5,
-    door:   6,
-    window: 4,
+    wall:   7,
+    door:   8,
+    window: 5,
   };
   var ERASE_HOVER_COLOR = "#e53935";
 
