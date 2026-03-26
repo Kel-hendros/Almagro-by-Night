@@ -9,13 +9,11 @@
     window: "#7bb3d4",
   };
   var WALL_WIDTHS = {
-    wall:   6,
-    door:   7,
+    wall:   5,
+    door:   6,
     window: 4,
   };
   var ERASE_HOVER_COLOR = "#e53935";
-  var WALL_OVERLAY_SAMPLE_STEP = 0.18;
-  var WALL_OVERLAY_PADDING_CELLS = 0.18;
 
   function apply(TacticalMap) {
     var proto = TacticalMap.prototype;
@@ -23,8 +21,7 @@
     /**
      * Draw all wall segments on the canvas.
      */
-    proto.drawWalls = function drawWalls(options) {
-      options = options || {};
+    proto.drawWalls = function drawWalls() {
       var walls = this.walls;
       if (!walls || !walls.length) return;
       var ctx = this.ctx;
@@ -34,49 +31,7 @@
 
       for (var i = 0; i < walls.length; i++) {
         var w = walls[i];
-        drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, eraseHoverId, options);
-      }
-    };
-
-    proto.drawVisibleWallsOverlay = function drawVisibleWallsOverlay() {
-      var fog = this._fog;
-      var walls = this.walls;
-      if (!fog || !walls || !walls.length) return;
-      if ((!fog.polygons || !fog.polygons.length) && !(fog.visibleCells && fog.visibleCells.size)) return;
-
-      var ctx = this.ctx;
-      var gs = this.gridSize;
-      var scale = this.scale;
-      var eraseHoverId = this._wallDrawerState?.eraseHoverWallId || null;
-
-      for (var i = 0; i < walls.length; i++) {
-        var wall = walls[i];
-        var intervals = getVisibleWallIntervals(wall, fog, WALL_OVERLAY_PADDING_CELLS);
-        if (!intervals.length) continue;
-        for (var j = 0; j < intervals.length; j++) {
-          var interval = intervals[j];
-          var startX = lerp(wall.x1, wall.x2, interval.start) * gs;
-          var startY = lerp(wall.y1, wall.y2, interval.start) * gs;
-          var endX = lerp(wall.x1, wall.x2, interval.end) * gs;
-          var endY = lerp(wall.y1, wall.y2, interval.end) * gs;
-          drawWallSegment(ctx, wall, startX, startY, endX, endY, gs, scale, eraseHoverId, {
-            overlayMode: true,
-            suppressLockedIndicator: true,
-          });
-        }
-
-        if (wall.locked && (wall.type === "door" || wall.type === "window")) {
-          var midX = (wall.x1 + wall.x2) * 0.5;
-          var midY = (wall.y1 + wall.y2) * 0.5;
-          if (isWallPointVisible(midX, midY, fog, WALL_OVERLAY_PADDING_CELLS)) {
-            ctx.save();
-            ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("\uD83D\uDD12", midX * gs, midY * gs);
-            ctx.restore();
-          }
-        }
+        drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, eraseHoverId);
       }
     };
 
@@ -239,17 +194,12 @@
 
   // ── Helpers ──
 
-  function drawWallSegment(ctx, wall, px1, py1, px2, py2, gs, scale, eraseHoverId, options) {
-    options = options || {};
+  function drawWallSegment(ctx, wall, px1, py1, px2, py2, gs, scale, eraseHoverId) {
     var midX = (px1 + px2) / 2;
     var midY = (py1 + py2) / 2;
     var isEraseHover = eraseHoverId === wall.id;
     var baseColor = WALL_COLORS[wall.type] || WALL_COLORS.wall;
     var lineWidth = (WALL_WIDTHS[wall.type] || WALL_WIDTHS.wall) / Math.max(scale, 0.5);
-
-    if (options.overlayMode) {
-      lineWidth += 1.25 / Math.max(scale, 0.5);
-    }
 
     if (isEraseHover) {
       baseColor = ERASE_HOVER_COLOR;
@@ -259,8 +209,8 @@
     ctx.save();
 
     if (!isEraseHover) {
-      ctx.shadowColor = options.overlayMode ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.4)";
-      ctx.shadowBlur = (options.overlayMode ? 3.5 : 2) / Math.max(scale, 0.5);
+      ctx.shadowColor = "rgba(0,0,0,0.4)";
+      ctx.shadowBlur = 2 / Math.max(scale, 0.5);
       ctx.shadowOffsetY = 1 / Math.max(scale, 0.5);
     } else {
       ctx.shadowColor = "rgba(229,57,53,0.6)";
@@ -330,7 +280,7 @@
 
     ctx.restore();
 
-    if (!options.suppressLockedIndicator && wall.locked && (wall.type === "door" || wall.type === "window")) {
+    if (wall.locked && (wall.type === "door" || wall.type === "window")) {
       ctx.save();
       ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
       ctx.textAlign = "center";
@@ -338,88 +288,6 @@
       ctx.fillText("\uD83D\uDD12", midX, midY);
       ctx.restore();
     }
-  }
-
-  function getVisibleWallIntervals(wall, fog, paddingCells) {
-    var dx = wall.x2 - wall.x1;
-    var dy = wall.y2 - wall.y1;
-    var len = Math.sqrt(dx * dx + dy * dy);
-    if (len === 0) return [];
-
-    var steps = Math.max(1, Math.ceil(len / WALL_OVERLAY_SAMPLE_STEP));
-    var intervals = [];
-    var startT = null;
-
-    for (var i = 0; i < steps; i++) {
-      var t0 = i / steps;
-      var t1 = (i + 1) / steps;
-      var tm = (t0 + t1) * 0.5;
-      var px = lerp(wall.x1, wall.x2, tm);
-      var py = lerp(wall.y1, wall.y2, tm);
-      var visible = isWallPointVisible(px, py, fog, paddingCells);
-
-      if (visible && startT == null) startT = t0;
-      if (!visible && startT != null) {
-        intervals.push({ start: startT, end: t0 });
-        startT = null;
-      }
-    }
-
-    if (startT != null) {
-      intervals.push({ start: startT, end: 1 });
-    }
-
-    return intervals;
-  }
-
-  function isWallPointVisible(px, py, fog, paddingCells) {
-    var polygons = fog && fog.polygons;
-    if (polygons && polygons.length && global.FogVisibility && typeof global.FogVisibility.pointInPolygon === "function") {
-      for (var i = 0; i < polygons.length; i++) {
-        var poly = polygons[i];
-        if (!poly || poly.length < 3) continue;
-        if (global.FogVisibility.pointInPolygon(px, py, poly)) return true;
-        if (paddingCells > 0 && distancePointToPolygonEdges(px, py, poly) <= paddingCells) return true;
-      }
-      return false;
-    }
-
-    var visibleCells = fog && fog.visibleCells;
-    if (!visibleCells || !visibleCells.size) return false;
-    return visibleCells.has(Math.floor(px) + "," + Math.floor(py));
-  }
-
-  function distancePointToPolygonEdges(px, py, polygon) {
-    var minDist = Infinity;
-    for (var i = 0; i < polygon.length; i++) {
-      var a = polygon[i];
-      var b = polygon[(i + 1) % polygon.length];
-      var dist = distancePointToSegment(px, py, a.x, a.y, b.x, b.y);
-      if (dist < minDist) minDist = dist;
-    }
-    return minDist;
-  }
-
-  function distancePointToSegment(px, py, ax, ay, bx, by) {
-    var dx = bx - ax;
-    var dy = by - ay;
-    var lenSq = dx * dx + dy * dy;
-    if (lenSq <= 0) {
-      var ddx = px - ax;
-      var ddy = py - ay;
-      return Math.sqrt(ddx * ddx + ddy * ddy);
-    }
-    var t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
-    t = Math.max(0, Math.min(1, t));
-    var cx = ax + dx * t;
-    var cy = ay + dy * t;
-    var ddx = px - cx;
-    var ddy = py - cy;
-    return Math.sqrt(ddx * ddx + ddy * ddy);
-  }
-
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
   }
 
   function drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, isOpen, isEraseHover) {
