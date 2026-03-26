@@ -15,9 +15,9 @@
   var LUMINOSITY_THRESHOLD = 0.25;
 
   function isLuminosityVisible(luminosity) {
-    var lum = Number.isFinite(luminosity) ? luminosity : 0;
+    var lum = isFinite(luminosity) ? luminosity : 0;
     lum = Math.min(1, Math.max(0, lum));
-    return Math.round(lum * 100) >= Math.round(LUMINOSITY_THRESHOLD * 100);
+    return lum + 1e-6 >= LUMINOSITY_THRESHOLD;
   }
 
   function drawInteractiveMarker(ctx, x, y, emoji, scale, isSelected) {
