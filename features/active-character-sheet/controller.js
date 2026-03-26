@@ -61,6 +61,7 @@
     ns.encounterPersiana?.bind?.();
     ns.encounterBridge?.connect?.();
     ns.handoutsInbox?.init?.();
+    ns.phoneButton?.init?.();
   }
 
   function destroyPage() {
@@ -69,6 +70,7 @@
     ns.encounterBar?.destroy?.();
     ns.encounterBridge?.destroy?.();
     ns.handoutsInbox?.destroy?.();
+    ns.phoneButton?.destroy?.();
 
     if (state.frame) {
       state.frame.removeEventListener("load", handleFrameLoad);

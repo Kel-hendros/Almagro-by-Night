@@ -341,16 +341,17 @@
 
     if (!state.sheetId) return;
 
-    // If no chronicle ID in localStorage, look it up from the sheet
+    // If no chronicle ID in localStorage, look it up via chronicle_characters
     if (!state.chronicleId) {
-      const { data: sheet } = await supabase
-        .from("character_sheets")
+      const { data: link } = await supabase
+        .from("chronicle_characters")
         .select("chronicle_id")
-        .eq("id", state.sheetId)
-        .single();
+        .eq("character_sheet_id", state.sheetId)
+        .limit(1)
+        .maybeSingle();
 
-      if (sheet?.chronicle_id) {
-        state.chronicleId = sheet.chronicle_id;
+      if (link?.chronicle_id) {
+        state.chronicleId = link.chronicle_id;
       }
     }
 

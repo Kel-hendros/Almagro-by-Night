@@ -74,6 +74,17 @@
       if (ids.indexOf(state.playerId) === -1) return;
     }
 
+    // SMS notifications are handled exclusively by the phone feature — skip entirely
+    if (row.type === "sms") {
+      var isOwnSms = row.actor_player_id === state.playerId;
+      if (!isOwnSms) {
+        global.dispatchEvent(
+          new CustomEvent("abn-sms-received", { detail: row }),
+        );
+      }
+      return;
+    }
+
     // Increment badge
     state.unreadCount++;
     ns.view.updateBadge(state.unreadCount);

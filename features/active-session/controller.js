@@ -14,6 +14,8 @@
     backBtnHandler: null,
     openArchiveBtnHandler: null,
     createMuestraBtnHandler: null,
+    sendSmsBtnHandler: null,
+    exportSmsBtnHandler: null,
     encounterListChangeHandler: null,
   };
 
@@ -66,6 +68,46 @@
         }
       };
       createMuestraBtn.addEventListener("click", state.createMuestraBtnHandler);
+    }
+
+    const sendSmsBtn = document.getElementById("as-send-sms");
+    if (sendSmsBtn) {
+      state.sendSmsBtnHandler = () => {
+        if (global.ABNPhone?.controller?.openCompose) {
+          global.ABNPhone.controller.openCompose({
+            chronicleId: state.chronicleId,
+            currentPlayerId: state.currentPlayerId,
+          });
+        }
+      };
+      sendSmsBtn.addEventListener("click", state.sendSmsBtnHandler);
+    }
+
+    const exportSmsBtn = document.getElementById("as-export-sms");
+    if (exportSmsBtn) {
+      state.exportSmsBtnHandler = async () => {
+        if (!global.ABNPhone?.service?.exportAllMessages) return;
+        exportSmsBtn.disabled = true;
+        exportSmsBtn.querySelector("span").textContent = "Exportando...";
+        try {
+          const data = await global.ABNPhone.service.exportAllMessages(state.chronicleId);
+          if (!data) return;
+          const json = JSON.stringify(data, null, 2);
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "sms-export.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.warn("ActiveSession: export SMS error", e);
+        } finally {
+          exportSmsBtn.disabled = false;
+          exportSmsBtn.querySelector("span").textContent = "Exportar SMS";
+        }
+      };
+      exportSmsBtn.addEventListener("click", state.exportSmsBtnHandler);
     }
 
     const encountersList = document.getElementById("as-encounters-list");
@@ -124,6 +166,18 @@
       createMuestraBtn.removeEventListener("click", state.createMuestraBtnHandler);
     }
     state.createMuestraBtnHandler = null;
+
+    const sendSmsBtn = document.getElementById("as-send-sms");
+    if (sendSmsBtn && state.sendSmsBtnHandler) {
+      sendSmsBtn.removeEventListener("click", state.sendSmsBtnHandler);
+    }
+    state.sendSmsBtnHandler = null;
+
+    const exportSmsBtn = document.getElementById("as-export-sms");
+    if (exportSmsBtn && state.exportSmsBtnHandler) {
+      exportSmsBtn.removeEventListener("click", state.exportSmsBtnHandler);
+    }
+    state.exportSmsBtnHandler = null;
 
     const encountersList = document.getElementById("as-encounters-list");
     if (encountersList && state.encounterListChangeHandler) {

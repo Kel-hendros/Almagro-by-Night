@@ -38,6 +38,7 @@
     },
     system: { label: "Sistema", icon: "info", cssClass: "notif-card--system" },
     muestra: { label: "Muestra", icon: "eye", cssClass: "notif-card--muestra" },
+    sms: { label: "SMS", icon: "smartphone", cssClass: "notif-card--sms" },
   };
 
   var FILTER_CHIPS = [
@@ -590,6 +591,54 @@
     }, TOAST_DISMISS_MS);
   }
 
+  /**
+   * Show a floating toast for an SMS notification. Clicking opens the phone modal.
+   */
+  function showSmsToast(notif) {
+    ensureToastContainer();
+
+    var meta = notif.metadata || {};
+    var senderLabel = meta.senderLabel || notif.title || "SMS";
+    var preview = notif.body || "";
+
+    var toast = document.createElement("div");
+    toast.className = "notif-toast notif-toast--sms notif-toast--clickable";
+
+    toast.innerHTML =
+      '<div class="notif-toast-icon"><i data-lucide="smartphone"></i></div>' +
+      '<div class="notif-toast-body">' +
+        '<span class="notif-toast-title">' + escapeHtml(senderLabel) + "</span>" +
+        (preview
+          ? '<span class="notif-toast-text">' + escapeHtml(preview) + "</span>"
+          : "") +
+      "</div>" +
+      '<button class="notif-toast-close" aria-label="Cerrar">&times;</button>';
+
+    toast.querySelector(".notif-toast-close").addEventListener("click", function () {
+      dismissToast(toast);
+    });
+
+    toast.addEventListener("click", function (e) {
+      if (e.target.closest(".notif-toast-close")) return;
+      // Dispatch event so phone feature can handle the open
+      global.dispatchEvent(
+        new CustomEvent("abn-sms-toast-click", { detail: meta }),
+      );
+      dismissToast(toast);
+    });
+
+    toastContainerEl.appendChild(toast);
+    if (global.lucide) global.lucide.createIcons({ nodes: [toast] });
+
+    requestAnimationFrame(function () {
+      toast.classList.add("notif-toast-enter");
+    });
+
+    setTimeout(function () {
+      dismissToast(toast);
+    }, TOAST_DISMISS_MS);
+  }
+
   function dismissToast(toast) {
     if (!toast || !toast.parentNode) return;
     toast.classList.add("notif-toast-exit");
@@ -626,6 +675,7 @@
     updateBadge: updateBadge,
     showToast: showToast,
     showMuestraToast: showMuestraToast,
+    showSmsToast: showSmsToast,
     getActiveFilter: getActiveFilter,
     resetFilters: resetFilters,
     destroy: destroy,

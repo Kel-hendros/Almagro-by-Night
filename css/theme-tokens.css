@@ -158,11 +158,12 @@ body[data-theme="anarquista"] {
     --color-border-subtle: #25313a;
     --color-border-strong: #3f5562;
     --color-accent: #4a7c8e;
-    --color-accent-soft: #6a98aa;
+    --color-accent-soft: #0a3242;
     --color-success: #37c871;
     --color-warning: #b3a379;
     --color-danger: #c62828;
     --color-danger-soft: #5c2020;
+    --color-text-on-accent: #ffffff;
     --color-info: #4a7c8e;
     --color-info-soft: #1a2d3a;
     --color-bg-decorative:

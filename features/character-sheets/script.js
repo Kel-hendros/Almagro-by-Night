@@ -377,6 +377,11 @@ function loadCharacterFromJSON(characterData) {
     if (diceBox3d) diceBox3d.loadFromCharacterData(characterData);
   });
 
+  safeLoad("Phone Color", () => {
+    currentPhoneColor = characterData.phoneColor || "black";
+    updatePhoneColorSwatches();
+  });
+
   // Update Ghoul Visuals if function exists
   if (window.updateGhoulVisuals && characterData.selectedGhoul) {
     window.updateGhoulVisuals(characterData.selectedGhoul);
@@ -556,6 +561,9 @@ function getCharacterData() {
   // Add 3D dice preference
   const diceBox3d = window.ABNSheetDiceBox3D;
   if (diceBox3d) characterData.diceBox3dEnabled = diceBox3d.getSettingForSave();
+
+  // Add phone color preference
+  characterData.phoneColor = currentPhoneColor || "black";
 
   return JSON.stringify(characterData);
 }
@@ -1329,6 +1337,28 @@ if (diceSystemModule) {
       if (diceBox3d && diceBox3d.isEnabled()) return diceBox3d.rollD10s(count);
       return null;
     },
+  });
+}
+
+// ── Phone color picker ──
+let currentPhoneColor = "black";
+
+function updatePhoneColorSwatches() {
+  const container = document.getElementById("phone-color-options");
+  if (!container) return;
+  container.querySelectorAll(".phone-color-swatch").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.color === currentPhoneColor);
+  });
+}
+
+const phoneColorContainer = document.getElementById("phone-color-options");
+if (phoneColorContainer) {
+  phoneColorContainer.addEventListener("click", (e) => {
+    const swatch = e.target.closest(".phone-color-swatch");
+    if (!swatch) return;
+    currentPhoneColor = swatch.dataset.color;
+    updatePhoneColorSwatches();
+    saveCharacterData();
   });
 }
 

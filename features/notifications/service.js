@@ -30,6 +30,9 @@
       .order("created_at", { ascending: false })
       .limit(limit);
 
+    // Exclude SMS — handled by phone feature
+    query = query.neq("type", "sms");
+
     if (opts.before) {
       query = query.lt("created_at", opts.before);
     }
