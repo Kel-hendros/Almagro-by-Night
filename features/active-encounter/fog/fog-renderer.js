@@ -428,8 +428,7 @@
     // ══════════════════════════════════════════════════
     if (fogEnabled) {
       config = normalizeFogConfig(config);
-      var previewDraggingPC = isPreviewDraggingPC(map);
-      var exploredAreas = previewDraggingPC ? [] : getExploredForViewer(config, fog);
+      var exploredAreas = getExploredForViewer(config, fog);
       var revealedAreas = normalizeAreaList(config.revealedAreas);
       var hiddenAreas = normalizeAreaList(config.hiddenAreas);
 
