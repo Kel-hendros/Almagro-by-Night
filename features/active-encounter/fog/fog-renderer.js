@@ -138,10 +138,6 @@
     var result = global.FogVisibility.computeVisibility(pcTokens, map.walls || []);
     fog.polygons = result.polygons;
 
-    if (isPreviewDraggingPC(map)) {
-      return;
-    }
-
     for (var ti = 0; ti < pcTokens.length; ti++) {
       var instId = pcTokens[ti].instanceId;
       var poly = result.perTokenPolygons ? result.perTokenPolygons[ti] : null;
@@ -194,19 +190,6 @@
       }
     }
     return merged;
-  }
-
-  function isPreviewDraggingPC(map) {
-    if (!map || !map.isDraggingToken || !map.draggedToken) return false;
-    var dragged = map.draggedToken;
-    if (!dragged.instanceId) return false;
-    var instances = map.instances || [];
-    for (var i = 0; i < instances.length; i++) {
-      if (instances[i].id === dragged.instanceId) {
-        return !!instances[i].isPC;
-      }
-    }
-    return false;
   }
 
   function renderCombinedOverlay(map, fog) {
