@@ -5,7 +5,9 @@
 
   var BLUR_RADIUS = 6;
   var BLUR_PAD = 2;
-  var EXPLORED_MEMORY_FILL = "rgba(24,24,24,0.42)";
+  // Explored memory should preserve the underlying map art and only dim it
+  // heavily; a neutral gray tint turns remembered terrain into a flat blob.
+  var EXPLORED_MEMORY_FILL = "rgba(0,0,0,0.72)";
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
