@@ -982,14 +982,12 @@
           this.draggedToken.x = nextX;
           this.draggedToken.y = nextY;
         }
-        // Fog: update at frame cadence while dragging a PC so the visibility
-        // cone tracks the token continuously instead of jumping on drop.
+        // Fog: update on every drag step for PCs so walls occlude vision using
+        // the token's exact current position, with no visible difference
+        // between moving and standing still.
         if (dragIsPC && typeof this.invalidateFog === "function" && this._fog?.config?.enabled) {
-          var now = performance.now();
-          if (!this._lastDragFogUpdate || now - this._lastDragFogUpdate > 16) {
-            this._lastDragFogUpdate = now;
-            this.invalidateFog();
-          }
+          this._lastDragFogUpdate = performance.now();
+          this.invalidateFog();
         }
         // Broadcast drag position to other clients in real-time
         if (typeof this.onTokenDrag === "function") {
