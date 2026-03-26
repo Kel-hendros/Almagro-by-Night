@@ -94,18 +94,30 @@
         return;
       }
 
-      const available = (mySheets || []).filter(
+      // Filter out sheets already in THIS chronicle
+      const notInThis = (mySheets || []).filter(
         (sheet) => !existingSheetIds.includes(sheet.id)
       );
 
-      if (!available.length) {
+      if (!notInThis.length) {
         pickerList.innerHTML =
           '<span class="cd-card-muted">No tenés personajes disponibles para agregar.</span>';
         return;
       }
 
+      // Check which sheets are already in ANOTHER chronicle
+      const sheetIds = notInThis.map((s) => s.id);
+      const { data: takenRows } = await supabase
+        .from("chronicle_characters")
+        .select("character_sheet_id, chronicles(name)")
+        .in("character_sheet_id", sheetIds);
+      const takenMap = {};
+      (takenRows || []).forEach((row) => {
+        takenMap[row.character_sheet_id] = row.chronicles?.name || "otra crónica";
+      });
+
       pickerList.innerHTML = "";
-      available.forEach((sheet) => {
+      notInThis.forEach((sheet) => {
         const clan = sheet.data?.clan || "Desconocido";
         const initials = (sheet.name || "?").charAt(0).toUpperCase();
         const avatarUrl = sheet.data?.avatarThumbUrl || sheet.avatar_url;
@@ -113,29 +125,33 @@
           ? `<img src="${escapeHtml(avatarUrl)}" alt="">`
           : `<span class="cd-player-char-initials">${escapeHtml(initials)}</span>`;
 
+        const isTaken = !!takenMap[sheet.id];
         const item = document.createElement("div");
-        item.className = "cd-modal-item";
+        item.className = "cd-modal-item" + (isTaken ? " cd-modal-item--disabled" : "");
         item.innerHTML = `
           <div class="cd-player-char-avatar">${avatarInner}</div>
           <span class="cd-player-char-name">${escapeHtml(sheet.name)}</span>
           <span class="cd-player-char-sep">|</span>
           <span class="cd-player-char-clan">${escapeHtml(clan)}</span>
+          ${isTaken ? `<span class="cd-player-char-taken">En ${escapeHtml(takenMap[sheet.id])}</span>` : ""}
         `;
 
-        item.addEventListener("click", async () => {
-          const { error: addErr } = await supabase
-            .from("chronicle_characters")
-            .insert({
-              chronicle_id: chronicleId,
-              character_sheet_id: sheet.id,
-            });
-          if (addErr) {
-            alert("Error: " + addErr.message);
-            return;
-          }
-          closeCharPicker();
-          reload();
-        });
+        if (!isTaken) {
+          item.addEventListener("click", async () => {
+            const { error: addErr } = await supabase
+              .from("chronicle_characters")
+              .insert({
+                chronicle_id: chronicleId,
+                character_sheet_id: sheet.id,
+              });
+            if (addErr) {
+              alert("Error: " + addErr.message);
+              return;
+            }
+            closeCharPicker();
+            reload();
+          });
+        }
 
         pickerList.appendChild(item);
       });

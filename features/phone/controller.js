@@ -33,12 +33,11 @@
    * Open phone for a player character.
    */
   async function openInbox(opts) {
-    if (!opts.chronicleId || !opts.characterSheetId) return;
+    if (!opts.characterSheetId) return;
 
     var svc = ns.service;
     if (!svc) return;
 
-    state.chronicleId = opts.chronicleId;
     state.entityType = "pc";
     state.entityId = opts.characterSheetId;
     state.isNarrator = false;
@@ -50,6 +49,24 @@
 
     // Resolve player
     state.playerId = await global.ABNPlayer?.getId();
+
+    // Resolve chronicle: the character must be in a chronicle via chronicle_characters
+    var chronicleId = await svc.findChronicleForSheet(state.entityId);
+    if (!chronicleId) {
+      // Character not in any chronicle — empty phone
+      state.chronicleId = null;
+      state.chroniclePCs = [];
+      state.autoContacts = [];
+      ns.view.renderInbox({
+        conversations: [],
+        groupConversations: [],
+        autoContacts: [],
+        isNarrator: false,
+      });
+      return;
+    }
+
+    state.chronicleId = chronicleId;
 
     // Resolve entity label
     var pcs = await svc.fetchChroniclePCs(state.chronicleId);
@@ -310,11 +327,18 @@
       entityId: state.entityId,
     });
 
-    state.conversations = convos;
+    // Filter out conversations with PCs no longer in the chronicle
+    var activePCIds = new Set(state.chroniclePCs.map(function (p) { return p.sheetId; }));
+    var filteredConvos = convos.filter(function (c) {
+      if (c.counterpartyType === "npc") return true;
+      return activePCIds.has(c.counterpartyId);
+    });
+
+    state.conversations = filteredConvos;
     state.groupConversations = groupConvos;
 
     ns.view.renderInbox({
-      conversations: convos,
+      conversations: filteredConvos,
       groupConversations: groupConvos,
       autoContacts: state.autoContacts,
       isNarrator: state.isNarrator,

@@ -20,6 +20,19 @@
     return "11-" + d() + d() + d() + d() + "-" + d() + d() + d() + d();
   }
 
+  // ---- Chronicle membership check ----
+
+  async function findChronicleForSheet(sheetId) {
+    if (!sb() || !sheetId) return null;
+    var res = await sb()
+      .from("chronicle_characters")
+      .select("chronicle_id")
+      .eq("character_sheet_id", sheetId)
+      .limit(1)
+      .maybeSingle();
+    return res.data?.chronicle_id || null;
+  }
+
   // ---- Chronicle PCs (for recipient picker + auto-contacts) ----
 
   async function fetchChroniclePCs(chronicleId) {
@@ -463,6 +476,7 @@
     subscribeMessages: subscribeMessages,
     unsubscribeMessages: unsubscribeMessages,
     getPlayerForSheet: getPlayerForSheet,
+    findChronicleForSheet: findChronicleForSheet,
     getParticipation: getParticipation,
     fetchSheetHealth: fetchSheetHealth,
     fetchPhoneColor: fetchPhoneColor,

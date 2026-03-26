@@ -888,6 +888,19 @@ p.chronicle-description {
     background: var(--cd-bg-elevated);
 }
 
+.cd-modal-item--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.cd-player-char-taken {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
 /* Breadcrumb */
 .chronicle-breadcrumb {
     font-size: 0.85rem;

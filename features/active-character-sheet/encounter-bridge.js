@@ -25,8 +25,15 @@
     return ns.service?.getSheetIdFromHash?.() || null;
   }
 
-  function getChronicleId() {
-    return localStorage.getItem("currentChronicleId") || null;
+  async function resolveChronicleId(sheetId) {
+    var supabase = getSupabase();
+    if (!supabase || !sheetId) return null;
+    var { data } = await supabase
+      .from("chronicle_characters")
+      .select("chronicle_id")
+      .eq("character_sheet_id", sheetId)
+      .maybeSingle();
+    return data?.chronicle_id || null;
   }
 
   function emit(eventName, detail) {
@@ -337,24 +344,10 @@
     bindFrameLoad();
 
     state.sheetId = getSheetId();
-    state.chronicleId = getChronicleId();
-
     if (!state.sheetId) return;
 
-    // If no chronicle ID in localStorage, look it up via chronicle_characters
-    if (!state.chronicleId) {
-      const { data: link } = await supabase
-        .from("chronicle_characters")
-        .select("chronicle_id")
-        .eq("character_sheet_id", state.sheetId)
-        .limit(1)
-        .maybeSingle();
-
-      if (link?.chronicle_id) {
-        state.chronicleId = link.chronicle_id;
-      }
-    }
-
+    // Resolve chronicle from chronicle_characters (single source of truth)
+    state.chronicleId = await resolveChronicleId(state.sheetId);
     if (!state.chronicleId) return;
 
     // Call the RPC to get the active encounter
