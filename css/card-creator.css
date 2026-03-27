@@ -189,26 +189,34 @@
 
 /* ── Border mode toggle ───────────────────────────── */
 .cc-border-mode-toggle {
-  display: flex;
+  display: inline-flex;
   margin-bottom: 0.5rem;
 }
 
 .cc-mode-btn {
-  flex: 1;
-  padding: 0.25rem 0.75rem;
+  padding: 0.15rem 0.5rem;
   background: var(--theme-bg-surface);
   color: var(--theme-text-secondary);
   border: 1px solid var(--theme-border-divider);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   transition: background 0.15s;
 }
-.cc-mode-btn:first-child { border-radius: 12px 0 0 12px; }
-.cc-mode-btn:last-child  { border-radius: 0 12px 12px 0; }
+.cc-mode-btn:first-child { border-radius: 6px 0 0 6px; }
+.cc-mode-btn:last-child  { border-radius: 0 6px 6px 0; }
 .cc-mode-btn.active {
   background: var(--theme-accent);
   color: var(--theme-text-on-accent);
   border-color: var(--theme-accent);
+}
+
+.cc-selected-border-row {
+  font-size: 0.7rem;
+  color: var(--theme-text-secondary);
+  margin: 0.25rem 0 0.5rem;
+}
+.cc-selected-border-row.hidden {
+  display: none;
 }
 
 /* ── Border selector ───────────────────────────────── */
@@ -229,13 +237,8 @@
 }
 
 .cc-selected-border {
-  display: inline-block;
-  padding: 2px 8px;
-  background: var(--theme-bg-surface);
   color: var(--theme-accent);
-  border-radius: 10px;
-  font-size: 0.8rem;
-  margin-left: 0.4rem;
+  font-weight: 600;
 }
 
 /* ── Sliders ───────────────────────────────────────── */

@@ -244,20 +244,35 @@
   }
 
   function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(" ");
-    let line = "";
+    // Split by explicit line breaks first
+    const paragraphs = text.split(/\r?\n/);
     let currY = y;
-    for (const word of words) {
-      const test = line + (line ? " " : "") + word;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        ctx.fillText(line, x, currY);
-        line = word;
+
+    for (const paragraph of paragraphs) {
+      if (paragraph === "") {
+        // Empty line = just add line height
         currY += lineHeight;
-      } else {
-        line = test;
+        continue;
+      }
+
+      const words = paragraph.split(" ");
+      let line = "";
+
+      for (const word of words) {
+        const test = line + (line ? " " : "") + word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          ctx.fillText(line, x, currY);
+          line = word;
+          currY += lineHeight;
+        } else {
+          line = test;
+        }
+      }
+      if (line) {
+        ctx.fillText(line, x, currY);
+        currY += lineHeight;
       }
     }
-    if (line) ctx.fillText(line, x, currY);
   }
 
   function getExportSize() {
@@ -473,12 +488,14 @@
 
     // Build size selector options
     const sizeSelect = $("#cc-size-select");
+    const DEFAULT_SIZE_INDEX = 2; // x2 Grande (1326×1992)
     SIZE_PRESETS.forEach((p, i) => {
       const opt = document.createElement("option");
       opt.value = i;
       opt.textContent = p.label;
       sizeSelect.appendChild(opt);
     });
+    sizeSelect.selectedIndex = DEFAULT_SIZE_INDEX;
 
     // Cache elements
     el = {
@@ -496,6 +513,7 @@
       cardTitle:    $(".cc-card-title"),
       cardDesc:     $(".cc-card-description"),
       selectedBorderSpan: $("#cc-selected-border"),
+      selectedBorderRow: $("#cc-selected-border-row"),
       fileInput:    $("#cc-file-input"),
       urlInput:     $("#cc-url-input"),
       sizeSelect:   sizeSelect,
@@ -598,6 +616,9 @@
       modeBtns.forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
       galleryPanel.classList.toggle("hidden", mode !== "gallery");
       customPanel.classList.toggle("hidden", mode !== "custom");
+      if (el.selectedBorderRow) {
+        el.selectedBorderRow.classList.toggle("hidden", mode !== "gallery");
+      }
 
       if (mode === "custom") {
         if (!_customInited && global.CCCustomBorder) {
@@ -605,7 +626,6 @@
           _customInited = true;
         }
         if (global.CCCustomBorder) global.CCCustomBorder.activate();
-        el.selectedBorderSpan.textContent = "Personalizado";
         el.cardText.classList.add("cc-text-backdrop");
       } else {
         if (global.CCCustomBorder) global.CCCustomBorder.deactivate();
@@ -627,7 +647,14 @@
       el.cardTitle.textContent = el.nameInput.value || "Nombre del personaje";
     });
     el.descInput.addEventListener("input", () => {
-      el.cardDesc.textContent = el.descInput.value || "Breve descripción del personaje";
+      const text = el.descInput.value;
+      if (text) {
+        // Convert newlines to <br> for preview, escape HTML first
+        const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        el.cardDesc.innerHTML = escaped.replace(/\n/g, "<br>");
+      } else {
+        el.cardDesc.textContent = "Breve descripción del personaje";
+      }
     });
 
     // ── Image upload (file) ──

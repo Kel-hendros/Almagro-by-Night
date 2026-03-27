@@ -13,6 +13,8 @@ let state = {
   selectedPreset: null,
   selectedBackground: null,
   selectedShot: null,
+  selectedModel: "gemini-3-pro-image-preview",
+  availableModels: [],
   images: [], // { id, url, prompt, fullPrompt, presetName, backgroundName, timestamp }
   isGenerating: false,
   viewingImage: null,
@@ -58,6 +60,9 @@ export async function initPortraitGenerator() {
 
     inputCustomArchetype: document.getElementById("input-custom-archetype"),
     inputCustomBackground: document.getElementById("input-custom-background"),
+
+    selectModel: document.getElementById("select-model"),
+    modelStatus: document.getElementById("model-status"),
   };
 
   try {
@@ -66,7 +71,7 @@ export async function initPortraitGenerator() {
     console.error("Failed to load configuration", e);
     if (els.presetList)
       els.presetList.innerHTML =
-        "<p style='color:red'>Error cargando configuración.</p>";
+        '<p class="config-error">Error cargando configuración.</p>';
     return;
   }
 
@@ -107,8 +112,20 @@ export async function initPortraitGenerator() {
   // Close lightbox on ESC
   document.addEventListener("keydown", handleGlobalKeydown);
 
+  // Model selector change
+  if (els.selectModel) {
+    els.selectModel.addEventListener("change", (e) => {
+      state.selectedModel = e.target.value;
+    });
+  }
+
   // Load Cloud Gallery
   fetchCloudGallery();
+
+  // If we have an API key, fetch available models
+  if (state.apiKey) {
+    fetchAvailableModels();
+  }
 }
 
 async function loadConfig() {
@@ -187,6 +204,9 @@ function handleConnect() {
   checkAuth();
 
   els.authError.classList.remove("visible");
+
+  // Fetch available models with the new key
+  fetchAvailableModels();
 }
 
 function resetKey() {
@@ -194,6 +214,79 @@ function resetKey() {
   localStorage.removeItem("vtm_gen_api_key");
   els.authScreen.classList.remove("hidden");
   els.inputApiKey.value = "";
+
+  // Reset model selector to default
+  if (els.selectModel) {
+    els.selectModel.innerHTML = '<option value="gemini-3-pro-image-preview">Gemini 3 Pro Image (default)</option>';
+  }
+  if (els.modelStatus) {
+    els.modelStatus.textContent = "Conecta tu API Key para ver modelos disponibles.";
+  }
+}
+
+// --- Fetch Available Models ---
+async function fetchAvailableModels() {
+  if (!state.apiKey || !els.selectModel) return;
+
+  els.modelStatus.textContent = "Cargando modelos...";
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: state.apiKey });
+    const response = await ai.models.list();
+
+    // Filter models that support image generation (have "image" in the name)
+    const imageModels = [];
+    for await (const model of response) {
+      const modelName = model.name || "";
+      const modelId = modelName.replace("models/", "");
+
+      // Filter for image generation models
+      if (modelId.includes("image") && !modelId.includes("embedding")) {
+        imageModels.push({
+          id: modelId,
+          displayName: model.displayName || modelId,
+          description: model.description || "",
+        });
+      }
+    }
+
+    state.availableModels = imageModels;
+
+    // Update dropdown
+    if (imageModels.length > 0) {
+      // Sort: gemini-3-pro first, then by name
+      imageModels.sort((a, b) => {
+        if (a.id.includes("3-pro")) return -1;
+        if (b.id.includes("3-pro")) return 1;
+        if (a.id.includes("3.1")) return -1;
+        if (b.id.includes("3.1")) return 1;
+        return a.id.localeCompare(b.id);
+      });
+
+      els.selectModel.innerHTML = imageModels
+        .map((m) => {
+          const isDefault = m.id === "gemini-3-pro-image-preview";
+          const label = isDefault ? `${m.displayName} (default)` : m.displayName;
+          return `<option value="${m.id}" ${isDefault ? "selected" : ""}>${label}</option>`;
+        })
+        .join("");
+
+      // Restore previous selection if valid
+      const previousModel = state.selectedModel;
+      if (imageModels.some((m) => m.id === previousModel)) {
+        els.selectModel.value = previousModel;
+      } else {
+        state.selectedModel = els.selectModel.value;
+      }
+
+      els.modelStatus.textContent = `${imageModels.length} modelos de imagen disponibles.`;
+    } else {
+      els.modelStatus.textContent = "No se encontraron modelos de imagen.";
+    }
+  } catch (err) {
+    console.error("Error fetching models:", err);
+    els.modelStatus.textContent = "Error cargando modelos. Usando default.";
+  }
 }
 
 // --- Generation Logic ---
@@ -238,14 +331,15 @@ async function generateImage() {
     }
 
     const ai = new GoogleGenAI({ apiKey: state.apiKey });
+    const selectedModel = state.selectedModel || "gemini-3-pro-image-preview";
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
-      contents: { parts: [{ text: fullPrompt }] },
+      model: selectedModel,
+      contents: fullPrompt,
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION.replace(/\n/g, " "), // Sanitize newlines just in case
+        responseModalities: ["TEXT", "IMAGE"],
+        systemInstruction: SYSTEM_INSTRUCTION.replace(/\n/g, " "),
         imageConfig: {
           aspectRatio: aspectRatio,
-          imageSize: "1024x1024", // Defaulting as resolution select is not in my UI yet, or could use "1024x1024"
         },
       },
     });
@@ -375,7 +469,7 @@ function renderGallery() {
     <div onclick="window.vtmOpenLightbox('${img.id}')" class="gallery-item">
        <img src="${img.url}" class="gallery-img" loading="lazy" />
        <div class="gallery-overlay">
-         <span style="color:#dca; font-size:0.7rem; font-weight:bold; text-transform:uppercase;">${img.presetName}</span>
+         <span class="gallery-preset-label">${img.presetName}</span>
          <p class="gallery-prompt">"${img.prompt}"</p>
          <div class="gallery-actions">
            <button id="btn-save-${img.id}" onclick="event.stopPropagation(); window.vtmSaveToCloud('${img.id}')">☁️ Guardar</button>
@@ -504,7 +598,7 @@ async function fetchCloudGallery() {
   if (!cloudContainer) return;
 
   // reset
-  cloudContainer.innerHTML = '<p style="color:#666">Cargando...</p>';
+  cloudContainer.innerHTML = '<p class="status-loading">Cargando...</p>';
 
   // Check session first to ensure RLS doesn't block us
   const {
@@ -527,7 +621,7 @@ async function fetchCloudGallery() {
   if (error) {
     console.error("Error fetching cloud gallery", error);
     cloudContainer.innerHTML =
-      '<p style="color:red">Error cargando galería.</p>';
+      '<p class="status-error">Error cargando galería.</p>';
     return;
   }
 
@@ -547,22 +641,22 @@ async function fetchCloudGallery() {
         }')">
            <img src="${dbImg.image_url}" class="gallery-img" loading="lazy" />
            <div class="gallery-overlay">
-             <span style="color:#dca; font-size:0.7rem; font-weight:bold; text-transform:uppercase;">${
+             <span class="gallery-preset-label">${
                dbImg.name || dbImg.metadata?.preset || "Vástago"
              }</span>
              <p class="gallery-prompt">"${dbImg.prompt}"</p>
-             <div class="gallery-actions" style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+             <div class="gallery-actions gallery-actions--cloud">
                 <button onclick="event.stopPropagation(); window.vtmCopyCloudUrl('${
                   dbImg.image_url
                 }')" title="Copiar URL">🔗</button>
                 <button onclick="event.stopPropagation(); window.vtmCopyCloudPrompt('${
                   dbImg.id
                 }')" title="Copiar Prompt Completo">📝 Prompt</button>
-                <button onclick="event.stopPropagation(); window.vtmDeleteCloudImage('${
+                <button class="btn-delete" onclick="event.stopPropagation(); window.vtmDeleteCloudImage('${
                   dbImg.id
                 }', '${
         dbImg.image_url
-      }')" title="Borrar de la Nube" style="border-color:red; color:red;">🗑️</button>
+      }')" title="Borrar de la Nube">🗑️</button>
              </div>
            </div>
         </div>
