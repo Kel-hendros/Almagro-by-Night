@@ -92,11 +92,18 @@
 }
 
 /* ── Creature type icons ───────────────────────────── */
-.cc-creature-icons {
+.cc-creature-row {
   display: flex;
+  align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  justify-content: center;
+}
+
+.cc-creature-icons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
 .cc-icon-container {
@@ -143,8 +150,7 @@
 /* ── Position buttons ──────────────────────────────── */
 .cc-position-buttons {
   display: flex;
-  justify-content: center;
-  margin-top: 1.5rem;
+  flex-shrink: 0;
 }
 .cc-position-buttons.cc-disabled {
   opacity: 0.3;
