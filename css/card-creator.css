@@ -193,6 +193,11 @@
   border-color: var(--theme-accent);
 }
 
+/* ── Border section ───────────────────────────────── */
+.cc-border-section {
+  margin-top: 0.75rem;
+}
+
 /* ── Border mode toggle ───────────────────────────── */
 .cc-border-mode-toggle {
   display: inline-flex;
