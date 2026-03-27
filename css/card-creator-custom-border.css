@@ -15,23 +15,22 @@
   gap: 0.5rem;
 }
 
-/* ── Fill type tabs ────────────────────────────────────── */
+/* ── Fill type tabs (matches .cc-mode-btn style) ───────── */
 .ccb-fill-tabs {
-  display: flex;
+  display: inline-flex;
 }
 
 .ccb-tab {
-  flex: 1;
-  padding: 0.3rem 0.5rem;
+  padding: 0.15rem 0.5rem;
   background: var(--theme-bg-surface);
   color: var(--theme-text-secondary);
   border: 1px solid var(--theme-border-divider);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   transition: background 0.15s;
 }
-.ccb-tab:first-child { border-radius: 10px 0 0 10px; }
-.ccb-tab:last-child  { border-radius: 0 10px 10px 0; }
+.ccb-tab:first-child { border-radius: 6px 0 0 6px; }
+.ccb-tab:last-child  { border-radius: 0 6px 6px 0; }
 .ccb-tab.active {
   background: var(--theme-accent);
   color: var(--theme-text-on-accent);
