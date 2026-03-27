@@ -20,7 +20,6 @@
 
       <!-- Image upload -->
       <div>
-        <p class="cc-section-title">Imagen</p>
         <div class="cc-image-form">
           <label for="cc-file-input" class="cc-file-label">Subir imagen</label>
           <input type="file" id="cc-file-input" accept="image/*" style="display:none">
@@ -47,11 +46,12 @@
 
       <!-- Border -->
       <div>
-        <p class="cc-section-title">Borde <span id="cc-selected-border" class="cc-selected-border"></span></p>
+        <p class="cc-section-title">Borde</p>
         <div class="cc-border-mode-toggle">
           <button class="cc-mode-btn active" data-mode="gallery">Galería</button>
           <button class="cc-mode-btn" data-mode="custom">Personalizado</button>
         </div>
+        <p id="cc-selected-border-row" class="cc-selected-border-row">Borde: <span id="cc-selected-border" class="cc-selected-border">Mármol Verde</span></p>
         <div id="cc-border-options" class="cc-border-options"></div>
         <div id="cc-custom-border-panel" class="hidden"></div>
       </div>
