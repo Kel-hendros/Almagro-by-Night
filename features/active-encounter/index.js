@@ -9,10 +9,6 @@
     // Walls
     "walls/wall-renderer.js",
     "walls/wall-drawer.js",
-    // Rooms
-    "rooms/room-renderer.js",
-    "rooms/room-drawer.js",
-    "rooms/room-manager.js",
     // Lighting
     "lighting/light-renderer.js",
     "lighting/light-switch-manager.js",

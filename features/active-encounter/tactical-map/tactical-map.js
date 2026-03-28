@@ -55,7 +55,6 @@ window.TacticalMap = class TacticalMap {
     this.walls = [];
     this.lights = [];
     this.switches = [];
-    this._rooms = [];
     this.selectedSwitchId = null;
     this._tilePainterHover = null;
     this._wallDrawerState = null;
@@ -215,9 +214,6 @@ window.TacticalMap = class TacticalMap {
     }
     if (Array.isArray(extras?.switches)) {
       this.switches = extras.switches;
-    }
-    if (Array.isArray(extras?.rooms)) {
-      this._rooms = extras.rooms;
     }
 
     const preloadTokenImage = (token) => {
@@ -1072,12 +1068,14 @@ window.TacticalMap = class TacticalMap {
   }
 
   recomputeRooms() {
-    // No-op: rooms are now explicit polygons, no flood-fill detection needed.
+    // No-op: enclosed spaces are detected dynamically via ray casting.
+    // No explicit room entities needed.
   }
 
   /**
    * Compute luminosity at a continuous map position (analytical, no canvas sampling).
    * Returns a value in [0, 1] where 0 = pitch black, 1 = fully illuminated.
+   * Uses enclosed polygon detection to determine if point is in an interior space (no ambient light).
    * @param {number} gx - Grid X coordinate
    * @param {number} gy - Grid Y coordinate
    * @param {Object} [options] - Optional configuration
@@ -1087,46 +1085,33 @@ window.TacticalMap = class TacticalMap {
     var opts = options || {};
     var falloffMode = opts.falloff || "gradient";
 
-    var rooms = this._rooms;
     var ambient = this._ambientLight;
     var ambientI = ambient
       ? Math.min(1, Math.max(0, ambient.intensity != null ? ambient.intensity : 0.5))
       : 0.5;
 
-    // Default: outdoor ambient. Check rooms — first match wins.
+    // Start with ambient light. Enclosed areas are darkened visually by the
+    // renderer overlay - no need to check polygons here for gameplay logic.
     var luminosity = ambientI;
-    if (rooms && rooms.length > 0 && window.FogVisibility) {
-      for (var ri = 0; ri < rooms.length; ri++) {
-        var room = rooms[ri];
-        if (!room.polygon || room.polygon.length < 3) continue;
-        if (window.FogVisibility.pointInPolygon(gx, gy, room.polygon)) {
-          luminosity = (room.ambientLight && room.ambientLight.intensity != null)
-            ? Math.min(1, Math.max(0, room.ambientLight.intensity)) : 0;
-          break;
-        }
-      }
-    }
 
-    // Light contributions
+    // Light contributions - use simple distance check for performance
     var lightPolygons = this._cachedLightPolygons;
-    if (lightPolygons && lightPolygons.length > 0 && window.FogVisibility) {
+    if (lightPolygons && lightPolygons.length > 0) {
       for (var i = 0; i < lightPolygons.length; i++) {
         var lc = lightPolygons[i];
-        if (!window.FogVisibility.pointInPolygon(gx, gy, lc.poly)) continue;
         var dx = gx - lc.light.x;
         var dy = gy - lc.light.y;
         var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > lc.radius) continue;
+
         var t = dist / lc.radius;
         var contribution = 0;
 
         if (falloffMode === "inverse-square") {
-          // Physics-based inverse-square falloff with softening
-          // Formula: intensity / (normalizedDist^2 + softening)
-          // Softening factor prevents extreme values near light center
           var normalizedDist = Math.max(0.1, t);
           var softening = 0.5;
           contribution = lc.intensity / (normalizedDist * normalizedDist + softening);
-          contribution = Math.min(contribution, lc.intensity); // Cap at max intensity
+          contribution = Math.min(contribution, lc.intensity);
         } else {
           // Default gradient falloff (matches visual rendering in light-renderer.js)
           if (t < 0.50) {
@@ -1205,20 +1190,16 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawLightingOverlay === "function") {
       this.drawLightingOverlay();
     }
-    // Narrator (not impersonating): redraw walls and rooms ON TOP of the
-    // fog/lighting overlay so they are always fully visible and never dimmed.
+    // Narrator (not impersonating): redraw walls ON TOP of the fog/lighting
+    // overlay so they are always fully visible and never dimmed.
     if (this._fog && this._fog.isNarrator && !this._fog.impersonateInstanceId) {
       if (typeof this.drawWalls === "function") this.drawWalls();
-      if (typeof this.drawRooms === "function") this.drawRooms();
       if (typeof this.drawLightIndicators === "function") this.drawLightIndicators();
     }
     // Interactive markers drawn ABOVE fog overlay (same pattern as tokens).
     // Visibility is checked programmatically in isMarkerVisibleToViewer.
     if (typeof this.drawInteractiveMarkers === "function") {
       this.drawInteractiveMarkers();
-    }
-    if (typeof this.drawRoomIcons === "function") {
-      this.drawRoomIcons();
     }
     // Tokens drawn ABOVE fog/lighting overlays. Fog and light visibility are
     // resolved independently inside drawTokens.
@@ -1236,9 +1217,6 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawWallDrawerPreview === "function") {
       this.drawWallDrawerPreview();
     }
-    if (typeof this.drawRoomDrawerPreview === "function") {
-      this.drawRoomDrawerPreview();
-    }
     this.ctx.restore();
     this._repositionViewPin();
     this._repositionPing();
@@ -1250,9 +1228,6 @@ if (typeof window.__applyTacticalMapLightRenderer === "function") {
 }
 if (typeof window.__applyTacticalMapWallRenderer === "function") {
   window.__applyTacticalMapWallRenderer(window.TacticalMap);
-}
-if (typeof window.__applyTacticalMapRoomRenderer === "function") {
-  window.__applyTacticalMapRoomRenderer(window.TacticalMap);
 }
 if (typeof window.__applyTacticalMapFogRenderer === "function") {
   window.__applyTacticalMapFogRenderer(window.TacticalMap);

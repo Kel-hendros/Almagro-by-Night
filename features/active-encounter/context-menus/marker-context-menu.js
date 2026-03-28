@@ -1,4 +1,4 @@
-// Context menu for interactive markers (doors, windows, lights, switches, rooms).
+// Context menu for interactive markers (doors, windows, lights, switches).
 // Reuses the same visual style as the token context menu.
 (function initAEMarkerContextMenu(global) {
   "use strict";
@@ -8,7 +8,6 @@
     window: "\u{1FA9F}",
     light: "\u{1F4A1}",
     switch: "\u{1F39A}\uFE0F",
-    room: "\uD83C\uDFE0",
   };
 
   var MARKER_TYPE_LABELS = {
@@ -16,7 +15,6 @@
     window: "Ventana",
     light: "Luz",
     switch: "Interruptor",
-    room: "Habitaci\u00f3n",
   };
 
   function createController(ctx) {
@@ -24,7 +22,6 @@
     var canEditEncounter = ctx.canEditEncounter;
     var getMap = ctx.getMap;
     var getLightSwitchManager = ctx.getLightSwitchManager;
-    var getRoomManager = ctx.getRoomManager;
     var saveEncounter = ctx.saveEncounter;
 
     var menuEl = null;
@@ -310,181 +307,6 @@
       bindHeaderRename(function (val) { sw.name = val; saveEncounter?.(); });
     }
 
-    // ── Room wall helpers ──
-
-    function isPointOnSegment(px, py, ax, ay, bx, by) {
-      var cross = (bx - ax) * (py - ay) - (by - ay) * (px - ax);
-      if (Math.abs(cross) > 0.15) return false;
-      var dx = bx - ax, dy = by - ay;
-      var lenSq = dx * dx + dy * dy;
-      if (lenSq === 0) return Math.abs(px - ax) < 0.15 && Math.abs(py - ay) < 0.15;
-      var t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
-      return t >= -0.01 && t <= 1.01;
-    }
-
-    function isWallOnRoomEdge(w, poly) {
-      var n = poly.length;
-      for (var i = 0; i < n; i++) {
-        var j = (i + 1) % n;
-        if (isPointOnSegment(w.x1, w.y1, poly[i].x, poly[i].y, poly[j].x, poly[j].y) &&
-            isPointOnSegment(w.x2, w.y2, poly[i].x, poly[i].y, poly[j].x, poly[j].y)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    function countRoomWalls(room) {
-      var walls = state.encounter?.data?.walls || [];
-      var poly = room.polygon;
-      if (!poly || poly.length < 3) return 0;
-      var count = 0;
-      for (var i = 0; i < walls.length; i++) {
-        if (isWallOnRoomEdge(walls[i], poly)) count++;
-      }
-      return count;
-    }
-
-    function createRoomWalls(room) {
-      var data = state.encounter?.data;
-      if (!data) return;
-      var walls = data.walls || [];
-      var poly = room.polygon;
-      if (!poly || poly.length < 3) return;
-      var n = poly.length;
-      for (var i = 0; i < n; i++) {
-        var j = (i + 1) % n;
-        var typeCount = walls.filter(function (w) { return w.type === "wall"; }).length + 1;
-        walls.push({
-          id: "wall-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 6),
-          name: "Pared " + typeCount,
-          x1: poly[i].x, y1: poly[i].y,
-          x2: poly[j].x, y2: poly[j].y,
-          type: "wall", doorOpen: false,
-        });
-      }
-      data.walls = walls;
-      var map = getMap?.();
-      if (map) {
-        map.walls = walls;
-        map.invalidateFog?.();
-        map.invalidateLighting?.();
-        map.draw();
-      }
-      saveEncounter?.();
-    }
-
-    function removeRoomWalls(room) {
-      var data = state.encounter?.data;
-      if (!data) return;
-      var walls = data.walls || [];
-      var poly = room.polygon;
-      if (!poly || poly.length < 3) return;
-      data.walls = walls.filter(function (w) { return !isWallOnRoomEdge(w, poly); });
-      var map = getMap?.();
-      if (map) {
-        map.walls = data.walls;
-        map.invalidateFog?.();
-        map.invalidateLighting?.();
-        map.draw();
-      }
-      saveEncounter?.();
-    }
-
-    function renderWallsPanel(room) {
-      if (!secondaryEl) return;
-      activePanel = "walls";
-      var wallCount = countRoomWalls(room);
-      var hasWalls = wallCount > 0;
-
-      secondaryEl.innerHTML = "";
-      secondaryEl.classList.remove("is-grid");
-
-      if (hasWalls) {
-        var info = document.createElement("div");
-        info.className = "ae-marker-panel-info";
-        info.textContent = wallCount + " pared" + (wallCount !== 1 ? "es" : "") + " en esta habitaci\u00f3n";
-        secondaryEl.appendChild(info);
-
-        var removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "ae-token-condition-item";
-        removeBtn.innerHTML = '<span class="ae-token-condition-name" style="color:#cf5f5f;">Eliminar paredes</span>';
-        removeBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          removeRoomWalls(room);
-          renderWallsPanel(room);
-        });
-        secondaryEl.appendChild(removeBtn);
-      } else {
-        var createBtn = document.createElement("button");
-        createBtn.type = "button";
-        createBtn.className = "ae-token-condition-item";
-        createBtn.innerHTML = '<span class="ae-token-condition-name">Crear paredes</span>';
-        createBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          createRoomWalls(room);
-          renderWallsPanel(room);
-        });
-        secondaryEl.appendChild(createBtn);
-      }
-
-      setExpanded(true);
-    }
-
-    function renderRoom(room) {
-      var rm = getRoomManager?.();
-      var ambI = (room.ambientLight && room.ambientLight.intensity != null) ? room.ambientLight.intensity : 0;
-      var ambC = (room.ambientLight && room.ambientLight.color) || "#8090b0";
-      var label = room.name || room.id;
-
-      bodyEl.innerHTML =
-        renderHeader(MARKER_EMOJIS.room, label) +
-        '<div class="ae-marker-props">' +
-          '<div class="ae-marker-prop"><label>Ambiente</label><input type="range" data-field="ambient" min="0" max="1" step="0.05" value="' + ambI + '"><span class="ae-marker-prop-val" data-val="ambient">' + Math.round(ambI * 100) + '%</span></div>' +
-          '<div class="ae-marker-prop"><label>Color</label><input type="color" data-field="ambientColor" value="' + ambC + '"></div>' +
-        '</div>' +
-        '<button class="ae-token-context-action" data-action="toggle-walls-panel">' +
-          '<span class="ae-token-context-action-label">Paredes</span>' +
-          '<span class="ae-token-context-chevron">\u203A</span>' +
-        '</button>' +
-        '<button class="ae-token-context-action ae-token-context-action--danger" data-action="delete">Eliminar</button>';
-
-      bindHeaderRename(function (val) { room.name = val; rm?.updateRoom(room.id, { name: val }); });
-
-      // Walls panel toggle (expands to the right like token conditions)
-      bodyEl.querySelector('[data-action="toggle-walls-panel"]')?.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (activePanel === "walls") {
-          collapsePanel();
-          bodyEl.querySelector('[data-action="toggle-walls-panel"]')?.classList.remove("is-active");
-        } else {
-          renderWallsPanel(room);
-          bodyEl.querySelector('[data-action="toggle-walls-panel"]')?.classList.add("is-active");
-        }
-      });
-
-      bodyEl.querySelector('[data-field="ambient"]').addEventListener("input", function (e) {
-        var v = parseFloat(e.target.value);
-        bodyEl.querySelector('[data-val="ambient"]').textContent = Math.round(v * 100) + "%";
-        var al = room.ambientLight || {};
-        al.intensity = v;
-        room.ambientLight = al;
-        rm?.updateRoom(room.id, { ambientLight: al });
-      });
-      bodyEl.querySelector('[data-field="ambientColor"]').addEventListener("input", function (e) {
-        var al = room.ambientLight || {};
-        al.color = e.target.value;
-        room.ambientLight = al;
-        rm?.updateRoom(room.id, { ambientLight: al });
-      });
-      bodyEl.querySelector('[data-action="delete"]')?.addEventListener("click", function (e) {
-        e.stopPropagation();
-        hide();
-        rm?.removeRoom(room.id);
-      });
-    }
-
     // ── Positioning (same logic as token context menu) ──
 
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -570,8 +392,6 @@
         renderLight(info.light);
       } else if (info.type === "switch") {
         renderSwitch(info.sw);
-      } else if (info.type === "room") {
-        renderRoom(info.room);
       } else {
         hide(); return;
       }

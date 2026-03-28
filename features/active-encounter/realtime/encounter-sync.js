@@ -13,7 +13,6 @@
     var openModal = ctx.openModal;
     var getTilePainter = ctx.getTilePainter;
     var getWallDrawer = ctx.getWallDrawer;
-    var getRoomDrawer = ctx.getRoomDrawer;
     var getApplyBroadcastInitiative = ctx.getApplyBroadcastInitiative;
 
     function extractPCHealth(charData) {
@@ -91,9 +90,6 @@
         ? state.encounter.data.tileMap : null;
       var localWalls = (wallDrawer && wallDrawer.isActive())
         ? state.encounter.data.walls : null;
-      var roomDrawer = getRoomDrawer();
-      var localRooms = (roomDrawer && roomDrawer.isActive())
-        ? state.encounter.data.rooms : null;
       var preserveLights = !!(
         (state.map && state.map._isDraggingLight) ||
         (state._lightLocalChangeUntil && Date.now() < state._lightLocalChangeUntil)
@@ -116,7 +112,6 @@
       }
       if (localTileMap) state.encounter.data.tileMap = localTileMap;
       if (localWalls) state.encounter.data.walls = localWalls;
-      if (localRooms) state.encounter.data.rooms = localRooms;
       if (localLights) state.encounter.data.lights = localLights;
       if (state.encounterHasUpdatedAt && updated.updated_at) {
         state.encounterUpdatedAt = updated.updated_at;
@@ -125,12 +120,11 @@
       sanitizeEncounterTokens();
       ensureActiveInstance();
       if (state.map) {
-        state.map.recomputeRooms?.();
         if (typeof state.map.setFogConfig === "function") {
           state.map.setFogConfig(state.encounter.data.fog || null);
         }
         state.map.invalidateFog?.();
-        state.map.invalidateLighting?.();
+        state.map.invalidateLightingWalls?.();
       }
       render();
     }

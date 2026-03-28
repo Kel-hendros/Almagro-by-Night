@@ -14,7 +14,6 @@
       getMap,
       getTilePainter,
       getWallDrawer,
-      getRoomDrawer,
       addLight,
       findLightAt,
       removeLight,
@@ -147,9 +146,6 @@
       // Wall tools
       bindWallEvents();
 
-      // Room tools
-      bindRoomEvents();
-
       // Light tools
       bindLightEvents();
 
@@ -268,13 +264,6 @@
           refreshWallUI();
         }
       }
-      if (except !== "roomDrawer") {
-        var rd = getRoomDrawer?.();
-        if (rd?.isActive()) {
-          rd.deactivate();
-          refreshRoomUI();
-        }
-      }
       if (except !== "lightPlacer" && lightPlaceMode) {
         deactivateLightPlacer();
       }
@@ -382,84 +371,6 @@
       if (countEl) {
         var count = wd?.getWallCount() || 0;
         countEl.textContent = count + " segmento" + (count !== 1 ? "s" : "");
-      }
-    }
-
-    // ── Room Tools ──
-
-    function bindRoomEvents() {
-      document.getElementById("btn-ae-room-draw")?.addEventListener("click", function () {
-        if (!requireAdminAction()) return;
-        var rd = getRoomDrawer?.();
-        if (!rd) return;
-        if (rd.isActive() && rd.getMode() === "draw") {
-          rd.deactivate();
-        } else {
-          deactivateOtherTools("roomDrawer");
-          rd.activate("draw");
-        }
-        refreshRoomUI();
-      });
-
-      document.getElementById("btn-ae-room-select")?.addEventListener("click", function () {
-        if (!requireAdminAction()) return;
-        var rd = getRoomDrawer?.();
-        if (!rd) return;
-        if (rd.isActive() && rd.getMode() === "select") {
-          rd.deactivate();
-        } else {
-          deactivateOtherTools("roomDrawer");
-          rd.activate("select");
-        }
-        refreshRoomUI();
-      });
-
-      document.getElementById("btn-ae-room-erase")?.addEventListener("click", function () {
-        if (!requireAdminAction()) return;
-        var rd = getRoomDrawer?.();
-        if (!rd) return;
-        if (rd.isActive() && rd.getMode() === "erase") {
-          rd.deactivate();
-        } else {
-          deactivateOtherTools("roomDrawer");
-          rd.activate("erase");
-        }
-        refreshRoomUI();
-      });
-
-      // Keyboard: Escape to cancel or deactivate
-      document.addEventListener("keydown", function (e) {
-        var rd = getRoomDrawer?.();
-        if (!rd || !rd.isActive()) return;
-        if (rd.handleKeyDown(e)) {
-          e.preventDefault();
-          refreshRoomUI();
-          return;
-        }
-        if (e.key === "Escape") {
-          rd.deactivate();
-          refreshRoomUI();
-          e.preventDefault();
-        }
-      });
-    }
-
-    function refreshRoomUI() {
-      var rd = getRoomDrawer?.();
-      var isActive = rd?.isActive() || false;
-      var currentMode = isActive ? rd.getMode() : null;
-
-      var drawBtn = document.getElementById("btn-ae-room-draw");
-      var selectBtn = document.getElementById("btn-ae-room-select");
-      var eraseBtn = document.getElementById("btn-ae-room-erase");
-      if (drawBtn) drawBtn.classList.toggle("active", isActive && currentMode === "draw");
-      if (selectBtn) selectBtn.classList.toggle("active", isActive && currentMode === "select");
-      if (eraseBtn) eraseBtn.classList.toggle("active", isActive && currentMode === "erase");
-
-      var countEl = document.getElementById("ae-room-count");
-      if (countEl) {
-        var rooms = state.encounter?.data?.rooms || [];
-        countEl.textContent = rooms.length + " habitaci\u00f3n" + (rooms.length !== 1 ? "es" : "");
       }
     }
 
@@ -687,7 +598,6 @@
       refreshGridOpacityButtons();
       refreshAmbientUI();
       refreshFogUI();
-      refreshRoomUI();
       renderLightList();
       const map = getMap();
 
@@ -837,7 +747,7 @@
         el.style.display = canEditEncounter() ? "" : "none";
       });
 
-      var narratorOnlySections = ["ae-terrain-section", "ae-walls-section", "ae-rooms-section", "ae-lights-section", "ae-fog-section"];
+      var narratorOnlySections = ["ae-terrain-section", "ae-walls-section", "ae-lights-section", "ae-fog-section"];
       narratorOnlySections.forEach(function (id) {
         var section = document.getElementById(id);
         if (section) section.style.display = canEditEncounter() ? "" : "none";
@@ -854,7 +764,6 @@
       applyPermissions,
       refreshTerrainPaletteUI,
       refreshWallUI,
-      refreshRoomUI,
       refreshFogUI,
     };
   }

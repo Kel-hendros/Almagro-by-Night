@@ -169,8 +169,8 @@
     };
 
     /**
-     * Find an interactive marker (door/window, light, switch, room) near a cell position.
-     * Returns { type, wall|light|sw|room } or null.
+     * Find an interactive marker (door/window, light, switch) near a cell position.
+     * Returns { type, wall|light|sw } or null.
      */
     proto.getMarkerAt = function getMarkerAt(cellX, cellY) {
       var THRESHOLD = 0.6;
@@ -197,17 +197,6 @@
         var s = switches[si];
         var sd = Math.sqrt((cellX - s.x) * (cellX - s.x) + (cellY - s.y) * (cellY - s.y));
         if (sd < THRESHOLD) return { type: "switch", sw: s };
-      }
-      // Rooms
-      var rooms = this._rooms || [];
-      if (rooms.length > 0 && window.FogVisibility) {
-        for (var ri = 0; ri < rooms.length; ri++) {
-          var r = rooms[ri];
-          if (!r.polygon || r.polygon.length < 3) continue;
-          if (window.FogVisibility.pointInPolygon(cellX, cellY, r.polygon)) {
-            return { type: "room", room: r };
-          }
-        }
       }
       return null;
     };
@@ -425,15 +414,6 @@
           return;
         }
       }
-
-      // Room drawer intercept
-      if (this._roomDrawer && this._roomDrawer.isActive()) {
-        if (this._roomDrawer.handleMouseDown(e, worldCellX, worldCellY)) {
-          e.preventDefault();
-          return;
-        }
-      }
-
 
       if (this.measureToolActive) {
         if (e.button === 0) {
@@ -875,16 +855,6 @@
         this._wallDrawer.handleMouseMove(e, wx / this.gridSize, wy / this.gridSize);
       }
 
-      // Room drawer mousemove
-      if (this._roomDrawer && this._roomDrawer.isActive()) {
-        const rectR = this.canvas.getBoundingClientRect();
-        const rmx = e.clientX - rectR.left;
-        const rmy = e.clientY - rectR.top;
-        const rwx = (rmx - this.offsetX) / this.scale;
-        const rwy = (rmy - this.offsetY) / this.scale;
-        this._roomDrawer.handleMouseMove(e, rwx / this.gridSize, rwy / this.gridSize);
-      }
-
       // Switch drag
       if (this._isDraggingSwitch && this._draggedSwitch) {
         const sRect = this.canvas.getBoundingClientRect();
@@ -992,16 +962,18 @@
           this.draggedToken.x = nextX;
           this.draggedToken.y = nextY;
         }
-        // Fog: update on every drag step for PCs so walls occlude vision using
-        // the token's exact current position, with no visible difference
-        // between moving and standing still.
-        // Use granular invalidation for better performance when available.
+        // Fog: update during drag for PCs so walls occlude vision.
+        // Throttle to every 50ms during drag for smoother movement (~20 FPS).
         if (dragIsPC && this._fog?.config?.enabled) {
-          this._lastDragFogUpdate = performance.now();
-          if (typeof this.invalidateFogForToken === "function" && curToken.instanceId) {
-            this.invalidateFogForToken(curToken.instanceId);
-          } else if (typeof this.invalidateFog === "function") {
-            this.invalidateFog();
+          var now = performance.now();
+          var DRAG_FOG_THROTTLE = 50; // ms between fog updates during drag
+          if (!this._lastDragFogUpdate || (now - this._lastDragFogUpdate) >= DRAG_FOG_THROTTLE) {
+            this._lastDragFogUpdate = now;
+            if (typeof this.invalidateFogForToken === "function" && curToken.instanceId) {
+              this.invalidateFogForToken(curToken.instanceId);
+            } else if (typeof this.invalidateFog === "function") {
+              this.invalidateFog();
+            }
           }
         }
         // Broadcast drag position to other clients in real-time
@@ -1129,10 +1101,6 @@
         var wwx = (wmx - this.offsetX) / this.scale;
         var wwy = (wmy - this.offsetY) / this.scale;
         this._wallDrawer.handleMouseUp(e, wwx / this.gridSize, wwy / this.gridSize);
-      }
-      // Room drawer mouseup
-      if (this._roomDrawer && this._roomDrawer.isActive()) {
-        this._roomDrawer.handleMouseUp();
       }
 
       // Switch drag end
@@ -1317,14 +1285,6 @@
       const worldY = (mouseY - this.offsetY) / this.scale;
       const worldCellX = worldX / this.gridSize;
       const worldCellY = worldY / this.gridSize;
-
-      // Room drawer intercept (double-click to close polygon)
-      if (this._roomDrawer && this._roomDrawer.isActive()) {
-        if (this._roomDrawer.handleDblClick(e, worldCellX, worldCellY)) {
-          e.preventDefault();
-          return;
-        }
-      }
 
       // Decor layer: rotate handle on double-click
       if (this.activeLayer === "decor") {

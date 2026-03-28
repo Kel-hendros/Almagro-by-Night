@@ -93,8 +93,6 @@
   let drawerController = null;
   let tilePainter = null;
   let wallDrawer = null;
-  let roomDrawer = null;
-  let roomManager = null;
   let tokenActionsController = null;
   let tokenContextMenuController = null;
   let persistenceController = null;
@@ -220,7 +218,6 @@
       canEditEncounter,
       getMap: () => state.map,
       getLightSwitchManager: () => lightSwitchManager,
-      getRoomManager: () => roomManager,
       saveEncounter: () => saveEncounter(),
     });
     layersController = window.AEEncounterLayers?.createController?.({
@@ -269,7 +266,6 @@
       saveEncounter: () => saveEncounter(),
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
-      getRoomDrawer: () => roomDrawer,
       addLight: (x, y) => lightSwitchManager?.addLight(x, y),
       findLightAt: (x, y) => lightSwitchManager?.findLightAt(x, y),
       removeLight: (id) => lightSwitchManager?.removeLight(id),
@@ -342,7 +338,6 @@
       openModal: (inst) => openModal(inst),
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
-      getRoomDrawer: () => roomDrawer,
       getApplyBroadcastInitiative: () => applyBroadcastInitiative,
     });
     instanceManager = window.AEInstanceManager?.createController?.({
@@ -386,9 +381,6 @@
     if (!Array.isArray(state.encounter.data.switches)) {
       state.encounter.data.switches = [];
     }
-    if (!Array.isArray(state.encounter.data.rooms)) {
-      state.encounter.data.rooms = [];
-    }
     if (!state.encounter.data.ambientLight) {
       state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5 };
     }
@@ -403,7 +395,6 @@
         walls: state.encounter.data.walls,
         lights: state.encounter.data.lights,
         switches: state.encounter.data.switches,
-        rooms: state.encounter.data.rooms,
       },
     );
 
@@ -434,41 +425,14 @@
             if (state.map) state.map.walls = walls;
           }
         },
-        onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLighting?.(); saveEncounter(); roomManager?.checkAutoCreateRooms?.(); },
+        onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLightingWalls?.(); saveEncounter(); },
         canEdit: canEditEncounter,
       });
       state.map._wallDrawer = wallDrawer;
     }
 
-    // Init Room Manager & Room Drawer (narrator only)
-    if (window.AERoomManager) {
-      roomManager = window.AERoomManager.createManager({
-        getEncounterData: () => state.encounter?.data,
-        getMap: () => state.map,
-        saveEncounter: () => saveEncounter(),
-      });
-    }
-    if (window.RoomDrawer) {
-      roomDrawer = window.RoomDrawer.createRoomDrawer({
-        getMap: () => state.map,
-        getWalls: () => state.encounter?.data?.walls || [],
-        getRooms: () => state.encounter?.data?.rooms || [],
-        setRooms: (rooms) => {
-          if (state.encounter?.data) {
-            state.encounter.data.rooms = rooms;
-            if (state.map) state.map._rooms = rooms;
-          }
-        },
-        onChanged: () => { state.map?.invalidateLighting?.(); saveEncounter(); },
-        canEdit: canEditEncounter,
-        roomManager: roomManager,
-      });
-      state.map._roomDrawer = roomDrawer;
-    }
-
     // Ambient light reference on the map (always use the encounter data object)
     state.map._ambientLight = state.encounter.data.ambientLight;
-    state.map._rooms = state.encounter.data.rooms;
 
     // Init Fog of War
     if (!state.encounter.data.fog) {
@@ -1791,7 +1755,6 @@
         walls: state.encounter.data.walls || [],
         lights: state.encounter.data.lights || [],
         switches: state.encounter.data.switches || [],
-        rooms: state.encounter.data.rooms || [],
       });
       // Keep ambient light reference in sync (always point to the encounter data object)
       state.map._ambientLight = state.encounter.data.ambientLight;
@@ -2216,9 +2179,6 @@
     tokenContextMenuController = null;
     lightSwitchManager?.destroy?.();
     lightSwitchManager = null;
-    roomDrawer?.closeRoomPopover?.();
-    roomDrawer = null;
-    roomManager = null;
     persistenceController?.destroy?.();
     persistenceController = null;
     designTokenMenuController?.destroy?.();

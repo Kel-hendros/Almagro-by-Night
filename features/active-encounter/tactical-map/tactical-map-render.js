@@ -707,7 +707,12 @@
         if (isPlayerView && fog.polygons && fog.polygons.length > 0) {
           fogHidesTokens = true;
           fogPolygons = fog.polygons;
-          viewerIdSet = fog.viewerInstanceIds ? new Set(fog.viewerInstanceIds) : null;
+          // Use impersonateInstanceId when no explicit viewerInstanceIds
+          if (fog.viewerInstanceIds) {
+            viewerIdSet = new Set(fog.viewerInstanceIds);
+          } else if (fog.impersonateInstanceId && fog.impersonateInstanceId !== 'all') {
+            viewerIdSet = new Set([fog.impersonateInstanceId]);
+          }
         }
       }
 
