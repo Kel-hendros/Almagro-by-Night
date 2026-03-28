@@ -1217,6 +1217,9 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawWallDrawerPreview === "function") {
       this.drawWallDrawerPreview();
     }
+    if (typeof this.drawWallEditOverlay === "function") {
+      this.drawWallEditOverlay();
+    }
     this.ctx.restore();
     this._repositionViewPin();
     this._repositionPing();

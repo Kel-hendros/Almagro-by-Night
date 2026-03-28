@@ -148,7 +148,7 @@
 
     var active = false;
     var wallType = "wall"; // "wall" | "door" | "window"
-    var mode = "draw"; // "draw" | "erase"
+    var mode = "draw"; // "draw" | "edit" | "erase"
     var drawShape = "polygon"; // "polygon" | "rectangle" | "circle"
     var chainStart = null; // { x, y } grid intersection
     var doorStart = null; // { x, y, wall, t } first click for door/window
@@ -156,8 +156,59 @@
     var shapeDragEnd = null; // { x, y } current drag position
     var CIRCLE_SEGMENTS = 24; // number of wall segments for circle approximation
 
+    // Edit mode state
+    var vertexRegistry = null;
+    var selection = null;
+    var wallEditor = null;
+    var wallSnapping = null;
+    var editDragStart = null; // { x, y, vertexKeys, wallIds } for drag operations
+    var hoverVertexKey = null;
+    var addVertexPreview = null; // Preview for wall split point
+
     var saveTimer = null;
     var SAVE_DELAY = 600;
+
+    // Initialize edit mode modules lazily
+    function ensureEditModules() {
+      if (!vertexRegistry && global.WallVertexRegistry) {
+        vertexRegistry = global.WallVertexRegistry.createVertexRegistry({ getWalls: getWalls });
+      }
+      if (!selection && global.WallSelection) {
+        selection = global.WallSelection.createWallSelection({
+          onSelectionChange: function () {
+            updateEditState();
+            var map = getMap?.();
+            if (map) map.draw();
+          },
+        });
+      }
+      if (!wallEditor && global.WallEditor) {
+        wallEditor = global.WallEditor.createWallEditor({
+          getWalls: getWalls,
+          setWalls: setWalls,
+          getVertexRegistry: function () { return vertexRegistry; },
+          getSelection: function () { return selection; },
+          onChanged: function () {
+            var map = getMap?.();
+            if (map) map.walls = getWalls() || [];
+            if (vertexRegistry) vertexRegistry.rebuild();
+            updateEditState();
+            scheduleSave();
+          },
+        });
+      }
+      if (!wallSnapping && global.WallSnapping) {
+        wallSnapping = global.WallSnapping.createWallSnapping({
+          getVertexRegistry: function () { return vertexRegistry; },
+          getWalls: getWalls,
+        });
+      }
+    }
+
+    function getSelection() { return selection; }
+    function getVertexRegistry() { return vertexRegistry; }
+    function getWallEditor() { return wallEditor; }
+    function getWallSnapping() { return wallSnapping; }
 
     function scheduleSave() {
       clearTimeout(saveTimer);
@@ -221,11 +272,17 @@
       doorStart = null;
       shapeOrigin = null;
       shapeDragEnd = null;
+      editDragStart = null;
+      hoverVertexKey = null;
+      addVertexPreview = null;
+      if (selection) selection.clearSelection();
       var map = getMap?.();
       if (map) {
         map.canvas?.classList.remove("wall-drawer-active");
         map.canvas?.classList.remove("wall-eraser-active");
+        map.canvas?.classList.remove("wall-edit-select", "wall-edit-move", "wall-edit-add-vertex", "wall-vertex-hover");
         map._wallDrawerState = null;
+        map._wallEditState = null;
         map.draw();
       }
     }
@@ -243,6 +300,14 @@
     function setMode(newMode) {
       mode = newMode;
       chainStart = null;
+      editDragStart = null;
+
+      // Initialize edit modules when entering edit mode
+      if (mode === "edit") {
+        ensureEditModules();
+        if (vertexRegistry) vertexRegistry.rebuild();
+      }
+
       var map = getMap?.();
       if (map) {
         map.canvas?.classList.toggle("wall-drawer-active", mode === "draw");
@@ -252,8 +317,102 @@
           map._wallDrawerState.chainStart = null;
           map._wallDrawerState.eraseHoverWallId = null;
         }
+        // Initialize or clear edit state
+        if (mode === "edit") {
+          updateEditState();
+        } else {
+          map._wallEditState = null;
+        }
+        updateEditCursor();
         map.draw();
       }
+    }
+
+    function updateEditCursor() {
+      var map = getMap?.();
+      if (!map || !map.canvas) return;
+      var c = map.canvas.classList;
+      c.remove("wall-edit-select", "wall-edit-move", "wall-vertex-hover");
+      if (mode !== "edit") return;
+      if (hoverVertexKey || editDragStart) {
+        c.add("wall-vertex-hover");
+      } else {
+        c.add("wall-edit-select");
+      }
+    }
+
+    function updateEditState() {
+      var map = getMap?.();
+      if (!map) return;
+
+      if (mode !== "edit") {
+        map._wallEditState = null;
+        return;
+      }
+
+      var vertices = vertexRegistry ? vertexRegistry.getAllVertices() : [];
+
+      // Build drag preview with wall segments
+      var dragPreview = null;
+      if (editDragStart && editDragStart.dragVertices) {
+        var dv = editDragStart.dragVertices;
+        // Calculate delta from current positions
+        var deltaX = 0, deltaY = 0;
+        if (dv.length > 0 && dv[0].currentX != null) {
+          deltaX = dv[0].currentX - dv[0].x;
+          deltaY = dv[0].currentY - dv[0].y;
+        }
+
+        // Collect walls that have at least one endpoint being dragged
+        var walls = getWalls() || [];
+        var draggedVertexKeys = {};
+        for (var i = 0; i < dv.length; i++) {
+          draggedVertexKeys[dv[i].key] = true;
+        }
+
+        var previewWalls = [];
+        for (var wi = 0; wi < walls.length; wi++) {
+          var w = walls[wi];
+          var key1 = vertexRegistry ? vertexRegistry.makeKey(w.x1, w.y1) : "";
+          var key2 = vertexRegistry ? vertexRegistry.makeKey(w.x2, w.y2) : "";
+          var drag1 = draggedVertexKeys[key1];
+          var drag2 = draggedVertexKeys[key2];
+
+          if (drag1 || drag2) {
+            previewWalls.push({
+              x1: drag1 ? w.x1 + deltaX : w.x1,
+              y1: drag1 ? w.y1 + deltaY : w.y1,
+              x2: drag2 ? w.x2 + deltaX : w.x2,
+              y2: drag2 ? w.y2 + deltaY : w.y2,
+              type: w.type,
+            });
+          }
+        }
+
+        dragPreview = {
+          vertices: dv,
+          walls: previewWalls,
+          deltaX: deltaX,
+          deltaY: deltaY,
+        };
+      }
+
+      // Get snap guides from drag state
+      var guides = [];
+      if (editDragStart && editDragStart.snapGuides) {
+        guides = editDragStart.snapGuides;
+      }
+
+      map._wallEditState = {
+        active: true,
+        vertices: vertices,
+        selectedWallIds: selection ? selection.getSelectedWallIds() : [],
+        selectedVertexKeys: selection ? selection.getSelectedVertexKeys() : [],
+        hoverVertexKey: hoverVertexKey,
+        boxSelection: selection && selection.isBoxSelecting() ? selection.getBoxSelection() : null,
+        dragPreview: dragPreview,
+        guides: guides,
+      };
     }
 
     /**
@@ -516,10 +675,22 @@
           updatePreview(cellX, cellY);
           return true;
         }
+        if (mode === "edit" && selection && selection.hasSelection()) {
+          selection.clearSelection();
+          updateEditState();
+          var map = getMap?.();
+          if (map) map.draw();
+          return true;
+        }
         return false; // Let parent handle (deactivate from drawer)
       }
 
       if (e.button !== 0) return false;
+
+      // ── Edit Mode ──
+      if (mode === "edit") {
+        return handleEditMouseDown(e, cellX, cellY);
+      }
 
       if (mode === "erase") {
         var wall = findNearestWall(cellX, cellY);
@@ -597,8 +768,283 @@
       return true;
     }
 
+    // ── Edit Mode Mouse Handlers ──
+
+    function handleEditMouseDown(e, cellX, cellY) {
+      if (!vertexRegistry || !selection) return false;
+      var isShift = e.shiftKey;
+
+      // Check if clicking on a vertex
+      var nearVertex = vertexRegistry.findVertex(cellX, cellY, 0.5);
+
+      // Check if clicking on a wall (not near vertex)
+      var nearWall = null;
+      if (!nearVertex) {
+        nearWall = findNearestWall(cellX, cellY);
+      }
+
+      // Shift+click on wall: split wall (add vertex)
+      if (isShift && nearWall && wallEditor) {
+        var pointOnWall = wallEditor.findPointOnWall(cellX, cellY, 0.5);
+        if (pointOnWall && pointOnWall.t > 0.05 && pointOnWall.t < 0.95) {
+          var newKey = wallEditor.addVertexOnWall(pointOnWall.wallId, pointOnWall.t);
+          if (newKey) {
+            selection.selectVertex(newKey, false);
+            vertexRegistry.rebuild();
+            updateEditState();
+            var map = getMap?.();
+            if (map) map.draw();
+          }
+          return true;
+        }
+      }
+
+      // Click on vertex: select and start drag
+      if (nearVertex) {
+        if (!selection.isVertexSelected(nearVertex.key)) {
+          selection.selectVertex(nearVertex.key, isShift);
+        }
+        startEditDrag(cellX, cellY);
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      // Click on wall: select and start drag
+      if (nearWall) {
+        if (!selection.isWallSelected(nearWall.id)) {
+          selection.selectWall(nearWall.id, isShift);
+        }
+        startEditDrag(cellX, cellY);
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      // Click on empty space: clear selection and start box selection
+      if (!isShift) selection.clearSelection();
+      selection.startBoxSelection(cellX, cellY);
+      updateEditState();
+      var map = getMap?.();
+      if (map) map.draw();
+      return true;
+    }
+
+    function startEditDrag(cellX, cellY) {
+      var selectedVertexKeys = selection.getSelectedVertexKeys();
+      var selectedWallIds = selection.getSelectedWallIds();
+
+      // Collect all vertex positions that will be dragged
+      var dragVertices = [];
+      for (var i = 0; i < selectedVertexKeys.length; i++) {
+        var vertex = vertexRegistry.getVertexByKey(selectedVertexKeys[i]);
+        if (vertex) {
+          dragVertices.push({ key: selectedVertexKeys[i], x: vertex.x, y: vertex.y });
+        }
+      }
+
+      // For walls, collect their endpoints
+      var walls = getWalls() || [];
+      for (var j = 0; j < selectedWallIds.length; j++) {
+        var wall = walls.find(function (w) { return w.id === selectedWallIds[j]; });
+        if (wall) {
+          var key1 = vertexRegistry.makeKey(wall.x1, wall.y1);
+          var key2 = vertexRegistry.makeKey(wall.x2, wall.y2);
+          if (!dragVertices.some(function (v) { return v.key === key1; })) {
+            dragVertices.push({ key: key1, x: wall.x1, y: wall.y1 });
+          }
+          if (!dragVertices.some(function (v) { return v.key === key2; })) {
+            dragVertices.push({ key: key2, x: wall.x2, y: wall.y2 });
+          }
+        }
+      }
+
+      editDragStart = {
+        x: cellX,
+        y: cellY,
+        vertexKeys: selectedVertexKeys.slice(),
+        wallIds: selectedWallIds.slice(),
+        dragVertices: dragVertices,
+      };
+    }
+
+    function handleEditMouseMove(e, cellX, cellY) {
+      // Update hover state
+      var prevHover = hoverVertexKey;
+      hoverVertexKey = null;
+      addVertexPreview = null;
+
+      if (vertexRegistry) {
+        var nearVertex = vertexRegistry.findVertex(cellX, cellY, 0.5);
+        hoverVertexKey = nearVertex ? nearVertex.key : null;
+      }
+
+      // Handle box selection drag
+      if (selection && selection.isBoxSelecting()) {
+        selection.updateBoxSelection(cellX, cellY);
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      // Handle drag operation
+      if (editDragStart) {
+        var deltaX = cellX - editDragStart.x;
+        var deltaY = cellY - editDragStart.y;
+        var snapGuides = [];
+
+        // Apply snapping when ALT is held
+        var isAlt = e && e.altKey;
+        var isShift = e && e.shiftKey;
+
+        if ((isAlt || isShift) && editDragStart.dragVertices && editDragStart.dragVertices.length > 0) {
+          // Use the first dragged vertex as reference for snapping
+          var refVertex = editDragStart.dragVertices[0];
+          var targetX = refVertex.x + deltaX;
+          var targetY = refVertex.y + deltaY;
+
+          // Get keys of vertices being dragged (to exclude from snap targets)
+          var excludeKeys = [];
+          for (var ek = 0; ek < editDragStart.dragVertices.length; ek++) {
+            excludeKeys.push(editDragStart.dragVertices[ek].key);
+          }
+
+          // For angle snapping, find a connected vertex as origin
+          var angleOriginX = null;
+          var angleOriginY = null;
+          if (isShift && vertexRegistry) {
+            var vertex = vertexRegistry.getVertexByKey(refVertex.key);
+            if (vertex && vertex.endpoints && vertex.endpoints.length > 0) {
+              // Find other endpoint of first connected wall
+              var walls = getWalls() || [];
+              var ep = vertex.endpoints[0];
+              var connWall = walls.find(function (w) { return w.id === ep.wallId; });
+              if (connWall) {
+                if (ep.end === 1) {
+                  angleOriginX = connWall.x2;
+                  angleOriginY = connWall.y2;
+                } else {
+                  angleOriginX = connWall.x1;
+                  angleOriginY = connWall.y1;
+                }
+              }
+            }
+          }
+
+          if (wallSnapping) {
+            var snapResult = wallSnapping.snap(targetX, targetY, {
+              excludeKeys: excludeKeys,
+              forceAlignment: isAlt,
+              forceAngle: isShift,
+              originX: angleOriginX,
+              originY: angleOriginY,
+            });
+
+            if (snapResult.snapped) {
+              // Adjust delta based on snap
+              deltaX = snapResult.x - refVertex.x;
+              deltaY = snapResult.y - refVertex.y;
+
+              // Collect guides for rendering
+              if (snapResult.guides) {
+                snapGuides = snapResult.guides;
+              }
+
+              // Add angle guide line if angle snapped
+              if (snapResult.type === "angle" && angleOriginX != null) {
+                snapGuides.push({
+                  x1: angleOriginX,
+                  y1: angleOriginY,
+                  x2: snapResult.x,
+                  y2: snapResult.y,
+                });
+              }
+            }
+          }
+        }
+
+        // Store snap guides for rendering
+        editDragStart.snapGuides = snapGuides;
+        editDragStart.currentDeltaX = deltaX;
+        editDragStart.currentDeltaY = deltaY;
+
+        // Update drag preview positions
+        if (editDragStart.dragVertices) {
+          for (var i = 0; i < editDragStart.dragVertices.length; i++) {
+            var dv = editDragStart.dragVertices[i];
+            dv.currentX = dv.x + deltaX;
+            dv.currentY = dv.y + deltaY;
+          }
+        }
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      // Update cursor if hover changed
+      if (hoverVertexKey !== prevHover) {
+        updateEditCursor();
+      }
+
+      updateEditState();
+      var map = getMap?.();
+      if (map) map.draw();
+      return false;
+    }
+
+    function handleEditMouseUp(cellX, cellY) {
+      // Commit box selection
+      if (selection && selection.isBoxSelecting()) {
+        var vertices = vertexRegistry ? vertexRegistry.getAllVertices() : [];
+        var walls = getWalls() || [];
+        selection.commitBoxSelection(walls, vertices, false);
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      // Commit drag operation
+      if (editDragStart && wallEditor) {
+        // Use snapped delta if available, otherwise calculate from mouse position
+        var deltaX = editDragStart.currentDeltaX != null ? editDragStart.currentDeltaX : (cellX - editDragStart.x);
+        var deltaY = editDragStart.currentDeltaY != null ? editDragStart.currentDeltaY : (cellY - editDragStart.y);
+
+        // Only commit if moved significantly
+        if (Math.abs(deltaX) > 0.01 || Math.abs(deltaY) > 0.01) {
+          // Move vertices
+          if (editDragStart.vertexKeys.length > 0) {
+            wallEditor.moveVertices(editDragStart.vertexKeys, deltaX, deltaY);
+          }
+          // Move walls (their vertices not already moved)
+          if (editDragStart.wallIds.length > 0 && editDragStart.vertexKeys.length === 0) {
+            wallEditor.moveWalls(editDragStart.wallIds, deltaX, deltaY);
+          }
+        }
+
+        editDragStart = null;
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      editDragStart = null;
+      return false;
+    }
+
     function handleMouseMove(e, cellX, cellY) {
       if (!active) return false;
+
+      // Edit mode
+      if (mode === "edit") {
+        return handleEditMouseMove(e, cellX, cellY);
+      }
+
       if (shapeOrigin) {
         shapeDragEnd = { x: cellX, y: cellY };
       }
@@ -607,6 +1053,11 @@
     }
 
     function handleMouseUp(e, cellX, cellY) {
+      // Edit mode
+      if (active && mode === "edit") {
+        return handleEditMouseUp(cellX, cellY);
+      }
+
       if (!active || !shapeOrigin) return false;
       var endPt = { x: cellX, y: cellY };
       var polygon = null;
@@ -723,7 +1174,28 @@
 
     function handleKeyDown(e) {
       if (!active) return false;
+
+      // Delete key in edit mode
+      if ((e.key === "Delete" || e.key === "Backspace") && mode === "edit") {
+        if (wallEditor && selection && selection.hasSelection()) {
+          wallEditor.deleteSelected();
+          updateEditState();
+          var map = getMap?.();
+          if (map) map.draw();
+          return true;
+        }
+      }
+
+      // Escape key
       if (e.key === "Escape") {
+        // Clear selection in edit mode
+        if (mode === "edit" && selection && selection.hasSelection()) {
+          selection.clearSelection();
+          updateEditState();
+          var map = getMap?.();
+          if (map) map.draw();
+          return true;
+        }
         if (doorStart) {
           doorStart = null;
           var map = getMap?.();
@@ -776,6 +1248,11 @@
       handleKeyDown: handleKeyDown,
       clearAll: clearAll,
       getWallCount: getWallCount,
+      // Edit mode access
+      getSelection: getSelection,
+      getVertexRegistry: getVertexRegistry,
+      getWallEditor: getWallEditor,
+      getWallSnapping: getWallSnapping,
     };
   }
 

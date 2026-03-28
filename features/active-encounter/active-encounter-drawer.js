@@ -272,6 +272,28 @@
     // ── Wall Tools ──
 
     function bindWallEvents() {
+      // Mode selector buttons (Draw / Edit / Erase)
+      document.querySelectorAll("[data-wall-mode]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (!requireAdminAction()) return;
+          var wd = getWallDrawer?.();
+          if (!wd) return;
+          var targetMode = btn.dataset.wallMode;
+          var isCurrentMode = wd.isActive() && wd.getMode() === targetMode;
+
+          if (isCurrentMode) {
+            // Clicking active mode deactivates
+            wd.deactivate();
+          } else {
+            deactivateOtherTools("wallDrawer");
+            if (!wd.isActive()) wd.activate(wd.getType() || "wall");
+            wd.setMode(targetMode);
+          }
+          refreshWallUI();
+        });
+      });
+
+      // Wall type buttons (in draw mode)
       var typeBtns = document.querySelectorAll(".ae-wall-type-btn");
       typeBtns.forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -291,6 +313,7 @@
         });
       });
 
+      // Shape buttons
       document.querySelectorAll("[data-wall-shape]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           var wd = getWallDrawer?.();
@@ -300,26 +323,45 @@
         });
       });
 
-      document.getElementById("btn-ae-wall-draw")?.addEventListener("click", function () {
-        if (!requireAdminAction()) return;
-        var wd = getWallDrawer?.();
-        if (!wd || !wd.isActive()) return;
-        wd.setMode("draw");
-        refreshWallUI();
-      });
-
-      document.getElementById("btn-ae-wall-erase")?.addEventListener("click", function () {
+      // Delete selected button
+      document.getElementById("btn-delete-selected")?.addEventListener("click", function () {
         if (!requireAdminAction()) return;
         var wd = getWallDrawer?.();
         if (!wd) return;
-        if (wd.isActive() && wd.getMode() === "erase") {
-          wd.deactivate();
-        } else {
-          deactivateOtherTools("wallDrawer");
-          if (!wd.isActive()) wd.activate(wd.getType() || "wall");
-          wd.setMode("erase");
+        var editor = wd.getWallEditor?.();
+        if (editor) {
+          editor.deleteSelected();
+          refreshWallUI();
         }
-        refreshWallUI();
+      });
+
+      // Snap toggle checkboxes
+      document.querySelectorAll("#ae-wall-snap-options input[type='checkbox']").forEach(function (cb) {
+        // Load saved settings
+        var snapping = global.WallSnapping;
+        if (snapping) {
+          var settings = snapping.loadSettings();
+          if (cb.id === "snap-endpoint") cb.checked = settings.endpoint !== false;
+          if (cb.id === "snap-angle") cb.checked = !!settings.angle;
+          if (cb.id === "snap-length") cb.checked = !!settings.length;
+          if (cb.id === "snap-alignment") cb.checked = !!settings.alignment;
+        }
+
+        cb.addEventListener("change", function () {
+          var wd = getWallDrawer?.();
+          var wallSnapping = wd?.getWallSnapping?.();
+          if (!wallSnapping) return;
+
+          var key = null;
+          if (cb.id === "snap-endpoint") key = "endpoint";
+          if (cb.id === "snap-angle") key = "angle";
+          if (cb.id === "snap-length") key = "length";
+          if (cb.id === "snap-alignment") key = "alignment";
+
+          if (key) {
+            wallSnapping.setSetting(key, cb.checked);
+          }
+        });
       });
 
       document.getElementById("btn-ae-wall-clear")?.addEventListener("click", function () {
@@ -330,9 +372,51 @@
         refreshWallUI();
       });
 
-      // Keyboard: Escape to cancel chain or deactivate
+      // Keyboard: D, E, X for modes, Escape to cancel, Delete for selection
       document.addEventListener("keydown", function (e) {
+        // Skip if focus is in an input
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
         var wd = getWallDrawer?.();
+
+        // Mode shortcuts when wall drawer is active or we're in the walls section
+        if (wd && canEditEncounter()) {
+          // D = Draw mode
+          if (e.key === "d" || e.key === "D") {
+            if (!wd.isActive()) {
+              deactivateOtherTools("wallDrawer");
+              wd.activate("wall");
+            }
+            wd.setMode("draw");
+            refreshWallUI();
+            e.preventDefault();
+            return;
+          }
+          // E = Edit mode
+          if (e.key === "e" || e.key === "E") {
+            if (!wd.isActive()) {
+              deactivateOtherTools("wallDrawer");
+              wd.activate("wall");
+            }
+            wd.setMode("edit");
+            refreshWallUI();
+            e.preventDefault();
+            return;
+          }
+          // X = Erase mode
+          if (e.key === "x" || e.key === "X") {
+            if (!wd.isActive()) {
+              deactivateOtherTools("wallDrawer");
+              wd.activate("wall");
+            }
+            wd.setMode("erase");
+            refreshWallUI();
+            e.preventDefault();
+            return;
+          }
+        }
+
+        // Pass through to wall drawer for Escape, Delete, etc.
         if (!wd || !wd.isActive()) return;
         if (wd.handleKeyDown(e)) {
           e.preventDefault();
@@ -353,24 +437,48 @@
       var currentType = isActive ? wd.getType() : null;
       var currentMode = isActive ? wd.getMode() : null;
 
+      // Mode selector buttons
+      document.querySelectorAll("[data-wall-mode]").forEach(function (btn) {
+        btn.classList.toggle("active", isActive && btn.dataset.wallMode === currentMode);
+      });
+
+      // Show/hide subsections based on mode
+      var drawOptions = document.getElementById("ae-wall-draw-options");
+      var editOptions = document.getElementById("ae-wall-edit-options");
+      if (drawOptions) drawOptions.hidden = currentMode !== "draw";
+      if (editOptions) editOptions.hidden = currentMode !== "edit";
+
+      // Wall type buttons (in draw mode)
       document.querySelectorAll(".ae-wall-type-btn").forEach(function (btn) {
         btn.classList.toggle("active", isActive && btn.dataset.wallType === currentType && currentMode === "draw");
       });
 
-      var drawBtn = document.getElementById("btn-ae-wall-draw");
-      var eraseBtn = document.getElementById("btn-ae-wall-erase");
-      if (drawBtn) drawBtn.classList.toggle("active", isActive && currentMode === "draw");
-      if (eraseBtn) eraseBtn.classList.toggle("active", isActive && currentMode === "erase");
-
+      // Shape buttons
       var currentShape = wd?.getDrawShape() || "polygon";
       document.querySelectorAll("[data-wall-shape]").forEach(function (btn) {
         btn.classList.toggle("active", btn.dataset.wallShape === currentShape);
       });
 
+      // Delete button enabled state
+      var deleteBtn = document.getElementById("btn-delete-selected");
+      if (deleteBtn) {
+        var selection = wd?.getSelection?.();
+        var hasSelection = selection ? selection.hasSelection() : false;
+        deleteBtn.disabled = !hasSelection;
+      }
+
+      // Wall count
       var countEl = document.getElementById("ae-wall-count");
       if (countEl) {
         var count = wd?.getWallCount() || 0;
         countEl.textContent = count + " segmento" + (count !== 1 ? "s" : "");
+      }
+
+      // Selection summary
+      var selectionEl = document.getElementById("ae-wall-selection");
+      if (selectionEl) {
+        var selection = wd?.getSelection?.();
+        selectionEl.textContent = selection ? selection.getSelectionSummary() : "";
       }
     }
 

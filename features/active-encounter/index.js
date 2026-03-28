@@ -7,6 +7,11 @@
     "terrain/tile-textures.js",
     "terrain/tile-painter.js",
     // Walls
+    "walls/wall-vertex-registry.js",
+    "walls/wall-selection.js",
+    "walls/wall-snapping.js",
+    "walls/wall-guides.js",
+    "walls/wall-editor.js",
     "walls/wall-renderer.js",
     "walls/wall-drawer.js",
     // Lighting

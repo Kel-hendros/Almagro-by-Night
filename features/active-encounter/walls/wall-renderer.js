@@ -318,11 +318,158 @@
 
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
+
+    // Separate walls by type for continuous path rendering
+    var plainWalls = [];
+    var specialWalls = []; // doors, windows - need individual rendering
+
     for (var i = 0; i < walls.length; i++) {
       var w = walls[i];
-      drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, eraseHoverId);
+      if (w.type === "door" || w.type === "window" || w.id === eraseHoverId) {
+        specialWalls.push(w);
+      } else {
+        plainWalls.push(w);
+      }
     }
+
+    // Draw plain walls as continuous vector paths
+    if (plainWalls.length > 0) {
+      drawWallsAsVectorPaths(ctx, plainWalls, gs, scale, eraseHoverId);
+    }
+
+    // Draw special walls (doors, windows, erase hover) individually
+    for (var j = 0; j < specialWalls.length; j++) {
+      var sw = specialWalls[j];
+      drawWallSegment(ctx, sw, sw.x1 * gs, sw.y1 * gs, sw.x2 * gs, sw.y2 * gs, gs, scale, eraseHoverId);
+    }
+
     ctx.restore();
+  }
+
+  /**
+   * Build connected chains from wall segments and draw as continuous paths.
+   */
+  function drawWallsAsVectorPaths(ctx, walls, gs, scale, eraseHoverId) {
+    // Build adjacency map: vertex key -> list of { wall, otherEnd }
+    var adjacency = {};
+
+    function makeKey(x, y) {
+      return x.toFixed(4) + "," + y.toFixed(4);
+    }
+
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      var key1 = makeKey(w.x1, w.y1);
+      var key2 = makeKey(w.x2, w.y2);
+
+      if (!adjacency[key1]) adjacency[key1] = [];
+      if (!adjacency[key2]) adjacency[key2] = [];
+
+      adjacency[key1].push({ wall: w, thisEnd: 1, otherKey: key2 });
+      adjacency[key2].push({ wall: w, thisEnd: 2, otherKey: key1 });
+    }
+
+    // Track which walls have been drawn
+    var drawn = {};
+
+    // Build chains starting from endpoints or junctions
+    var chains = [];
+
+    for (var wi = 0; wi < walls.length; wi++) {
+      var wall = walls[wi];
+      if (drawn[wall.id]) continue;
+
+      // Start a new chain from this wall
+      var chain = buildChain(wall, adjacency, drawn, makeKey);
+      if (chain.length > 0) {
+        chains.push(chain);
+      }
+    }
+
+    // Draw each chain as a continuous path
+    var lineWidth = WALL_WIDTHS.wall * gs;
+    var baseColor = WALL_COLORS.wall;
+
+    ctx.save();
+    ctx.strokeStyle = baseColor;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = 2 / Math.max(scale, 0.5);
+    ctx.shadowOffsetY = 1 / Math.max(scale, 0.5);
+
+    for (var ci = 0; ci < chains.length; ci++) {
+      var pts = chains[ci];
+      if (pts.length < 2) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x * gs, pts[0].y * gs);
+      for (var pi = 1; pi < pts.length; pi++) {
+        ctx.lineTo(pts[pi].x * gs, pts[pi].y * gs);
+      }
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Build a chain of connected points starting from a wall.
+   */
+  function buildChain(startWall, adjacency, drawn, makeKey) {
+    var points = [];
+    drawn[startWall.id] = true;
+
+    // Start with the first wall's endpoints
+    points.push({ x: startWall.x1, y: startWall.y1 });
+    points.push({ x: startWall.x2, y: startWall.y2 });
+
+    // Extend forward from the second point
+    extendChain(points, adjacency, drawn, makeKey, false);
+
+    // Extend backward from the first point
+    extendChain(points, adjacency, drawn, makeKey, true);
+
+    return points;
+  }
+
+  /**
+   * Extend a chain in one direction by following connected walls.
+   */
+  function extendChain(points, adjacency, drawn, makeKey, prepend) {
+    while (true) {
+      var endPoint = prepend ? points[0] : points[points.length - 1];
+      var endKey = makeKey(endPoint.x, endPoint.y);
+      var neighbors = adjacency[endKey] || [];
+
+      // Find an undrawn connected wall
+      var nextWall = null;
+      var nextPoint = null;
+
+      for (var i = 0; i < neighbors.length; i++) {
+        var n = neighbors[i];
+        if (drawn[n.wall.id]) continue;
+
+        // Get the other endpoint of this wall
+        nextWall = n.wall;
+        if (n.thisEnd === 1) {
+          nextPoint = { x: nextWall.x2, y: nextWall.y2 };
+        } else {
+          nextPoint = { x: nextWall.x1, y: nextWall.y1 };
+        }
+        break;
+      }
+
+      if (!nextWall) break;
+
+      drawn[nextWall.id] = true;
+      if (prepend) {
+        points.unshift(nextPoint);
+      } else {
+        points.push(nextPoint);
+      }
+    }
   }
 
   function clipToAreas(ctx, includeAreas, excludeAreas, gs) {
@@ -403,9 +550,183 @@
     ctx.restore();
   }
 
+  // ── Edit Mode Rendering ──
+
+  var VERTEX_COLORS = {
+    normal: "rgba(255, 255, 255, 0.4)",
+    hover: "rgba(255, 255, 255, 0.85)",
+    selected: "rgba(197, 160, 89, 0.95)",
+    junction: "rgba(100, 200, 255, 0.6)",
+  };
+
+  var SELECTION_COLORS = {
+    wall: "rgba(197, 160, 89, 0.4)",
+    wallStroke: "rgba(197, 160, 89, 0.9)",
+  };
+
+  function drawEditModeOverlay(map) {
+    var editState = map._wallEditState;
+    if (!editState || !editState.active) return;
+
+    var ctx = map.ctx;
+    var gs = map.gridSize;
+    var scale = map.scale;
+    var walls = map.walls || [];
+
+    // Draw wall selection highlights
+    var selectedWallIds = editState.selectedWallIds || [];
+    if (selectedWallIds.length > 0) {
+      ctx.save();
+      ctx.strokeStyle = SELECTION_COLORS.wallStroke;
+      ctx.lineWidth = Math.max(4, 0.3 * gs) / Math.max(scale, 0.5);
+      ctx.lineCap = "round";
+      ctx.globalAlpha = 0.5;
+
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        if (selectedWallIds.indexOf(w.id) === -1) continue;
+        ctx.beginPath();
+        ctx.moveTo(w.x1 * gs, w.y1 * gs);
+        ctx.lineTo(w.x2 * gs, w.y2 * gs);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Draw box selection
+    var boxSelection = editState.boxSelection;
+    if (boxSelection) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(197, 160, 89, 0.7)";
+      ctx.fillStyle = "rgba(197, 160, 89, 0.08)";
+      ctx.lineWidth = 1 / Math.max(scale, 0.5);
+      ctx.setLineDash([4 / Math.max(scale, 0.5), 3 / Math.max(scale, 0.5)]);
+
+      var bx = boxSelection.left * gs;
+      var by = boxSelection.top * gs;
+      var bw = boxSelection.width * gs;
+      var bh = boxSelection.height * gs;
+
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeRect(bx, by, bw, bh);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // Draw vertices
+    var vertices = editState.vertices || [];
+    var selectedVertexKeys = editState.selectedVertexKeys || [];
+    var hoverVertexKey = editState.hoverVertexKey || null;
+
+    for (var v = 0; v < vertices.length; v++) {
+      var vertex = vertices[v];
+      var px = vertex.x * gs;
+      var py = vertex.y * gs;
+      var isSelected = selectedVertexKeys.indexOf(vertex.key) !== -1;
+      var isHover = vertex.key === hoverVertexKey;
+      var isJunction = vertex.connectionCount >= 3;
+
+      var radius;
+      var fillColor;
+
+      if (isSelected) {
+        radius = 7 / Math.max(scale, 0.5);
+        fillColor = VERTEX_COLORS.selected;
+      } else if (isHover) {
+        radius = 6 / Math.max(scale, 0.5);
+        fillColor = VERTEX_COLORS.hover;
+      } else if (isJunction) {
+        radius = 5 / Math.max(scale, 0.5);
+        fillColor = VERTEX_COLORS.junction;
+      } else {
+        radius = 4 / Math.max(scale, 0.5);
+        fillColor = VERTEX_COLORS.normal;
+      }
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+
+      // Draw outline for selected vertices
+      if (isSelected) {
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.lineWidth = 1.5 / Math.max(scale, 0.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Draw drag preview - show walls at their new positions
+    if (editState.dragPreview && editState.dragPreview.walls) {
+      var previewWalls = editState.dragPreview.walls;
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = "rgba(197, 160, 89, 0.9)";
+      ctx.lineWidth = WALL_WIDTHS.wall * gs;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Draw preview walls as continuous path
+      ctx.beginPath();
+      for (var pwi = 0; pwi < previewWalls.length; pwi++) {
+        var pw = previewWalls[pwi];
+        ctx.moveTo(pw.x1 * gs, pw.y1 * gs);
+        ctx.lineTo(pw.x2 * gs, pw.y2 * gs);
+      }
+      ctx.stroke();
+
+      // Draw vertex dots at preview positions
+      var dv = editState.dragPreview.vertices || [];
+      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      for (var di = 0; di < dv.length; di++) {
+        if (dv[di].currentX != null) {
+          ctx.beginPath();
+          ctx.arc(dv[di].currentX * gs, dv[di].currentY * gs, 4 / Math.max(scale, 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Draw alignment guides
+    if (editState.guides && editState.guides.length) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(100, 200, 255, 0.5)";
+      ctx.lineWidth = 1 / Math.max(scale, 0.5);
+      ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
+
+      for (var gi = 0; gi < editState.guides.length; gi++) {
+        var guide = editState.guides[gi];
+        ctx.beginPath();
+        ctx.moveTo(guide.x1 * gs, guide.y1 * gs);
+        ctx.lineTo(guide.x2 * gs, guide.y2 * gs);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  function applyEditMode(TacticalMap) {
+    var proto = TacticalMap.prototype;
+
+    /**
+     * Draw edit mode overlay (vertices, selection, guides).
+     */
+    proto.drawWallEditOverlay = function drawWallEditOverlay() {
+      drawEditModeOverlay(this);
+    };
+  }
+
   // Export as deferred mixin or apply immediately
-  global.__applyTacticalMapWallRenderer = apply;
+  global.__applyTacticalMapWallRenderer = function (TM) {
+    apply(TM);
+    applyEditMode(TM);
+  };
   if (global.TacticalMap) {
     apply(global.TacticalMap);
+    applyEditMode(global.TacticalMap);
   }
 })(window);

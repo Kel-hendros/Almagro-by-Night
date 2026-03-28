@@ -100,31 +100,73 @@
                                 <span>Paredes</span>
                             </summary>
                             <div class="ae-collapse-body">
-                                <div class="ae-wall-types">
-                                    <button class="ae-wall-type-btn" data-wall-type="wall" title="Pared">
-                                        <span class="ae-wall-type-icon ae-wall-type-icon--wall"></span>
-                                        <span>Pared</span>
-                                    </button>
-                                    <button class="ae-wall-type-btn" data-wall-type="door" title="Puerta">
-                                        <span class="ae-wall-type-icon ae-wall-type-icon--door"></span>
-                                        <span>Puerta</span>
-                                    </button>
-                                    <button class="ae-wall-type-btn" data-wall-type="window" title="Ventana">
-                                        <span class="ae-wall-type-icon ae-wall-type-icon--window"></span>
-                                        <span>Ventana</span>
-                                    </button>
+                                <!-- Mode Selector -->
+                                <div class="ae-wall-mode-selector">
+                                    <button class="ae-mode-btn active" data-wall-mode="draw" title="Dibujar paredes (D)">Dibujar</button>
+                                    <button class="ae-mode-btn" data-wall-mode="edit" title="Editar paredes (E)">Editar</button>
+                                    <button class="ae-mode-btn" data-wall-mode="erase" title="Borrar paredes (X)">Borrar</button>
                                 </div>
-                                <div class="ae-wall-shape-btns ae-levels">
-                                    <button type="button" class="ae-level-btn active" data-wall-shape="polygon" title="Pol&#xED;gono">&#x2B21;</button>
-                                    <button type="button" class="ae-level-btn" data-wall-shape="rectangle" title="Rect&#xE1;ngulo">&#x25AD;</button>
-                                    <button type="button" class="ae-level-btn" data-wall-shape="circle" title="C&#xED;rculo">&#x25EF;</button>
+
+                                <!-- Draw Mode Options -->
+                                <div id="ae-wall-draw-options" class="ae-wall-subsection">
+                                    <label class="ae-setting-label">Tipo</label>
+                                    <div class="ae-wall-types">
+                                        <button class="ae-wall-type-btn" data-wall-type="wall" title="Pared">
+                                            <span class="ae-wall-type-icon ae-wall-type-icon--wall"></span>
+                                            <span>Pared</span>
+                                        </button>
+                                        <button class="ae-wall-type-btn" data-wall-type="door" title="Puerta">
+                                            <span class="ae-wall-type-icon ae-wall-type-icon--door"></span>
+                                            <span>Puerta</span>
+                                        </button>
+                                        <button class="ae-wall-type-btn" data-wall-type="window" title="Ventana">
+                                            <span class="ae-wall-type-icon ae-wall-type-icon--window"></span>
+                                            <span>Ventana</span>
+                                        </button>
+                                    </div>
+                                    <label class="ae-setting-label">Forma</label>
+                                    <div class="ae-wall-shape-btns ae-levels">
+                                        <button type="button" class="ae-level-btn active" data-wall-shape="polygon" title="Pol&#xED;gono">&#x2B21;</button>
+                                        <button type="button" class="ae-level-btn" data-wall-shape="rectangle" title="Rect&#xE1;ngulo">&#x25AD;</button>
+                                        <button type="button" class="ae-level-btn" data-wall-shape="circle" title="C&#xED;rculo">&#x25EF;</button>
+                                    </div>
                                 </div>
-                                <div class="ae-wall-mode-btns">
-                                    <button id="btn-ae-wall-draw" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Dibujar</button>
-                                    <button id="btn-ae-wall-erase" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Borrar</button>
-                                    <button id="btn-ae-wall-clear" class="ae-btn ae-btn--danger ae-btn--half" type="button">Limpiar</button>
+
+                                <!-- Edit Mode Options -->
+                                <div id="ae-wall-edit-options" class="ae-wall-subsection" hidden>
+                                    <p class="ae-wall-edit-hint">Click para seleccionar. Arrastrar para mover. Shift+click en segmento para dividir.</p>
+                                    <button id="btn-delete-selected" class="ae-btn ae-btn--danger ae-btn--full" type="button" disabled>Eliminar (Supr)</button>
                                 </div>
-                                <div id="ae-wall-count" class="ae-wall-count">0 segmentos</div>
+
+                                <!-- Snap Options (visible in both draw and edit modes) -->
+                                <div id="ae-wall-snap-options" class="ae-wall-subsection">
+                                    <label class="ae-setting-label">Ajuste</label>
+                                    <div class="ae-snap-toggles">
+                                        <label class="ae-snap-toggle" title="Snap a puntos existentes">
+                                            <input type="checkbox" id="snap-endpoint" checked>
+                                            <span>Puntos</span>
+                                        </label>
+                                        <label class="ae-snap-toggle" title="Snap a &#xE1;ngulos (Shift)">
+                                            <input type="checkbox" id="snap-angle">
+                                            <span>&#xC1;ngulos</span>
+                                        </label>
+                                        <label class="ae-snap-toggle" title="Snap a longitudes (Ctrl)">
+                                            <input type="checkbox" id="snap-length">
+                                            <span>Longitud</span>
+                                        </label>
+                                        <label class="ae-snap-toggle" title="Gu&#xED;as de alineaci&#xF3;n (Alt)">
+                                            <input type="checkbox" id="snap-alignment">
+                                            <span>Alinear</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Footer -->
+                                <div class="ae-wall-footer">
+                                    <span id="ae-wall-count" class="ae-wall-count">0 segmentos</span>
+                                    <span id="ae-wall-selection" class="ae-wall-selection"></span>
+                                    <button id="btn-ae-wall-clear" class="ae-btn ae-btn--danger ae-btn--small" type="button">Limpiar todo</button>
+                                </div>
                             </div>
                         </details>
 

@@ -2692,3 +2692,191 @@ html.embed-mode .ae-vtt-layout {
     color: #888;
     padding: 4px 8px;
 }
+
+/* ── Wall Edit Mode UI ── */
+
+.ae-wall-mode-selector {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.ae-mode-btn {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #999;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ae-mode-btn:hover {
+    color: #ccc;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.ae-mode-btn.active {
+    background: rgba(173, 56, 56, 0.2);
+    border-color: rgba(173, 56, 56, 0.45);
+    color: #ffb3b3;
+}
+
+.ae-wall-subsection {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.ae-wall-subsection[hidden] {
+    display: none;
+}
+
+.ae-edit-tools {
+    display: flex;
+    gap: 3px;
+}
+
+.ae-edit-tool-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #999;
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ae-edit-tool-btn span:first-child {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.ae-edit-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ccc;
+}
+
+.ae-edit-tool-btn.active {
+    background: rgba(197, 160, 89, 0.18);
+    border-color: rgba(197, 160, 89, 0.45);
+    color: #ffe0a7;
+}
+
+.ae-snap-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.ae-snap-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ae-snap-toggle:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.ae-snap-toggle input[type="checkbox"] {
+    accent-color: var(--color-gold, #c5a059);
+    cursor: pointer;
+    margin: 0;
+    width: 12px;
+    height: 12px;
+}
+
+.ae-snap-toggle span {
+    font-size: 0.62rem;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ae-snap-toggle:has(input:checked) {
+    background: rgba(197, 160, 89, 0.12);
+    border-color: rgba(197, 160, 89, 0.35);
+}
+
+.ae-snap-toggle:has(input:checked) span {
+    color: #d4b06a;
+}
+
+.ae-wall-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ae-wall-count {
+    font-size: 0.65rem;
+    color: #666;
+}
+
+.ae-wall-selection {
+    font-size: 0.65rem;
+    color: var(--color-gold, #c5a059);
+    flex: 1;
+}
+
+.ae-btn.ae-btn--small {
+    padding: 3px 8px;
+    font-size: 0.6rem;
+    margin-left: auto;
+}
+
+/* ── Wall Edit Cursors ── */
+
+canvas.wall-edit-select {
+    cursor: default;
+}
+
+canvas.wall-edit-move {
+    cursor: move;
+}
+
+canvas.wall-edit-add-vertex {
+    cursor: cell;
+}
+
+canvas.wall-vertex-hover {
+    cursor: pointer;
+}
+
+/* ── Box Selection ── */
+
+.ae-box-selection-overlay {
+    position: absolute;
+    pointer-events: none;
+    border: 1px dashed rgba(197, 160, 89, 0.7);
+    background: rgba(197, 160, 89, 0.08);
+    z-index: 50;
+}
