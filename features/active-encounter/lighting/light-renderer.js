@@ -19,7 +19,7 @@
     closed: createMarkerImage("images/svgs/door-closed.svg"),
   };
   var LUMINOSITY_THRESHOLD = 0.30;
-  var LIGHT_MASK_BLUR_RADIUS = 6;
+  var LIGHT_MASK_BLUR_RADIUS = 3; // Reduced for performance
   var DEFAULT_VIEWER_VISION_PROFILE = {
     visibilityThreshold: LUMINOSITY_THRESHOLD,
     luminosityMultiplier: 1,
@@ -238,6 +238,231 @@
       this._lighting.wallsHash = null;
       this._lighting.dirty = true;
       this._drawDirty = true;
+      // Mark enclosed polygons for lazy recomputation (not sync to avoid loops)
+      this._enclosedPolygonsStale = true;
+    };
+
+    /**
+     * Find closed loops of walls and convert them to polygons.
+     * Uses connected component caching - only recomputes components that changed.
+     */
+    proto._recomputeEnclosedPolygons = function () {
+      // Prevent reentry
+      if (this._isComputingPolygons) return;
+
+      // Debounce: don't recompute more than once per 250ms
+      var now = Date.now();
+      if (this._lastEnclosedPolygonCompute && (now - this._lastEnclosedPolygonCompute) < 250) {
+        return;
+      }
+
+      this._isComputingPolygons = true;
+      this._lastEnclosedPolygonCompute = now;
+
+      try {
+        var walls = this.walls || [];
+        if (walls.length < 3) {
+          this._enclosedPolygons = null;
+          this._enclosedPolygonCache = null;
+          return;
+        }
+
+        var EPSILON = 0.15;
+
+        // Initialize cache if needed
+        if (!this._enclosedPolygonCache) {
+          this._enclosedPolygonCache = new Map(); // componentHash -> polygons[]
+        }
+
+        // Step 1: Build adjacency and find connected components
+        var endpoints = [];
+        var wallToEndpoints = []; // wallIdx -> [ep1, ep2]
+
+        function findOrCreateEndpoint(x, y) {
+          for (var i = 0; i < endpoints.length; i++) {
+            var ep = endpoints[i];
+            if (Math.abs(ep.x - x) < EPSILON && Math.abs(ep.y - y) < EPSILON) {
+              return ep;
+            }
+          }
+          var newEp = { x: x, y: y, walls: [], componentId: -1 };
+          endpoints.push(newEp);
+          return newEp;
+        }
+
+        // Register all wall endpoints
+        for (var wi = 0; wi < walls.length; wi++) {
+          var wall = walls[wi];
+          var x1 = parseFloat(wall.x1), y1 = parseFloat(wall.y1);
+          var x2 = parseFloat(wall.x2), y2 = parseFloat(wall.y2);
+          if (!Number.isFinite(x1) || !Number.isFinite(y1) || !Number.isFinite(x2) || !Number.isFinite(y2)) {
+            wallToEndpoints.push(null);
+            continue;
+          }
+
+          var ep1 = findOrCreateEndpoint(x1, y1);
+          var ep2 = findOrCreateEndpoint(x2, y2);
+          ep1.walls.push({ wallIdx: wi, otherEp: ep2 });
+          ep2.walls.push({ wallIdx: wi, otherEp: ep1 });
+          wallToEndpoints.push([ep1, ep2]);
+        }
+
+        // Step 2: Find connected components using flood fill
+        var componentId = 0;
+        var components = []; // Array of {endpoints: [], wallIndices: [], hash: ""}
+
+        for (var epIdx = 0; epIdx < endpoints.length; epIdx++) {
+          var ep = endpoints[epIdx];
+          if (ep.componentId >= 0) continue; // Already assigned
+
+          // BFS to find all connected endpoints
+          var compEndpoints = [];
+          var compWallIndices = new Set();
+          var queue = [ep];
+          ep.componentId = componentId;
+
+          while (queue.length > 0) {
+            var current = queue.shift();
+            compEndpoints.push(current);
+
+            for (var wi2 = 0; wi2 < current.walls.length; wi2++) {
+              var edge = current.walls[wi2];
+              compWallIndices.add(edge.wallIdx);
+              if (edge.otherEp.componentId < 0) {
+                edge.otherEp.componentId = componentId;
+                queue.push(edge.otherEp);
+              }
+            }
+          }
+
+          // Compute hash for this component (based on wall coordinates)
+          var wallIndicesArr = Array.from(compWallIndices).sort(function(a,b) { return a - b; });
+          var hashParts = [];
+          for (var hi = 0; hi < wallIndicesArr.length; hi++) {
+            var w = walls[wallIndicesArr[hi]];
+            hashParts.push(w.x1.toFixed(2) + "," + w.y1.toFixed(2) + "-" + w.x2.toFixed(2) + "," + w.y2.toFixed(2));
+          }
+          var compHash = hashParts.join("|");
+
+          components.push({
+            id: componentId,
+            endpoints: compEndpoints,
+            wallIndices: wallIndicesArr,
+            hash: compHash
+          });
+          componentId++;
+        }
+
+        // Step 3: For each component, use cache or recompute
+        var allPolygons = [];
+        var newCache = new Map();
+
+        for (var ci = 0; ci < components.length; ci++) {
+          var comp = components[ci];
+
+          // Check cache
+          if (this._enclosedPolygonCache.has(comp.hash)) {
+            var cachedPolys = this._enclosedPolygonCache.get(comp.hash);
+            for (var cpi = 0; cpi < cachedPolys.length; cpi++) {
+              allPolygons.push(cachedPolys[cpi]);
+            }
+            newCache.set(comp.hash, cachedPolys);
+            continue;
+          }
+
+          // Recompute polygons for this component
+          var compPolygons = this._findPolygonsInComponent(comp.endpoints, walls);
+          for (var pi = 0; pi < compPolygons.length; pi++) {
+            allPolygons.push(compPolygons[pi]);
+          }
+          newCache.set(comp.hash, compPolygons);
+        }
+
+        this._enclosedPolygonCache = newCache;
+        // Store polygons with pre-computed bounding boxes for fast rejection
+        if (allPolygons.length > 0) {
+          this._enclosedPolygons = allPolygons.map(function(poly) {
+            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (var i = 0; i < poly.length; i++) {
+              if (poly[i].x < minX) minX = poly[i].x;
+              if (poly[i].y < minY) minY = poly[i].y;
+              if (poly[i].x > maxX) maxX = poly[i].x;
+              if (poly[i].y > maxY) maxY = poly[i].y;
+            }
+            return { points: poly, minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+          });
+        } else {
+          this._enclosedPolygons = null;
+        }
+      } finally {
+        this._isComputingPolygons = false;
+      }
+    };
+
+    /**
+     * Find closed polygon loops within a connected component of endpoints.
+     */
+    proto._findPolygonsInComponent = function (endpoints, walls) {
+      var usedWalls = new Set();
+      var polygons = [];
+
+      for (var startEpIdx = 0; startEpIdx < endpoints.length; startEpIdx++) {
+        var startEp = endpoints[startEpIdx];
+
+        for (var startEdgeIdx = 0; startEdgeIdx < startEp.walls.length; startEdgeIdx++) {
+          var startEdge = startEp.walls[startEdgeIdx];
+          var startKey = startEdge.wallIdx + "_" + startEpIdx;
+          if (usedWalls.has(startKey)) continue;
+
+          // Trace a closed loop using rightmost turn rule
+          var poly = [{ x: startEp.x, y: startEp.y }];
+          var currentEp = startEdge.otherEp;
+          var prevEp = startEp;
+          var pathWalls = [startKey];
+          var maxSteps = walls.length + 1;
+          var steps = 0;
+
+          while (currentEp !== startEp && steps < maxSteps) {
+            steps++;
+            poly.push({ x: currentEp.x, y: currentEp.y });
+
+            var incomingAngle = Math.atan2(currentEp.y - prevEp.y, currentEp.x - prevEp.x);
+            var bestEdge = null;
+            var bestAngle = Infinity;
+
+            for (var ei = 0; ei < currentEp.walls.length; ei++) {
+              var edge = currentEp.walls[ei];
+              if (edge.otherEp === prevEp) continue;
+
+              var outAngle = Math.atan2(edge.otherEp.y - currentEp.y, edge.otherEp.x - currentEp.x);
+              var turnAngle = outAngle - incomingAngle;
+              while (turnAngle > Math.PI) turnAngle -= 2 * Math.PI;
+              while (turnAngle < -Math.PI) turnAngle += 2 * Math.PI;
+
+              if (turnAngle < bestAngle) {
+                bestAngle = turnAngle;
+                bestEdge = edge;
+              }
+            }
+
+            if (!bestEdge) break;
+
+            var edgeKey = bestEdge.wallIdx + "_" + endpoints.indexOf(currentEp);
+            pathWalls.push(edgeKey);
+            prevEp = currentEp;
+            currentEp = bestEdge.otherEp;
+          }
+
+          if (currentEp === startEp && poly.length >= 3) {
+            for (var pk = 0; pk < pathWalls.length; pk++) {
+              usedWalls.add(pathWalls[pk]);
+            }
+            polygons.push(poly);
+          }
+        }
+      }
+
+      return polygons;
     };
 
     proto.getViewerInstances = function () {
@@ -394,7 +619,22 @@
       if (!this._lighting) this.initLighting();
 
       var lighting = this._lighting;
+
+      // Throttle full recalculation to max 10 times per second when dirty
+      var now = Date.now();
+      var LIGHTING_THROTTLE_MS = 100;
       if (lighting.dirty) {
+        if (lighting._lastFullRender && (now - lighting._lastFullRender) < LIGHTING_THROTTLE_MS) {
+          // Skip recalc but still draw cached overlay if available
+          if (lighting.overlayCanvas) {
+            var bounds = typeof this.getOverlayBounds === "function" ? this.getOverlayBounds() : null;
+            if (bounds) {
+              this.ctx.drawImage(lighting.overlayCanvas, bounds.minX * this.gridSize, bounds.minY * this.gridSize);
+            }
+          }
+          return;
+        }
+        lighting._lastFullRender = now;
         this._cachedLightPolygons = buildLightPolygonCache(this);
       }
 
@@ -848,7 +1088,6 @@
     var pxW = Math.min((bounds.maxX - bounds.minX) * gs, 12000);
     var pxH = Math.min((bounds.maxY - bounds.minY) * gs, 12000);
     var ambient = map._ambientLight || { intensity: 1, color: "#8090b0" };
-    var rooms = map._rooms || [];
     var lightCache = map._cachedLightPolygons || [];
     var fog = map._fog;
     var isNarratorView = fog && fog.isNarrator && !fog.impersonateInstanceId;
@@ -878,23 +1117,29 @@
       ctx.fillRect(0, 0, pxW, pxH);
       ctx.restore();
 
-      if (rooms.length > 0) {
+      // Darken enclosed areas using polygons detected from wall loops
+      // Recompute only if stale (walls changed) - prevents loops
+      var walls = map.walls || [];
+      if (walls.length >= 3 && (map._enclosedPolygonsStale || map._enclosedPolygons === undefined)) {
+        map._enclosedPolygonsStale = false;
+        if (typeof map._recomputeEnclosedPolygons === "function") {
+          map._recomputeEnclosedPolygons();
+        }
+      }
+      var enclosedPolys = map._enclosedPolygons;
+      if (enclosedPolys && enclosedPolys.length > 0) {
         ctx.save();
         ctx.globalCompositeOperation = "source-over";
-        for (var ri = 0; ri < rooms.length; ri++) {
-          var room = rooms[ri];
-          var poly = room && room.polygon;
+        ctx.fillStyle = "rgba(0,0,0," + ambientI + ")";
+        for (var pi = 0; pi < enclosedPolys.length; pi++) {
+          var polyData = enclosedPolys[pi];
+          var poly = polyData && polyData.points ? polyData.points : polyData;
           if (!poly || poly.length < 3) continue;
-          var roomAmbient = clamp01(
-            clamp01(room.ambientLight && room.ambientLight.intensity != null ? room.ambientLight.intensity : 0)
-              * multiplier + offset
-          );
-          var darken = ambientI - roomAmbient;
-          if (darken < 0.005) continue;
-          ctx.fillStyle = "rgba(0,0,0," + darken + ")";
           ctx.beginPath();
           ctx.moveTo(poly[0].x * gs + offX, poly[0].y * gs + offY);
-          for (var pk = 1; pk < poly.length; pk++) ctx.lineTo(poly[pk].x * gs + offX, poly[pk].y * gs + offY);
+          for (var pvi = 1; pvi < poly.length; pvi++) {
+            ctx.lineTo(poly[pvi].x * gs + offX, poly[pvi].y * gs + offY);
+          }
           ctx.closePath();
           ctx.fill();
         }
@@ -904,51 +1149,32 @@
       var ambientRgb = hexToRgb(ambient.color || "#8090b0");
       var ambientTint = ambientI * 0.05;
       if (ambientTint > 0.005) {
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = "rgba(" + ambientRgb.r + "," + ambientRgb.g + "," + ambientRgb.b + "," + ambientTint + ")";
-        ctx.fillRect(0, 0, pxW, pxH);
-        ctx.restore();
-
-        if (rooms.length > 0) {
-          ctx.save();
-          ctx.globalCompositeOperation = "destination-out";
-          for (var rgi = 0; rgi < rooms.length; rgi++) {
-            var roomPoly = rooms[rgi] && rooms[rgi].polygon;
-            if (!roomPoly || roomPoly.length < 3) continue;
-            ctx.fillStyle = "rgba(255,255,255," + ambientTint + ")";
-            ctx.beginPath();
-            ctx.moveTo(roomPoly[0].x * gs + offX, roomPoly[0].y * gs + offY);
-            for (var rp = 1; rp < roomPoly.length; rp++) {
-              ctx.lineTo(roomPoly[rp].x * gs + offX, roomPoly[rp].y * gs + offY);
-            }
-            ctx.closePath();
-            ctx.fill();
-          }
-          ctx.restore();
-
+        // If we have enclosed areas, use clipping to apply tint only outside them (single pass)
+        if (enclosedPolys && enclosedPolys.length > 0) {
           ctx.save();
           ctx.globalCompositeOperation = "source-over";
-          for (var rti = 0; rti < rooms.length; rti++) {
-            var roomEntry = rooms[rti];
-            var roomShape = roomEntry && roomEntry.polygon;
-            if (!roomShape || roomShape.length < 3) continue;
-            var roomAmbientI = clamp01(
-              clamp01(roomEntry.ambientLight && roomEntry.ambientLight.intensity != null ? roomEntry.ambientLight.intensity : 0)
-                * multiplier + offset
-            );
-            if (roomAmbientI < 0.005) continue;
-            var roomRgb = hexToRgb((roomEntry.ambientLight && roomEntry.ambientLight.color) || "#8090b0");
-            var roomTint = roomAmbientI * 0.05;
-            ctx.fillStyle = "rgba(" + roomRgb.r + "," + roomRgb.g + "," + roomRgb.b + "," + roomTint + ")";
-            ctx.beginPath();
-            ctx.moveTo(roomShape[0].x * gs + offX, roomShape[0].y * gs + offY);
-            for (var rs = 1; rs < roomShape.length; rs++) {
-              ctx.lineTo(roomShape[rs].x * gs + offX, roomShape[rs].y * gs + offY);
+          // Create a clip path that excludes enclosed areas using even-odd rule
+          ctx.beginPath();
+          ctx.rect(0, 0, pxW, pxH); // Outer rect
+          for (var pi2 = 0; pi2 < enclosedPolys.length; pi2++) {
+            var polyData2 = enclosedPolys[pi2];
+            var poly2 = polyData2 && polyData2.points ? polyData2.points : polyData2;
+            if (!poly2 || poly2.length < 3) continue;
+            ctx.moveTo(poly2[0].x * gs + offX, poly2[0].y * gs + offY);
+            for (var pvi2 = 1; pvi2 < poly2.length; pvi2++) {
+              ctx.lineTo(poly2[pvi2].x * gs + offX, poly2[pvi2].y * gs + offY);
             }
             ctx.closePath();
-            ctx.fill();
           }
+          ctx.clip("evenodd");
+          ctx.fillStyle = "rgba(" + ambientRgb.r + "," + ambientRgb.g + "," + ambientRgb.b + "," + ambientTint + ")";
+          ctx.fillRect(0, 0, pxW, pxH);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.globalCompositeOperation = "source-over";
+          ctx.fillStyle = "rgba(" + ambientRgb.r + "," + ambientRgb.g + "," + ambientRgb.b + "," + ambientTint + ")";
+          ctx.fillRect(0, 0, pxW, pxH);
           ctx.restore();
         }
       }

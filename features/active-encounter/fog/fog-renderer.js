@@ -157,6 +157,9 @@
       for (var j = 0; j < preview.pendingExploredBy.length; j++) {
         pushUniquePolygon(config.exploredBy[preview.instanceId], preview.pendingExploredBy[j]);
       }
+      // Compact explored areas on drop to prevent unbounded growth
+      compactPolygonList(config.exploredAreas);
+      compactPolygonList(config.exploredBy[preview.instanceId]);
       fog.config = config;
       fog.dragPreview = null;
     };
@@ -204,6 +207,18 @@
       if (!fog) { this.initFog(null, true); fog = this._fog; }
 
       if (fog.dirty) {
+        // Throttle full recalculation to max 12 times per second
+        var now = Date.now();
+        var FOG_THROTTLE_MS = 83;
+        if (fog._lastFullRender && (now - fog._lastFullRender) < FOG_THROTTLE_MS) {
+          // Skip recalc but still draw cached overlay
+          var oc = fog.offscreenCanvas;
+          if (oc && fog._bounds) {
+            this.ctx.drawImage(oc, fog._bounds.minX * this.gridSize, fog._bounds.minY * this.gridSize);
+          }
+          return;
+        }
+        fog._lastFullRender = now;
         recomputeVisibility(this, fog);
         renderFogOverlay(this, fog);
         fog.dirty = false;
@@ -329,6 +344,10 @@
 
       if (!poly || poly.length < 3) continue;
       polygons.push(poly);
+
+      // Only update explored areas when token actually moved (cache miss)
+      // This prevents unbounded growth from repeated renders at same position
+      if (!needsRecalc) continue;
 
       // Update explored areas
       if (dragPreview && dragPreview.instanceId === instId) {
@@ -658,6 +677,14 @@
     list.push(normalized);
   }
 
+  // Tolerance for considering two polygons as duplicates:
+  // - CENTROID_DIST_SQ_THRESHOLD: squared distance between centroids (1.5^2 = 2.25 units = ~2.25m)
+  // - AREA_DELTA_THRESHOLD: absolute difference in area
+  var CENTROID_DIST_SQ_THRESHOLD = 2.25;
+  var AREA_DELTA_THRESHOLD = 5.0;
+  // Maximum polygons per list before triggering auto-compaction
+  var MAX_POLYGONS_BEFORE_COMPACT = 150;
+
   function pushUniquePolygon(list, polygon) {
     var normalized = normalizeArea(polygon);
     if (!normalized || !Array.isArray(normalized)) return;
@@ -665,14 +692,73 @@
     var normalizedCentroid = polygonCentroid(normalized);
     for (var i = 0; i < list.length; i++) {
       var existing = list[i];
-      if (!Array.isArray(existing) || existing.length !== normalized.length) continue;
+      if (!Array.isArray(existing)) continue;
       var areaDelta = Math.abs(polygonArea(existing) - normalizedArea);
       var centroid = polygonCentroid(existing);
       var dx = centroid.x - normalizedCentroid.x;
       var dy = centroid.y - normalizedCentroid.y;
-      if (areaDelta < 0.2 && dx * dx + dy * dy < 0.04) return;
+      if (areaDelta < AREA_DELTA_THRESHOLD && dx * dx + dy * dy < CENTROID_DIST_SQ_THRESHOLD) return;
     }
     list.push(normalized);
+    // Auto-compact if list grows too large
+    if (list.length > MAX_POLYGONS_BEFORE_COMPACT) {
+      compactPolygonList(list);
+    }
+  }
+
+  // Compact a polygon list by merging nearby polygons
+  function compactPolygonList(list) {
+    if (!Array.isArray(list) || list.length < 20) return;
+
+    // Build spatial buckets (grid of 3x3 units)
+    var BUCKET_SIZE = 3;
+    var buckets = {};
+
+    for (var i = 0; i < list.length; i++) {
+      var poly = list[i];
+      if (!Array.isArray(poly)) continue;
+      var c = polygonCentroid(poly);
+      var bx = Math.floor(c.x / BUCKET_SIZE);
+      var by = Math.floor(c.y / BUCKET_SIZE);
+      var key = bx + "," + by;
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key].push({ poly: poly, area: polygonArea(poly), centroid: c, index: i });
+    }
+
+    // For each bucket, keep only the largest polygon (covers most area)
+    var keep = new Set();
+    for (var key in buckets) {
+      var bucket = buckets[key];
+      if (bucket.length === 1) {
+        keep.add(bucket[0].index);
+        continue;
+      }
+      // Sort by area descending, keep largest
+      bucket.sort(function(a, b) { return b.area - a.area; });
+      keep.add(bucket[0].index);
+      // Keep a few more if they're significantly different in position
+      for (var j = 1; j < bucket.length && j < 3; j++) {
+        var dx = bucket[j].centroid.x - bucket[0].centroid.x;
+        var dy = bucket[j].centroid.y - bucket[0].centroid.y;
+        if (dx * dx + dy * dy > 1.0) {
+          keep.add(bucket[j].index);
+        }
+      }
+    }
+
+    // Rebuild list in place
+    var newList = [];
+    for (var i = 0; i < list.length; i++) {
+      if (keep.has(i)) newList.push(list[i]);
+    }
+    list.length = 0;
+    for (var i = 0; i < newList.length; i++) {
+      list.push(newList[i]);
+    }
+
+    if (typeof console !== "undefined" && console.log) {
+      console.log("[FogCompact] Compacted from", keep.size, "kept of original, now", list.length, "polygons");
+    }
   }
 
   function polygonArea(poly) {
