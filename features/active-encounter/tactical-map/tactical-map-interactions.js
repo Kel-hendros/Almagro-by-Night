@@ -907,7 +907,12 @@
         const lwy = (lmy - this.offsetY) / this.scale;
         this._draggedLight.x = (lwx - this._dragLightOffset.x) / this.gridSize;
         this._draggedLight.y = (lwy - this._dragLightOffset.y) / this.gridSize;
-        if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+        // Use granular invalidation for single light when available
+        if (typeof this.invalidateLightingForLight === "function" && this._draggedLight.id) {
+          this.invalidateLightingForLight(this._draggedLight.id);
+        } else if (typeof this.invalidateLighting === "function") {
+          this.invalidateLighting();
+        }
         this.draw();
         return;
       }
@@ -990,9 +995,14 @@
         // Fog: update on every drag step for PCs so walls occlude vision using
         // the token's exact current position, with no visible difference
         // between moving and standing still.
-        if (dragIsPC && typeof this.invalidateFog === "function" && this._fog?.config?.enabled) {
+        // Use granular invalidation for better performance when available.
+        if (dragIsPC && this._fog?.config?.enabled) {
           this._lastDragFogUpdate = performance.now();
-          this.invalidateFog();
+          if (typeof this.invalidateFogForToken === "function" && curToken.instanceId) {
+            this.invalidateFogForToken(curToken.instanceId);
+          } else if (typeof this.invalidateFog === "function") {
+            this.invalidateFog();
+          }
         }
         // Broadcast drag position to other clients in real-time
         if (typeof this.onTokenDrag === "function") {

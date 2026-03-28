@@ -205,7 +205,10 @@ window.TacticalMap = class TacticalMap {
       this.tileMap = extras.tileMap;
     }
     if (Array.isArray(extras?.walls)) {
+      var oldWalls = this.walls;
       this.walls = extras.walls;
+      // Update spatial index if walls changed
+      this._updateWallSpatialIndex(oldWalls, extras.walls);
     }
     if (Array.isArray(extras?.lights)) {
       this.lights = extras.lights;
@@ -368,6 +371,35 @@ window.TacticalMap = class TacticalMap {
     });
 
     this.draw();
+  }
+
+  /**
+   * Update or create the wall spatial index when walls change.
+   * @private
+   */
+  _updateWallSpatialIndex(oldWalls, newWalls) {
+    if (!window.WallSpatialIndex) {
+      this._wallSpatialIndex = null;
+      return;
+    }
+
+    // Create index if it doesn't exist
+    if (!this._wallSpatialIndex) {
+      this._wallSpatialIndex = new window.WallSpatialIndex(newWalls);
+      return;
+    }
+
+    // Rebuild if walls changed
+    if (this._wallSpatialIndex.needsRebuild(newWalls)) {
+      this._wallSpatialIndex.rebuild(newWalls);
+      // Invalidate lighting and fog when walls change
+      if (typeof this.invalidateLightingWalls === "function") {
+        this.invalidateLightingWalls();
+      }
+      if (typeof this.invalidateFogWalls === "function") {
+        this.invalidateFogWalls();
+      }
+    }
   }
 
   markLocalTokenMove(tokenId, x, y, ttlMs = 2500) {
@@ -1046,8 +1078,15 @@ window.TacticalMap = class TacticalMap {
   /**
    * Compute luminosity at a continuous map position (analytical, no canvas sampling).
    * Returns a value in [0, 1] where 0 = pitch black, 1 = fully illuminated.
+   * @param {number} gx - Grid X coordinate
+   * @param {number} gy - Grid Y coordinate
+   * @param {Object} [options] - Optional configuration
+   * @param {string} [options.falloff='gradient'] - Falloff mode: 'gradient' (default) or 'inverse-square'
    */
-  computeLuminosityAt(gx, gy) {
+  computeLuminosityAt(gx, gy, options) {
+    var opts = options || {};
+    var falloffMode = opts.falloff || "gradient";
+
     var rooms = this._rooms;
     var ambient = this._ambientLight;
     var ambientI = ambient
@@ -1068,7 +1107,7 @@ window.TacticalMap = class TacticalMap {
       }
     }
 
-    // Light contributions (unchanged)
+    // Light contributions
     var lightPolygons = this._cachedLightPolygons;
     if (lightPolygons && lightPolygons.length > 0 && window.FogVisibility) {
       for (var i = 0; i < lightPolygons.length; i++) {
@@ -1079,12 +1118,24 @@ window.TacticalMap = class TacticalMap {
         var dist = Math.sqrt(dx * dx + dy * dy);
         var t = dist / lc.radius;
         var contribution = 0;
-        if (t < 0.50) {
-          contribution = lc.intensity * (1 - t / 0.5 * 0.4);
-        } else if (t < 0.85) {
-          contribution = lc.intensity * (0.6 - (t - 0.5) / 0.35 * 0.45);
-        } else if (t < 1.00) {
-          contribution = lc.intensity * (0.15 - (t - 0.85) / 0.15 * 0.15);
+
+        if (falloffMode === "inverse-square") {
+          // Physics-based inverse-square falloff with softening
+          // Formula: intensity / (normalizedDist^2 + softening)
+          // Softening factor prevents extreme values near light center
+          var normalizedDist = Math.max(0.1, t);
+          var softening = 0.5;
+          contribution = lc.intensity / (normalizedDist * normalizedDist + softening);
+          contribution = Math.min(contribution, lc.intensity); // Cap at max intensity
+        } else {
+          // Default gradient falloff (matches visual rendering in light-renderer.js)
+          if (t < 0.50) {
+            contribution = lc.intensity * (1 - t / 0.5 * 0.4);
+          } else if (t < 0.85) {
+            contribution = lc.intensity * (0.6 - (t - 0.5) / 0.35 * 0.45);
+          } else if (t < 1.00) {
+            contribution = lc.intensity * (0.15 - (t - 0.85) / 0.15 * 0.15);
+          }
         }
         luminosity += contribution;
       }

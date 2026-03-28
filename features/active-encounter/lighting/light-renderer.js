@@ -202,6 +202,10 @@
         overlayFogGen: -1,
         overlayBoundsKey: "",
         overlayProfileKey: "",
+        // Per-light polygon cache: Map<lightId, {poly, x, y, radius, intensity, wallsHash}>
+        perLightCache: new Map(),
+        // Hash of walls for invalidation detection
+        wallsHash: null,
       };
     };
 
@@ -209,6 +213,30 @@
       if (!this._lighting) this.initLighting();
       this._lighting.dirty = true;
       this._lighting.cacheGen = (this._lighting.cacheGen || 0) + 1;
+      this._drawDirty = true;
+    };
+
+    /**
+     * Invalidate cache for a specific light (e.g., when dragging).
+     * More efficient than full invalidation when only one light moved.
+     */
+    proto.invalidateLightingForLight = function (lightId) {
+      if (!this._lighting) this.initLighting();
+      if (this._lighting.perLightCache && lightId) {
+        this._lighting.perLightCache.delete(lightId);
+      }
+      this._lighting.dirty = true;
+      this._drawDirty = true;
+    };
+
+    /**
+     * Invalidate lighting due to wall changes (doors opening, walls added/removed).
+     * Clears the walls hash to force recalculation of all light polygons.
+     */
+    proto.invalidateLightingWalls = function () {
+      if (!this._lighting) this.initLighting();
+      this._lighting.wallsHash = null;
+      this._lighting.dirty = true;
       this._drawDirty = true;
     };
 
@@ -703,19 +731,93 @@
     };
   }
 
+  /**
+   * Compute a simple hash for walls to detect changes.
+   */
+  function computeWallsHash(walls) {
+    if (!walls || walls.length === 0) return "0";
+    var hash = walls.length + ":";
+    // Sample first, middle, and last walls + door states
+    var indices = [0, Math.floor(walls.length / 2), walls.length - 1];
+    for (var i = 0; i < indices.length; i++) {
+      var w = walls[indices[i]];
+      if (w) {
+        hash += (w.x1 || 0).toFixed(2) + "," + (w.y1 || 0).toFixed(2) + "," +
+                (w.x2 || 0).toFixed(2) + "," + (w.y2 || 0).toFixed(2) + "," +
+                (w.doorOpen ? 1 : 0) + ";";
+      }
+    }
+    return hash;
+  }
+
   function buildLightPolygonCache(map) {
     var lights = map.lights || [];
     var walls = map.walls || [];
     var cache = [];
     if (!lights.length || !global.AELightVisibility) return cache;
 
+    var lighting = map._lighting || {};
+    var perLightCache = lighting.perLightCache || new Map();
+    var currentWallsHash = computeWallsHash(walls);
+    var wallsChanged = currentWallsHash !== lighting.wallsHash;
+
+    // Update walls hash for next check
+    if (lighting.wallsHash !== currentWallsHash) {
+      lighting.wallsHash = currentWallsHash;
+    }
+
+    // Track which lights are still active (for cleanup)
+    var activeLightIds = new Set();
+    var cacheHits = 0;
+    var cacheMisses = 0;
+
+    // Get spatial index if available
+    var spatialIndex = map._wallSpatialIndex || null;
+
     for (var li = 0; li < lights.length; li++) {
       var light = lights[li];
       if (!light || light.on === false) continue;
+
+      var lightId = light.id || li;
+      activeLightIds.add(lightId);
+
       var radius = parseFloat(light.radius) || 4;
       var intensity = clamp01(light.intensity != null ? light.intensity : 0.8);
-      var poly = global.AELightVisibility.computeLightPolygon(light.x, light.y, walls, radius);
-      if (!poly || poly.length < 3) continue;
+      var lightX = parseFloat(light.x) || 0;
+      var lightY = parseFloat(light.y) || 0;
+
+      // Check if cached entry is still valid
+      var cached = perLightCache.get(lightId);
+      var needsRecalc = !cached ||
+                        wallsChanged ||
+                        cached.x !== lightX ||
+                        cached.y !== lightY ||
+                        cached.radius !== radius;
+
+      var poly;
+      if (needsRecalc) {
+        cacheMisses++;
+        // Use spatial index to get only relevant walls if available
+        var relevantWalls = walls;
+        if (spatialIndex) {
+          relevantWalls = spatialIndex.queryCircle(lightX, lightY, radius + 1);
+        }
+        poly = global.AELightVisibility.computeLightPolygon(lightX, lightY, relevantWalls, radius);
+        if (!poly || poly.length < 3) continue;
+
+        // Update cache
+        perLightCache.set(lightId, {
+          poly: poly,
+          x: lightX,
+          y: lightY,
+          radius: radius,
+          wallsHash: currentWallsHash,
+        });
+      } else {
+        cacheHits++;
+        poly = cached.poly;
+      }
+
       cache.push({
         light: light,
         poly: poly,
@@ -723,6 +825,19 @@
         intensity: intensity,
       });
     }
+
+    // Clean up stale cache entries for lights that no longer exist or are off
+    perLightCache.forEach(function(_, key) {
+      if (!activeLightIds.has(key)) {
+        perLightCache.delete(key);
+      }
+    });
+
+    // Debug logging (can be removed in production)
+    if (cacheMisses > 0 && typeof console !== "undefined" && console.log) {
+      console.log("[LightCache] Recalculados:", cacheMisses, "/", cacheMisses + cacheHits);
+    }
+
     return cache;
   }
 

@@ -660,8 +660,17 @@
           return;
         }
       }
-      state.map.invalidateFog?.();
-      state.map.invalidateLighting?.();
+      // Use wall-specific invalidation for better cache performance
+      if (typeof state.map.invalidateFogWalls === "function") {
+        state.map.invalidateFogWalls();
+      } else {
+        state.map.invalidateFog?.();
+      }
+      if (typeof state.map.invalidateLightingWalls === "function") {
+        state.map.invalidateLightingWalls();
+      } else {
+        state.map.invalidateLighting?.();
+      }
       if (canEditEncounter()) {
         saveEncounter();
       } else {

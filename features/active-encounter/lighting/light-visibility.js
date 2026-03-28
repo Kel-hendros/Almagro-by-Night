@@ -54,11 +54,21 @@
     list.push({ ax: p4.x, ay: p4.y, bx: p1.x, by: p1.y });
   }
 
+  /**
+   * Compute a light visibility polygon using raycasting.
+   * @param {number} ox - Light origin X
+   * @param {number} oy - Light origin Y
+   * @param {Array} walls - Wall segments (or pre-filtered from spatial index)
+   * @param {number} radius - Light radius
+   * @param {number} [rayCount] - Number of rays (default 720)
+   * @returns {Array<{x: number, y: number}>} Polygon points
+   */
   function computeLightPolygon(ox, oy, walls, radius, rayCount) {
     var segments = [];
     var points = [];
     var rays = Math.max(64, rayCount || DEFAULT_RAY_COUNT);
 
+    // walls parameter can be pre-filtered by spatial index
     for (var i = 0; i < (walls || []).length; i++) {
       var wall = walls[i];
       if (!blocksLight(wall)) continue;

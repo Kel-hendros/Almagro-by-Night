@@ -1,6 +1,8 @@
 (function initActiveEncounterFeatureBootstrap(global) {
   const FEATURE_BASE = "features/active-encounter/";
   const CHAIN = [
+    // Spatial indexing (used by lighting and fog for performance)
+    "spatial/wall-spatial-index.js",
     // Terrain
     "terrain/tile-textures.js",
     "terrain/tile-painter.js",
@@ -18,6 +20,7 @@
     // Fog
     "fog/fog-visibility.js",
     "fog/fog-renderer.js",
+    "fog/fog-brush.js",
     // Tactical Map
     "tactical-map/tactical-map-render.js",
     "tactical-map/tactical-map-interactions.js",
