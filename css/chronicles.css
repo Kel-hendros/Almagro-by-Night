@@ -76,12 +76,15 @@
     background: var(--theme-bg-surface);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     cursor: pointer;
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.chronicle-card:hover {
+.chronicle-card:hover,
+.chronicle-card:focus-visible {
     transform: translateY(-2px);
     border-color: var(--theme-accent);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    outline: none;
 }
 
 .chronicle-card-banner {

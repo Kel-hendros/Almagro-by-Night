@@ -34,7 +34,7 @@
     background: var(--theme-bg-surface);
     border: 1px solid var(--theme-border-divider);
     max-width: 360px;
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .cs-card--skeleton {
@@ -97,9 +97,12 @@
     cursor: pointer;
 }
 
-.cs-card:hover {
+.cs-card:hover,
+.cs-card:focus-visible {
     transform: translateY(-2px);
     border-color: var(--theme-accent);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+    outline: none;
 }
 
 /* --- Card Banner --- */
