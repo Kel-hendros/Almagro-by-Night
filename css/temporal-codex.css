@@ -1,220 +1,181 @@
 /* Temporal Codex Styles */
 
-.codex-page-header {
-    margin-bottom: 1rem;
+.temporal-codex-root {
+    display: flex;
+    flex-direction: column;
 }
 
-.temporal-codex-container {
-    max-width: 600px;
+.temporal-codex-content {
+    max-width: 500px;
     margin: 0 auto;
-    border: 1px solid var(--theme-border-divider);
-    border-radius: 20px;
-    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.32);
-    color: var(--theme-text-secondary);
-    background: color-mix(in srgb, var(--theme-bg-surface) 92%, transparent);
-    font-size: 1rem;
-}
-
-.codex-header {
-    padding: 2rem 2rem 1rem 2rem;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
     width: 100%;
-    position: relative;
-
 }
 
-
-
-.codex-title h1 {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--theme-text-primary);
-    letter-spacing: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.25rem;
-    font-family: var(--app-font-heading);
-}
-
-
-.codex-title p {
-    font-size: 0.9rem;
-    color: var(--theme-text-secondary);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-}
-
-.reset-btn {
-    position: absolute;
-    top: -1rem;
-    right: -1rem;
-    padding: 0.75rem;
-    background-color: var(--theme-bg-elevated);
-    color: var(--theme-text-secondary);
-    border: 1px solid var(--theme-border-divider);
-    border-radius: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-}
-
-.reset-btn:hover {
-    background-color: var(--theme-bg-surface);
-    color: var(--theme-text-primary);
-    border-color: var(--theme-accent);
-}
-
-.error-banner {
-    margin: 0 2rem 1.5rem 2rem;
-    padding: 0.75rem;
-    background-color: color-mix(in srgb, var(--theme-accent) 18%, transparent);
-    border: 1px solid color-mix(in srgb, var(--theme-accent) 40%, transparent);
-    border-radius: 1rem;
+/* Error Banner */
+.codex-error-banner {
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
+    border-radius: 8px;
     display: flex;
     gap: 0.75rem;
     align-items: center;
 }
 
-.error-banner p {
-    font-size: 0.7rem;
+.codex-error-banner p {
+    font-size: 0.85rem;
     color: var(--theme-text-primary);
-    font-weight: 500;
     margin: 0;
 }
 
+.codex-error-banner .icon-danger {
+    color: var(--color-danger);
+    flex-shrink: 0;
+}
+
+/* Form */
 .codex-form {
-    padding: 0 2rem 2rem 2rem;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
-.form-group {
+.codex-form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-}
-
-.form-label {
-    font-size: 1rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--theme-text-secondary);
-    display: flex;
-    align-items: flex-end;
     gap: 0.5rem;
 }
 
-.form-input {
-    background-color: var(--theme-bg-elevated);
+.codex-form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--theme-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.codex-form-label i,
+.codex-form-label svg {
+    width: 16px;
+    height: 16px;
+    color: var(--theme-text-tertiary);
+}
+
+.codex-form-input {
+    background: var(--theme-bg-surface);
     border: 1px solid var(--theme-border-divider);
     color: var(--theme-text-primary);
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    font-size: 1.125rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
     font-weight: 500;
     width: 100%;
     outline: none;
-    transition: all 0.2s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.form-input:focus {
+.codex-form-input::placeholder {
+    color: var(--theme-text-tertiary);
+}
+
+.codex-form-input:focus {
     border-color: var(--theme-accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 25%, transparent);
 }
 
-.grid-2 {
+/* Grid */
+.codex-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
 
-.divider {
+@media (max-width: 480px) {
+    .codex-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Divider */
+.codex-divider {
     display: flex;
     align-items: center;
     gap: 1rem;
-    opacity: 0.3;
     padding: 0.5rem 0;
 }
 
-.divider-line {
-    flex-grow: 1;
+.codex-divider-line {
+    flex: 1;
     height: 1px;
-    background-color: var(--theme-border-divider);
+    background: var(--theme-border-divider);
 }
 
-.divider-text {
-    font-size: 0.625rem;
+.codex-divider-text {
+    font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    font-weight: 900;
+    font-weight: 600;
+    color: var(--theme-text-tertiary);
 }
 
-/* Special styling for Total Existence */
-.input-total {
-    border-color: color-mix(in srgb, var(--theme-accent) 45%, transparent);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--theme-accent) 16%, transparent);
-}
-
-.input-total-label {
+/* Accent styling for Total */
+.codex-label-accent {
     color: var(--theme-accent);
 }
 
-.footer-info {
-    margin-top: 1rem;
-    padding: 1.5rem 2rem;
-    background-color: color-mix(in srgb, var(--theme-bg-elevated) 86%, transparent);
-    border-top: 1px solid var(--theme-border-divider);
-    border-radius: 0 0 20px 20px;
-    display: flex;
+.codex-label-accent i,
+.codex-label-accent svg {
+    color: var(--theme-accent);
+}
+
+.codex-input-accent {
+    border-color: color-mix(in srgb, var(--theme-accent) 50%, transparent);
+}
+
+.codex-input-accent:focus {
+    border-color: var(--theme-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 20%, transparent);
+}
+
+/* Reset button */
+.codex-reset-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 1rem;
-}
-
-.info-icon {
-    padding: 0.5rem;
-    background-color: var(--theme-bg-base);
-    border-radius: 0.5rem;
+    justify-content: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    background: var(--theme-bg-surface);
     color: var(--theme-text-secondary);
-    display: flex;
+    border: 1px solid var(--theme-border-divider);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
 }
 
-.info-text {
-    font-size: 0.625rem;
-    color: var(--theme-text-secondary);
-    line-height: 1.6;
-    font-style: italic;
-    margin: 0;
+.codex-reset-btn i,
+.codex-reset-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
-.info-text strong {
+.codex-reset-btn:hover {
+    border-color: var(--theme-accent);
     color: var(--theme-text-primary);
-    font-weight: 700;
 }
 
-/* Utilities for icons */
-.icon-red {
-    color: var(--theme-accent);
-}
-
-.icon-muted {
-    color: var(--theme-text-secondary);
-}
-
+/* Hidden utility */
 .hidden {
     display: none !important;
 }
 
-/* Remove default spinners from number inputs */
+/* Remove spinners from number inputs */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;

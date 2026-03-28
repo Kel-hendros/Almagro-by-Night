@@ -1,31 +1,24 @@
 <link rel="stylesheet" href="css/temporal-codex.css">
 
-<div class="main-container">
-    <div class="chronicles-header codex-page-header">
+<div class="main-container games temporal-codex-root">
+
+    <!-- Header -->
+    <div class="chronicles-header">
         <div class="chronicles-title-wrap">
             <h1>Temporal Codex</h1>
             <p class="chronicles-subtitle">Calculadora de edades para crónicas y líneas temporales.</p>
         </div>
-    </div>
-    <div class="temporal-codex-container">
-
-        <!-- Header -->
-        <div class="codex-header">
-            <button id="codex-reset" class="reset-btn" title="Reiniciar">
-                <i data-lucide="trash-2"></i>
-            </button>
-            <div class="codex-title">
-                <h1>
-                    <span>TEMPORAL CODEX</span>
-                </h1>
-                <p>Calculadora de Edades</p>
-            </div>
-
+        <div class="chronicles-actions">
+            <button type="button" data-history-back class="btn btn--ghost">← Volver</button>
         </div>
+    </div>
+
+    <!-- Content -->
+    <div class="temporal-codex-content">
 
         <!-- Error Banner -->
-        <div id="codex-error" class="error-banner hidden">
-            <i data-lucide="alert-circle" class="icon-red"></i>
+        <div id="codex-error" class="codex-error-banner hidden">
+            <i data-lucide="alert-circle" class="icon-danger"></i>
             <p id="codex-error-text">Error message here</p>
         </div>
 
@@ -33,82 +26,79 @@
         <div class="codex-form">
 
             <!-- Anchor -->
-            <div class="form-group">
-                <label class="form-label">
-                    <i data-lucide="calendar" class="icon-muted"></i>
+            <div class="codex-form-group">
+                <label class="codex-form-label">
+                    <i data-lucide="calendar"></i>
                     Año Actual
                 </label>
-                <input type="number" id="input-fecha-actual" class="form-input" placeholder="2020">
+                <input type="number" id="input-fecha-actual" class="codex-form-input" placeholder="2020">
             </div>
 
             <!-- Dates -->
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">
-                        <i data-lucide="baby" class="icon-muted"></i>
+            <div class="codex-grid-2">
+                <div class="codex-form-group">
+                    <label class="codex-form-label">
+                        <i data-lucide="baby"></i>
                         Nacimiento
                     </label>
-                    <input type="number" id="input-fecha-nacimiento" class="form-input" placeholder="...">
+                    <input type="number" id="input-fecha-nacimiento" class="codex-form-input" placeholder="...">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">
-                        <i data-lucide="droplet" class="icon-muted"></i>
+                <div class="codex-form-group">
+                    <label class="codex-form-label">
+                        <i data-lucide="droplet"></i>
                         Abrazo
                     </label>
-                    <input type="number" id="input-fecha-abrazo" class="form-input" placeholder="...">
+                    <input type="number" id="input-fecha-abrazo" class="codex-form-input" placeholder="...">
                 </div>
             </div>
 
             <!-- Divider -->
-            <div class="divider">
-                <div class="divider-line"></div>
-                <div class="divider-text">Cómputo de Edad</div>
-                <div class="divider-line"></div>
+            <div class="codex-divider">
+                <div class="codex-divider-line"></div>
+                <div class="codex-divider-text">Cómputo de Edad</div>
+                <div class="codex-divider-line"></div>
             </div>
 
             <!-- Ages -->
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">
-                        <i data-lucide="user" class="icon-muted"></i>
+            <div class="codex-grid-2">
+                <div class="codex-form-group">
+                    <label class="codex-form-label">
+                        <i data-lucide="user"></i>
                         Años como Mortal
                     </label>
-                    <input type="number" id="input-edad-humana" class="form-input" placeholder="...">
+                    <input type="number" id="input-edad-humana" class="codex-form-input" placeholder="...">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">
-                        <i data-lucide="skull" class="icon-muted"></i>
+                <div class="codex-form-group">
+                    <label class="codex-form-label">
+                        <i data-lucide="skull"></i>
                         Años como Vástago
                     </label>
-                    <input type="number" id="input-edad-vastago" class="form-input" placeholder="...">
+                    <input type="number" id="input-edad-vastago" class="codex-form-input" placeholder="...">
                 </div>
             </div>
 
             <!-- Total -->
-            <div class="form-group">
-                <label class="form-label text-red">
-                    <i data-lucide="hourglass" class="icon-red"></i>
-                    <span class="input-total-label">Existencia Total</span>
+            <div class="codex-form-group">
+                <label class="codex-form-label codex-label-accent">
+                    <i data-lucide="hourglass"></i>
+                    Existencia Total
                 </label>
-                <input type="number" id="input-edad-total" class="form-input input-total" placeholder="...">
+                <input type="number" id="input-edad-total" class="codex-form-input codex-input-accent" placeholder="...">
             </div>
 
+            <!-- Reset button -->
+            <button id="codex-reset" class="codex-reset-btn">
+                <i data-lucide="trash-2"></i>
+                Reiniciar
+            </button>
+
         </div>
 
-        <!-- Footer -->
-        <div class="footer-info">
-
-            <p class="info-text">
-
-            </p>
-        </div>
     </div>
 </div>
 
 <script src="js/temporal-codex.js"></script>
 <script>
-    // Initialize standard icons if libraries are already loaded
     if (window.lucide) window.lucide.createIcons();
-    // Initialize logic manually to ensure it runs when fragment is injected
     if (window.initTemporalCodex) window.initTemporalCodex();
 </script>
