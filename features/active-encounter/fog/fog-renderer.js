@@ -8,6 +8,35 @@
   // Explored memory should preserve the underlying map art and only dim it
   // heavily; a neutral gray tint turns remembered terrain into a flat blob.
   var EXPLORED_MEMORY_FILL = "rgba(0,0,0,0.72)";
+
+  function clamp01(value) {
+    var n = parseFloat(value);
+    if (!Number.isFinite(n)) return 0;
+    return Math.min(1, Math.max(0, n));
+  }
+
+  /**
+   * Compute the explored memory fill based on ambient light.
+   * When ambient light is low, memory should be at least as dark as the
+   * current visibility to avoid the "I see more in what I don't see" effect.
+   * @param {Object} map - The TacticalMap instance
+   * @returns {string} CSS rgba color string
+   */
+  function computeExploredMemoryFill(map) {
+    var BASELINE_OPACITY = 0.72; // Minimum darkness for memory
+    var EXTRA_DIMMING = 0.15;    // Extra darkness to indicate "memory"
+
+    var ambient = map._ambientLight;
+    if (!ambient || ambient.intensity >= 1) {
+      return EXPLORED_MEMORY_FILL; // Fallback to fixed value
+    }
+
+    var ambientIntensity = clamp01(ambient.intensity);
+    var ambientDarkness = 1 - ambientIntensity;
+    var exploredOpacity = Math.max(BASELINE_OPACITY, Math.min(1, ambientDarkness + EXTRA_DIMMING));
+
+    return "rgba(0,0,0," + exploredOpacity.toFixed(2) + ")";
+  }
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -33,6 +62,12 @@
         impersonateInstanceId: null,
         viewerInstanceIds: null,
         _bounds: null,
+        // Per-token polygon cache: Map<instanceId, {poly, x, y, wallsHash}>
+        perTokenPolygonCache: new Map(),
+        // Hash of walls for invalidation detection
+        wallsHash: null,
+        // Set of instance IDs that need recalculation
+        dirtyTokens: new Set(),
       };
       // Invalidate token visibility caches so they recompute with fresh fog state
       this._tokenFogCacheGeneration = -1;
@@ -48,6 +83,37 @@
 
     proto.invalidateFog = function () {
       if (this._fog) this._fog.dirty = true;
+      this._drawDirty = true;
+    };
+
+    /**
+     * Invalidate fog visibility for a specific token/instance.
+     * More efficient than full invalidation when only one token moved.
+     * @param {string} instanceId - The instance ID to invalidate
+     */
+    proto.invalidateFogForToken = function (instanceId) {
+      if (!this._fog) return;
+      if (instanceId && this._fog.perTokenPolygonCache) {
+        this._fog.perTokenPolygonCache.delete(instanceId);
+      }
+      if (this._fog.dirtyTokens) {
+        this._fog.dirtyTokens.add(instanceId);
+      }
+      this._fog.dirty = true;
+      this._drawDirty = true;
+    };
+
+    /**
+     * Invalidate fog due to wall changes (doors opening, walls added/removed).
+     * Clears the walls hash to force recalculation of all visibility polygons.
+     */
+    proto.invalidateFogWalls = function () {
+      if (!this._fog) return;
+      this._fog.wallsHash = null;
+      if (this._fog.perTokenPolygonCache) {
+        this._fog.perTokenPolygonCache.clear();
+      }
+      this._fog.dirty = true;
       this._drawDirty = true;
     };
 
@@ -150,7 +216,26 @@
     };
   }
 
-  // ── Visibility computation (unchanged) ──
+  // ── Visibility computation with per-token caching ──
+
+  /**
+   * Compute a simple hash for walls to detect changes.
+   */
+  function computeWallsHash(walls) {
+    if (!walls || walls.length === 0) return "0";
+    var hash = walls.length + ":";
+    // Sample first, middle, and last walls + door states
+    var indices = [0, Math.floor(walls.length / 2), walls.length - 1];
+    for (var i = 0; i < indices.length; i++) {
+      var w = walls[indices[i]];
+      if (w) {
+        hash += (w.x1 || 0).toFixed(2) + "," + (w.y1 || 0).toFixed(2) + "," +
+                (w.x2 || 0).toFixed(2) + "," + (w.y2 || 0).toFixed(2) + "," +
+                (w.doorOpen ? 1 : 0) + ";";
+      }
+    }
+    return hash;
+  }
 
   function recomputeVisibility(map, fog) {
     var config = normalizeFogConfig(fog.config);
@@ -160,6 +245,14 @@
       return;
     }
     if (!global.FogVisibility) { fog.polygons = []; return; }
+
+    var walls = map.walls || [];
+    var currentWallsHash = computeWallsHash(walls);
+    var wallsChanged = currentWallsHash !== fog.wallsHash;
+    fog.wallsHash = currentWallsHash;
+
+    var perTokenCache = fog.perTokenPolygonCache || new Map();
+    var dirtyTokens = fog.dirtyTokens || new Set();
 
     var pcTokens = [];
     var impersonate = fog.impersonateInstanceId;
@@ -184,14 +277,60 @@
       }
     }
 
-    var result = global.FogVisibility.computeVisibility(pcTokens, map.walls || []);
-    fog.polygons = result.polygons;
+    // Track active instance IDs for cache cleanup
+    var activeInstanceIds = new Set();
+    var polygons = [];
+    var cacheHits = 0;
+    var cacheMisses = 0;
     var dragPreview = fog.dragPreview || null;
 
+    // Get spatial index if available
+    var spatialIndex = map._wallSpatialIndex || null;
+
     for (var ti = 0; ti < pcTokens.length; ti++) {
-      var instId = pcTokens[ti].instanceId;
-      var poly = result.perTokenPolygons ? result.perTokenPolygons[ti] : null;
+      var token = pcTokens[ti];
+      var instId = token.instanceId;
+      activeInstanceIds.add(instId);
+
+      var tSize = parseFloat(token.size) || 1;
+      var tokenX = token.x + tSize * 0.5;
+      var tokenY = token.y + tSize * 0.5;
+
+      // Check if cached entry is still valid
+      var cached = perTokenCache.get(instId);
+      var needsRecalc = !cached ||
+                        wallsChanged ||
+                        dirtyTokens.has(instId) ||
+                        cached.x !== tokenX ||
+                        cached.y !== tokenY;
+
+      var poly;
+      if (needsRecalc) {
+        cacheMisses++;
+        // Use spatial index to get only relevant walls if available
+        var visionRadius = 30; // DEFAULT_VISION_RADIUS from fog-visibility.js
+        var relevantWalls = walls;
+        if (spatialIndex) {
+          relevantWalls = spatialIndex.queryCircle(tokenX, tokenY, visionRadius + 2);
+        }
+        poly = global.FogVisibility.computeVisibilityPolygon(tokenX, tokenY, relevantWalls, visionRadius);
+
+        // Update cache
+        perTokenCache.set(instId, {
+          poly: poly,
+          x: tokenX,
+          y: tokenY,
+          wallsHash: currentWallsHash,
+        });
+      } else {
+        cacheHits++;
+        poly = cached.poly;
+      }
+
       if (!poly || poly.length < 3) continue;
+      polygons.push(poly);
+
+      // Update explored areas
       if (dragPreview && dragPreview.instanceId === instId) {
         pushUniquePolygon(dragPreview.pendingExploredAreas, poly);
         pushUniquePolygon(dragPreview.pendingExploredBy, poly);
@@ -200,6 +339,23 @@
       if (!Array.isArray(config.exploredBy[instId])) config.exploredBy[instId] = [];
       pushUniquePolygon(config.exploredAreas, poly);
       pushUniquePolygon(config.exploredBy[instId], poly);
+    }
+
+    fog.polygons = polygons;
+
+    // Clean up stale cache entries
+    perTokenCache.forEach(function(_, key) {
+      if (!activeInstanceIds.has(key)) {
+        perTokenCache.delete(key);
+      }
+    });
+
+    // Clear dirty tokens set after processing
+    dirtyTokens.clear();
+
+    // Debug logging (can be removed in production)
+    if (cacheMisses > 0 && typeof console !== "undefined" && console.log) {
+      console.log("[FogCache] Cache hits:", cacheHits, "/ Recalculados:", cacheMisses);
     }
   }
 
@@ -315,9 +471,10 @@
         // Explored memory stays visible as a dark, neutral-tinted layer so it
         // reads as recollection rather than live sight, and never looks more
         // illuminated than the currently visible cone.
+        var exploredFill = computeExploredMemoryFill(map);
         fCtx.save();
         fCtx.globalCompositeOperation = "source-over";
-        fillAreas(fCtx, exploredAreas, gs, offX, offY, EXPLORED_MEMORY_FILL);
+        fillAreas(fCtx, exploredAreas, gs, offX, offY, exploredFill);
         fCtx.restore();
       }
 
