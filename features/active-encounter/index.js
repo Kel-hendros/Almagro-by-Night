@@ -14,6 +14,7 @@
     "walls/wall-editor.js",
     "walls/wall-renderer.js",
     "walls/wall-drawer.js",
+    "walls/paper-wall-editor.js",
     // Lighting
     "lighting/light-renderer.js",
     "lighting/light-switch-manager.js",
@@ -32,6 +33,9 @@
     "context-menus/design-token-menu.js",
     "context-menus/map-context-menu.js",
     "context-menus/marker-context-menu.js",
+    "context-menus/wall-context-menu.js",
+    // Toolbars
+    "toolbars/elements-toolbar.js",
     // Modal
     "modal/instance-modal.js",
     // Instances

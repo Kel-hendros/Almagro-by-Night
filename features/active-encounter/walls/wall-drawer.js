@@ -138,6 +138,7 @@
    * @param {Function} opts.setWalls - updates walls array
    * @param {Function} opts.onChanged - callback for save (debounced internally)
    * @param {Function} opts.canEdit - returns boolean (is narrator)
+   * @param {Function} opts.onReturnToSelection - callback when right-click cancels drawing
    */
   function createWallDrawer(opts) {
     var getMap = opts.getMap;
@@ -145,6 +146,7 @@
     var setWalls = opts.setWalls;
     var onChanged = opts.onChanged;
     var canEdit = opts.canEdit || function () { return true; };
+    var onReturnToSelection = opts.onReturnToSelection || null;
 
     var active = false;
     var wallType = "wall"; // "wall" | "door" | "window"
@@ -164,6 +166,9 @@
     var editDragStart = null; // { x, y, vertexKeys, wallIds } for drag operations
     var hoverVertexKey = null;
     var addVertexPreview = null; // Preview for wall split point
+
+    // Elements layer state - enables contextual editing
+    var elementsLayerActive = false;
 
     var saveTimer = null;
     var SAVE_DELAY = 600;
@@ -282,7 +287,12 @@
         map.canvas?.classList.remove("wall-eraser-active");
         map.canvas?.classList.remove("wall-edit-select", "wall-edit-move", "wall-edit-add-vertex", "wall-vertex-hover");
         map._wallDrawerState = null;
-        map._wallEditState = null;
+        // Keep edit state if elements layer is still active (for contextual editing)
+        if (elementsLayerActive) {
+          updateEditState();
+        } else {
+          map._wallEditState = null;
+        }
         map.draw();
       }
     }
@@ -328,6 +338,37 @@
       }
     }
 
+    function setElementsLayerActive(isActive) {
+      elementsLayerActive = !!isActive;
+
+      var map = getMap?.();
+
+      if (elementsLayerActive) {
+        ensureEditModules();
+        if (vertexRegistry) vertexRegistry.rebuild();
+      } else {
+        // Clean up hover state and cursor classes when deactivating
+        hoverVertexKey = null;
+        addVertexPreview = null;
+        if (map && map.canvas) {
+          var c = map.canvas.classList;
+          c.remove("wall-vertex-hover", "wall-edit-add-vertex");
+        }
+      }
+
+      // Communicate state to map for rendering color changes
+      if (map) {
+        map._elementsLayerActive = elementsLayerActive;
+      }
+
+      updateEditState();
+      if (map) map.draw();
+    }
+
+    function isElementsLayerActive() {
+      return elementsLayerActive;
+    }
+
     function updateEditCursor() {
       var map = getMap?.();
       if (!map || !map.canvas) return;
@@ -345,7 +386,13 @@
       var map = getMap?.();
       if (!map) return;
 
-      if (mode !== "edit") {
+      // Show edit overlay when:
+      // - In explicit edit mode, OR
+      // - Elements layer is active (contextual editing), OR
+      // - During active drag
+      var showOverlay = mode === "edit" || elementsLayerActive || editDragStart;
+
+      if (!showOverlay) {
         map._wallEditState = null;
         return;
       }
@@ -403,15 +450,23 @@
         guides = editDragStart.snapGuides;
       }
 
+      // Get weld targets from drag state
+      var weldTargets = [];
+      if (editDragStart && editDragStart.weldTargets) {
+        weldTargets = editDragStart.weldTargets;
+      }
+
       map._wallEditState = {
         active: true,
         vertices: vertices,
         selectedWallIds: selection ? selection.getSelectedWallIds() : [],
         selectedVertexKeys: selection ? selection.getSelectedVertexKeys() : [],
         hoverVertexKey: hoverVertexKey,
+        addVertexPreview: addVertexPreview,
         boxSelection: selection && selection.isBoxSelecting() ? selection.getBoxSelection() : null,
         dragPreview: dragPreview,
         guides: guides,
+        weldTargets: weldTargets,
       };
     }
 
@@ -659,30 +714,103 @@
 
     // ── Mouse Handlers ──
 
-    function handleMouseDown(e, cellX, cellY) {
-      if (!active || !canEdit()) return false;
-
-      // Only handle left-click
+    // Contextual editing handler for elements layer (when wall drawer not explicitly active)
+    function handleContextualMouseDown(e, cellX, cellY) {
+      // Right-click: let the context menu handle it (don't intercept)
       if (e.button === 2) {
-        // Right-click: cancel door placement or chain
-        if (doorStart) {
+        return false;
+      }
+
+      // Left-click only
+      if (e.button !== 0) return false;
+
+      // Click on vertex → select and allow dragging
+      if (vertexRegistry) {
+        var nearVertex = vertexRegistry.findVertex(cellX, cellY, 0.5);
+        if (nearVertex) {
+          if (selection) {
+            selection.selectVertex(nearVertex.key, false);
+          }
+          startEditDrag(cellX, cellY);
+          updateEditState();
+          var map = getMap?.();
+          if (map) map.draw();
+          return true;
+        }
+      }
+
+      // Click on wall → select the wall segment (for dragging later)
+      var nearWall = findNearestWall(cellX, cellY);
+      if (nearWall && selection) {
+        selection.clearSelection();
+        selection.selectWall(nearWall.id, false);
+        startEditDrag(cellX, cellY);
+        updateEditState();
+        var map = getMap?.();
+        if (map) map.draw();
+        return true;
+      }
+
+      // Click on empty space → don't consume, let map handle panning
+      return false;
+    }
+
+    function handleMouseDown(e, cellX, cellY) {
+      // Allow contextual editing when elements layer is active, even without explicit activation
+      var contextualMode = elementsLayerActive && !active;
+
+      if (!active && !elementsLayerActive) return false;
+      if (!canEdit()) return false;
+
+      // Ensure edit modules are available when elements layer is active
+      if (elementsLayerActive) {
+        ensureEditModules();
+        if (vertexRegistry) vertexRegistry.rebuild();
+      }
+
+      // In contextual mode, only handle vertex/wall interactions, not drawing
+      if (contextualMode) {
+        return handleContextualMouseDown(e, cellX, cellY);
+      }
+
+      // ── Right-click ──
+      if (e.button === 2) {
+        // In draw mode: cancel and return to Selection mode
+        if (active && mode === "draw") {
+          // Cancel any active drawing operation
           doorStart = null;
-          updatePreview(cellX, cellY);
-          return true;
-        }
-        if (chainStart) {
           chainStart = null;
-          updatePreview(cellX, cellY);
+          shapeOrigin = null;
+          shapeDragEnd = null;
+
+          var map = getMap?.();
+          if (map && map._wallDrawerState) {
+            map._wallDrawerState.chainStart = null;
+            map._wallDrawerState.doorPreview = null;
+            map._wallDrawerState.doorStartPoint = null;
+            map._wallDrawerState.shapePreview = null;
+          }
+
+          // Deactivate and return to selection
+          deactivate();
+          if (typeof onReturnToSelection === "function") {
+            onReturnToSelection();
+          }
+          map?.draw();
           return true;
         }
-        if (mode === "edit" && selection && selection.hasSelection()) {
+
+        // Clear selection if has any
+        if (selection && selection.hasSelection()) {
           selection.clearSelection();
           updateEditState();
           var map = getMap?.();
           if (map) map.draw();
           return true;
         }
-        return false; // Let parent handle (deactivate from drawer)
+
+        // Let context menu handle right-clicks on walls/vertices
+        return false;
       }
 
       if (e.button !== 0) return false;
@@ -692,6 +820,7 @@
         return handleEditMouseDown(e, cellX, cellY);
       }
 
+      // ── Erase Mode ──
       if (mode === "erase") {
         var wall = findNearestWall(cellX, cellY);
         if (wall) {
@@ -702,6 +831,7 @@
             setWalls(walls);
             var map = getMap?.();
             if (map) map.walls = walls;
+            if (vertexRegistry) vertexRegistry.rebuild();
             scheduleSave();
             updatePreview(cellX, cellY);
           }
@@ -709,6 +839,11 @@
         }
         return true; // Consume click anyway in erase mode
       }
+
+      // NOTE: Contextual editing in Elements layer (vertex/wall interaction)
+      // is now handled by handleContextualMouseDown() when in Selection mode.
+      // When actively drawing (active = true), we skip this and go directly to
+      // shape/chain drawing below.
 
       // Door/window: two-click placement on existing wall
       if (wallType === "door" || wallType === "window") {
@@ -979,6 +1114,43 @@
             dv.currentY = dv.y + deltaY;
           }
         }
+
+        // Detect potential weld targets (vertices that could be merged on drop)
+        var WELD_THRESHOLD = 0.2;
+        var weldTargets = [];
+        if (vertexRegistry && editDragStart.dragVertices) {
+          var movedKeySet = {};
+          for (var mk = 0; mk < editDragStart.dragVertices.length; mk++) {
+            movedKeySet[editDragStart.dragVertices[mk].key] = true;
+          }
+
+          var allVertices = vertexRegistry.getAllVertices();
+          for (var mv = 0; mv < editDragStart.dragVertices.length; mv++) {
+            var movedV = editDragStart.dragVertices[mv];
+            if (movedV.currentX == null) continue;
+
+            for (var av = 0; av < allVertices.length; av++) {
+              var otherV = allVertices[av];
+              if (movedKeySet[otherV.key]) continue;
+
+              var wdx = movedV.currentX - otherV.x;
+              var wdy = movedV.currentY - otherV.y;
+              var wdist = Math.sqrt(wdx * wdx + wdy * wdy);
+
+              if (wdist < WELD_THRESHOLD) {
+                weldTargets.push({
+                  sourceKey: movedV.key,
+                  targetKey: otherV.key,
+                  targetX: otherV.x,
+                  targetY: otherV.y,
+                });
+                break; // One weld target per moved vertex
+              }
+            }
+          }
+        }
+        editDragStart.weldTargets = weldTargets;
+
         updateEditState();
         var map = getMap?.();
         if (map) map.draw();
@@ -1016,13 +1188,55 @@
 
         // Only commit if moved significantly
         if (Math.abs(deltaX) > 0.01 || Math.abs(deltaY) > 0.01) {
-          // Move vertices
-          if (editDragStart.vertexKeys.length > 0) {
-            wallEditor.moveVertices(editDragStart.vertexKeys, deltaX, deltaY);
+          // Capture weld targets BEFORE moving (these were calculated during drag)
+          var weldTargets = editDragStart.weldTargets || [];
+
+          // Always use moveVertices with all dragged vertices.
+          // This ensures adjacent walls that share vertices stay connected.
+          // dragVertices contains both explicitly selected vertices AND
+          // the endpoints of selected walls.
+          if (editDragStart.dragVertices && editDragStart.dragVertices.length > 0) {
+            var vertexKeysToMove = [];
+            for (var i = 0; i < editDragStart.dragVertices.length; i++) {
+              vertexKeysToMove.push(editDragStart.dragVertices[i].key);
+            }
+            wallEditor.moveVertices(vertexKeysToMove, deltaX, deltaY);
           }
-          // Move walls (their vertices not already moved)
-          if (editDragStart.wallIds.length > 0 && editDragStart.vertexKeys.length === 0) {
-            wallEditor.moveWalls(editDragStart.wallIds, deltaX, deltaY);
+
+          // Perform vertex welding using the targets we detected during drag
+          // After moveVertices, the moved vertex is now at the target position
+          // We need to find and weld vertices that ended up at the same spot
+          if (vertexRegistry && weldTargets.length > 0) {
+            vertexRegistry.rebuild();
+
+            for (var wti = 0; wti < weldTargets.length; wti++) {
+              var wt = weldTargets[wti];
+              // The target vertex key should still be valid (it didn't move)
+              var targetVertex = vertexRegistry.getVertexByKey(wt.targetKey);
+              if (!targetVertex) continue;
+
+              // Find the moved vertex by its NEW position (original + delta)
+              // The dragVertices entry has x, y (original) so new pos = x+deltaX, y+deltaY
+              var movedDv = null;
+              for (var dvi = 0; dvi < editDragStart.dragVertices.length; dvi++) {
+                if (editDragStart.dragVertices[dvi].key === wt.sourceKey) {
+                  movedDv = editDragStart.dragVertices[dvi];
+                  break;
+                }
+              }
+              if (!movedDv) continue;
+
+              var newX = movedDv.x + deltaX;
+              var newY = movedDv.y + deltaY;
+              var newKey = vertexRegistry.makeKey(newX, newY);
+
+              var movedVertex = vertexRegistry.getVertexByKey(newKey);
+              if (!movedVertex) continue;
+
+              // Weld: merge moved vertex into the target vertex
+              wallEditor.weldVertices(wt.targetKey, newKey);
+              vertexRegistry.rebuild();
+            }
           }
         }
 
@@ -1038,7 +1252,49 @@
     }
 
     function handleMouseMove(e, cellX, cellY) {
+      // Handle vertex drag in contextual mode (elements layer active)
+      if (elementsLayerActive && editDragStart) {
+        return handleEditMouseMove(e, cellX, cellY);
+      }
+
+      // Update hover state in Selection mode (contextual editing, no drag)
+      // In Selection mode, we highlight vertices on hover but do NOT show
+      // add-vertex preview since clicking just selects, not adds.
+      if (elementsLayerActive && !active) {
+        var prevHover = hoverVertexKey;
+        hoverVertexKey = null;
+        addVertexPreview = null; // Never show add preview in Selection mode
+
+        if (vertexRegistry) {
+          var nearVertex = vertexRegistry.findVertex(cellX, cellY, 0.5);
+          hoverVertexKey = nearVertex ? nearVertex.key : null;
+        }
+
+        // Update cursor based on hover
+        var map = getMap?.();
+        if (map && map.canvas) {
+          var c = map.canvas.classList;
+          c.remove("wall-vertex-hover", "wall-edit-add-vertex");
+          if (hoverVertexKey) {
+            c.add("wall-vertex-hover");
+          }
+        }
+
+        // Redraw if hover changed
+        if (hoverVertexKey !== prevHover) {
+          updateEditState();
+          if (map) map.draw();
+        }
+
+        return false;
+      }
+
       if (!active) return false;
+
+      // Handle vertex drag regardless of mode
+      if (editDragStart) {
+        return handleEditMouseMove(e, cellX, cellY);
+      }
 
       // Edit mode
       if (mode === "edit") {
@@ -1053,6 +1309,28 @@
     }
 
     function handleMouseUp(e, cellX, cellY) {
+      // Handle vertex drag in contextual mode (elements layer active)
+      if (elementsLayerActive && editDragStart) {
+        var result = handleEditMouseUp(cellX, cellY);
+        // Clear selection after contextual drag
+        if (selection) {
+          selection.clearSelection();
+          updateEditState();
+        }
+        return result;
+      }
+
+      // Handle vertex drag regardless of mode
+      if (active && editDragStart) {
+        var result = handleEditMouseUp(cellX, cellY);
+        // Clear selection after contextual drag in draw mode
+        if (mode !== "edit" && selection) {
+          selection.clearSelection();
+          updateEditState();
+        }
+        return result;
+      }
+
       // Edit mode
       if (active && mode === "edit") {
         return handleEditMouseUp(cellX, cellY);
@@ -1226,6 +1504,8 @@
         map.draw();
       }
       onChanged?.();
+      // Notify Paper.js editor to refresh
+      document.dispatchEvent(new CustomEvent("ae-walls-changed"));
     }
 
     function getWallCount() {
@@ -1242,6 +1522,10 @@
       setType: setType,
       setMode: setMode,
       setDrawShape: setDrawShape,
+      // Elements layer (contextual editing)
+      setElementsLayerActive: setElementsLayerActive,
+      isElementsLayerActive: isElementsLayerActive,
+      // Event handlers
       handleMouseDown: handleMouseDown,
       handleMouseMove: handleMouseMove,
       handleMouseUp: handleMouseUp,

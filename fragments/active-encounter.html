@@ -264,17 +264,51 @@
                 <button id="btn-map-reset" class="ae-map-btn" title="Recentrar">⌖</button>
             </div>
 
-            <!-- Floating Layer Toolbar (anchored to map area) -->
+            <!-- Unified Floating Toolbar (layer selector + layer tools + ruler) -->
             <div id="ae-layer-toolbar" class="ae-layer-toolbar">
-                <button id="btn-ae-layer-menu" class="ae-layer-toolbar-btn icon" title="Capas">☰</button>
-                <button id="btn-ae-ruler" class="ae-layer-toolbar-btn icon" title="Regla">📏</button>
-                <span id="ae-layer-current-label" class="ae-layer-current-label">Entidades</span>
-
-                <div id="ae-layer-menu" class="ae-layer-menu" style="display:none;">
-                    <button class="ae-layer-option" data-layer="background">Fondo</button>
-                    <button class="ae-layer-option" data-layer="decor">Decorado</button>
-                    <button class="ae-layer-option active" data-layer="entities">Entidades</button>
+                <!-- Layer selector (narrator only) -->
+                <div class="ae-layer-selector">
+                    <button id="btn-ae-layer-menu" class="ae-layer-selector-btn" title="Capas">
+                        <span id="ae-layer-current-label" class="ae-layer-current-label">Entidades</span>
+                        <i data-lucide="chevron-down" class="ae-layer-chevron"></i>
+                    </button>
+                    <div id="ae-layer-menu" class="ae-layer-menu" style="display:none;">
+                        <button class="ae-layer-option" data-layer="background">Fondo</button>
+                        <button class="ae-layer-option" data-layer="elements">Elementos</button>
+                        <button class="ae-layer-option" data-layer="decor">Decorado</button>
+                        <button class="ae-layer-option active" data-layer="entities">Entidades</button>
+                    </div>
                 </div>
+
+                <!-- Separator (hidden when layer selector hidden) -->
+                <div id="ae-toolbar-separator-1" class="ae-toolbar-separator"></div>
+
+                <!-- Layer-specific tools (shown/hidden based on layer) -->
+                <div id="ae-layer-tools" class="ae-layer-tools">
+                    <!-- Elements layer tools -->
+                    <div id="ae-elements-tools" class="ae-elements-tools" style="display:none;">
+                        <button class="ae-layer-tool-btn is-active" data-tool="selection" title="Selección">
+                            <i data-lucide="mouse-pointer-2"></i>
+                        </button>
+                        <button class="ae-layer-tool-btn" data-tool="walls" title="Paredes">
+                            <i data-lucide="square"></i>
+                        </button>
+                        <button class="ae-layer-tool-btn" data-tool="doors" title="Puertas y Ventanas">
+                            <i data-lucide="door-open"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Separator (only when tools visible) -->
+                <div id="ae-toolbar-separator-2" class="ae-toolbar-separator" style="display:none;"></div>
+
+                <!-- Ruler (always visible) -->
+                <button id="btn-ae-ruler" class="ae-layer-tool-btn" title="Regla">📏</button>
+            </div>
+
+            <!-- Contextual toolbar for elements (appears below main toolbar) -->
+            <div id="ae-elements-contextual-bar" class="ae-elements-contextual-bar" style="display:none;">
+                <div id="ae-elements-contextual" class="ae-elements-contextual"></div>
             </div>
 
             <!-- Floating Tools Toggle (left bottom) -->

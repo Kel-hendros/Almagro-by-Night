@@ -83,6 +83,18 @@
       this.scale = newScale;
       this.offsetX = fx - worldX * newScale;
       this.offsetY = fy - worldY * newScale;
+      this.dispatchTransformEvent();
+    };
+
+    proto.dispatchTransformEvent = function dispatchTransformEvent() {
+      document.dispatchEvent(new CustomEvent("ae-map-transform", {
+        detail: {
+          scale: this.scale,
+          offsetX: this.offsetX,
+          offsetY: this.offsetY,
+          gridSize: this.gridSize,
+        },
+      }));
     };
 
     proto.stepZoom = function stepZoom(direction, focusX, focusY) {
@@ -166,6 +178,55 @@
           local.y <= ty + height
         );
       });
+    };
+
+    /**
+     * Find a wall vertex (shared endpoint) near a cell position.
+     * Returns { x, y } or null.
+     */
+    proto.getVertexAt = function getVertexAt(cellX, cellY) {
+      var THRESHOLD = 0.35;
+      var walls = this.walls || [];
+      // Build a registry of unique vertices
+      var vertices = [];
+      var seen = new Set();
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        var k1 = Math.round(w.x1 * 1000) + "," + Math.round(w.y1 * 1000);
+        var k2 = Math.round(w.x2 * 1000) + "," + Math.round(w.y2 * 1000);
+        if (!seen.has(k1)) { seen.add(k1); vertices.push({ x: w.x1, y: w.y1 }); }
+        if (!seen.has(k2)) { seen.add(k2); vertices.push({ x: w.x2, y: w.y2 }); }
+      }
+      for (var vi = 0; vi < vertices.length; vi++) {
+        var v = vertices[vi];
+        var dx = cellX - v.x, dy = cellY - v.y;
+        if (Math.sqrt(dx * dx + dy * dy) < THRESHOLD) return v;
+      }
+      return null;
+    };
+
+    /**
+     * Find a wall segment near a cell position.
+     * Returns wall object or null.
+     */
+    proto.getWallAt = function getWallAt(cellX, cellY) {
+      var THRESHOLD = 0.4;
+      var walls = this.walls || [];
+      for (var i = 0; i < walls.length; i++) {
+        var w = walls[i];
+        var dist = this._pointToSegmentDist(cellX, cellY, w.x1, w.y1, w.x2, w.y2);
+        if (dist < THRESHOLD) return w;
+      }
+      return null;
+    };
+
+    proto._pointToSegmentDist = function _pointToSegmentDist(px, py, x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1;
+      var lenSq = dx * dx + dy * dy;
+      if (lenSq < 0.0001) return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+      var t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+      var projX = x1 + t * dx, projY = y1 + t * dy;
+      return Math.sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
     };
 
     /**
@@ -407,8 +468,8 @@
         }
       }
 
-      // Wall drawer intercept
-      if (this._wallDrawer && this._wallDrawer.isActive()) {
+      // Wall drawer intercept (active drawing OR elements layer contextual editing)
+      if (this._wallDrawer && (this._wallDrawer.isActive() || this._wallDrawer.isElementsLayerActive?.())) {
         if (this._wallDrawer.handleMouseDown(e, worldCellX, worldCellY)) {
           e.preventDefault();
           return;
@@ -437,8 +498,8 @@
         }
       }
 
-      // Light interaction: only on background layer
-      if (e.button === 0 && layer === "background" && this.lights && this.lights.length) {
+      // Light interaction: on background or elements layer
+      if (e.button === 0 && (layer === "background" || layer === "elements") && this.lights && this.lights.length) {
         var clickedLight = null;
         var lightThreshold = 0.5; // in grid cells (~25px at zoom 1)
         for (var li = 0; li < this.lights.length; li++) {
@@ -472,8 +533,8 @@
         }
       }
 
-      // Switch interaction on background layer (narrator: select/drag)
-      if (e.button === 0 && layer === "background" && this.switches && this.switches.length) {
+      // Switch interaction on background or elements layer (narrator: select/drag)
+      if (e.button === 0 && (layer === "background" || layer === "elements") && this.switches && this.switches.length) {
         var clickedSwitch = null;
         for (var swi = 0; swi < this.switches.length; swi++) {
           var swt = this.switches[swi];
@@ -536,6 +597,38 @@
           markerHit.clientX = e.clientX;
           markerHit.clientY = e.clientY;
           this.onMarkerContext(markerHit);
+          return;
+        }
+      }
+
+      // Right-click on walls/vertices — only in elements layer
+      if (e.button === 2 && layer === "elements" && this.onWallContext) {
+        // Check vertex first (smaller hit area, higher priority)
+        var vertexHit = this.getVertexAt(worldCellX, worldCellY);
+        if (vertexHit) {
+          e.preventDefault();
+          this.onWallContext({
+            type: "vertex",
+            vertex: vertexHit,
+            cellX: worldCellX,
+            cellY: worldCellY,
+            clientX: e.clientX,
+            clientY: e.clientY,
+          });
+          return;
+        }
+        // Then check wall segment
+        var wallHit = this.getWallAt(worldCellX, worldCellY);
+        if (wallHit) {
+          e.preventDefault();
+          this.onWallContext({
+            type: "wall",
+            wall: wallHit,
+            cellX: worldCellX,
+            cellY: worldCellY,
+            clientX: e.clientX,
+            clientY: e.clientY,
+          });
           return;
         }
       }
@@ -845,8 +938,8 @@
         if (this._tilePainter.handleMouseMove(cellX, cellY)) return;
       }
 
-      // Wall drawer mousemove
-      if (this._wallDrawer && this._wallDrawer.isActive()) {
+      // Wall drawer mousemove (active drawing OR elements layer contextual editing)
+      if (this._wallDrawer && (this._wallDrawer.isActive() || this._wallDrawer.isElementsLayerActive?.())) {
         const rect2 = this.canvas.getBoundingClientRect();
         const mx = e.clientX - rect2.left;
         const my = e.clientY - rect2.top;
@@ -893,6 +986,7 @@
         this.offsetX += dx;
         this.offsetY += dy;
         this.dragStart = { x: e.clientX, y: e.clientY };
+        this.dispatchTransformEvent();
         this.draw();
       } else if (this.measureToolActive && this.measureStart && !this.measureEnd) {
         const rect = this.canvas.getBoundingClientRect();
@@ -1093,8 +1187,8 @@
       if (this._tilePainter && this._tilePainter.isActive()) {
         this._tilePainter.handleMouseUp();
       }
-      // Wall drawer mouseup (needed for rectangle/circle shape drag)
-      if (this._wallDrawer && this._wallDrawer.isActive()) {
+      // Wall drawer mouseup (needed for rectangle/circle shape drag AND elements layer contextual editing)
+      if (this._wallDrawer && (this._wallDrawer.isActive() || this._wallDrawer.isElementsLayerActive?.())) {
         var wRect = this.canvas.getBoundingClientRect();
         var wmx = (e?.clientX || 0) - wRect.left;
         var wmy = (e?.clientY || 0) - wRect.top;

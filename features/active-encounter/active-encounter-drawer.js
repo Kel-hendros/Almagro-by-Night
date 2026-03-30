@@ -429,6 +429,14 @@
           e.preventDefault();
         }
       });
+
+      // Listen for layer changes to enable/disable contextual editing
+      document.addEventListener("ae-layer-change", function (e) {
+        var wd = getWallDrawer?.();
+        if (wd && typeof wd.setElementsLayerActive === "function") {
+          wd.setElementsLayerActive(e.detail.showElements);
+        }
+      });
     }
 
     function refreshWallUI() {

@@ -1021,6 +1021,7 @@
 }
 
 /* ── Floating Layer Toolbar ── */
+/* ── Unified Layer Toolbar ── */
 .ae-layer-toolbar {
     position: absolute;
     left: 50%;
@@ -1031,54 +1032,52 @@
     background: rgba(14, 14, 14, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
-    z-index: 31;
-    padding: 4px 6px;
+    z-index: 32;
+    padding: 4px 8px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
-.ae-layer-toolbar-btn {
+/* Layer selector (dropdown trigger) */
+.ae-layer-selector {
+    position: relative;
+}
+
+.ae-layer-selector-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     border: 1px solid rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.05);
-    color: #ddd;
     border-radius: 999px;
     padding: 6px 10px;
-    font-size: 0.72rem;
-    font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    transition: background 0.15s, border-color 0.15s;
 }
 
-.ae-layer-toolbar-btn.icon {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
-}
-
-.ae-layer-toolbar-btn:hover {
+.ae-layer-selector-btn:hover {
     background: rgba(255, 255, 255, 0.11);
     border-color: rgba(255, 255, 255, 0.25);
-    transform: translateY(-1px);
-}
-
-.ae-layer-toolbar-btn.is-active {
-    background: rgba(197, 160, 89, 0.18);
-    border-color: rgba(197, 160, 89, 0.44);
-    color: #ffe0a7;
 }
 
 .ae-layer-current-label {
     color: var(--color-gold, #c5a059);
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.4px;
     text-transform: uppercase;
-    min-width: 78px;
+}
+
+.ae-layer-chevron {
+    width: 14px;
+    height: 14px;
+    color: #888;
+    transition: transform 0.2s;
+}
+
+.ae-layer-selector.is-open .ae-layer-chevron {
+    transform: rotate(180deg);
 }
 
 .ae-layer-menu {
@@ -1094,6 +1093,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    z-index: 100;
 }
 
 .ae-layer-option {
@@ -1118,6 +1118,79 @@
     background: rgba(173, 56, 56, 0.18);
     border-color: rgba(173, 56, 56, 0.5);
     color: #ffb3b3;
+}
+
+/* Toolbar separator */
+.ae-toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 0 2px;
+}
+
+/* Layer tools container */
+.ae-layer-tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ae-elements-tools {
+    display: flex;
+    gap: 3px;
+}
+
+/* Tool buttons (Selection, Walls, Doors, Ruler) */
+.ae-layer-tool-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: #ddd;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+    font-size: 1rem;
+}
+
+.ae-layer-tool-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.ae-layer-tool-btn:hover {
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.ae-layer-tool-btn.is-active {
+    background: rgba(173, 56, 56, 0.22);
+    border-color: rgba(173, 56, 56, 0.5);
+    color: #ffc1c1;
+}
+
+/* Contextual bar (appears below main toolbar) */
+.ae-elements-contextual-bar {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 70px;
+    border-radius: 10px;
+    background: rgba(14, 14, 14, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+    z-index: 31;
+    padding: 6px 10px;
+}
+
+.ae-elements-contextual {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* ── Floating FAB (Tools Drawer) ── */
@@ -2879,4 +2952,119 @@ canvas.wall-vertex-hover {
     border: 1px dashed rgba(197, 160, 89, 0.7);
     background: rgba(197, 160, 89, 0.08);
     z-index: 50;
+}
+
+/* ── Elements Contextual Styles ── */
+
+.ae-elements-ctx-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ae-elements-ctx-label {
+    font-size: 0.62rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.ae-elements-ctx-btns {
+    display: flex;
+    gap: 2px;
+}
+
+.ae-elements-ctx-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #bbb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.ae-elements-ctx-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.ae-elements-ctx-btn.is-active {
+    background: rgba(197, 160, 89, 0.18);
+    border-color: rgba(197, 160, 89, 0.45);
+    color: #ffe0a7;
+}
+
+.ae-elements-ctx-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.ae-elements-ctx-hint {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    padding: 2px 6px;
+}
+
+/* ── Paper.js Wall Editor Canvas ── */
+
+#paper-wall-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5; /* Below UI elements (drawer, toolbars, menus are 100+) */
+    pointer-events: auto;
+}
+
+/* ── Wall Context Menu ── */
+
+.ae-wall-context-menu {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+}
+
+.ae-wall-context-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 4px;
+}
+
+.ae-wall-context-icon {
+    font-size: 0.9rem;
+    line-height: 1;
+    opacity: 0.8;
+}
+
+.ae-wall-context-header span:last-child {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-cream, #e4d7c5);
+}
+
+.ae-wall-context-menu .ae-token-context-action {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+}
+
+.ae-wall-context-menu .ae-token-context-action--danger {
+    color: #e57373;
+}
+
+.ae-wall-context-menu .ae-token-context-action--danger:hover {
+    background: rgba(229, 115, 115, 0.16);
+    border-color: rgba(229, 115, 115, 0.28);
 }

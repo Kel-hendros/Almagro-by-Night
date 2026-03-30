@@ -776,7 +776,8 @@ window.TacticalMap = class TacticalMap {
   }
 
   setInteractionLayer(layer) {
-    const next = layer === "background" || layer === "decor" ? layer : "entities";
+    const validLayers = ["background", "decor", "elements"];
+    const next = validLayers.includes(layer) ? layer : "entities";
     if (this.activeLayer === next) return;
     this.activeLayer = next;
     if (next !== "entities") {

@@ -93,12 +93,15 @@
   let drawerController = null;
   let tilePainter = null;
   let wallDrawer = null;
+  let paperWallEditor = null;
   let tokenActionsController = null;
   let tokenContextMenuController = null;
   let persistenceController = null;
   let designTokenMenuController = null;
   let mapContextMenuController = null;
   let markerContextMenuController = null;
+  let wallContextMenuController = null;
+  let elementsToolbarController = null;
   let modalController = null;
 
   // PC_ATTR_MAP & PC_ABILITY_MAP — moved to modal/instance-modal.js
@@ -218,6 +221,20 @@
       canEditEncounter,
       getMap: () => state.map,
       getLightSwitchManager: () => lightSwitchManager,
+      saveEncounter: () => saveEncounter(),
+    });
+    wallContextMenuController = window.AEWallContextMenu?.createController?.({
+      state,
+      canEditEncounter,
+      getMap: () => state.map,
+      getWallDrawer: () => wallDrawer,
+      getPaperEditor: () => paperWallEditor,
+      saveEncounter: () => saveEncounter(),
+    });
+    elementsToolbarController = window.AEElementsToolbar?.createController?.({
+      getWallDrawer: () => wallDrawer,
+      getPaperEditor: () => paperWallEditor,
+      canEditEncounter,
       saveEncounter: () => saveEncounter(),
     });
     layersController = window.AEEncounterLayers?.createController?.({
@@ -427,8 +444,82 @@
         },
         onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLightingWalls?.(); saveEncounter(); },
         canEdit: canEditEncounter,
+        onReturnToSelection: () => {
+          // Dispatch event for elements toolbar to switch to selection mode
+          document.dispatchEvent(new CustomEvent("ae-wall-drawer-return-to-selection"));
+        },
       });
       state.map._wallDrawer = wallDrawer;
+    }
+
+    // Init Paper.js Wall Editor (for elements layer editing)
+    if (window.PaperWallEditor) {
+      var mapContainer = document.getElementById("ae-map-container");
+      paperWallEditor = window.PaperWallEditor.createEditor({
+        container: mapContainer,
+        // Paper.js JSON is the source of truth for editing
+        getPaperJSON: () => state.encounter?.data?.paperPaths || null,
+        setPaperJSON: (json) => {
+          if (state.encounter?.data) {
+            state.encounter.data.paperPaths = json;
+          }
+        },
+        // Walls are derived for the game engine
+        setWalls: (walls) => {
+          if (state.encounter?.data) {
+            state.encounter.data.walls = walls;
+            if (state.map) state.map.walls = walls;
+          }
+        },
+        onChanged: () => {
+          state.map?.invalidateFog?.();
+          state.map?.invalidateLightingWalls?.();
+          state.map?.draw();
+          saveEncounter();
+        },
+        getTransform: () => ({
+          scale: state.map?.scale || 1,
+          offsetX: state.map?.offsetX || 0,
+          offsetY: state.map?.offsetY || 0,
+          gridSize: state.map?.gridSize || 40,
+        }),
+        // Start panning on the map directly
+        onStartPan: (clientX, clientY) => {
+          if (state.map) {
+            state.map.isPanning = true;
+            state.map.dragStart = { x: clientX, y: clientY };
+          }
+        },
+        // Context menu for vertices/walls
+        onWallContext: (info) => {
+          if (!canEditEncounter()) return;
+
+          // Convert Paper.js info to context menu format
+          if (info.type === "vertex") {
+            wallContextMenuController?.open({
+              type: "vertex",
+              vertex: { x: info.point.x, y: info.point.y },
+              clientX: info.clientX,
+              clientY: info.clientY,
+              // Paper.js objects for manipulation
+              _paperSegment: info.segment,
+              _paperPath: info.path
+            });
+          } else if (info.type === "wall") {
+            wallContextMenuController?.open({
+              type: "wall",
+              wall: { id: info.path?.data?.id, type: info.path?.data?.type || "wall" },
+              cellX: info.location?.point?.x,
+              cellY: info.location?.point?.y,
+              clientX: info.clientX,
+              clientY: info.clientY,
+              // Paper.js objects for manipulation
+              _paperPath: info.path,
+              _paperLocation: info.location
+            });
+          }
+        },
+      });
     }
 
     // Ambient light reference on the map (always use the encounter data object)
@@ -558,11 +649,21 @@
     };
     state.map.onEmptyContext = (info) => {
       if (!canEditEncounter()) return;
+      // Only show context menu in entities layer
+      if (state.activeMapLayer !== "entities") return;
       mapContextMenuController?.open(info);
     };
     state.map.onMarkerContext = (info) => {
       if (!canEditEncounter()) return;
+      // Only show marker context menu in entities layer
+      if (state.activeMapLayer !== "entities") return;
       markerContextMenuController?.open(info);
+    };
+    state.map.onWallContext = (info) => {
+      if (!canEditEncounter()) return;
+      // Only show wall context menu in elements layer
+      if (state.activeMapLayer !== "elements") return;
+      wallContextMenuController?.open(info);
     };
     state.map.onPing = (info) => {
       mapContextMenuController?.sendPing(info.cellX, info.cellY);
@@ -655,6 +756,7 @@
     state._lightLocalChangeUntil = 0;
 
     setupMapControls();
+    setupElementsToolbarListener();
     applyPermissionsUI();
     render();
     registerGlobalLifecycleListeners();
@@ -1053,8 +1155,14 @@
     if (els.layerToolbar) {
       els.layerToolbar.style.display = "flex";
     }
-    if (els.layerMenuToggle) {
-      els.layerMenuToggle.style.display = canEditEncounter() ? "flex" : "none";
+    // Hide layer selector (dropdown) for non-admins
+    const layerSelectorEl = els.layerMenuToggle?.closest(".ae-layer-selector");
+    const separator1 = document.getElementById("ae-toolbar-separator-1");
+    if (layerSelectorEl) {
+      layerSelectorEl.style.display = canEditEncounter() ? "flex" : "none";
+    }
+    if (separator1) {
+      separator1.style.display = canEditEncounter() ? "block" : "none";
     }
     if (els.layerMenu && !canEditEncounter()) {
       els.layerMenu.style.display = "none";
@@ -1121,6 +1229,61 @@
       state.map.setMeasurementToolActive(nextActive);
       rulerBtn.classList.toggle("is-active", nextActive);
     });
+  }
+
+  function setupElementsToolbarListener() {
+    document.addEventListener("ae-layer-change", function (e) {
+      var detail = e.detail || {};
+      var showElements = detail.showElements && canEditEncounter();
+      if (showElements) {
+        elementsToolbarController?.show();
+        // Activate Paper.js editor for wall editing
+        if (paperWallEditor && !paperWallEditor.isActive()) {
+          paperWallEditor.activate();
+          // Tell TacticalMap to skip wall rendering (Paper.js handles it)
+          if (state.map) {
+            state.map._paperWallEditorActive = true;
+            state.map._elementsLayerActive = true;
+            state.map.draw();
+          }
+        }
+        // Refresh Lucide icons in the toolbar
+        if (window.lucide && typeof window.lucide.createIcons === "function") {
+          setTimeout(function () { window.lucide.createIcons(); }, 10);
+        }
+      } else {
+        elementsToolbarController?.hide();
+        // Deactivate Paper.js editor
+        if (paperWallEditor && paperWallEditor.isActive()) {
+          paperWallEditor.deactivate();
+          // Re-enable TacticalMap wall rendering
+          if (state.map) {
+            state.map._paperWallEditorActive = false;
+            state.map._elementsLayerActive = false;
+          }
+          state.map?.draw();
+        }
+      }
+    });
+
+    // Check initial state after a short delay to ensure everything is initialized
+    setTimeout(function () {
+      if (state.activeMapLayer === "elements" && canEditEncounter()) {
+        elementsToolbarController?.show();
+        // Activate Paper.js editor
+        if (paperWallEditor && !paperWallEditor.isActive()) {
+          paperWallEditor.activate();
+          if (state.map) {
+            state.map._paperWallEditorActive = true;
+            state.map._elementsLayerActive = true;
+            state.map.draw();
+          }
+        }
+        if (window.lucide && typeof window.lucide.createIcons === "function") {
+          setTimeout(function () { window.lucide.createIcons(); }, 10);
+        }
+      }
+    }, 100);
   }
 
   // --- REALTIME SYNC — delegated to realtime/encounter-sync.js ---
@@ -1254,6 +1417,9 @@
 
       if (els.layerMenu && els.layerToolbar && !els.layerToolbar.contains(e.target)) {
         els.layerMenu.style.display = "none";
+        // Close chevron animation
+        const selectorEl = els.layerMenuToggle?.closest(".ae-layer-selector");
+        if (selectorEl) selectorEl.classList.remove("is-open");
       }
     };
     runtime.documentKeydownHandler = (e) => {
@@ -1262,6 +1428,7 @@
         designTokenMenuController?.close?.();
         mapContextMenuController?.close?.();
         markerContextMenuController?.hide?.();
+        wallContextMenuController?.hide?.();
       }
 
       if (!canEditEncounter()) return;
@@ -2187,6 +2354,10 @@
     mapContextMenuController = null;
     markerContextMenuController?.destroy?.();
     markerContextMenuController = null;
+    wallContextMenuController?.destroy?.();
+    wallContextMenuController = null;
+    elementsToolbarController?.destroy?.();
+    elementsToolbarController = null;
     modalController = null;
     syncController = null;
     dragBroadcast?.destroy?.();

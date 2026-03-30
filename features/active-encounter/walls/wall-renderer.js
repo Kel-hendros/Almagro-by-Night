@@ -8,6 +8,12 @@
     door:   "#8b6914",
     window: "#7bb3d4",
   };
+  // Muted colors when not in elements layer (structural view)
+  var WALL_COLORS_INACTIVE = {
+    wall:   "#4a4a4a",
+    door:   "#5a5a5a",
+    window: "#555555",
+  };
   var WALL_WIDTHS = {
     wall:   0.22,
     door:   0.24,
@@ -20,12 +26,25 @@
 
     /**
      * Draw all wall segments on the canvas.
+     * When Paper.js is active in Elements layer, Paper.js handles ALL rendering.
+     * When Paper.js is active in other layers, we draw doors/windows.
+     * When Paper.js is not active, we draw everything.
      */
     proto.drawWalls = function drawWalls() {
+      if (this._paperWallEditorActive) {
+        // In Elements layer: Paper.js handles everything, don't draw anything here
+        if (this._elementsLayerActive) {
+          return;
+        }
+        // In other layers: draw doors/windows for visual feedback
+        drawDoorsAndWindowsOnly(this, 1);
+        return;
+      }
       drawWallsInternal(this, 1);
     };
 
     proto.drawWallsForFogState = function drawWallsForFogState(visibleState) {
+      if (this._paperWallEditorActive) return;
       var state = visibleState || null;
       if (!state || !state.isPlayerView) {
         drawWallsInternal(this, 1);
@@ -55,8 +74,10 @@
 
     /**
      * Draw the wall drawer preview: snap points, chain preview line.
+     * Skip if Paper.js is handling wall editing.
      */
     proto.drawWallDrawerPreview = function drawWallDrawerPreview() {
+      if (this._paperWallEditorActive) return;
       var st = this._wallDrawerState;
       if (!st || !st.active) return;
       var ctx = this.ctx;
@@ -212,11 +233,12 @@
 
   // ── Helpers ──
 
-  function drawWallSegment(ctx, wall, px1, py1, px2, py2, gs, scale, eraseHoverId) {
+  function drawWallSegment(ctx, wall, px1, py1, px2, py2, gs, scale, eraseHoverId, isElementsActive) {
     var midX = (px1 + px2) / 2;
     var midY = (py1 + py2) / 2;
     var isEraseHover = eraseHoverId === wall.id;
-    var baseColor = WALL_COLORS[wall.type] || WALL_COLORS.wall;
+    var colors = isElementsActive ? WALL_COLORS : WALL_COLORS_INACTIVE;
+    var baseColor = colors[wall.type] || colors.wall;
     var lineWidth = (WALL_WIDTHS[wall.type] || WALL_WIDTHS.wall) * gs;
 
     if (isEraseHover) {
@@ -236,38 +258,42 @@
     }
 
     if (wall.type === "door" && wall.doorOpen) {
-      ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : "rgba(197,160,89,0.5)";
-      ctx.lineWidth = (lineWidth * 0.6);
-      ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
-      ctx.beginPath();
-      ctx.moveTo(px1, py1);
-      ctx.lineTo(px2, py2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, true, isEraseHover);
-    } else if (wall.type === "door") {
-      var dx = px2 - px1;
-      var dy = py2 - py1;
-      var len = Math.sqrt(dx * dx + dy * dy);
-      var gapHalf = Math.min(len * 0.15, lineWidth * 0.7);
-      if (len > 0) {
-        var nx = dx / len;
-        var ny = dy / len;
-        ctx.strokeStyle = baseColor;
+      if (isElementsActive) {
+        // Elements layer: just colored line (no arc)
+        ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : baseColor;
         ctx.lineWidth = lineWidth;
         ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(px1, py1);
-        ctx.lineTo(midX - nx * gapHalf, midY - ny * gapHalf);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(midX + nx * gapHalf, midY + ny * gapHalf);
         ctx.lineTo(px2, py2);
         ctx.stroke();
+      } else {
+        // Other layers: dashed line + arc
+        var doorOpenColor = "rgba(90,90,90,0.5)";
+        ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : doorOpenColor;
+        ctx.lineWidth = (lineWidth * 0.6);
+        ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
+        ctx.beginPath();
+        ctx.moveTo(px1, py1);
+        ctx.lineTo(px2, py2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, true, isEraseHover, isElementsActive);
       }
-      drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, false, isEraseHover);
+    } else if (wall.type === "door") {
+      // Closed door: colored line in elements layer, light brown in other layers
+      var doorClosedColor = isElementsActive ? baseColor : "#c9a86c";
+      ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : doorClosedColor;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
     } else if (wall.type === "window" && wall.doorOpen) {
-      ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : "rgba(123,179,212,0.45)";
+      var windowOpenColor = isElementsActive ? "rgba(123,179,212,0.45)" : "rgba(85,85,85,0.45)";
+      var windowTickColor = isElementsActive ? "rgba(123,179,212,0.4)" : "rgba(85,85,85,0.4)";
+      ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : windowOpenColor;
       ctx.lineWidth = lineWidth * 0.6;
       ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
       ctx.lineCap = "round";
@@ -276,7 +302,7 @@
       ctx.lineTo(px2, py2);
       ctx.stroke();
       ctx.setLineDash([]);
-      drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : "rgba(123,179,212,0.4)");
+      drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : windowTickColor);
     } else if (wall.type === "window") {
       ctx.strokeStyle = baseColor;
       ctx.lineWidth = lineWidth;
@@ -298,6 +324,29 @@
 
     ctx.restore();
 
+    // Draw door/window icon in elements layer
+    if (isElementsActive && (wall.type === "door" || wall.type === "window")) {
+      var dx = px2 - px1;
+      var dy = py2 - py1;
+      var len = Math.sqrt(dx * dx + dy * dy);
+      // Perpendicular offset for icon position (above the line)
+      var perpX = len > 0 ? (-dy / len) * (12 / Math.max(scale, 0.5)) : 0;
+      var perpY = len > 0 ? (dx / len) * (12 / Math.max(scale, 0.5)) : 0;
+      var iconX = midX + perpX;
+      var iconY = midY + perpY;
+
+      ctx.save();
+      ctx.font = Math.round(12 / Math.max(scale, 0.5)) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      var icon = wall.type === "door" ? "\uD83D\uDEAA" : "\uD83E\uDE9F";
+      // Add slight shadow for readability
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = 2 / Math.max(scale, 0.5);
+      ctx.fillText(icon, iconX, iconY);
+      ctx.restore();
+    }
+
     if (wall.locked && (wall.type === "door" || wall.type === "window")) {
       ctx.save();
       ctx.font = Math.round(10 / Math.max(scale, 0.5)) + "px sans-serif";
@@ -315,6 +364,7 @@
     var gs = map.gridSize;
     var scale = map.scale;
     var eraseHoverId = map._wallDrawerState?.eraseHoverWallId || null;
+    var isElementsActive = !!map._elementsLayerActive;
 
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
@@ -334,13 +384,37 @@
 
     // Draw plain walls as continuous vector paths
     if (plainWalls.length > 0) {
-      drawWallsAsVectorPaths(ctx, plainWalls, gs, scale, eraseHoverId);
+      drawWallsAsVectorPaths(ctx, plainWalls, gs, scale, eraseHoverId, isElementsActive);
     }
 
     // Draw special walls (doors, windows, erase hover) individually
     for (var j = 0; j < specialWalls.length; j++) {
       var sw = specialWalls[j];
-      drawWallSegment(ctx, sw, sw.x1 * gs, sw.y1 * gs, sw.x2 * gs, sw.y2 * gs, gs, scale, eraseHoverId);
+      drawWallSegment(ctx, sw, sw.x1 * gs, sw.y1 * gs, sw.x2 * gs, sw.y2 * gs, gs, scale, eraseHoverId, isElementsActive);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw only doors and windows (for when Paper.js handles regular walls).
+   */
+  function drawDoorsAndWindowsOnly(map, alpha) {
+    var walls = map.walls;
+    if (!walls || !walls.length) return;
+    var ctx = map.ctx;
+    var gs = map.gridSize;
+    var scale = map.scale;
+    var isElementsActive = !!map._elementsLayerActive;
+
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      if (w.type === "door" || w.type === "window") {
+        drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, null, isElementsActive);
+      }
     }
 
     ctx.restore();
@@ -349,7 +423,7 @@
   /**
    * Build connected chains from wall segments and draw as continuous paths.
    */
-  function drawWallsAsVectorPaths(ctx, walls, gs, scale, eraseHoverId) {
+  function drawWallsAsVectorPaths(ctx, walls, gs, scale, eraseHoverId, isElementsActive) {
     // Build adjacency map: vertex key -> list of { wall, otherEnd }
     var adjacency = {};
 
@@ -388,7 +462,7 @@
 
     // Draw each chain as a continuous path
     var lineWidth = WALL_WIDTHS.wall * gs;
-    var baseColor = WALL_COLORS.wall;
+    var baseColor = isElementsActive ? WALL_COLORS.wall : WALL_COLORS_INACTIVE.wall;
 
     ctx.save();
     ctx.strokeStyle = baseColor;
@@ -499,7 +573,7 @@
     }
   }
 
-  function drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, isOpen, isEraseHover) {
+  function drawDoorArc(ctx, px1, py1, px2, py2, gs, scale, isOpen, isEraseHover, isElementsActive) {
     var dx = px2 - px1;
     var dy = py2 - py1;
     var len = Math.sqrt(dx * dx + dy * dy);
@@ -510,7 +584,9 @@
     var perpX = -dy / len;
     var perpY = dx / len;
     var radius = len * 0.3;
-    var arcColor = isEraseHover ? ERASE_HOVER_COLOR : (isOpen ? "rgba(197,160,89,0.4)" : "#c5a059");
+    var openColor = isElementsActive ? "rgba(197,160,89,0.4)" : "rgba(90,90,90,0.4)";
+    var closedColor = isElementsActive ? "#c5a059" : "#5a5a5a";
+    var arcColor = isEraseHover ? ERASE_HOVER_COLOR : (isOpen ? openColor : closedColor);
 
     ctx.save();
     ctx.strokeStyle = arcColor;
@@ -658,6 +734,20 @@
       ctx.restore();
     }
 
+    // Draw add-vertex preview point (when hovering over a wall)
+    var addPreview = editState.addVertexPreview;
+    if (addPreview) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(addPreview.x * gs, addPreview.y * gs, 5 / Math.max(scale, 0.5), 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(197, 160, 89, 0.9)";
+      ctx.lineWidth = 2 / Math.max(scale, 0.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Draw drag preview - show walls at their new positions
     if (editState.dragPreview && editState.dragPreview.walls) {
       var previewWalls = editState.dragPreview.walls;
@@ -707,6 +797,32 @@
       ctx.setLineDash([]);
       ctx.restore();
     }
+
+    // Draw weld targets (vertices that will merge on drop)
+    if (editState.weldTargets && editState.weldTargets.length) {
+      ctx.save();
+      var weldRadius = 8 / Math.max(scale, 0.5);
+
+      for (var wi = 0; wi < editState.weldTargets.length; wi++) {
+        var wt = editState.weldTargets[wi];
+        var wtx = wt.targetX * gs;
+        var wty = wt.targetY * gs;
+
+        // Draw pulsing ring around weld target
+        ctx.strokeStyle = "rgba(100, 255, 150, 0.9)";
+        ctx.lineWidth = 2 / Math.max(scale, 0.5);
+        ctx.beginPath();
+        ctx.arc(wtx, wty, weldRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw filled center
+        ctx.fillStyle = "rgba(100, 255, 150, 0.4)";
+        ctx.beginPath();
+        ctx.arc(wtx, wty, weldRadius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 
   function applyEditMode(TacticalMap) {
@@ -714,8 +830,10 @@
 
     /**
      * Draw edit mode overlay (vertices, selection, guides).
+     * Skip if Paper.js is handling wall editing.
      */
     proto.drawWallEditOverlay = function drawWallEditOverlay() {
+      if (this._paperWallEditorActive) return;
       drawEditModeOverlay(this);
     };
   }
