@@ -97,6 +97,28 @@
       }));
     };
 
+    proto.getElementsGridState = function getElementsGridState() {
+      return this._elementsEditorGrid || null;
+    };
+
+    proto.snapElementsCellToGrid = function snapElementsCellToGrid(cellX, cellY) {
+      const gridState = this.getElementsGridState();
+      if (!gridState || gridState.enabled !== true) {
+        return { x: cellX, y: cellY };
+      }
+      const spacing = Number.isFinite(gridState.spacing) && gridState.spacing > 0
+        ? gridState.spacing
+        : 1;
+      const offsetX = Number.isFinite(gridState.offsetX) ? gridState.offsetX : 0;
+      const offsetY = Number.isFinite(gridState.offsetY) ? gridState.offsetY : 0;
+      const snappedX = Math.round((cellX - offsetX) / spacing) * spacing + offsetX;
+      const snappedY = Math.round((cellY - offsetY) / spacing) * spacing + offsetY;
+      return {
+        x: Math.round(snappedX * 1000) / 1000,
+        y: Math.round(snappedY * 1000) / 1000,
+      };
+    };
+
     proto.startPan = function startPan(clientX, clientY) {
       this.isPanning = true;
       this.dragStart = { x: clientX, y: clientY };
@@ -501,8 +523,8 @@
         }
       }
 
-      // Light interaction: on background or elements layer
-      if (e.button === 0 && (layer === "background" || layer === "elements") && this.lights && this.lights.length) {
+      // Light interaction: only on elements layer
+      if (e.button === 0 && layer === "elements" && this.lights && this.lights.length) {
         var clickedLight = null;
         var lightThreshold = 0.5; // in grid cells (~25px at zoom 1)
         for (var li = 0; li < this.lights.length; li++) {
@@ -526,7 +548,7 @@
           this.draw();
           return;
         } else {
-          // Clicked empty space on background layer: deselect light/switch
+          // Clicked empty space on elements layer: deselect light/switch
           if (this.selectedLightId || this.selectedSwitchId) {
             this.selectedLightId = null;
             this.selectedSwitchId = null;
@@ -536,8 +558,8 @@
         }
       }
 
-      // Switch interaction on background or elements layer (narrator: select/drag)
-      if (e.button === 0 && (layer === "background" || layer === "elements") && this.switches && this.switches.length) {
+      // Switch interaction: only on elements layer
+      if (e.button === 0 && layer === "elements" && this.switches && this.switches.length) {
         var clickedSwitch = null;
         for (var swi = 0; swi < this.switches.length; swi++) {
           var swt = this.switches[swi];
@@ -557,6 +579,23 @@
           e.preventDefault();
           this.draw();
           return;
+        }
+      }
+
+      if (e.button === 0 && layer === "elements" && this._elementsPlacementMode) {
+        const snappedPlacement = this.snapElementsCellToGrid(worldCellX, worldCellY);
+        if (this._elementsPlacementMode === "light") {
+          if (typeof this.onCreateLight === "function") {
+            this.onCreateLight(snappedPlacement.x, snappedPlacement.y);
+            e.preventDefault();
+            return;
+          }
+        } else if (this._elementsPlacementMode === "switch") {
+          if (typeof this.onCreateSwitch === "function") {
+            this.onCreateSwitch(snappedPlacement.x, snappedPlacement.y);
+            e.preventDefault();
+            return;
+          }
         }
       }
 
@@ -952,8 +991,12 @@
         const smy = e.clientY - sRect.top;
         const swx = (smx - this.offsetX) / this.scale;
         const swy = (smy - this.offsetY) / this.scale;
-        this._draggedSwitch.x = (swx - this._dragSwitchOffset.x) / this.gridSize;
-        this._draggedSwitch.y = (swy - this._dragSwitchOffset.y) / this.gridSize;
+        const snappedSwitch = this.snapElementsCellToGrid(
+          (swx - this._dragSwitchOffset.x) / this.gridSize,
+          (swy - this._dragSwitchOffset.y) / this.gridSize,
+        );
+        this._draggedSwitch.x = snappedSwitch.x;
+        this._draggedSwitch.y = snappedSwitch.y;
         this.draw();
         return;
       }
@@ -965,8 +1008,12 @@
         const lmy = e.clientY - lRect.top;
         const lwx = (lmx - this.offsetX) / this.scale;
         const lwy = (lmy - this.offsetY) / this.scale;
-        this._draggedLight.x = (lwx - this._dragLightOffset.x) / this.gridSize;
-        this._draggedLight.y = (lwy - this._dragLightOffset.y) / this.gridSize;
+        const snappedLight = this.snapElementsCellToGrid(
+          (lwx - this._dragLightOffset.x) / this.gridSize,
+          (lwy - this._dragLightOffset.y) / this.gridSize,
+        );
+        this._draggedLight.x = snappedLight.x;
+        this._draggedLight.y = snappedLight.y;
         // Use granular invalidation for single light when available
         if (typeof this.invalidateLightingForLight === "function" && this._draggedLight.id) {
           this.invalidateLightingForLight(this._draggedLight.id);

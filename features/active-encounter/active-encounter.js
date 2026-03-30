@@ -619,6 +619,7 @@
         switches: state.encounter.data.switches,
       },
     );
+    state.map._elementsEditorGrid = sanitizeEditorGridState(state.encounterViewState?.editorGrid);
     restoreEncounterMapTransform();
 
     // Init Tile Painter (narrator only)
@@ -671,9 +672,19 @@
         }),
         getGridState: () => sanitizeEditorGridState(state.encounterViewState?.editorGrid),
         onGridStateChange: (gridState) => {
+          const nextGridState = sanitizeEditorGridState(gridState);
           persistEncounterViewState({
-            editorGrid: sanitizeEditorGridState(gridState),
+            editorGrid: nextGridState,
           });
+          if (state.map) {
+            state.map._elementsEditorGrid = nextGridState;
+          }
+        },
+        getInteractiveMarkerAt: (x, y) => {
+          if (!state.map || state.activeMapLayer !== "elements") return null;
+          return typeof state.map.getMarkerAt === "function"
+            ? state.map.getMarkerAt(x, y)
+            : null;
         },
         // Start panning on the map directly
         onStartPan: (clientX, clientY) => {
@@ -898,6 +909,16 @@
     state.map.onSwitchMove = () => {
       if (!state.encounter?.data) return;
       saveEncounter();
+    };
+
+    state.map.onCreateLight = (x, y) => {
+      if (!state.encounter?.data || !canEditEncounter()) return;
+      lightSwitchManager?.addLight(x, y);
+    };
+
+    state.map.onCreateSwitch = (x, y) => {
+      if (!state.encounter?.data || !canEditEncounter()) return;
+      lightSwitchManager?.addSwitch(x, y);
     };
 
     state.map.onLightMove = (light) => {

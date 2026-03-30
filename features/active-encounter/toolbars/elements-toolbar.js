@@ -5,11 +5,12 @@
   "use strict";
 
   var TOOL_STATE = {
-    activeTool: "selection", // "selection" | "walls" | "doors"
+    activeTool: "selection", // "selection" | "walls" | "doors" | "lights"
     wallShape: "polygon",    // "polygon" | "rectangle" | "circle"
     wallMode: "draw",        // "draw" | "erase"
     doorElement: "door",     // "door" | "window"
     doorMode: "draw",        // "draw" | "erase"
+    lightElement: "light",   // "light" | "switch"
     measurementMode: false,
   };
   var GRID_DENSITY_STEPS = [
@@ -110,22 +111,30 @@
       // Update contextual toolbar
       renderContextualToolbar();
 
-      // Update Paper.js editor state
+      // Update Paper.js editor + map interaction state
       var paperEditor = getPaperEditor?.();
+      var map = getMap?.();
+      if (map) {
+        map._elementsPlacementMode = tool === "lights" ? TOOL_STATE.lightElement : null;
+        map.canvas?.classList.toggle("light-placer-active", tool === "lights");
+      }
       if (paperEditor && paperEditor.isActive()) {
-        paperEditor.setInputEnabled(true);
         if (tool === "selection") {
+          paperEditor.setInputEnabled(true);
           paperEditor.setDrawMode(null);
         } else if (tool === "walls") {
+          paperEditor.setInputEnabled(true);
           paperEditor.setDrawMode("wall");
           paperEditor.setShapeMode(TOOL_STATE.wallShape);
         } else if (tool === "doors") {
+          paperEditor.setInputEnabled(true);
           var elementType = TOOL_STATE.doorElement === "window" ? "window" : "door";
           paperEditor.setDrawMode(elementType);
+        } else if (tool === "lights") {
+          paperEditor.setDrawMode(null);
+          paperEditor.setInputEnabled(false);
         }
       }
-
-      var map = getMap?.();
       if (map && typeof map.setMeasurementToolActive === "function" && map.measureToolActive) {
         map.setMeasurementToolActive(false);
         var rulerBtn = document.getElementById("btn-ae-ruler");
@@ -195,6 +204,9 @@
         contextualBarEl.style.display = "block";
       } else if (TOOL_STATE.activeTool === "doors") {
         renderDoorsContextual();
+        contextualBarEl.style.display = "block";
+      } else if (TOOL_STATE.activeTool === "lights") {
+        renderLightsContextual();
         contextualBarEl.style.display = "block";
       } else {
         contextualEl.innerHTML = "";
@@ -273,6 +285,37 @@
       });
     }
 
+    function renderLightsContextual() {
+      var hint = TOOL_STATE.lightElement === "switch"
+        ? "Click en el mapa para crear un interruptor"
+        : "Click en el mapa para crear una luz";
+
+      contextualEl.innerHTML =
+        '<div class="ae-elements-ctx-group">' +
+          '<span class="ae-elements-ctx-label">Elemento</span>' +
+          '<div class="ae-elements-ctx-btns">' +
+            '<button class="ae-elements-ctx-btn' + (TOOL_STATE.lightElement === "light" ? " is-active" : "") + '" data-light-element="light" title="Luz">\uD83D\uDCA1</button>' +
+            '<button class="ae-elements-ctx-btn' + (TOOL_STATE.lightElement === "switch" ? " is-active" : "") + '" data-light-element="switch" title="Interruptor">\uD83C\uDF9A\uFE0F</button>' +
+          '</div>' +
+        '</div>' +
+        '<span class="ae-elements-ctx-hint">' + hint + '</span>';
+
+      contextualEl.querySelectorAll("[data-light-element]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          TOOL_STATE.lightElement = btn.dataset.lightElement === "switch" ? "switch" : "light";
+          renderLightsContextual();
+
+          var map = getMap?.();
+          if (map) {
+            map._elementsPlacementMode = TOOL_STATE.lightElement;
+            map.canvas?.classList.add("light-placer-active");
+          }
+        });
+      });
+    }
+
     // ── Show / Hide ──
 
     function show() {
@@ -299,6 +342,11 @@
       if (gridBtnEl) gridBtnEl.style.display = "none";
       if (contextualBarEl) contextualBarEl.style.display = "none";
       if (separatorEl) separatorEl.style.display = "none";
+      var map = getMap?.();
+      if (map) {
+        map._elementsPlacementMode = null;
+        map.canvas?.classList.remove("light-placer-active");
+      }
       isVisible = false;
 
       // Clear draw mode in Paper.js
@@ -330,6 +378,11 @@
       renderContextualToolbar();
 
       var paperEditor = getPaperEditor?.();
+      var map = getMap?.();
+      if (map) {
+        map._elementsPlacementMode = null;
+        map.canvas?.classList.remove("light-placer-active");
+      }
       if (paperEditor && paperEditor.isActive()) {
         paperEditor.setDrawMode(null);
         paperEditor.setInputEnabled(!TOOL_STATE.measurementMode);

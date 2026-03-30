@@ -21,6 +21,7 @@
     var getTransform = opts.getTransform;
     var getGridState = opts.getGridState;
     var onGridStateChange = opts.onGridStateChange || function () {};
+    var getInteractiveMarkerAt = opts.getInteractiveMarkerAt;
     var onStartPan = opts.onStartPan;       // Callback to start map panning
     var onWallContext = opts.onWallContext; // Callback for right-click context menu
 
@@ -814,6 +815,30 @@
       };
     }
 
+    function findSelectedSegmentHit(point) {
+      if (!point || !selectedSegments || !selectedSegments.length) return null;
+
+      var bestSegment = null;
+      var bestDistance = Math.max(getVertexHitTolerance(), VERTEX_SELECT_RADIUS * 1.35);
+
+      for (var i = 0; i < selectedSegments.length; i++) {
+        var segment = selectedSegments[i];
+        if (!segment || !segment.point || !segment.path) continue;
+        var distance = point.getDistance(segment.point);
+        if (distance > bestDistance) continue;
+        bestDistance = distance;
+        bestSegment = segment;
+      }
+
+      if (!bestSegment) return null;
+      return {
+        type: "segment",
+        item: bestSegment.path,
+        segment: bestSegment,
+        point: bestSegment.point,
+      };
+    }
+
     function getCurveHitTolerance() {
       return Math.max(0.2, 14 / getPixelsPerUnit());
     }
@@ -1130,6 +1155,30 @@
       }, { once: true });
     }
 
+    function passEventThroughToMap(nativeEvent) {
+      if (!canvas || !container) return false;
+      var mapCanvas = container.querySelector("#ae-map-canvas");
+      if (!mapCanvas) return false;
+
+      canvas.style.pointerEvents = "none";
+      mapCanvas.dispatchEvent(new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+        clientX: nativeEvent.clientX,
+        clientY: nativeEvent.clientY,
+        button: nativeEvent.button,
+        buttons: nativeEvent.buttons,
+        ctrlKey: nativeEvent.ctrlKey,
+        shiftKey: nativeEvent.shiftKey,
+        altKey: nativeEvent.altKey,
+        metaKey: nativeEvent.metaKey,
+      }));
+      window.addEventListener("mouseup", function reEnable() {
+        if (canvas) canvas.style.pointerEvents = inputEnabled ? "auto" : "none";
+      }, { once: true });
+      return true;
+    }
+
     function onWindowKeyDown(e) {
       if (!isActive || !editorGridState.enabled || !inputEnabled) return;
       var target = e.target;
@@ -1169,6 +1218,8 @@
     var dragging = false;
     var dragHasExceededThreshold = false;
     var pointerDownPoint = null;
+    var pendingEmptyInteraction = false;
+    var emptyInteractionDidPan = false;
 
     function syncSelectionStyles() {
       if (!scope || !scope.project || !scope.project.activeLayer) return;
@@ -1246,6 +1297,8 @@
       var button = event.event.button;
       pointerDownPoint = event.point.clone();
       dragHasExceededThreshold = false;
+      pendingEmptyInteraction = false;
+      emptyInteractionDidPan = false;
 
       // Middle click or Cmd+click: pan
       if (button === 1 || event.event.metaKey) {
@@ -1385,7 +1438,7 @@
       }
 
       // Left click - Selection mode
-      var vertexHit = findNearestSegmentHit(event.point);
+      var vertexHit = findSelectedSegmentHit(event.point) || findNearestSegmentHit(event.point);
       var hitResult = vertexHit || scope.project.hitTest(event.point, {
         segments: true,
         stroke: true,
@@ -1421,14 +1474,26 @@
 
         dragging = true;
       } else {
-        // Clicked on empty space - deselect all
+        if (typeof getInteractiveMarkerAt === "function") {
+          var markerHit = getInteractiveMarkerAt(event.point.x, event.point.y);
+          if (markerHit) {
+            clearSelection();
+            event.event.preventDefault();
+            event.event.stopPropagation();
+            passEventThroughToMap(event.event);
+            dragging = false;
+            return;
+          }
+        }
+
+        // Clicked on empty space. Defer deselect/pan until we know whether this
+        // becomes a click or an actual drag, so we don't drop selection on a tiny miss.
         if (event.modifiers && event.modifiers.shift) {
           dragging = false;
           return;
         }
-        clearSelection();
-        dragging = false;
-        startPanning(event.event);
+        dragging = true;
+        pendingEmptyInteraction = true;
       }
     }
 
@@ -1483,8 +1548,20 @@
         return;
       }
 
+      var dragDistance = pointerDownPoint ? event.point.getDistance(pointerDownPoint) : 0;
+
+      if (pendingEmptyInteraction) {
+        var emptyPanThreshold = Math.max(0.012, 2 / getPixelsPerUnit());
+        if (dragDistance >= emptyPanThreshold) {
+          pendingEmptyInteraction = false;
+          emptyInteractionDidPan = true;
+          dragging = false;
+          startPanning(event.event);
+          return;
+        }
+      }
+
       if (!dragHasExceededThreshold) {
-        var dragDistance = pointerDownPoint ? event.point.getDistance(pointerDownPoint) : 0;
         if (dragDistance < getDragThresholdUnits()) {
           return;
         }
@@ -1594,7 +1671,39 @@
     }
 
     function onMouseUp(event) {
+      if (emptyInteractionDidPan) {
+        emptyInteractionDidPan = false;
+        pendingEmptyInteraction = false;
+        dragging = false;
+        dragHasExceededThreshold = false;
+        pointerDownPoint = null;
+        dragStartPoint = null;
+        dragStartPosition = null;
+        dragStartReferencePoint = null;
+        draggedSegments = [];
+        draggedSegmentOrigins = [];
+        updateSnapIndicator(null);
+        updateAngleGuides(null, false);
+        return;
+      }
+
       if (dragging) {
+        if (pendingEmptyInteraction) {
+          pendingEmptyInteraction = false;
+          dragging = false;
+          dragHasExceededThreshold = false;
+          pointerDownPoint = null;
+          dragStartPoint = null;
+          dragStartPosition = null;
+          dragStartReferencePoint = null;
+          draggedSegments = [];
+          draggedSegmentOrigins = [];
+          clearSelection();
+          updateSnapIndicator(null);
+          updateAngleGuides(null, false);
+          return;
+        }
+
         var didMoveSelection = !!dragHasExceededThreshold;
         // Track if we were dragging a vertex (for merge check)
         var wasDraggingVertex = didMoveSelection && selectedSegment !== null;
@@ -1627,6 +1736,7 @@
         dragging = false;
         dragHasExceededThreshold = false;
         pointerDownPoint = null;
+        pendingEmptyInteraction = false;
         dragStartPoint = null;
         dragStartPosition = null;
         dragStartReferencePoint = null;
