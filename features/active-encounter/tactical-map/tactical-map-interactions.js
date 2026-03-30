@@ -97,6 +97,11 @@
       }));
     };
 
+    proto.startPan = function startPan(clientX, clientY) {
+      this.isPanning = true;
+      this.dragStart = { x: clientX, y: clientY };
+    };
+
     proto.stepZoom = function stepZoom(direction, focusX, focusY) {
       const currentIndex = this.getNearestZoomIndex();
       const nextIndex = currentIndex + direction;
@@ -446,8 +451,7 @@
     proto.handleMouseDown = function handleMouseDown(e) {
       if (e.button === 1 || e.metaKey) {
         e.preventDefault();
-        this.isPanning = true;
-        this.dragStart = { x: e.clientX, y: e.clientY };
+        this.startPan(e.clientX, e.clientY);
         return;
       }
 
@@ -492,8 +496,7 @@
         }
         if (e.button === 2) {
           e.preventDefault();
-          this.isPanning = true;
-          this.dragStart = { x: e.clientX, y: e.clientY };
+          this.startPan(e.clientX, e.clientY);
           return;
         }
       }
@@ -650,8 +653,7 @@
 
         if (e.button === 2) {
           e.preventDefault();
-          this.isPanning = true;
-          this.dragStart = { x: e.clientX, y: e.clientY };
+          this.startPan(e.clientX, e.clientY);
         } else if (e.button === 0) {
           const clickedBackground = this.isPointInsideBackground(worldX, worldY);
           const canEdit =
@@ -669,8 +671,7 @@
               mapY: rect.y,
             };
           } else if (!clickedBackground) {
-            this.isPanning = true;
-            this.dragStart = { x: e.clientX, y: e.clientY };
+            this.startPan(e.clientX, e.clientY);
           }
           this.draw();
         }
@@ -755,8 +756,7 @@
                 clientX: e.clientX, clientY: e.clientY,
               });
             } else {
-              this.isPanning = true;
-              this.dragStart = { x: e.clientX, y: e.clientY };
+              this.startPan(e.clientX, e.clientY);
             }
             if (this.onDesignTokenContext) this.onDesignTokenContext(null);
           }
@@ -789,8 +789,7 @@
             this.draw();
           } else {
             this.selectedDesignTokenId = null;
-            this.isPanning = true;
-            this.dragStart = { x: e.clientX, y: e.clientY };
+            this.startPan(e.clientX, e.clientY);
             if (this.onDesignTokenSelect) this.onDesignTokenSelect(null);
             if (this.onDesignTokenContext) this.onDesignTokenContext(null);
             this.draw();
@@ -827,19 +826,18 @@
               anchorRadiusPx: anchor?.radiusPx ?? null,
             });
           }
-        } else {
-          if (this.onEmptyContext) {
-            this.onEmptyContext({
-              worldX, worldY,
-              cellX: worldCellX, cellY: worldCellY,
-              clientX: e.clientX, clientY: e.clientY,
-            });
           } else {
-            this.isPanning = true;
-            this.dragStart = { x: e.clientX, y: e.clientY };
+            if (this.onEmptyContext) {
+              this.onEmptyContext({
+                worldX, worldY,
+                cellX: worldCellX, cellY: worldCellY,
+                clientX: e.clientX, clientY: e.clientY,
+              });
+            } else {
+              this.startPan(e.clientX, e.clientY);
+            }
+            if (this.onTokenContext) this.onTokenContext(null);
           }
-          if (this.onTokenContext) this.onTokenContext(null);
-        }
         return;
       }
 
@@ -916,8 +914,7 @@
         } else {
           this.selectedTokenId = null;
           this.selectedMapEffectId = null;
-          this.isPanning = true;
-          this.dragStart = { x: e.clientX, y: e.clientY };
+          this.startPan(e.clientX, e.clientY);
 
           if (this.onTokenSelect) this.onTokenSelect(null);
           if (this.onTokenContext) this.onTokenContext(null);

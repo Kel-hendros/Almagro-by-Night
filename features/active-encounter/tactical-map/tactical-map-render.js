@@ -478,8 +478,9 @@
       this.ctx.stroke();
     };
 
-    proto.drawMeasurement = function drawMeasurement() {
+    proto.drawMeasurement = function drawMeasurement(ctxOverride) {
       if (!this.measureToolActive || !this.measureStart) return;
+      const ctx = ctxOverride || this.ctx;
       const start = this.measureStart;
       const end = this.measureEnd || this.measurePreview;
       if (!end) return;
@@ -494,29 +495,29 @@
       const midX = (sx + ex) / 2;
       const midY = (sy + ey) / 2;
 
-      this.ctx.save();
-      this.ctx.strokeStyle = "rgba(255, 221, 140, 0.95)";
-      this.ctx.lineWidth = Math.max(2 / this.scale, 1.2);
-      this.ctx.setLineDash([Math.max(10 / this.scale, 5), Math.max(6 / this.scale, 3)]);
-      this.ctx.beginPath();
-      this.ctx.moveTo(sx, sy);
-      this.ctx.lineTo(ex, ey);
-      this.ctx.stroke();
-      this.ctx.setLineDash([]);
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 221, 140, 0.95)";
+      ctx.lineWidth = Math.max(2 / this.scale, 1.2);
+      ctx.setLineDash([Math.max(10 / this.scale, 5), Math.max(6 / this.scale, 3)]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       const pointRadius = Math.max(4 / this.scale, 2.4);
-      this.ctx.fillStyle = "rgba(255, 221, 140, 0.95)";
-      this.ctx.beginPath();
-      this.ctx.arc(sx, sy, pointRadius, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.beginPath();
-      this.ctx.arc(ex, ey, pointRadius, 0, Math.PI * 2);
-      this.ctx.fill();
+      ctx.fillStyle = "rgba(255, 221, 140, 0.95)";
+      ctx.beginPath();
+      ctx.arc(sx, sy, pointRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(ex, ey, pointRadius, 0, Math.PI * 2);
+      ctx.fill();
 
       const label = `${meters.toFixed(1)} m`;
       const fontSize = Math.max(12 / this.scale, 9);
-      this.ctx.font = `700 ${fontSize}px Nunito Sans, sans-serif`;
-      const textWidth = this.ctx.measureText(label).width;
+      ctx.font = `700 ${fontSize}px Nunito Sans, sans-serif`;
+      const textWidth = ctx.measureText(label).width;
       const padX = Math.max(7 / this.scale, 4);
       const padY = Math.max(4 / this.scale, 2.5);
       const boxW = textWidth + padX * 2;
@@ -524,23 +525,23 @@
       const boxX = midX - boxW / 2;
       const boxY = midY - boxH / 2;
 
-      this.ctx.fillStyle = "rgba(14, 14, 14, 0.84)";
-      this.ctx.strokeStyle = "rgba(255, 221, 140, 0.45)";
-      this.ctx.lineWidth = Math.max(1 / this.scale, 0.7);
-      this.ctx.beginPath();
-      if (typeof this.ctx.roundRect === "function") {
-        this.ctx.roundRect(boxX, boxY, boxW, boxH, Math.max(6 / this.scale, 3));
+      ctx.fillStyle = "rgba(14, 14, 14, 0.84)";
+      ctx.strokeStyle = "rgba(255, 221, 140, 0.45)";
+      ctx.lineWidth = Math.max(1 / this.scale, 0.7);
+      ctx.beginPath();
+      if (typeof ctx.roundRect === "function") {
+        ctx.roundRect(boxX, boxY, boxW, boxH, Math.max(6 / this.scale, 3));
       } else {
-        this.ctx.rect(boxX, boxY, boxW, boxH);
+        ctx.rect(boxX, boxY, boxW, boxH);
       }
-      this.ctx.fill();
-      this.ctx.stroke();
+      ctx.fill();
+      ctx.stroke();
 
-      this.ctx.fillStyle = "rgba(255, 240, 196, 0.96)";
-      this.ctx.textAlign = "center";
-      this.ctx.textBaseline = "middle";
-      this.ctx.fillText(label, midX, midY);
-      this.ctx.restore();
+      ctx.fillStyle = "rgba(255, 240, 196, 0.96)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, midX, midY);
+      ctx.restore();
     };
 
     proto.drawDesignTokens = function drawDesignTokens(layerName = "underlay") {

@@ -16,8 +16,8 @@
   };
   var WALL_WIDTHS = {
     wall:   0.22,
-    door:   0.24,
-    window: 0.18,
+    door:   0.16,
+    window: 0.14,
   };
   var ERASE_HOVER_COLOR = "#e53935";
 
@@ -262,7 +262,7 @@
         // Elements layer: just colored line (no arc)
         ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : baseColor;
         ctx.lineWidth = lineWidth;
-        ctx.lineCap = "round";
+        ctx.lineCap = "butt";
         ctx.beginPath();
         ctx.moveTo(px1, py1);
         ctx.lineTo(px2, py2);
@@ -272,6 +272,7 @@
         var doorOpenColor = "rgba(90,90,90,0.5)";
         ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : doorOpenColor;
         ctx.lineWidth = (lineWidth * 0.6);
+        ctx.lineCap = "butt";
         ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
         ctx.beginPath();
         ctx.moveTo(px1, py1);
@@ -285,7 +286,7 @@
       var doorClosedColor = isElementsActive ? baseColor : "#c9a86c";
       ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : doorClosedColor;
       ctx.lineWidth = lineWidth;
-      ctx.lineCap = "round";
+      ctx.lineCap = "butt";
       ctx.beginPath();
       ctx.moveTo(px1, py1);
       ctx.lineTo(px2, py2);
@@ -296,7 +297,7 @@
       ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : windowOpenColor;
       ctx.lineWidth = lineWidth * 0.6;
       ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
-      ctx.lineCap = "round";
+      ctx.lineCap = "butt";
       ctx.beginPath();
       ctx.moveTo(px1, py1);
       ctx.lineTo(px2, py2);
@@ -306,7 +307,7 @@
     } else if (wall.type === "window") {
       ctx.strokeStyle = baseColor;
       ctx.lineWidth = lineWidth;
-      ctx.lineCap = "round";
+      ctx.lineCap = "butt";
       ctx.beginPath();
       ctx.moveTo(px1, py1);
       ctx.lineTo(px2, py2);
@@ -315,7 +316,7 @@
     } else {
       ctx.strokeStyle = baseColor;
       ctx.lineWidth = lineWidth;
-      ctx.lineCap = "round";
+      ctx.lineCap = "butt";
       ctx.beginPath();
       ctx.moveTo(px1, py1);
       ctx.lineTo(px2, py2);
@@ -465,13 +466,16 @@
     var baseColor = isElementsActive ? WALL_COLORS.wall : WALL_COLORS_INACTIVE.wall;
 
     ctx.save();
-    ctx.strokeStyle = baseColor;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = "round";
+    ctx.lineCap = "butt";
     ctx.lineJoin = "round";
-    ctx.shadowColor = "rgba(0,0,0,0.4)";
-    ctx.shadowBlur = 2 / Math.max(scale, 0.5);
-    ctx.shadowOffsetY = 1 / Math.max(scale, 0.5);
+
+    // Soft shadow bloom under the wall so it feels elevated instead of outlined.
+    var shadowBlurPx = Math.max(lineWidth * 0.55, 2.5 / Math.max(scale, 0.5));
+    ctx.strokeStyle = "rgba(0,0,0,0.16)";
+    ctx.lineWidth = lineWidth * 1.9;
+    ctx.filter = "blur(" + shadowBlurPx.toFixed(2) + "px)";
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
 
     for (var ci = 0; ci < chains.length; ci++) {
       var pts = chains[ci];
@@ -481,6 +485,42 @@
       ctx.moveTo(pts[0].x * gs, pts[0].y * gs);
       for (var pi = 1; pi < pts.length; pi++) {
         ctx.lineTo(pts[pi].x * gs, pts[pi].y * gs);
+      }
+      ctx.stroke();
+    }
+
+    // A tighter contact pass keeps some depth near the wall without a hard outline.
+    ctx.filter = "none";
+    ctx.strokeStyle = "rgba(0,0,0,0.10)";
+    ctx.lineWidth = lineWidth * 1.22;
+
+    for (var ciMid = 0; ciMid < chains.length; ciMid++) {
+      var ptsMid = chains[ciMid];
+      if (ptsMid.length < 2) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(ptsMid[0].x * gs, ptsMid[0].y * gs);
+      for (var piMid = 1; piMid < ptsMid.length; piMid++) {
+        ctx.lineTo(ptsMid[piMid].x * gs, ptsMid[piMid].y * gs);
+      }
+      ctx.stroke();
+    }
+
+    // Main wall stroke on top.
+    ctx.strokeStyle = baseColor;
+    ctx.lineWidth = lineWidth;
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.filter = "none";
+
+    for (var ci2 = 0; ci2 < chains.length; ci2++) {
+      var pts2 = chains[ci2];
+      if (pts2.length < 2) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(pts2[0].x * gs, pts2[0].y * gs);
+      for (var pi2 = 1; pi2 < pts2.length; pi2++) {
+        ctx.lineTo(pts2[pi2].x * gs, pts2[pi2].y * gs);
       }
       ctx.stroke();
     }
@@ -613,7 +653,7 @@
     ctx.save();
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5 / Math.max(scale, 0.5);
-    ctx.lineCap = "round";
+    ctx.lineCap = "butt";
     for (var t = 1; t <= 2; t++) {
       var frac = t / 3;
       var cx = px1 + dx * frac;

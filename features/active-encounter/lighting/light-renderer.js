@@ -928,8 +928,8 @@
      * Draw emoji markers for all interactive objects (doors, windows, lights, switches).
      * Called after drawLightIndicators so markers appear on top of dots/squares.
      */
-    proto.drawInteractiveMarkers = function () {
-      var ctx = this.ctx;
+    proto.drawInteractiveMarkers = function (ctxOverride) {
+      var ctx = ctxOverride || this.ctx;
       var gs = this.gridSize;
       var sc = Math.max(this.scale, 0.5);
       var walls = this.walls || [];
@@ -945,11 +945,15 @@
         var mx = (wall.x1 + wall.x2) / 2;
         var my = (wall.y1 + wall.y2) / 2;
         if (!this.isWallMarkerVisibleToViewer(wall)) continue;
+
+        var markerX = mx * gs;
+        var markerY = my * gs;
+
         if (wall.type === "door") {
           var doorImage = wall.doorOpen ? DOOR_MARKER_IMAGES.open : DOOR_MARKER_IMAGES.closed;
-          drawInteractiveImageMarker(ctx, mx * gs, my * gs, doorImage, sc, false);
+          drawInteractiveImageMarker(ctx, markerX, markerY, doorImage, sc, false);
         } else {
-          drawInteractiveMarker(ctx, mx * gs, my * gs, MARKER_EMOJIS.window, sc, false);
+          drawInteractiveMarker(ctx, markerX, markerY, MARKER_EMOJIS.window, sc, false);
         }
       }
 

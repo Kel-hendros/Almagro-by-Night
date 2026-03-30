@@ -10,18 +10,27 @@
     wallMode: "draw",        // "draw" | "erase"
     doorElement: "door",     // "door" | "window"
     doorMode: "draw",        // "draw" | "erase"
+    measurementMode: false,
   };
+  var GRID_DENSITY_STEPS = [
+    { enabled: false, spacing: 1, density: 0, label: "Grid off" },
+    { enabled: true, spacing: 1, density: 1, label: "Grid 1x" },
+    { enabled: true, spacing: 0.5, density: 2, label: "Grid 2x" },
+    { enabled: true, spacing: 0.25, density: 3, label: "Grid 4x" },
+  ];
 
   function createController(ctx) {
     var getPaperEditor = ctx.getPaperEditor;
     var getWallDrawer = ctx.getWallDrawer; // Keep for backwards compatibility
     var canEditEncounter = ctx.canEditEncounter;
     var saveEncounter = ctx.saveEncounter;
+    var getMap = ctx.getMap;
 
     var toolsEl = null;        // #ae-elements-tools (inside main toolbar)
     var contextualBarEl = null; // #ae-elements-contextual-bar (separate floating bar)
     var contextualEl = null;    // #ae-elements-contextual (content inside bar)
     var separatorEl = null;     // #ae-toolbar-separator-2
+    var gridBtnEl = null;       // #btn-ae-elements-grid
     var isVisible = false;
     var isBound = false;
 
@@ -32,6 +41,7 @@
       contextualBarEl = document.getElementById("ae-elements-contextual-bar");
       contextualEl = document.getElementById("ae-elements-contextual");
       separatorEl = document.getElementById("ae-toolbar-separator-2");
+      gridBtnEl = document.getElementById("btn-ae-elements-grid");
 
       if (!toolsEl) return false;
 
@@ -46,6 +56,20 @@
           });
           toolsEl.addEventListener("mouseup", function (e) {
             e.stopPropagation();
+          });
+        }
+
+        if (gridBtnEl) {
+          gridBtnEl.addEventListener("mousedown", function (e) {
+            e.stopPropagation();
+          });
+          gridBtnEl.addEventListener("mouseup", function (e) {
+            e.stopPropagation();
+          });
+          gridBtnEl.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleGrid();
           });
         }
 
@@ -77,15 +101,11 @@
     }
 
     function selectTool(tool) {
+      TOOL_STATE.measurementMode = false;
       TOOL_STATE.activeTool = tool;
 
       // Update button states
-      if (toolsEl) {
-        var toolBtns = toolsEl.querySelectorAll(".ae-layer-tool-btn");
-        toolBtns.forEach(function (btn) {
-          btn.classList.toggle("is-active", btn.dataset.tool === tool);
-        });
-      }
+      updateToolButtonStates();
 
       // Update contextual toolbar
       renderContextualToolbar();
@@ -93,6 +113,7 @@
       // Update Paper.js editor state
       var paperEditor = getPaperEditor?.();
       if (paperEditor && paperEditor.isActive()) {
+        paperEditor.setInputEnabled(true);
         if (tool === "selection") {
           paperEditor.setDrawMode(null);
         } else if (tool === "walls") {
@@ -103,10 +124,71 @@
           paperEditor.setDrawMode(elementType);
         }
       }
+
+      var map = getMap?.();
+      if (map && typeof map.setMeasurementToolActive === "function" && map.measureToolActive) {
+        map.setMeasurementToolActive(false);
+        var rulerBtn = document.getElementById("btn-ae-ruler");
+        if (rulerBtn) rulerBtn.classList.remove("is-active");
+      }
+    }
+
+    function updateToolButtonStates() {
+      if (toolsEl) {
+        var toolBtns = toolsEl.querySelectorAll(".ae-layer-tool-btn");
+        toolBtns.forEach(function (btn) {
+          var isActive = !TOOL_STATE.measurementMode && btn.dataset.tool === TOOL_STATE.activeTool;
+          btn.classList.toggle("is-active", isActive);
+        });
+      }
+    }
+
+    function updateGridButtonState() {
+      if (!gridBtnEl) return;
+      var paperEditor = getPaperEditor?.();
+      var gridState = paperEditor?.getGridState?.() || { enabled: false, spacing: 1 };
+      var density = 0;
+      if (gridState.enabled) {
+        if (gridState.spacing <= 0.25) density = 3;
+        else if (gridState.spacing <= 0.5) density = 2;
+        else density = 1;
+      }
+      gridBtnEl.classList.toggle("is-active", density > 0);
+      gridBtnEl.dataset.density = String(density);
+      var title = "Grid de edición";
+      if (density === 1) title = "Grid 1x (click: 2x, flechas: mover)";
+      else if (density === 2) title = "Grid 2x (click: 4x, flechas: mover)";
+      else if (density === 3) title = "Grid 4x (click: Off, flechas: mover)";
+      else title = "Grid Off (click: 1x)";
+      gridBtnEl.title = title;
+    }
+
+    function toggleGrid() {
+      var paperEditor = getPaperEditor?.();
+      if (!paperEditor || typeof paperEditor.setGridState !== "function") return;
+      var current = paperEditor.getGridState?.() || { enabled: false, spacing: 1 };
+      var currentIndex = 0;
+      if (current.enabled) {
+        if (current.spacing <= 0.25) currentIndex = 3;
+        else if (current.spacing <= 0.5) currentIndex = 2;
+        else currentIndex = 1;
+      }
+      var nextStep = GRID_DENSITY_STEPS[(currentIndex + 1) % GRID_DENSITY_STEPS.length];
+      paperEditor.setGridState({
+        enabled: nextStep.enabled,
+        spacing: nextStep.spacing,
+      });
+      updateGridButtonState();
     }
 
     function renderContextualToolbar() {
       if (!contextualEl || !contextualBarEl) return;
+
+      if (TOOL_STATE.measurementMode) {
+        contextualEl.innerHTML = "";
+        contextualBarEl.style.display = "none";
+        return;
+      }
 
       if (TOOL_STATE.activeTool === "walls") {
         renderWallsContextual();
@@ -201,6 +283,7 @@
       var wasHidden = !isVisible;
 
       toolsEl.style.display = "flex";
+      if (gridBtnEl) gridBtnEl.style.display = "flex";
       if (separatorEl) separatorEl.style.display = "block";
       isVisible = true;
 
@@ -208,10 +291,12 @@
         // Reset to selection tool only on initial show
         selectTool("selection");
       }
+      updateGridButtonState();
     }
 
     function hide() {
       if (toolsEl) toolsEl.style.display = "none";
+      if (gridBtnEl) gridBtnEl.style.display = "none";
       if (contextualBarEl) contextualBarEl.style.display = "none";
       if (separatorEl) separatorEl.style.display = "none";
       isVisible = false;
@@ -239,12 +324,25 @@
       return TOOL_STATE.activeTool;
     }
 
+    function setMeasurementMode(isActive) {
+      TOOL_STATE.measurementMode = !!isActive;
+      updateToolButtonStates();
+      renderContextualToolbar();
+
+      var paperEditor = getPaperEditor?.();
+      if (paperEditor && paperEditor.isActive()) {
+        paperEditor.setDrawMode(null);
+        paperEditor.setInputEnabled(!TOOL_STATE.measurementMode);
+      }
+    }
+
     function destroy() {
       hide();
       toolsEl = null;
       contextualBarEl = null;
       contextualEl = null;
       separatorEl = null;
+      gridBtnEl = null;
     }
 
     return {
@@ -254,6 +352,7 @@
       isVisible: isToolbarVisible,
       getActiveTool: getActiveTool,
       selectTool: selectTool,
+      setMeasurementMode: setMeasurementMode,
       destroy: destroy,
     };
   }

@@ -13,6 +13,7 @@
     var openModal = ctx.openModal;
     var getTilePainter = ctx.getTilePainter;
     var getWallDrawer = ctx.getWallDrawer;
+    var getPaperEditor = ctx.getPaperEditor || function () { return null; };
     var getApplyBroadcastInitiative = ctx.getApplyBroadcastInitiative;
 
     function extractPCHealth(charData) {
@@ -86,10 +87,20 @@
       if (!updated || !state.encounter) return;
       var tilePainter = getTilePainter();
       var wallDrawer = getWallDrawer();
+      var paperEditor = getPaperEditor();
+      var wallPathsDomain = global.AEWallPaths;
       var localTileMap = (tilePainter && tilePainter.isActive())
         ? state.encounter.data.tileMap : null;
-      var localWalls = (wallDrawer && wallDrawer.isActive())
-        ? state.encounter.data.walls : null;
+      var preserveLocalWallEditorState = !!(
+        (wallDrawer && wallDrawer.isActive()) ||
+        (paperEditor && paperEditor.isActive && paperEditor.isActive())
+      );
+      var localWallPaths = preserveLocalWallEditorState
+        ? state.encounter.data.wallPaths
+        : null;
+      var localWalls = preserveLocalWallEditorState
+        ? state.encounter.data.walls
+        : null;
       var preserveLights = !!(
         (state.map && state.map._isDraggingLight) ||
         (state._lightLocalChangeUntil && Date.now() < state._lightLocalChangeUntil)
@@ -104,6 +115,13 @@
 
       state.encounter.status = normalizeEncounterStatus(updated.status);
       state.encounter.data = updated.data || state.encounter.data;
+      state.encounter.data.wallPaths =
+        wallPathsDomain?.normalizeWallPaths?.(state.encounter.data.wallPaths || []) || [];
+      state.encounter.data.wallPaths =
+        wallPathsDomain?.reconcileWallPathsFromWalls?.(
+          state.encounter.data.wallPaths,
+          state.encounter.data.walls || [],
+        ) || state.encounter.data.wallPaths;
       if (preserveLocalFogMemory) {
         state.encounter.data.fog = mergeFogMemory(state.encounter.data.fog, localFog);
       }
@@ -111,7 +129,12 @@
         state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5 };
       }
       if (localTileMap) state.encounter.data.tileMap = localTileMap;
-      if (localWalls) state.encounter.data.walls = localWalls;
+      if (localWallPaths) {
+        state.encounter.data.wallPaths = wallPathsDomain?.normalizeWallPaths?.(localWallPaths) || [];
+      }
+      state.encounter.data.walls = localWalls ||
+        wallPathsDomain?.compileWalls?.(state.encounter.data.wallPaths) ||
+        [];
       if (localLights) state.encounter.data.lights = localLights;
       if (state.encounterHasUpdatedAt && updated.updated_at) {
         state.encounterUpdatedAt = updated.updated_at;
@@ -127,6 +150,9 @@
         state.map.invalidateLightingWalls?.();
       }
       render();
+      if (!preserveLocalWallEditorState && paperEditor?.isActive?.()) {
+        paperEditor.reload?.();
+      }
     }
 
     function setupRealtimeSubscription() {

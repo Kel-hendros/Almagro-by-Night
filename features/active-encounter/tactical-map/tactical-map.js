@@ -47,6 +47,17 @@ window.TacticalMap = class TacticalMap {
     this.canvas = document.getElementById(canvasId);
     this.container = document.getElementById(containerId);
     this.ctx = this.canvas.getContext("2d");
+    this.overlayCanvas = null;
+    this.overlayCtx = null;
+    if (this.container) {
+      var existingOverlay = this.container.querySelector("#ae-map-overlay-canvas");
+      if (existingOverlay) existingOverlay.remove();
+      this.overlayCanvas = document.createElement("canvas");
+      this.overlayCanvas.id = "ae-map-overlay-canvas";
+      this.overlayCanvas.setAttribute("aria-hidden", "true");
+      this.container.appendChild(this.overlayCanvas);
+      this.overlayCtx = this.overlayCanvas.getContext("2d");
+    }
 
     this.tokens = [];
     this.designTokens = [];
@@ -169,6 +180,10 @@ window.TacticalMap = class TacticalMap {
     if (!this.container) return;
     this.canvas.width = this.container.clientWidth;
     this.canvas.height = this.container.clientHeight;
+    if (this.overlayCanvas) {
+      this.overlayCanvas.width = this.container.clientWidth;
+      this.overlayCanvas.height = this.container.clientHeight;
+    }
     this.draw();
   }
 
@@ -823,6 +838,7 @@ window.TacticalMap = class TacticalMap {
     if (!animate) {
       this.offsetX = targetOX;
       this.offsetY = targetOY;
+      this.dispatchTransformEvent?.();
       this.draw();
       return;
     }
@@ -838,6 +854,7 @@ window.TacticalMap = class TacticalMap {
       var ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       self.offsetX = startOX + (targetOX - startOX) * ease;
       self.offsetY = startOY + (targetOY - startOY) * ease;
+      if (t >= 1) self.dispatchTransformEvent?.();
       self.draw();
       if (t < 1) requestAnimationFrame(step);
     }
@@ -1066,6 +1083,11 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.disposeInteractions === "function") {
       this.disposeInteractions();
     }
+    if (this.overlayCanvas) {
+      this.overlayCanvas.remove();
+      this.overlayCanvas = null;
+      this.overlayCtx = null;
+    }
   }
 
   recomputeRooms() {
@@ -1197,20 +1219,12 @@ window.TacticalMap = class TacticalMap {
       if (typeof this.drawWalls === "function") this.drawWalls();
       if (typeof this.drawLightIndicators === "function") this.drawLightIndicators();
     }
-    // Interactive markers drawn ABOVE fog overlay (same pattern as tokens).
-    // Visibility is checked programmatically in isMarkerVisibleToViewer.
-    if (typeof this.drawInteractiveMarkers === "function") {
-      this.drawInteractiveMarkers();
-    }
     // Tokens drawn ABOVE fog/lighting overlays. Fog and light visibility are
     // resolved independently inside drawTokens.
     this.drawTokens(timestamp);
     // Hover halo drawn AFTER tokens
     if (typeof this.drawTokenHoverOverlay === "function") {
       this.drawTokenHoverOverlay(timestamp);
-    }
-    if (typeof this.drawMeasurement === "function") {
-      this.drawMeasurement();
     }
     if (typeof this.drawTilePainterHover === "function") {
       this.drawTilePainterHover();
@@ -1222,6 +1236,21 @@ window.TacticalMap = class TacticalMap {
       this.drawWallEditOverlay();
     }
     this.ctx.restore();
+
+    if (this.overlayCtx && this.overlayCanvas) {
+      this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+      this.overlayCtx.save();
+      this.overlayCtx.translate(this.offsetX, this.offsetY);
+      this.overlayCtx.scale(this.scale, this.scale);
+      if (typeof this.drawInteractiveMarkers === "function") {
+        this.drawInteractiveMarkers(this.overlayCtx);
+      }
+      if (typeof this.drawMeasurement === "function") {
+        this.drawMeasurement(this.overlayCtx);
+      }
+      this.overlayCtx.restore();
+    }
+
     this._repositionViewPin();
     this._repositionPing();
   }

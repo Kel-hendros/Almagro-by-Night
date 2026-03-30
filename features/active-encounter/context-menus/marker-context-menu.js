@@ -22,6 +22,7 @@
     var canEditEncounter = ctx.canEditEncounter;
     var getMap = ctx.getMap;
     var getLightSwitchManager = ctx.getLightSwitchManager;
+    var updateEncounterWallSegment = ctx.updateEncounterWallSegment;
     var saveEncounter = ctx.saveEncounter;
 
     var menuEl = null;
@@ -139,18 +140,21 @@
 
       bodyEl.querySelector('[data-action="toggle-door"]').addEventListener("click", function (e) {
         e.stopPropagation();
-        wall.doorOpen = !wall.doorOpen;
+        wall = updateEncounterWallSegment?.(wall.id, function (segment) {
+          segment.doorOpen = !segment.doorOpen;
+          return segment;
+        }, { invalidateFog: true, invalidateLightingWalls: true, draw: true }) || wall;
         var map = getMap?.();
-        if (map) { map.invalidateFog?.(); map.invalidateLighting?.(); map.draw(); }
         saveEncounter?.();
         renderDoorWindow(wall);
         reposition();
       });
       bodyEl.querySelector('[data-action="toggle-lock"]').addEventListener("click", function (e) {
         e.stopPropagation();
-        wall.locked = !wall.locked;
-        var map = getMap?.();
-        if (map) map.draw();
+        wall = updateEncounterWallSegment?.(wall.id, function (segment) {
+          segment.locked = !segment.locked;
+          return segment;
+        }, { draw: true }) || wall;
         saveEncounter?.();
         renderDoorWindow(wall);
         reposition();
@@ -159,15 +163,22 @@
         e.stopPropagation();
         hide();
         // Convert back to wall segment (don't leave a gap)
-        wall.type = "wall";
-        wall.doorOpen = false;
-        wall.locked = false;
-        wall.name = "Pared";
-        var map = getMap?.();
-        if (map) { map.invalidateFog?.(); map.invalidateLighting?.(); map.draw(); }
+        wall = updateEncounterWallSegment?.(wall.id, function (segment) {
+          segment.type = "wall";
+          segment.doorOpen = false;
+          segment.locked = false;
+          segment.name = "Pared";
+          return segment;
+        }, { invalidateFog: true, invalidateLightingWalls: true, draw: true }) || wall;
         saveEncounter?.();
       });
-      bindHeaderRename(function (val) { wall.name = val; saveEncounter?.(); });
+      bindHeaderRename(function (val) {
+        wall = updateEncounterWallSegment?.(wall.id, function (segment) {
+          segment.name = val;
+          return segment;
+        }) || wall;
+        saveEncounter?.();
+      });
     }
 
     function renderLight(light) {

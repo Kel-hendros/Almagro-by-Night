@@ -53,6 +53,11 @@
         pruneEncounterRoster();
       }
       sanitizeEncounterTokens();
+      var wallPathsDomain = global.AEWallPaths;
+      var wallPaths = wallPathsDomain?.normalizeWallPaths?.(state.encounter.data.wallPaths || []) || [];
+      var compiledWalls = wallPathsDomain?.compileWalls?.(wallPaths) || [];
+      state.encounter.data.wallPaths = wallPaths;
+      state.encounter.data.walls = compiledWalls;
       var btn = document.getElementById("btn-ae-save");
       var prevText = (btn && btn.textContent) || "";
       if (btn) btn.textContent = "Guardando...";
@@ -74,12 +79,14 @@
         ),
         mapEffects: normalizeMapEffectsData(state.encounter.data.mapEffects),
         tileMap: state.encounter.data.tileMap || {},
-        walls: state.encounter.data.walls || [],
+        wallPaths: wallPaths,
+        walls: compiledWalls,
         lights: state.encounter.data.lights || [],
         switches: state.encounter.data.switches || [],
         ambientLight: state.encounter.data.ambientLight || null,
         fog: state.encounter.data.fog || null,
       };
+      delete cleanData.paperPaths;
 
       state.isApplyingRemoteUpdate = true;
       var error = null;

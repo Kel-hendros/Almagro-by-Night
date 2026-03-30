@@ -9,14 +9,18 @@
   var WALL_COLOR = "#5588cc";   // Blue for walls
   var DOOR_COLOR = "#8b6914";   // Brown for doors
   var WINDOW_COLOR = "#7bb3d4"; // Light blue for windows
+  var DEFAULT_GRID_SPACING = 1.0;
+  var GRID_NUDGE_STEP = 0.1;
 
   function createPaperWallEditor(opts) {
     var container = opts.container;
-    var getPaperJSON = opts.getPaperJSON;   // Load Paper.js project JSON
-    var setPaperJSON = opts.setPaperJSON;   // Save Paper.js project JSON
-    var setWalls = opts.setWalls;           // Derive walls for game engine
+    var getWallPaths = opts.getWallPaths;
+    var setWallPaths = opts.setWallPaths;
+    var setWalls = opts.setWalls;
     var onChanged = opts.onChanged || function () {};
     var getTransform = opts.getTransform;
+    var getGridState = opts.getGridState;
+    var onGridStateChange = opts.onGridStateChange || function () {};
     var onStartPan = opts.onStartPan;       // Callback to start map panning
     var onWallContext = opts.onWallContext; // Callback for right-click context menu
 
@@ -28,63 +32,402 @@
     var currentPath = null;
     var snapIndicator = null;
     var angleGuides = null; // Group for angle guide lines
+    var gridVisuals = null; // Group for edit grid dots
+    var segmentVisuals = null; // Group for per-segment color overlays
+    var selectionVisuals = null; // Group for selected vertex markers
     var shapeStartPoint = null; // For rectangle/circle: the starting point
     var SNAP_THRESHOLD = 0.3; // Grid units
     var GUIDE_LENGTH = 15; // Length of guide lines in grid units
     var CIRCLE_SEGMENTS = 24; // Number of segments for circle approximation
+    var VERTEX_SELECT_RADIUS = 0.17;
+    var DRAG_START_THRESHOLD_PX = 6;
+    var inputEnabled = true;
+    var editorGridState = normalizeEditorGridState(getGridState ? getGridState() : null);
 
-    // ── Curve Types Helpers ──
-    // Each curve (segment between vertices) can be: "wall", "door", or "window"
-    // path.data.curveTypes = ["wall", "door", "wall", ...]
-    // path.data.doorStates = { curveIndex: isOpen, ... }
+    function normalizeEditorGridState(raw) {
+      var spacing = Number.isFinite(raw?.spacing) && raw.spacing > 0
+        ? raw.spacing
+        : DEFAULT_GRID_SPACING;
 
-    function ensureCurveTypes(path) {
-      if (!path || !path.data) return;
-      if (!path.data.curveTypes) {
-        path.data.curveTypes = [];
+      function normalizeOffset(value) {
+        if (!Number.isFinite(value)) return 0;
+        var normalized = value % spacing;
+        if (normalized < 0) normalized += spacing;
+        if (Math.abs(normalized) < 0.0001 || Math.abs(normalized - spacing) < 0.0001) {
+          normalized = 0;
+        }
+        return Math.round(normalized * 1000) / 1000;
       }
-      syncCurveTypesLength(path);
+
+      return {
+        enabled: raw?.enabled === true,
+        spacing: spacing,
+        offsetX: normalizeOffset(raw?.offsetX),
+        offsetY: normalizeOffset(raw?.offsetY),
+      };
     }
 
-    function syncCurveTypesLength(path) {
-      if (!path || !path.data || !path.data.curveTypes) return;
+    function getEditorGridState() {
+      return {
+        enabled: !!editorGridState.enabled,
+        spacing: editorGridState.spacing,
+        offsetX: editorGridState.offsetX,
+        offsetY: editorGridState.offsetY,
+      };
+    }
+
+    function emitGridStateChange() {
+      onGridStateChange(getEditorGridState());
+    }
+
+    // ── Segment Metadata Helpers ──
+
+    function createDefaultSegmentData() {
+      return {
+        id: global.AEWallPaths?.generateSegmentId?.() ||
+          ("ws-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8)),
+        type: "wall",
+        doorOpen: false,
+        locked: false,
+        name: "",
+      };
+    }
+
+    function normalizeSegmentData(segment) {
+      var base = createDefaultSegmentData();
+      if (!segment || typeof segment !== "object") return base;
+      if (segment.id) base.id = String(segment.id);
+      if (segment.type === "door" || segment.type === "window") {
+        base.type = segment.type;
+      }
+      base.doorOpen = !!segment.doorOpen;
+      base.locked = !!segment.locked;
+      base.name = typeof segment.name === "string" ? segment.name : "";
+      return base;
+    }
+
+    function ensureSegmentData(path) {
+      if (!path || !path.data) return;
+      if (!Array.isArray(path.data.segmentData)) {
+        path.data.segmentData = [];
+      }
+      syncSegmentDataLength(path);
+    }
+
+    function syncSegmentDataLength(path) {
+      if (!path || !path.data || !Array.isArray(path.data.segmentData)) return;
       var numCurves = path.closed ? path.segments.length : path.segments.length - 1;
       if (numCurves < 0) numCurves = 0;
 
-      // Extend with "wall" if too short
-      while (path.data.curveTypes.length < numCurves) {
-        path.data.curveTypes.push("wall");
+      while (path.data.segmentData.length < numCurves) {
+        path.data.segmentData.push(createDefaultSegmentData());
       }
-      // Trim if too long
-      if (path.data.curveTypes.length > numCurves) {
-        path.data.curveTypes.length = numCurves;
+      if (path.data.segmentData.length > numCurves) {
+        path.data.segmentData.length = numCurves;
       }
+    }
+
+    function getSegmentData(path, curveIndex) {
+      ensureSegmentData(path);
+      if (curveIndex < 0 || curveIndex >= path.data.segmentData.length) return createDefaultSegmentData();
+      path.data.segmentData[curveIndex] = normalizeSegmentData(path.data.segmentData[curveIndex]);
+      return path.data.segmentData[curveIndex];
     }
 
     function getCurveType(path, curveIndex) {
-      ensureCurveTypes(path);
-      return (path.data.curveTypes && path.data.curveTypes[curveIndex]) || "wall";
+      return getSegmentData(path, curveIndex).type || "wall";
     }
 
     function setCurveType(path, curveIndex, type) {
-      ensureCurveTypes(path);
-      if (curveIndex >= 0 && curveIndex < path.data.curveTypes.length) {
-        path.data.curveTypes[curveIndex] = type;
+      ensureSegmentData(path);
+      if (curveIndex >= 0 && curveIndex < path.data.segmentData.length) {
+        var segment = getSegmentData(path, curveIndex);
+        segment.type = type === "door" || type === "window" ? type : "wall";
+        if (segment.type === "wall") {
+          segment.doorOpen = false;
+          segment.locked = false;
+        }
       }
     }
 
     function isDoorOpen(path, curveIndex) {
-      if (!path || !path.data || !path.data.doorStates) return false;
-      return !!path.data.doorStates[curveIndex];
+      return !!getSegmentData(path, curveIndex).doorOpen;
     }
 
     function setDoorOpen(path, curveIndex, isOpen) {
       if (!path || !path.data) return;
-      if (!path.data.doorStates) path.data.doorStates = {};
-      if (isOpen) {
-        path.data.doorStates[curveIndex] = true;
-      } else {
-        delete path.data.doorStates[curveIndex];
+      getSegmentData(path, curveIndex).doorOpen = !!isOpen;
+    }
+
+    function createPathStyle() {
+      return {
+        strokeColor: WALL_COLOR,
+        strokeWidth: 0.08,
+        strokeCap: "butt",
+        strokeJoin: "round",
+      };
+    }
+
+    function getStrokeColorForType(type) {
+      if (type === "door") return DOOR_COLOR;
+      if (type === "window") return WINDOW_COLOR;
+      return WALL_COLOR;
+    }
+
+    function getPixelsPerUnit() {
+      var t = getTransform ? getTransform() : null;
+      return Math.max(1, (t?.gridSize || 40) * (t?.scale || 1));
+    }
+
+    function getVertexHitTolerance() {
+      return Math.max(0.22, 14 / getPixelsPerUnit());
+    }
+
+    function getDragThresholdUnits() {
+      return Math.max(0.04, DRAG_START_THRESHOLD_PX / getPixelsPerUnit());
+    }
+
+    function getGridSnapPoint(point) {
+      if (!scope || !editorGridState.enabled || !point) return null;
+      var spacing = editorGridState.spacing || DEFAULT_GRID_SPACING;
+      var snappedX =
+        Math.round((point.x - editorGridState.offsetX) / spacing) * spacing +
+        editorGridState.offsetX;
+      var snappedY =
+        Math.round((point.y - editorGridState.offsetY) / spacing) * spacing +
+        editorGridState.offsetY;
+
+      return new scope.Point(
+        Math.round(snappedX * 1000) / 1000,
+        Math.round(snappedY * 1000) / 1000,
+      );
+    }
+
+    function resolveSnapPoint(point, options) {
+      var opts = options || {};
+      var vertexPoint = opts.excludeSegments
+        ? findNearestVertexExcluding(point, opts.excludeSegment, opts.excludeSegments)
+        : findNearestVertex(point, opts.excludePath || null);
+      if (vertexPoint) return vertexPoint;
+      return getGridSnapPoint(point);
+    }
+
+    function refreshGridVisuals() {
+      if (gridVisuals) {
+        gridVisuals.remove();
+        gridVisuals = null;
+      }
+      if (!scope || !scope.project || !scope.project.activeLayer || !editorGridState.enabled) return;
+
+      var t = getTransform ? getTransform() : { scale: 1, offsetX: 0, offsetY: 0, gridSize: 40 };
+      var pixelsPerUnit = Math.max(1, (t.gridSize || 40) * (t.scale || 1));
+      var viewWidth = canvas ? canvas.width : scope.view.viewSize.width;
+      var viewHeight = canvas ? canvas.height : scope.view.viewSize.height;
+      var worldLeft = (-t.offsetX) / pixelsPerUnit;
+      var worldTop = (-t.offsetY) / pixelsPerUnit;
+      var worldRight = (viewWidth - t.offsetX) / pixelsPerUnit;
+      var worldBottom = (viewHeight - t.offsetY) / pixelsPerUnit;
+      var spacing = editorGridState.spacing || DEFAULT_GRID_SPACING;
+      var startX =
+        Math.floor((worldLeft - editorGridState.offsetX) / spacing) * spacing +
+        editorGridState.offsetX;
+      var startY =
+        Math.floor((worldTop - editorGridState.offsetY) / spacing) * spacing +
+        editorGridState.offsetY;
+      var dotRadius = Math.max(0.018, 1.6 / pixelsPerUnit);
+
+      gridVisuals = new scope.Group({ data: { isOverlay: true, isGridOverlay: true } });
+
+      for (var x = startX; x <= worldRight + spacing; x += spacing) {
+        var roundedX = Math.round(x * 1000) / 1000;
+        for (var y = startY; y <= worldBottom + spacing; y += spacing) {
+          gridVisuals.addChild(new scope.Path.Circle({
+            center: new scope.Point(roundedX, Math.round(y * 1000) / 1000),
+            radius: dotRadius,
+            fillColor: "rgba(255, 255, 255, 0.28)",
+            data: { isOverlay: true, isGridOverlay: true },
+          }));
+        }
+      }
+
+      scope.project.activeLayer.insertChild(0, gridVisuals);
+    }
+
+    function setGridState(nextState, options) {
+      editorGridState = normalizeEditorGridState(Object.assign({}, editorGridState, nextState || {}));
+      if (isActive) {
+        refreshGridVisuals();
+        scope.view.draw();
+      }
+      if (!options || options.silent !== true) {
+        emitGridStateChange();
+      }
+    }
+
+    function setGridEnabled(enabled) {
+      setGridState({ enabled: enabled === true });
+    }
+
+    function nudgeGrid(offsetX, offsetY) {
+      setGridState({
+        offsetX: editorGridState.offsetX + offsetX,
+        offsetY: editorGridState.offsetY + offsetY,
+      });
+    }
+
+    function createPaperPath(pathLike) {
+      if (!scope) return null;
+      var pathData = global.AEWallPaths?.normalizeWallPath?.(pathLike) || pathLike;
+      if (!pathData || !Array.isArray(pathData.points) || pathData.points.length < 2) return null;
+
+      var path = new scope.Path(createPathStyle());
+      path.closed = !!pathData.closed;
+      path.data = {
+        id: pathData.id || (global.AEWallPaths?.generatePathId?.() || generateId()),
+        segmentData: Array.isArray(pathData.segments) ? pathData.segments.map(normalizeSegmentData) : [],
+      };
+
+      for (var i = 0; i < pathData.points.length; i++) {
+        path.add(pathData.points[i]);
+      }
+
+      syncSegmentDataLength(path);
+      return path;
+    }
+
+    function exportWallPaths() {
+      if (!scope) return [];
+      var wallPaths = [];
+      var items = scope.project.activeLayer.children;
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item.segments || item.segments.length < 2) continue;
+        if (!item.data || !item.data.id || item.data.isOverlay) continue;
+
+        ensureSegmentData(item);
+        wallPaths.push({
+          id: item.data.id,
+          closed: !!item.closed,
+          points: item.segments.map(function (segment) {
+            return { x: segment.point.x, y: segment.point.y };
+          }),
+          segments: item.data.segmentData.map(function (segment) {
+            return normalizeSegmentData(segment);
+          }),
+        });
+      }
+
+      return global.AEWallPaths?.normalizeWallPaths?.(wallPaths) || wallPaths;
+    }
+
+    function refreshSegmentVisuals() {
+      if (!scope || !scope.project || !scope.project.activeLayer) return;
+
+      if (segmentVisuals) {
+        segmentVisuals.remove();
+        segmentVisuals = null;
+      }
+
+      segmentVisuals = new scope.Group({ data: { isOverlay: true } });
+      var items = scope.project.activeLayer.children.slice();
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item || item === segmentVisuals) continue;
+        if (!item.segments || item.segments.length < 2) continue;
+        if (!item.data || !item.data.id || item.data.isOverlay) continue;
+
+        ensureSegmentData(item);
+        var curveCount = item.closed ? item.segments.length : item.segments.length - 1;
+
+        for (var j = 0; j < curveCount; j++) {
+          var point1 = item.segments[j].point;
+          var point2 = item.closed && j === item.segments.length - 1
+            ? item.segments[0].point
+            : item.segments[j + 1].point;
+          if (!point1 || !point2 || point1.getDistance(point2) < 0.0001) continue;
+          var segmentType = getCurveType(item, j);
+
+          segmentVisuals.addChild(new scope.Path.Line({
+            from: point1,
+            to: point2,
+            strokeColor: getStrokeColorForType(segmentType),
+            strokeWidth: 0.08,
+            strokeCap: "butt",
+            strokeJoin: "round",
+            data: { isOverlay: true },
+          }));
+
+        }
+      }
+    }
+
+    function refreshSelectionVisuals() {
+      if (!scope || !scope.project || !scope.project.activeLayer) return;
+
+      if (selectionVisuals) {
+        selectionVisuals.remove();
+        selectionVisuals = null;
+      }
+
+      selectionVisuals = new scope.Group({ data: { isOverlay: true, isSelectionOverlay: true } });
+
+      var vertexPaths = [];
+      var seenPaths = new Set();
+
+      for (var p = 0; p < selectedItems.length; p++) {
+        var selectedPath = selectedItems[p];
+        if (!selectedPath || !selectedPath.segments || seenPaths.has(selectedPath)) continue;
+        seenPaths.add(selectedPath);
+        vertexPaths.push(selectedPath);
+      }
+
+      for (var sp = 0; sp < selectedSegments.length; sp++) {
+        var segmentPath = selectedSegments[sp] && selectedSegments[sp].path;
+        if (!segmentPath || !segmentPath.segments || seenPaths.has(segmentPath)) continue;
+        seenPaths.add(segmentPath);
+        vertexPaths.push(segmentPath);
+      }
+
+      if (hoveredPath && hoveredPath.segments && !seenPaths.has(hoveredPath)) {
+        seenPaths.add(hoveredPath);
+        vertexPaths.push(hoveredPath);
+      }
+
+      for (var vp = 0; vp < vertexPaths.length; vp++) {
+        var path = vertexPaths[vp];
+        for (var vs = 0; vs < path.segments.length; vs++) {
+          var vertex = path.segments[vs];
+          if (!vertex || !vertex.point) continue;
+          selectionVisuals.addChild(new scope.Path.Circle({
+            center: vertex.point,
+            radius: VERTEX_SELECT_RADIUS * 0.42,
+            fillColor: "#ffffff",
+            data: { isOverlay: true, isSelectionOverlay: true },
+          }));
+        }
+      }
+
+      for (var i = 0; i < selectedSegments.length; i++) {
+        var segment = selectedSegments[i];
+        if (!segment || !segment.path || !segment.point) continue;
+
+        selectionVisuals.addChild(new scope.Path.Circle({
+          center: segment.point,
+          radius: VERTEX_SELECT_RADIUS,
+          fillColor: "rgba(100, 200, 255, 0.28)",
+          strokeColor: "#9ad6ff",
+          strokeWidth: 0.06,
+          data: { isOverlay: true, isSelectionOverlay: true },
+        }));
+
+        selectionVisuals.addChild(new scope.Path.Circle({
+          center: segment.point,
+          radius: VERTEX_SELECT_RADIUS * 0.42,
+          fillColor: "#ffffff",
+          data: { isOverlay: true, isSelectionOverlay: true },
+        }));
       }
     }
 
@@ -100,6 +443,7 @@
     function activate() {
       if (isActive) return;
       isActive = true;
+      editorGridState = normalizeEditorGridState(getGridState ? getGridState() : editorGridState);
 
       canvas = document.createElement("canvas");
       canvas.id = "paper-wall-canvas";
@@ -111,6 +455,8 @@
       resizeCanvas();
       loadProject();
       bindEvents();
+      setInputEnabled(inputEnabled);
+      refreshSegmentVisuals();
       scope.view.draw();
     }
 
@@ -133,8 +479,12 @@
       currentPath = null;
       snapIndicator = null;
       angleGuides = null;
+      gridVisuals = null;
+      segmentVisuals = null;
+      selectionVisuals = null;
       shapeStartPoint = null;
       drawMode = null;
+      hoveredPath = null;
       isActive = false;
     }
 
@@ -156,6 +506,7 @@
       matrix.translate(t.offsetX, t.offsetY);
       matrix.scale(t.gridSize * t.scale);
       scope.view.matrix = matrix;
+      refreshGridVisuals();
       scope.view.draw();
     }
 
@@ -164,102 +515,51 @@
     function loadProject() {
       if (!scope) return;
       scope.project.activeLayer.removeChildren();
+      selectedItem = null;
+      selectedItems = [];
+      selectedSegment = null;
+      selectedSegments = [];
+      hoveredPath = null;
 
-      var json = getPaperJSON ? getPaperJSON() : null;
-      if (json) {
-        try {
-          scope.project.importJSON(json);
-        } catch (e) {
-          console.warn("Failed to load Paper.js project:", e);
+      var wallPaths = getWallPaths ? getWallPaths() : null;
+      if (Array.isArray(wallPaths) && wallPaths.length) {
+        for (var i = 0; i < wallPaths.length; i++) {
+          try {
+            createPaperPath(wallPaths[i]);
+          } catch (e) {
+            console.warn("Failed to load wall path into Paper editor:", e);
+          }
         }
       }
 
+      refreshGridVisuals();
+      refreshSegmentVisuals();
+      refreshSelectionVisuals();
       scope.view.draw();
     }
 
     function saveProject() {
       if (!scope) return;
-
-      // Save Paper.js JSON
-      if (setPaperJSON) {
-        var json = scope.project.exportJSON();
-        setPaperJSON(json);
+      var wallPaths = exportWallPaths();
+      if (setWallPaths) {
+        setWallPaths(wallPaths);
       }
-
-      // Derive walls for game engine
-      deriveWalls();
+      refreshSegmentVisuals();
+      refreshSelectionVisuals();
+      deriveWalls(wallPaths);
     }
 
-    function deriveWalls() {
+    function deriveWalls(wallPaths) {
       if (!scope || !setWalls) return;
-
-      var walls = [];
-      var items = scope.project.activeLayer.children;
-
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        // Skip non-path items (like snap indicator)
-        if (!item.segments || item.segments.length < 2) continue;
-        // Skip items without wall data
-        if (!item.data || !item.data.id) continue;
-        // Skip overlay items
-        if (item.data.isOverlay) continue;
-
-        // Ensure curve types array is synced
-        ensureCurveTypes(item);
-
-        // Export each segment as a wall
-        for (var j = 0; j < item.segments.length - 1; j++) {
-          var p1 = item.segments[j].point;
-          var p2 = item.segments[j + 1].point;
-          if (p1.getDistance(p2) < 0.01) continue;
-
-          var curveType = getCurveType(item, j);
-          var wallData = {
-            id: item.data.id + (j > 0 ? "-" + j : ""),
-            type: curveType,
-            x1: p1.x, y1: p1.y,
-            x2: p2.x, y2: p2.y
-          };
-
-          // For doors, include open state
-          if (curveType === "door") {
-            wallData.isOpen = isDoorOpen(item, j);
-          }
-
-          walls.push(wallData);
-        }
-
-        // If closed path, add segment from last to first
-        if (item.closed && item.segments.length >= 3) {
-          var pLast = item.segments[item.segments.length - 1].point;
-          var pFirst = item.segments[0].point;
-          if (pLast.getDistance(pFirst) >= 0.01) {
-            var closeIndex = item.segments.length - 1;
-            var closeCurveType = getCurveType(item, closeIndex);
-            var closeWallData = {
-              id: item.data.id + "-close",
-              type: closeCurveType,
-              x1: pLast.x, y1: pLast.y,
-              x2: pFirst.x, y2: pFirst.y
-            };
-
-            if (closeCurveType === "door") {
-              closeWallData.isOpen = isDoorOpen(item, closeIndex);
-            }
-
-            walls.push(closeWallData);
-          }
-        }
-      }
-
+      var sourcePaths = Array.isArray(wallPaths) ? wallPaths : exportWallPaths();
+      var walls = global.AEWallPaths?.compileWalls?.(sourcePaths) || [];
       setWalls(walls);
       onChanged();
     }
 
     // ── Snap to Vertex ──
 
-    var WELD_THRESHOLD = 0.05; // Vertices within this distance are considered "welded"
+    var WELD_THRESHOLD = 0.08; // Endpoints within this distance are merge candidates
 
     /**
      * Try to merge paths that share endpoints after welding.
@@ -279,7 +579,7 @@
           var pathA = items[i];
           if (!pathA || !pathA.segments || pathA.segments.length < 2) continue;
           if (pathA === snapIndicator || pathA === angleGuides) continue;
-          if (!pathA.data || !pathA.data.id) continue;
+          if (!pathA.data || !pathA.data.id || pathA.data.isOverlay) continue;
           if (pathA.closed) continue; // Only merge open paths
 
           var aFirst = pathA.firstSegment.point;
@@ -289,7 +589,7 @@
             var pathB = items[j];
             if (!pathB || !pathB.segments || pathB.segments.length < 2) continue;
             if (pathB === snapIndicator || pathB === angleGuides) continue;
-            if (!pathB.data || !pathB.data.id) continue;
+            if (!pathB.data || !pathB.data.id || pathB.data.isOverlay) continue;
             if (pathB.closed) continue;
 
             var bFirst = pathB.firstSegment.point;
@@ -308,13 +608,33 @@
             }
 
             if (mergeType) {
-              // Get curveTypes before merge
-              ensureCurveTypes(pathA);
-              ensureCurveTypes(pathB);
-              var aCurveTypes = pathA.data.curveTypes.slice();
-              var bCurveTypes = pathB.data.curveTypes.slice();
-              var aDoorStates = pathA.data.doorStates ? Object.assign({}, pathA.data.doorStates) : {};
-              var bDoorStates = pathB.data.doorStates ? Object.assign({}, pathB.data.doorStates) : {};
+              var sharedPoint = null;
+              if (mergeType === "aLast-bFirst") {
+                sharedPoint = bFirst.clone();
+                pathA.lastSegment.point = sharedPoint.clone();
+                pathB.firstSegment.point = sharedPoint.clone();
+              } else if (mergeType === "aLast-bLast") {
+                sharedPoint = bLast.clone();
+                pathA.lastSegment.point = sharedPoint.clone();
+                pathB.lastSegment.point = sharedPoint.clone();
+              } else if (mergeType === "aFirst-bFirst") {
+                sharedPoint = bFirst.clone();
+                pathA.firstSegment.point = sharedPoint.clone();
+                pathB.firstSegment.point = sharedPoint.clone();
+              } else if (mergeType === "aFirst-bLast") {
+                sharedPoint = bLast.clone();
+                pathA.firstSegment.point = sharedPoint.clone();
+                pathB.lastSegment.point = sharedPoint.clone();
+              }
+
+              ensureSegmentData(pathA);
+              ensureSegmentData(pathB);
+              var aSegments = pathA.data.segmentData.map(function (segment) {
+                return normalizeSegmentData(segment);
+              });
+              var bSegments = pathB.data.segmentData.map(function (segment) {
+                return normalizeSegmentData(segment);
+              });
 
               // Merge pathB into pathA
               var bPoints = [];
@@ -322,42 +642,23 @@
                 bPoints.push(pathB.segments[k].point.clone());
               }
 
-              var newCurveTypes = [];
-              var newDoorStates = {};
+              var newSegmentData = [];
 
               if (mergeType === "aLast-bFirst") {
                 // Append B's points to A (skip first point, it's the shared vertex)
                 for (var k = 1; k < bPoints.length; k++) {
                   pathA.add(bPoints[k]);
                 }
-                // Combine curveTypes: A + B (shared vertex creates connection)
-                newCurveTypes = aCurveTypes.concat(bCurveTypes);
-                // Copy A's doorStates
-                for (var idx in aDoorStates) {
-                  newDoorStates[idx] = aDoorStates[idx];
-                }
-                // Copy B's doorStates with offset
-                for (var idx in bDoorStates) {
-                  newDoorStates[parseInt(idx, 10) + aCurveTypes.length] = bDoorStates[idx];
-                }
+                newSegmentData = aSegments.concat(bSegments);
 
               } else if (mergeType === "aLast-bLast") {
                 // Reverse B and append (skip last point which is now first after reverse)
                 bPoints.reverse();
-                bCurveTypes.reverse();
+                bSegments.reverse();
                 for (var k = 1; k < bPoints.length; k++) {
                   pathA.add(bPoints[k]);
                 }
-                newCurveTypes = aCurveTypes.concat(bCurveTypes);
-                for (var idx in aDoorStates) {
-                  newDoorStates[idx] = aDoorStates[idx];
-                }
-                // Reverse B's doorStates indices
-                var bLen = bCurveTypes.length;
-                for (var idx in bDoorStates) {
-                  var reversedIdx = bLen - 1 - parseInt(idx, 10);
-                  newDoorStates[reversedIdx + aCurveTypes.length] = bDoorStates[idx];
-                }
+                newSegmentData = aSegments.concat(bSegments);
 
               } else if (mergeType === "aFirst-bFirst") {
                 // Reverse A's current points, then append B (skip first)
@@ -366,7 +667,7 @@
                   aPoints.push(pathA.segments[k].point.clone());
                 }
                 aPoints.reverse();
-                aCurveTypes.reverse();
+                aSegments.reverse();
                 pathA.removeSegments();
                 for (var k = 0; k < aPoints.length; k++) {
                   pathA.add(aPoints[k]);
@@ -374,16 +675,7 @@
                 for (var k = 1; k < bPoints.length; k++) {
                   pathA.add(bPoints[k]);
                 }
-                newCurveTypes = aCurveTypes.concat(bCurveTypes);
-                // Reverse A's doorStates
-                var aLen = aCurveTypes.length;
-                for (var idx in aDoorStates) {
-                  var reversedIdx = aLen - 1 - parseInt(idx, 10);
-                  newDoorStates[reversedIdx] = aDoorStates[idx];
-                }
-                for (var idx in bDoorStates) {
-                  newDoorStates[parseInt(idx, 10) + aCurveTypes.length] = bDoorStates[idx];
-                }
+                newSegmentData = aSegments.concat(bSegments);
 
               } else if (mergeType === "aFirst-bLast") {
                 // Prepend B's points to A (skip B's last point, it's the shared vertex)
@@ -398,18 +690,10 @@
                 for (var k = 0; k < aPoints.length; k++) {
                   pathA.add(aPoints[k]);
                 }
-                newCurveTypes = bCurveTypes.concat(aCurveTypes);
-                for (var idx in bDoorStates) {
-                  newDoorStates[idx] = bDoorStates[idx];
-                }
-                for (var idx in aDoorStates) {
-                  newDoorStates[parseInt(idx, 10) + bCurveTypes.length] = aDoorStates[idx];
-                }
+                newSegmentData = bSegments.concat(aSegments);
               }
 
-              // Update pathA's curveTypes and doorStates
-              pathA.data.curveTypes = newCurveTypes;
-              pathA.data.doorStates = newDoorStates;
+              pathA.data.segmentData = newSegmentData;
 
               // Remove pathB
               pathB.remove();
@@ -425,7 +709,7 @@
                 }
               }
 
-              syncCurveTypesLength(pathA);
+              syncSegmentDataLength(pathA);
               merged = true;
               break;
             }
@@ -452,6 +736,7 @@
         if (item === excludePath) continue;
         if (item === snapIndicator) continue;
         if (item === angleGuides) continue;
+        if (item.data && item.data.isOverlay) continue;
         if (!item.segments) continue;
 
         for (var j = 0; j < item.segments.length; j++) {
@@ -465,29 +750,6 @@
       }
 
       return nearest;
-    }
-
-    function findWeldedSegments(point, excludeSegment) {
-      // Find all segments at the same position (welded together)
-      var welded = [];
-      var items = scope.project.activeLayer.children;
-
-      for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        if (item === snapIndicator) continue;
-        if (item === angleGuides) continue;
-        if (!item.segments) continue;
-
-        for (var j = 0; j < item.segments.length; j++) {
-          var seg = item.segments[j];
-          if (seg === excludeSegment) continue;
-          if (point.getDistance(seg.point) < WELD_THRESHOLD) {
-            welded.push(seg);
-          }
-        }
-      }
-
-      return welded;
     }
 
     function findNearestVertexExcluding(point, excludeSegment, excludeSegments) {
@@ -504,6 +766,7 @@
         var item = items[i];
         if (item === snapIndicator) continue;
         if (item === angleGuides) continue;
+        if (item.data && item.data.isOverlay) continue;
         if (!item.segments) continue;
 
         for (var j = 0; j < item.segments.length; j++) {
@@ -518,6 +781,101 @@
       }
 
       return nearest;
+    }
+
+    function findNearestSegmentHit(point) {
+      if (!scope) return null;
+
+      var items = scope.project.activeLayer.children;
+      var bestSegment = null;
+      var bestDistance = getVertexHitTolerance();
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item || !item.segments) continue;
+        if (!item.data || !item.data.id || item.data.isOverlay) continue;
+
+        for (var j = 0; j < item.segments.length; j++) {
+          var segment = item.segments[j];
+          if (!segment || !segment.point) continue;
+          var distance = point.getDistance(segment.point);
+          if (distance > bestDistance) continue;
+          bestDistance = distance;
+          bestSegment = segment;
+        }
+      }
+
+      if (!bestSegment) return null;
+      return {
+        type: "segment",
+        item: bestSegment.path,
+        segment: bestSegment,
+        point: bestSegment.point,
+      };
+    }
+
+    function getCurveHitTolerance() {
+      return Math.max(0.2, 14 / getPixelsPerUnit());
+    }
+
+    function findNearestCurveHit(point) {
+      if (!scope) return null;
+
+      var items = scope.project.activeLayer.children;
+      var bestHit = null;
+      var bestDistance = getCurveHitTolerance();
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item || !item.segments || item.segments.length < 2) continue;
+        if (!item.data || !item.data.id || item.data.isOverlay) continue;
+
+        var location = typeof item.getNearestLocation === "function"
+          ? item.getNearestLocation(point)
+          : null;
+        if (!location || !location.curve || !location.point) continue;
+
+        var distance = location.point.getDistance(point);
+        if (distance > bestDistance) continue;
+
+        bestDistance = distance;
+        bestHit = {
+          item: item,
+          location: location,
+          distance: distance,
+        };
+      }
+
+      return bestHit;
+    }
+
+    function clamp01(value) {
+      return Math.max(0, Math.min(1, value));
+    }
+
+    function getLinearCurveTime(curve, point) {
+      if (!curve || !curve.point1 || !curve.point2 || !point) return 0;
+      var dx = curve.point2.x - curve.point1.x;
+      var dy = curve.point2.y - curve.point1.y;
+      var lenSq = dx * dx + dy * dy;
+      if (lenSq < 0.000001) return 0;
+      var px = point.x - curve.point1.x;
+      var py = point.y - curve.point1.y;
+      return clamp01((px * dx + py * dy) / lenSq);
+    }
+
+    function getCurvePointAtNormalizedTime(curve, t) {
+      if (!curve) return null;
+      var safeT = clamp01(t);
+      if (curve.point1 && curve.point2) {
+        return new scope.Point(
+          curve.point1.x + (curve.point2.x - curve.point1.x) * safeT,
+          curve.point1.y + (curve.point2.y - curve.point1.y) * safeT
+        );
+      }
+      if (typeof curve.getPointAtTime === "function") return curve.getPointAtTime(safeT);
+      if (typeof curve.getPointAt === "function") return curve.getPointAt(curve.length * safeT);
+      return null;
     }
 
     // ── Door/Window Placement ──
@@ -565,15 +923,14 @@
       if (!curve) return false;
 
       // Get points at t1 and t2
-      var point1 = curve.getPointAt(t1, true);
-      var point2 = curve.getPointAt(t2, true);
+      var point1 = getCurvePointAtNormalizedTime(curve, t1);
+      var point2 = getCurvePointAtNormalizedTime(curve, t2);
+      if (!point1 || !point2) return false;
 
-      // We need to insert vertices at these points
-      // First, ensure curveTypes exists
-      ensureCurveTypes(path);
+      ensureSegmentData(path);
 
-      var originalType = getCurveType(path, curveIndex);
-      var originalDoorStates = path.data.doorStates ? Object.assign({}, path.data.doorStates) : {};
+      var originalSegment = normalizeSegmentData(path.data.segmentData[curveIndex]);
+      var originalType = originalSegment.type;
 
       // Insert the two points (in reverse order since indices shift)
       // After inserting at t2, curveIndex+1 becomes the segment from t2 to end
@@ -588,76 +945,55 @@
         path.insert(insertIdx1, point1);
       }
 
-      // Rebuild curveTypes array
-      var oldCurveTypes = path.data.curveTypes.slice();
-      syncCurveTypesLength(path);
+      var before = path.data.segmentData
+        .slice(0, curveIndex)
+        .map(function (segment) { return normalizeSegmentData(segment); });
+      var after = path.data.segmentData
+        .slice(curveIndex + 1)
+        .map(function (segment) { return normalizeSegmentData(segment); });
+      var nextSegments = before.slice();
+
+      function cloneSegment(segment, overrides) {
+        return normalizeSegmentData(Object.assign({}, segment, overrides || {}));
+      }
+
+      function createTypedSegment(typeName, id) {
+        return normalizeSegmentData({
+          id: id || originalSegment.id,
+          type: typeName,
+          doorOpen: false,
+          locked: false,
+          name: "",
+        });
+      }
 
       // Now assign types based on what we split
       // Depends on whether t1 > 0 and t2 < 1
       if (t1 > 0 && t2 < 1) {
-        // Three new segments: [start-t1]=originalType, [t1-t2]=new type, [t2-end]=originalType
-        // curveIndex = start to t1 (originalType)
-        // curveIndex+1 = t1 to t2 (new type)
-        // curveIndex+2 = t2 to end (originalType)
-        setCurveType(path, curveIndex, originalType);
-        setCurveType(path, curveIndex + 1, type);
-        setCurveType(path, curveIndex + 2, originalType);
-        if (type === "door") {
-          setDoorOpen(path, curveIndex + 1, false);
-        }
+        nextSegments.push(cloneSegment(originalSegment, { id: createDefaultSegmentData().id, type: originalType }));
+        nextSegments.push(createTypedSegment(type, originalSegment.id));
+        nextSegments.push(cloneSegment(originalSegment, { id: createDefaultSegmentData().id, type: originalType }));
       } else if (t1 > 0) {
-        // Two segments: [start-t1]=originalType, [t1-end]=new type
-        setCurveType(path, curveIndex, originalType);
-        setCurveType(path, curveIndex + 1, type);
-        if (type === "door") {
-          setDoorOpen(path, curveIndex + 1, false);
-        }
+        nextSegments.push(cloneSegment(originalSegment, { id: createDefaultSegmentData().id, type: originalType }));
+        nextSegments.push(createTypedSegment(type, originalSegment.id));
       } else if (t2 < 1) {
-        // Two segments: [start-t2]=new type, [t2-end]=originalType
-        setCurveType(path, curveIndex, type);
-        setCurveType(path, curveIndex + 1, originalType);
-        if (type === "door") {
-          setDoorOpen(path, curveIndex, false);
-        }
+        nextSegments.push(createTypedSegment(type, originalSegment.id));
+        nextSegments.push(cloneSegment(originalSegment, { id: createDefaultSegmentData().id, type: originalType }));
       } else {
-        // Whole curve becomes the new type (t1=0, t2=1)
-        setCurveType(path, curveIndex, type);
-        if (type === "door") {
-          setDoorOpen(path, curveIndex, false);
-        }
+        nextSegments.push(createTypedSegment(type, originalSegment.id));
       }
-
-      // Update doorStates indices for curves after the split
-      var newDoorStates = {};
-      for (var oldIdx in originalDoorStates) {
-        var idx = parseInt(oldIdx, 10);
-        if (idx < curveIndex) {
-          newDoorStates[idx] = originalDoorStates[oldIdx];
-        } else if (idx > curveIndex) {
-          // Shift indices by number of new segments added
-          var shift = (t1 > 0 ? 1 : 0) + (t2 < 1 ? 1 : 0);
-          newDoorStates[idx + shift] = originalDoorStates[oldIdx];
-        }
-        // Skip the original curveIndex since we're replacing it
-      }
-      path.data.doorStates = newDoorStates;
+      path.data.segmentData = nextSegments.concat(after);
+      syncSegmentDataLength(path);
 
       saveProject();
       return true;
     }
 
     function handleDoorWindowClick(point) {
-      // Handle click when in door or window mode
-      // Find the curve nearest to the click point
-      var hitResult = scope.project.hitTest(point, {
-        stroke: true,
-        tolerance: 0.3
-      });
-
-      if (!hitResult || !hitResult.item || !hitResult.item.data || !hitResult.item.data.id) {
+      var hitResult = findNearestCurveHit(point);
+      if (!hitResult || !hitResult.item || !hitResult.location) {
         return false;
       }
-
 
       var path = hitResult.item;
       var location = hitResult.location;
@@ -667,7 +1003,7 @@
       }
 
       var curveIndex = location.curve.index;
-      var t = location.time; // Parameter along curve (0-1)
+      var t = getLinearCurveTime(location.curve, location.point || point);
 
       return placeDoorOnCurve(path, curveIndex, t, drawMode);
     }
@@ -746,6 +1082,7 @@
       canvas.addEventListener("wheel", onWheel, { passive: false });
       canvas.addEventListener("contextmenu", onContextMenu);
       window.addEventListener("resize", resizeCanvas);
+      window.addEventListener("keydown", onWindowKeyDown, true);
       document.addEventListener("ae-map-transform", updateViewTransform);
     }
 
@@ -759,12 +1096,13 @@
         canvas.removeEventListener("contextmenu", onContextMenu);
       }
       window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("keydown", onWindowKeyDown, true);
       document.removeEventListener("ae-map-transform", updateViewTransform);
     }
 
     function onWheel(e) {
       e.preventDefault();
-      var mapCanvas = container.querySelector("canvas:not(#paper-wall-canvas)");
+      var mapCanvas = container.querySelector("#ae-map-canvas");
       if (mapCanvas) {
         mapCanvas.dispatchEvent(new WheelEvent("wheel", {
           deltaX: e.deltaX,
@@ -792,14 +1130,122 @@
       }, { once: true });
     }
 
+    function onWindowKeyDown(e) {
+      if (!isActive || !editorGridState.enabled || !inputEnabled) return;
+      var target = e.target;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      var step = e.shiftKey ? 0.5 : GRID_NUDGE_STEP;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        nudgeGrid(-step, 0);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        nudgeGrid(step, 0);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        nudgeGrid(0, -step);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        nudgeGrid(0, step);
+      }
+    }
+
     // ── Mouse Handlers ──
 
     var selectedItem = null;
+    var selectedItems = [];
     var selectedSegment = null;
+    var selectedSegments = [];
+    var hoveredPath = null;
     var dragging = false;
+    var dragHasExceededThreshold = false;
+    var pointerDownPoint = null;
+
+    function syncSelectionStyles() {
+      if (!scope || !scope.project || !scope.project.activeLayer) return;
+      var highlightedPaths = new Set();
+      for (var si = 0; si < selectedItems.length; si++) {
+        if (selectedItems[si]) highlightedPaths.add(selectedItems[si]);
+      }
+      for (var ss = 0; ss < selectedSegments.length; ss++) {
+        if (selectedSegments[ss]?.path) highlightedPaths.add(selectedSegments[ss].path);
+      }
+      if (hoveredPath) highlightedPaths.add(hoveredPath);
+
+      var items = scope.project.activeLayer.children;
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item || (item.data && item.data.isOverlay)) continue;
+        item.selected = highlightedPaths.has(item);
+      }
+      refreshSelectionVisuals();
+    }
+
+    function clearSelection() {
+      selectedItem = null;
+      selectedItems = [];
+      selectedSegment = null;
+      selectedSegments = [];
+      hoveredPath = null;
+      syncSelectionStyles();
+    }
+
+    function setSelectedItem(item) {
+      selectedItem = item || null;
+      selectedItems = item ? [item] : [];
+      selectedSegment = null;
+      selectedSegments = [];
+      syncSelectionStyles();
+    }
+
+    function setSelectedSegments(segments, activeSegment) {
+      selectedSegments = [];
+      var seen = new Set();
+      for (var i = 0; i < (segments || []).length; i++) {
+        var segment = segments[i];
+        if (!segment || !segment.path) continue;
+        if (seen.has(segment)) continue;
+        seen.add(segment);
+        selectedSegments.push(segment);
+      }
+      selectedSegment =
+        (activeSegment && selectedSegments.indexOf(activeSegment) >= 0 ? activeSegment : null) ||
+        selectedSegments[0] ||
+        null;
+      selectedItem = null;
+      selectedItems = [];
+      syncSelectionStyles();
+    }
+
+    function toggleSelectedSegment(segment) {
+      if (!segment || !segment.path) return;
+      var nextSegments = selectedSegments.slice();
+      var idx = nextSegments.indexOf(segment);
+      var nextActiveSegment = segment;
+      if (idx >= 0) {
+        nextSegments.splice(idx, 1);
+        if (selectedSegment === segment) {
+          nextActiveSegment = nextSegments[nextSegments.length - 1] || nextSegments[0] || null;
+        }
+      } else {
+        nextSegments.push(segment);
+      }
+      setSelectedSegments(nextSegments, nextActiveSegment);
+    }
 
     function onMouseDown(event) {
       var button = event.event.button;
+      pointerDownPoint = event.point.clone();
+      dragHasExceededThreshold = false;
 
       // Middle click or Cmd+click: pan
       if (button === 1 || event.event.metaKey) {
@@ -809,10 +1255,13 @@
 
       // Right-click: context menu or pan
       if (button === 2) {
-        var hitResult = scope.project.hitTest(event.point, {
+        var hitResult = findNearestSegmentHit(event.point) || scope.project.hitTest(event.point, {
           segments: true,
           stroke: true,
-          tolerance: 8 / (scope.view.zoom || 1)
+          tolerance: 8 / (scope.view.zoom || 1),
+          match: function(hit) {
+            return !(hit.item && hit.item.data && hit.item.data.isOverlay);
+          }
         });
 
         if (hitResult && onWallContext) {
@@ -830,11 +1279,13 @@
             });
           } else if (hitResult.type === "stroke") {
             var curveIndex = hitResult.location ? hitResult.location.curve.index : -1;
-            var curveType = curveIndex >= 0 ? getCurveType(hitResult.item, curveIndex) : "wall";
-            var isOpen = curveType === "door" ? isDoorOpen(hitResult.item, curveIndex) : false;
+            var wallData = curveIndex >= 0 ? normalizeSegmentData(getSegmentData(hitResult.item, curveIndex)) : null;
+            var curveType = wallData ? wallData.type : "wall";
+            var isOpen = wallData ? !!wallData.doorOpen : false;
 
             onWallContext({
               type: "wall",
+              wall: wallData,
               path: hitResult.item,
               location: hitResult.location,
               curveIndex: curveIndex,
@@ -855,34 +1306,29 @@
       // Left click - Drawing mode
       if (drawMode) {
         // Clear any previous selection when starting to draw
-        scope.project.deselectAll();
-        selectedItem = null;
-        selectedSegment = null;
+        clearSelection();
 
         // Door/Window mode: click on existing wall to place
         if (drawMode === "door" || drawMode === "window") {
           if (handleDoorWindowClick(event.point)) {
             return;
           }
-          // If no wall was hit, do nothing
+          // Empty space in these modes should pan the map, same as other layers.
+          startPanning(event.event);
           return;
         }
 
         // Rectangle and Circle modes: start drag
         if (shapeMode === "rectangle" || shapeMode === "circle") {
-          var startPoint = findNearestVertex(event.point, null) || event.point;
+          var startPoint = resolveSnapPoint(event.point, { excludePath: null }) || event.point;
           shapeStartPoint = startPoint.clone();
 
           // Create preview shape
           if (shapeMode === "rectangle") {
-            currentPath = new scope.Path({
-              strokeColor: WALL_COLOR,
-              strokeWidth: 0.08,
-              strokeCap: "round",
-              strokeJoin: "round",
+            currentPath = new scope.Path(Object.assign(createPathStyle(), {
               closed: true,
-              data: { id: generateId(), type: drawMode }
-            });
+              data: { id: generateId(), segmentData: [] }
+            }));
             // Add 4 corners (will be updated on drag)
             currentPath.add(startPoint);
             currentPath.add(startPoint);
@@ -890,14 +1336,10 @@
             currentPath.add(startPoint);
           } else {
             // Circle: create polygon approximation
-            currentPath = new scope.Path({
-              strokeColor: WALL_COLOR,
-              strokeWidth: 0.08,
-              strokeCap: "round",
-              strokeJoin: "round",
+            currentPath = new scope.Path(Object.assign(createPathStyle(), {
               closed: true,
-              data: { id: generateId(), type: drawMode }
-            });
+              data: { id: generateId(), segmentData: [] }
+            }));
             // Add segments for circle (will be updated on drag)
             for (var i = 0; i < CIRCLE_SEGMENTS; i++) {
               currentPath.add(startPoint);
@@ -928,16 +1370,12 @@
           targetPoint = constrainAngle(lastFixed, event.point);
         }
 
-        var clickPoint = findNearestVertex(targetPoint, currentPath) || targetPoint;
+        var clickPoint = resolveSnapPoint(targetPoint, { excludePath: currentPath }) || targetPoint;
 
         if (!currentPath) {
-          currentPath = new scope.Path({
-            strokeColor: WALL_COLOR,
-            strokeWidth: 0.08,
-            strokeCap: "round",
-            strokeJoin: "round",
-            data: { id: generateId(), type: drawMode }
-          });
+          currentPath = new scope.Path(Object.assign(createPathStyle(), {
+            data: { id: generateId(), segmentData: [] }
+          }));
           currentPath.add(clickPoint);
           currentPath.add(clickPoint); // Preview point
         } else {
@@ -947,42 +1385,58 @@
       }
 
       // Left click - Selection mode
-      var hitResult = scope.project.hitTest(event.point, {
+      var vertexHit = findNearestSegmentHit(event.point);
+      var hitResult = vertexHit || scope.project.hitTest(event.point, {
         segments: true,
         stroke: true,
         fill: true,
-        tolerance: 5 / (scope.view.zoom || 1)
+        tolerance: 5 / (scope.view.zoom || 1),
+        match: function(hit) {
+          return !(hit.item && hit.item.data && hit.item.data.isOverlay);
+        }
       });
 
       if (hitResult && hitResult.item) {
         var clickedPath = hitResult.item;
+        var isShiftSelection = !!(event.modifiers && event.modifiers.shift);
 
-        // Deselect all other items first
-        scope.project.deselectAll();
-
-        // Select the clicked path
-        clickedPath.selected = true;
-        selectedItem = clickedPath;
-
-        // If clicked on a segment (vertex), prepare for vertex drag
         if (hitResult.type === "segment") {
-          selectedSegment = hitResult.segment;
+          if (isShiftSelection) {
+            toggleSelectedSegment(hitResult.segment);
+          } else {
+            if (selectedSegments.indexOf(hitResult.segment) >= 0) {
+              selectedSegment = hitResult.segment;
+              selectedItem = null;
+              selectedItems = [];
+              syncSelectionStyles();
+            } else {
+              setSelectedSegments([hitResult.segment], hitResult.segment);
+            }
+          }
         } else {
-          selectedSegment = null;
+          if (!isShiftSelection) {
+            setSelectedItem(clickedPath);
+          }
         }
 
         dragging = true;
       } else {
         // Clicked on empty space - deselect all
-        scope.project.deselectAll();
-        selectedItem = null;
-        selectedSegment = null;
+        if (event.modifiers && event.modifiers.shift) {
+          dragging = false;
+          return;
+        }
+        clearSelection();
+        dragging = false;
+        startPanning(event.event);
       }
     }
 
     var dragStartPoint = null;
     var dragStartPosition = null;
-    var weldedSegments = []; // Segments welded to the selected segment
+    var dragStartReferencePoint = null;
+    var draggedSegments = [];
+    var draggedSegmentOrigins = [];
 
     function onMouseDrag(event) {
       if (!dragging) return;
@@ -1005,7 +1459,7 @@
         }
 
         // Snap end point
-        var snapPoint = findNearestVertex(endPoint, currentPath);
+        var snapPoint = resolveSnapPoint(endPoint, { excludePath: currentPath });
         updateSnapIndicator(snapPoint);
         endPoint = snapPoint || endPoint;
 
@@ -1029,10 +1483,40 @@
         return;
       }
 
+      if (!dragHasExceededThreshold) {
+        var dragDistance = pointerDownPoint ? event.point.getDistance(pointerDownPoint) : 0;
+        if (dragDistance < getDragThresholdUnits()) {
+          return;
+        }
+        dragHasExceededThreshold = true;
+      }
+
       if (selectedSegment) {
-        // On first drag, find all segments welded to this one
-        if (weldedSegments.length === 0) {
-          weldedSegments = findWeldedSegments(selectedSegment.point, selectedSegment);
+        // On first actual drag, capture the full set of segments to move.
+        if (draggedSegments.length === 0) {
+          var baseSegments = selectedSegments.length ? selectedSegments.slice() : [selectedSegment];
+          if (selectedSegment) {
+            baseSegments = [selectedSegment].concat(baseSegments.filter(function (segment) {
+              return segment !== selectedSegment;
+            }));
+          }
+          var allSegments = [];
+          var seenSegments = new Set();
+
+          function addMovableSegment(segment) {
+            if (!segment || seenSegments.has(segment)) return;
+            seenSegments.add(segment);
+            allSegments.push(segment);
+          }
+
+          for (var bs = 0; bs < baseSegments.length; bs++) {
+            addMovableSegment(baseSegments[bs]);
+          }
+
+          draggedSegments = allSegments;
+          draggedSegmentOrigins = allSegments.map(function (segment) {
+            return segment.point.clone();
+          });
         }
 
         var targetPoint = event.point;
@@ -1058,40 +1542,62 @@
         }
 
         // Snap while dragging (exclude all segments being moved)
-        var snapPoint = findNearestVertexExcluding(targetPoint, selectedSegment, weldedSegments);
+        var snapPoint = resolveSnapPoint(targetPoint, {
+          excludeSegment: selectedSegment,
+          excludeSegments: draggedSegments,
+        });
         updateSnapIndicator(snapPoint);
         var finalPoint = snapPoint || targetPoint;
 
-        // Move selected segment and all welded segments together
-        selectedSegment.point = finalPoint;
-        for (var i = 0; i < weldedSegments.length; i++) {
-          weldedSegments[i].point = finalPoint;
+        var anchorIndex = draggedSegments.indexOf(selectedSegment);
+        var anchorOrigin = draggedSegmentOrigins[anchorIndex >= 0 ? anchorIndex : 0] || selectedSegment.point.clone();
+        var delta = finalPoint.subtract(anchorOrigin);
+
+        for (var i = 0; i < draggedSegments.length; i++) {
+          draggedSegments[i].point = draggedSegmentOrigins[i].add(delta);
         }
+        refreshSegmentVisuals();
+        refreshSelectionVisuals();
 
       } else if (selectedItem) {
         // Track start position on first drag
         if (!dragStartPoint) {
           dragStartPoint = event.point.subtract(event.delta);
           dragStartPosition = selectedItem.position.clone();
+          dragStartReferencePoint = selectedItem.firstSegment?.point?.clone() || null;
         }
 
+        var offset;
         if (shiftPressed) {
           // Constrain movement direction from start
           updateAngleGuides(dragStartPoint, true);
           var constrainedTarget = constrainAngle(dragStartPoint, event.point);
-          var offset = constrainedTarget.subtract(dragStartPoint);
-          selectedItem.position = dragStartPosition.add(offset);
+          offset = constrainedTarget.subtract(dragStartPoint);
         } else {
           updateAngleGuides(null, false);
-          selectedItem.position = selectedItem.position.add(event.delta);
+          offset = event.point.subtract(dragStartPoint);
         }
+
+        if (dragStartReferencePoint) {
+          var snappedReference = resolveSnapPoint(dragStartReferencePoint.add(offset), {
+            excludePath: selectedItem,
+          });
+          if (snappedReference) {
+            offset = snappedReference.subtract(dragStartReferencePoint);
+          }
+        }
+
+        selectedItem.position = dragStartPosition.add(offset);
+        refreshSegmentVisuals();
+        refreshSelectionVisuals();
       }
     }
 
     function onMouseUp(event) {
       if (dragging) {
+        var didMoveSelection = !!dragHasExceededThreshold;
         // Track if we were dragging a vertex (for merge check)
-        var wasDraggingVertex = selectedSegment !== null || weldedSegments.length > 0;
+        var wasDraggingVertex = didMoveSelection && selectedSegment !== null;
 
         // Finalize rectangle/circle shape
         if (drawMode && currentPath && shapeStartPoint) {
@@ -1119,9 +1625,13 @@
         }
 
         dragging = false;
+        dragHasExceededThreshold = false;
+        pointerDownPoint = null;
         dragStartPoint = null;
         dragStartPosition = null;
-        weldedSegments = [];
+        dragStartReferencePoint = null;
+        draggedSegments = [];
+        draggedSegmentOrigins = [];
         updateSnapIndicator(null);
         updateAngleGuides(null, false);
 
@@ -1130,7 +1640,11 @@
           tryMergePaths();
         }
 
-        saveProject(); // Auto-save on edit
+        if (didMoveSelection || drawMode) {
+          saveProject(); // Auto-save on edit
+        } else {
+          refreshSelectionVisuals();
+        }
       }
     }
 
@@ -1168,7 +1682,7 @@
       var curveLength = curve.length;
 
       // Calculate the segment that would become a door
-      var t = hitResult.location.time;
+      var t = getLinearCurveTime(curve, hitResult.location.point || hitResult.location._point || hitResult.location);
       var doorT1, doorT2;
 
       if (curveLength < MIN_DOOR_WIDTH) {
@@ -1185,16 +1699,17 @@
       }
 
       // Get points for the preview segment
-      var previewP1 = curve.getPointAt(doorT1, true);
-      var previewP2 = curve.getPointAt(doorT2, true);
+      var previewP1 = getCurvePointAtNormalizedTime(curve, doorT1);
+      var previewP2 = getCurvePointAtNormalizedTime(curve, doorT2);
+      if (!previewP1 || !previewP2) return;
 
       hoverIndicator = new scope.Path.Line({
         from: previewP1,
         to: previewP2,
         strokeColor: color,
-        strokeWidth: 0.15,
-        strokeCap: "round",
-        dashArray: [0.2, 0.1]
+        strokeWidth: 0.08,
+        strokeCap: "butt",
+        strokeJoin: "round"
       });
     }
 
@@ -1206,29 +1721,35 @@
         updateAngleGuides(null, false);
         updateSnapIndicator(null);
 
-        var hitResult = scope.project.hitTest(event.point, {
-          stroke: true,
-          tolerance: 0.3
-        });
+        var hitResult = findNearestCurveHit(event.point);
 
-        if (hitResult && hitResult.item && hitResult.item.data && hitResult.item.data.id) {
+        if (hitResult && hitResult.item) {
+          hoveredPath = hitResult.item;
+          syncSelectionStyles();
           var color = drawMode === "door" ? DOOR_COLOR : WINDOW_COLOR;
           updateHoverIndicator(hitResult, color);
-          container.style.cursor = "pointer";
         } else {
+          if (hoveredPath) {
+            hoveredPath = null;
+            syncSelectionStyles();
+          }
           updateHoverIndicator(null, null);
-          container.style.cursor = "crosshair";
         }
+        container.style.cursor = "crosshair";
         return;
       }
 
+      if (hoveredPath) {
+        hoveredPath = null;
+        syncSelectionStyles();
+      }
       updateHoverIndicator(null, null);
 
       // Rectangle/circle: preview is handled in onMouseDrag, just show snap indicator here
       if (drawMode && (shapeMode === "rectangle" || shapeMode === "circle")) {
         if (!currentPath) {
           // Not yet drawing, show snap indicator for potential start point
-          var snapPoint = findNearestVertex(event.point, null);
+          var snapPoint = resolveSnapPoint(event.point, { excludePath: null });
           updateSnapIndicator(snapPoint);
         }
         updateAngleGuides(null, false);
@@ -1249,12 +1770,12 @@
         }
 
         // Check for snap (snap takes priority over angle constraint)
-        var snapPoint = findNearestVertex(targetPoint, currentPath);
+        var snapPoint = resolveSnapPoint(targetPoint, { excludePath: currentPath });
         updateSnapIndicator(snapPoint);
         currentPath.lastSegment.point = snapPoint || targetPoint;
       } else if (drawMode) {
         updateAngleGuides(null, false);
-        var snapPoint = findNearestVertex(event.point, null);
+        var snapPoint = resolveSnapPoint(event.point, { excludePath: null });
         updateSnapIndicator(snapPoint);
       } else {
         updateAngleGuides(null, false);
@@ -1284,18 +1805,17 @@
       }
 
       if (event.key === "delete" || event.key === "backspace") {
-        if (selectedSegment) {
-          var path = selectedSegment.path;
-          selectedSegment.remove();
-          if (path.segments.length < 2) {
-            path.remove();
+        if (selectedSegments.length) {
+          var segmentsToDelete = selectedSegments.slice();
+          clearSelection();
+          for (var i = 0; i < segmentsToDelete.length; i++) {
+            if (segmentsToDelete[i] && segmentsToDelete[i].path) {
+              deleteSegment(segmentsToDelete[i]);
+            }
           }
-          selectedSegment = null;
-          selectedItem = null;
-          saveProject();
         } else if (selectedItem) {
           selectedItem.remove();
-          selectedItem = null;
+          clearSelection();
           saveProject();
         }
       }
@@ -1344,33 +1864,10 @@
       var path = segment.path;
       var segIndex = segment.index;
 
-      // Update curveTypes: when removing a vertex, we need to merge the two adjacent curves
-      ensureCurveTypes(path);
-      if (path.data.curveTypes && path.data.curveTypes.length > 0) {
-        // Determine which curve type to keep
-        // If either adjacent curve is a door/window, prefer keeping wall
-        var prevType = segIndex > 0 ? getCurveType(path, segIndex - 1) : "wall";
-        var nextType = segIndex < path.data.curveTypes.length ? getCurveType(path, segIndex) : "wall";
-
-        // Remove the curve type at segIndex (the curve after this vertex)
-        if (segIndex < path.data.curveTypes.length) {
-          path.data.curveTypes.splice(segIndex, 1);
-        }
-
-        // Update doorStates - remove any references to the deleted curve and shift indices
-        if (path.data.doorStates) {
-          var newDoorStates = {};
-          for (var idx in path.data.doorStates) {
-            var i = parseInt(idx, 10);
-            if (i < segIndex) {
-              newDoorStates[i] = path.data.doorStates[idx];
-            } else if (i > segIndex) {
-              newDoorStates[i - 1] = path.data.doorStates[idx];
-            }
-            // Skip i === segIndex (the deleted curve)
-          }
-          path.data.doorStates = newDoorStates;
-        }
+      ensureSegmentData(path);
+      var removeIndex = segIndex < path.data.segmentData.length ? segIndex : segIndex - 1;
+      if (removeIndex >= 0 && removeIndex < path.data.segmentData.length) {
+        path.data.segmentData.splice(removeIndex, 1);
       }
 
       segment.remove();
@@ -1379,7 +1876,7 @@
       if (path.segments.length < 2) {
         path.remove();
       } else {
-        syncCurveTypesLength(path);
+        syncSegmentDataLength(path);
       }
       saveProject();
     }
@@ -1398,41 +1895,20 @@
       if (curve) {
         var curveIndex = curve.index;
 
-        // Get the current type of this curve
-        ensureCurveTypes(path);
-        var currentType = getCurveType(path, curveIndex);
-        var isDoor = currentType === "door";
-        var wasOpen = isDoor ? isDoorOpen(path, curveIndex) : false;
+        ensureSegmentData(path);
+        var currentSegment = normalizeSegmentData(path.data.segmentData[curveIndex]);
 
         // Insert the new vertex
         path.insert(curveIndex + 1, location.point);
-
-        // Insert a new curveType for the new curve created
-        // Both halves inherit the original type
-        if (path.data.curveTypes) {
-          path.data.curveTypes.splice(curveIndex + 1, 0, currentType);
-        }
-
-        // Update doorStates - shift indices for curves after the split
-        if (path.data.doorStates) {
-          var newDoorStates = {};
-          for (var idx in path.data.doorStates) {
-            var i = parseInt(idx, 10);
-            if (i < curveIndex) {
-              newDoorStates[i] = path.data.doorStates[idx];
-            } else if (i === curveIndex) {
-              // Both new curves inherit the door state
-              newDoorStates[i] = path.data.doorStates[idx];
-              newDoorStates[i + 1] = path.data.doorStates[idx];
-            } else {
-              newDoorStates[i + 1] = path.data.doorStates[idx];
-            }
-          }
-          path.data.doorStates = newDoorStates;
-        }
-
-        syncCurveTypesLength(path);
-          saveProject();
+        path.data.segmentData.splice(
+          curveIndex + 1,
+          0,
+          normalizeSegmentData(Object.assign({}, currentSegment, {
+            id: createDefaultSegmentData().id,
+          })),
+        );
+        syncSegmentDataLength(path);
+        saveProject();
       }
     }
 
@@ -1443,9 +1919,10 @@
       var path = location.path;
       var curveIndex = location.curve.index;
 
-      ensureCurveTypes(path);
-      var oldCurveTypes = path.data.curveTypes ? path.data.curveTypes.slice() : [];
-      var oldDoorStates = path.data.doorStates ? Object.assign({}, path.data.doorStates) : {};
+      ensureSegmentData(path);
+      var oldSegmentData = path.data.segmentData
+        ? path.data.segmentData.map(function (segment) { return normalizeSegmentData(segment); })
+        : [];
 
       if (path.closed) {
         // For closed paths: open the path by "breaking" it at this curve
@@ -1459,17 +1936,12 @@
           points.push(path.segments[idx].point.clone());
         }
 
-        // Reorder curveTypes (removing the deleted curve)
-        var newCurveTypes = [];
-        var newDoorStates = {};
-        for (var i = 0; i < oldCurveTypes.length; i++) {
+        // Reorder segment metadata (removing the deleted curve)
+        var newSegmentData = [];
+        for (var i = 0; i < oldSegmentData.length; i++) {
           if (i === curveIndex) continue; // Skip deleted curve
-          var oldIdx = (breakIndex + i) % oldCurveTypes.length;
-          var newIdx = newCurveTypes.length;
-          newCurveTypes.push(oldCurveTypes[oldIdx]);
-          if (oldDoorStates[oldIdx]) {
-            newDoorStates[newIdx] = oldDoorStates[oldIdx];
-          }
+          var oldIdx = (breakIndex + i) % oldSegmentData.length;
+          newSegmentData.push(normalizeSegmentData(oldSegmentData[oldIdx]));
         }
 
         // Rebuild the path as open
@@ -1478,104 +1950,62 @@
           path.add(points[i]);
         }
         path.closed = false;
-        path.data.curveTypes = newCurveTypes;
-        path.data.doorStates = newDoorStates;
-        syncCurveTypesLength(path);
+        path.data.segmentData = newSegmentData;
+        syncSegmentDataLength(path);
 
       } else {
-        // For open paths: split into two separate paths at this curve
-        var seg1End = curveIndex;
-        var seg2Start = curveIndex + 1;
-
-        if (seg2Start >= path.segments.length) {
-          // Clicked on the last segment - just remove it
-          if (path.data.curveTypes && path.data.curveTypes.length > 0) {
-            path.data.curveTypes.pop();
-          }
-          if (path.data.doorStates) {
-            delete path.data.doorStates[oldCurveTypes.length - 1];
-          }
+        if (curveIndex === oldSegmentData.length - 1) {
+          // Clicked on the last segment - remove trailing point and segment.
+          path.data.segmentData.pop();
           path.lastSegment.remove();
           if (path.segments.length < 2) {
             path.remove();
           }
-              saveProject();
+          saveProject();
           return;
         }
 
-        if (seg1End < 0) {
-          // Clicked on the first segment - just remove it
-          if (path.data.curveTypes && path.data.curveTypes.length > 0) {
-            path.data.curveTypes.shift();
-          }
-          // Shift doorStates indices
-          var newDoorStates = {};
-          for (var idx in oldDoorStates) {
-            var i = parseInt(idx, 10);
-            if (i > 0) {
-              newDoorStates[i - 1] = oldDoorStates[idx];
-            }
-          }
-          path.data.doorStates = newDoorStates;
+        if (curveIndex === 0) {
+          path.data.segmentData.shift();
           path.firstSegment.remove();
           if (path.segments.length < 2) {
             path.remove();
           }
-              saveProject();
+          syncSegmentDataLength(path);
+          saveProject();
           return;
         }
 
-        // Collect points and curveTypes for the second path
+        // For open paths: split into two separate paths at this curve
+        var seg1End = curveIndex;
+        var seg2Start = curveIndex + 1;
         var secondPathPoints = [];
-        var secondCurveTypes = [];
-        var secondDoorStates = {};
         for (var i = seg2Start; i < path.segments.length; i++) {
           secondPathPoints.push(path.segments[i].point.clone());
         }
-        for (var i = seg2Start; i < oldCurveTypes.length; i++) {
-          var newIdx = secondCurveTypes.length;
-          secondCurveTypes.push(oldCurveTypes[i]);
-          if (oldDoorStates[i]) {
-            secondDoorStates[newIdx] = oldDoorStates[i];
-          }
-        }
-
-        // Truncate curveTypes for first path
-        if (path.data.curveTypes) {
-          path.data.curveTypes = path.data.curveTypes.slice(0, curveIndex);
-        }
-        // Truncate doorStates for first path
-        var firstDoorStates = {};
-        for (var idx in oldDoorStates) {
-          var i = parseInt(idx, 10);
-          if (i < curveIndex) {
-            firstDoorStates[i] = oldDoorStates[idx];
-          }
-        }
-        path.data.doorStates = firstDoorStates;
+        var secondPathSegments = oldSegmentData
+          .slice(seg2Start)
+          .map(function (segment) { return normalizeSegmentData(segment); });
+        path.data.segmentData = oldSegmentData
+          .slice(0, curveIndex)
+          .map(function (segment) { return normalizeSegmentData(segment); });
 
         // Remove segments from original path (keep only up to seg1End)
         while (path.segments.length > seg1End + 1) {
           path.lastSegment.remove();
         }
+        syncSegmentDataLength(path);
 
         // Create second path if it has at least 2 points
         if (secondPathPoints.length >= 2) {
-          var secondPath = new scope.Path({
-            strokeColor: path.strokeColor,
-            strokeWidth: path.strokeWidth,
-            strokeCap: path.strokeCap,
-            strokeJoin: path.strokeJoin,
-            data: {
-              id: generateId(),
-              type: path.data?.type || "wall",
-              curveTypes: secondCurveTypes,
-              doorStates: secondDoorStates
-            }
+          createPaperPath({
+            id: global.AEWallPaths?.generatePathId?.() || generateId(),
+            closed: false,
+            points: secondPathPoints.map(function (point) {
+              return { x: point.x, y: point.y };
+            }),
+            segments: secondPathSegments,
           });
-          for (var i = 0; i < secondPathPoints.length; i++) {
-            secondPath.add(secondPathPoints[i]);
-          }
         }
 
         // Remove original path if too short
@@ -1591,6 +2021,7 @@
 
     function setDrawMode(mode) {
       drawMode = mode;
+      hoveredPath = null;
       if (!mode) {
         if (currentPath) {
           currentPath.remove();
@@ -1600,7 +2031,21 @@
         updateSnapIndicator(null);
         updateHoverIndicator(null, null);
       }
+      clearSelection();
+      syncSelectionStyles();
       container.style.cursor = mode ? "crosshair" : "";
+    }
+
+    function setInputEnabled(enabled) {
+      inputEnabled = enabled !== false;
+      if (canvas) {
+        canvas.style.pointerEvents = inputEnabled ? "auto" : "none";
+      }
+      if (!inputEnabled) {
+        updateSnapIndicator(null);
+        updateHoverIndicator(null, null);
+        updateAngleGuides(null, false);
+      }
     }
 
     function setShapeMode(mode) {
@@ -1617,6 +2062,8 @@
     function clearAll() {
       if (!scope) return;
       scope.project.activeLayer.removeChildren();
+      clearSelection();
+      refreshGridVisuals();
       scope.view.draw();
       saveProject();
     }
@@ -1629,8 +2076,16 @@
       getDrawMode: function() { return drawMode; },
       setShapeMode: setShapeMode,
       getShapeMode: function() { return shapeMode; },
+      getGridState: getEditorGridState,
+      setGridState: setGridState,
+      setGridEnabled: setGridEnabled,
       clearAll: clearAll,
       save: saveProject,
+      reload: function() {
+        if (isActive && scope) {
+          loadProject();
+        }
+      },
       refresh: function() {
         if (isActive && scope) {
           scope.view.draw();
@@ -1644,11 +2099,15 @@
       // Door/window methods
       toggleDoorState: toggleDoorState,
       getCurveType: getCurveType,
+      getSegmentData: function(path, curveIndex) {
+        return normalizeSegmentData(getSegmentData(path, curveIndex));
+      },
       setCurveType: function(path, curveIndex, type) {
         setCurveType(path, curveIndex, type);
         saveProject();
       },
-      isDoorOpen: isDoorOpen
+      isDoorOpen: isDoorOpen,
+      setInputEnabled: setInputEnabled
     };
   }
 

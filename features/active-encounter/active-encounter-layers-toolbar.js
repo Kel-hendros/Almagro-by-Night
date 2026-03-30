@@ -67,7 +67,7 @@
       if (decorBtn) decorBtn.style.display = showDecor ? "" : "none";
       if (mapUploadBtn) mapUploadBtn.style.display = showBackground ? "" : "none";
       if (mapRemoveBtn) mapRemoveBtn.style.display = showBackground ? "" : "none";
-      if (wallsSection) wallsSection.style.display = showElements ? "" : "none";
+      if (wallsSection) wallsSection.style.display = "none";
       if (lightsSection) lightsSection.style.display = showElements ? "" : "none";
 
       // Dispatch event for other modules to react to layer change
@@ -79,16 +79,9 @@
         }));
       }
 
-      if (persist && state.encounter?.data) {
-        state.encounter.data.ui = {
-          ...(state.encounter.data.ui || {}),
-          activeLayer: nextLayer,
-        };
-
-        if (openDrawer) {
-          const drawer = document.getElementById("ae-tools-drawer");
-          if (drawer) drawer.classList.add("open");
-        }
+      if (persist && openDrawer) {
+        const drawer = document.getElementById("ae-tools-drawer");
+        if (drawer) drawer.classList.add("open");
       }
     }
 

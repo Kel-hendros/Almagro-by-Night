@@ -25,6 +25,7 @@
     realtimeChannels: [],
     lastViewTargetTs: null,
     lastPingTs: null,
+    encounterViewState: null,
   };
   const runtime = {
     isBooted: false,
@@ -77,6 +78,18 @@
     layer: "underlay",
     zIndex: 0,
   };
+  const DEFAULT_ENCOUNTER_VIEW_STATE = Object.freeze({
+    activeLayer: "entities",
+    toolsDrawerOpen: false,
+    timelineCollapsed: false,
+    mapTransform: null,
+  });
+  const DEFAULT_EDITOR_GRID_STATE = Object.freeze({
+    enabled: false,
+    spacing: 1,
+    offsetX: 0,
+    offsetY: 0,
+  });
   const MAP_EFFECT_DEFAULTS = {
     id: "",
     type: "",
@@ -122,6 +135,191 @@
     window.location.hash = hash;
   }
 
+  function createDefaultEncounterViewState() {
+    return {
+      activeLayer: DEFAULT_ENCOUNTER_VIEW_STATE.activeLayer,
+      toolsDrawerOpen: DEFAULT_ENCOUNTER_VIEW_STATE.toolsDrawerOpen,
+      timelineCollapsed: DEFAULT_ENCOUNTER_VIEW_STATE.timelineCollapsed,
+      mapTransform: null,
+      editorGrid: { ...DEFAULT_EDITOR_GRID_STATE },
+    };
+  }
+
+  function sanitizeEditorGridState(raw) {
+    const base = { ...DEFAULT_EDITOR_GRID_STATE };
+    if (!raw || typeof raw !== "object") return base;
+
+    base.enabled = raw.enabled === true;
+    if (Number.isFinite(raw.spacing) && raw.spacing > 0) {
+      base.spacing = raw.spacing;
+    }
+    if (Number.isFinite(raw.offsetX)) {
+      base.offsetX = raw.offsetX;
+    }
+    if (Number.isFinite(raw.offsetY)) {
+      base.offsetY = raw.offsetY;
+    }
+    return base;
+  }
+
+  function getEncounterViewStateStorageKey() {
+    if (!state.user?.id || !state.encounterId) return null;
+    return `abn:encounter-view:${state.user.id}:${state.encounterId}`;
+  }
+
+  function sanitizeEncounterViewState(raw) {
+    const base = createDefaultEncounterViewState();
+    if (!raw || typeof raw !== "object") return base;
+
+    if (MAP_LAYER_LABELS[raw.activeLayer]) {
+      base.activeLayer = raw.activeLayer;
+    }
+    base.toolsDrawerOpen = raw.toolsDrawerOpen === true;
+    base.timelineCollapsed = raw.timelineCollapsed === true;
+
+    const transform = raw.mapTransform;
+    if (
+      transform &&
+      Number.isFinite(transform.scale) &&
+      transform.scale > 0 &&
+      Number.isFinite(transform.offsetX) &&
+      Number.isFinite(transform.offsetY)
+    ) {
+      base.mapTransform = {
+        scale: transform.scale,
+        offsetX: transform.offsetX,
+        offsetY: transform.offsetY,
+      };
+    }
+
+    base.editorGrid = sanitizeEditorGridState(raw.editorGrid);
+
+    return base;
+  }
+
+  function loadEncounterViewState() {
+    const key = getEncounterViewStateStorageKey();
+    const fallback = createDefaultEncounterViewState();
+    if (!key) {
+      state.encounterViewState = fallback;
+      return fallback;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : null;
+      const nextState = sanitizeEncounterViewState(parsed);
+      state.encounterViewState = nextState;
+      return nextState;
+    } catch (_error) {
+      state.encounterViewState = fallback;
+      return fallback;
+    }
+  }
+
+  function persistEncounterViewState(patch = {}) {
+    const key = getEncounterViewStateStorageKey();
+    const nextState = sanitizeEncounterViewState({
+      ...(state.encounterViewState || createDefaultEncounterViewState()),
+      ...(patch || {}),
+    });
+    state.encounterViewState = nextState;
+    if (!key) return nextState;
+
+    try {
+      window.localStorage.setItem(key, JSON.stringify(nextState));
+    } catch (_error) {}
+    return nextState;
+  }
+
+  function setToolsDrawerOpen(isOpen) {
+    const drawer = document.getElementById("ae-tools-drawer");
+    if (!drawer) return;
+    drawer.classList.toggle("open", !!isOpen && canEditEncounter());
+  }
+
+  function setTimelineCollapsed(isCollapsed) {
+    const timelineSidebar = document.querySelector(".ae-timeline-sidebar");
+    const timelineToggle = document.getElementById("btn-ae-toggle-timeline");
+    if (timelineSidebar) {
+      timelineSidebar.classList.toggle("collapsed", !!isCollapsed);
+    }
+    if (timelineToggle) {
+      timelineToggle.classList.toggle("is-collapsed", !!isCollapsed);
+    }
+  }
+
+  function restoreEncounterChromeState() {
+    const viewState = state.encounterViewState || createDefaultEncounterViewState();
+    setToolsDrawerOpen(viewState.toolsDrawerOpen);
+    setTimelineCollapsed(viewState.timelineCollapsed);
+  }
+
+  function restoreEncounterMapTransform() {
+    const map = state.map;
+    const transform = state.encounterViewState?.mapTransform;
+    if (!map || !transform) return;
+    map.scale = transform.scale;
+    map.offsetX = transform.offsetX;
+    map.offsetY = transform.offsetY;
+    map.draw();
+  }
+
+  function setupEncounterViewPersistence() {
+    if (runtime.encounterViewPersistenceBound) return;
+    runtime.encounterViewPersistenceBound = true;
+
+    document.addEventListener("ae-map-transform", function (event) {
+      const detail = event?.detail || {};
+      if (
+        !Number.isFinite(detail.scale) ||
+        !Number.isFinite(detail.offsetX) ||
+        !Number.isFinite(detail.offsetY)
+      ) {
+        return;
+      }
+      persistEncounterViewState({
+        mapTransform: {
+          scale: detail.scale,
+          offsetX: detail.offsetX,
+          offsetY: detail.offsetY,
+        },
+      });
+    });
+
+    document.addEventListener("ae-layer-change", function (event) {
+      const layer = event?.detail?.layer;
+      if (!MAP_LAYER_LABELS[layer]) return;
+      persistEncounterViewState({ activeLayer: layer });
+    });
+
+    const toolsDrawer = document.getElementById("ae-tools-drawer");
+    if (toolsDrawer && typeof MutationObserver !== "undefined") {
+      runtime.toolsDrawerObserver = new MutationObserver(function () {
+        persistEncounterViewState({
+          toolsDrawerOpen: toolsDrawer.classList.contains("open"),
+        });
+      });
+      runtime.toolsDrawerObserver.observe(toolsDrawer, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+    }
+
+    const timelineSidebar = document.querySelector(".ae-timeline-sidebar");
+    if (timelineSidebar && typeof MutationObserver !== "undefined") {
+      runtime.timelineSidebarObserver = new MutationObserver(function () {
+        persistEncounterViewState({
+          timelineCollapsed: timelineSidebar.classList.contains("collapsed"),
+        });
+      });
+      runtime.timelineSidebarObserver.observe(timelineSidebar, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+    }
+  }
+
   async function init() {
     if (!encounterTurns) {
       alert("Error cargando módulo de turnos del encuentro.");
@@ -148,6 +346,7 @@
     }
     state.user = session.user;
     state.currentPlayer = await fetchCurrentPlayerByUserId(session.user.id);
+    loadEncounterViewState();
 
     // DOM Elements
     els.name = document.getElementById("ae-encounter-name");
@@ -221,6 +420,8 @@
       canEditEncounter,
       getMap: () => state.map,
       getLightSwitchManager: () => lightSwitchManager,
+      updateEncounterWallSegment: (wallId, updater, options) =>
+        updateEncounterWallSegment(wallId, updater, options),
       saveEncounter: () => saveEncounter(),
     });
     wallContextMenuController = window.AEWallContextMenu?.createController?.({
@@ -234,6 +435,7 @@
     elementsToolbarController = window.AEElementsToolbar?.createController?.({
       getWallDrawer: () => wallDrawer,
       getPaperEditor: () => paperWallEditor,
+      getMap: () => state.map,
       canEditEncounter,
       saveEncounter: () => saveEncounter(),
     });
@@ -355,6 +557,7 @@
       openModal: (inst) => openModal(inst),
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
+      getPaperEditor: () => paperWallEditor,
       getApplyBroadcastInitiative: () => applyBroadcastInitiative,
     });
     instanceManager = window.AEInstanceManager?.createController?.({
@@ -371,6 +574,10 @@
 
     const ok = await loadEncounterData();
     if (!ok) return false;
+    if (MAP_LAYER_LABELS[state.encounterViewState?.activeLayer]) {
+      state.activeMapLayer = state.encounterViewState.activeLayer;
+    }
+    restoreEncounterChromeState();
     await loadCharacterSheets();
     const rosterResult = pruneEncounterRoster();
     syncEncounterPCDataFromSheets();
@@ -389,9 +596,7 @@
     if (!state.encounter.data.tileMap || typeof state.encounter.data.tileMap !== "object") {
       state.encounter.data.tileMap = {};
     }
-    if (!Array.isArray(state.encounter.data.walls)) {
-      state.encounter.data.walls = [];
-    }
+    ensureEncounterWallData(state.encounter.data);
     if (!Array.isArray(state.encounter.data.lights)) {
       state.encounter.data.lights = [];
     }
@@ -414,6 +619,7 @@
         switches: state.encounter.data.switches,
       },
     );
+    restoreEncounterMapTransform();
 
     // Init Tile Painter (narrator only)
     if (window.TilePainter) {
@@ -431,40 +637,20 @@
       state.map._tilePainter = tilePainter;
     }
 
-    // Init Wall Drawer (narrator only)
-    if (window.WallDrawer) {
-      wallDrawer = window.WallDrawer.createWallDrawer({
-        getMap: () => state.map,
-        getWalls: () => state.encounter?.data?.walls || [],
-        setWalls: (walls) => {
-          if (state.encounter?.data) {
-            state.encounter.data.walls = walls;
-            if (state.map) state.map.walls = walls;
-          }
-        },
-        onChanged: () => { state.map?.invalidateFog?.(); state.map?.invalidateLightingWalls?.(); saveEncounter(); },
-        canEdit: canEditEncounter,
-        onReturnToSelection: () => {
-          // Dispatch event for elements toolbar to switch to selection mode
-          document.dispatchEvent(new CustomEvent("ae-wall-drawer-return-to-selection"));
-        },
-      });
-      state.map._wallDrawer = wallDrawer;
-    }
+    wallDrawer = null;
+    state.map._wallDrawer = null;
 
     // Init Paper.js Wall Editor (for elements layer editing)
     if (window.PaperWallEditor) {
       var mapContainer = document.getElementById("ae-map-container");
       paperWallEditor = window.PaperWallEditor.createEditor({
         container: mapContainer,
-        // Paper.js JSON is the source of truth for editing
-        getPaperJSON: () => state.encounter?.data?.paperPaths || null,
-        setPaperJSON: (json) => {
+        getWallPaths: () => state.encounter?.data?.wallPaths || [],
+        setWallPaths: (wallPaths) => {
           if (state.encounter?.data) {
-            state.encounter.data.paperPaths = json;
+            state.encounter.data.wallPaths = window.AEWallPaths?.normalizeWallPaths?.(wallPaths || []) || [];
           }
         },
-        // Walls are derived for the game engine
         setWalls: (walls) => {
           if (state.encounter?.data) {
             state.encounter.data.walls = walls;
@@ -483,11 +669,21 @@
           offsetY: state.map?.offsetY || 0,
           gridSize: state.map?.gridSize || 40,
         }),
+        getGridState: () => sanitizeEditorGridState(state.encounterViewState?.editorGrid),
+        onGridStateChange: (gridState) => {
+          persistEncounterViewState({
+            editorGrid: sanitizeEditorGridState(gridState),
+          });
+        },
         // Start panning on the map directly
         onStartPan: (clientX, clientY) => {
           if (state.map) {
-            state.map.isPanning = true;
-            state.map.dragStart = { x: clientX, y: clientY };
+            if (typeof state.map.startPan === "function") {
+              state.map.startPan(clientX, clientY);
+            } else {
+              state.map.isPanning = true;
+              state.map.dragStart = { x: clientX, y: clientY };
+            }
           }
         },
         // Context menu for vertices/walls
@@ -508,7 +704,10 @@
           } else if (info.type === "wall") {
             wallContextMenuController?.open({
               type: "wall",
-              wall: { id: info.path?.data?.id, type: info.path?.data?.type || "wall" },
+              wall: info.wall || null,
+              curveIndex: info.curveIndex,
+              curveType: info.curveType,
+              isDoorOpen: info.isDoorOpen,
               cellX: info.location?.point?.x,
               cellY: info.location?.point?.y,
               clientX: info.clientX,
@@ -710,10 +909,18 @@
 
     state.map.onWallDoorToggle = (door) => {
       if (!state.encounter?.data) return;
+      updateEncounterWallSegment(door.id, function (segment) {
+        segment.doorOpen = !!door.doorOpen;
+        return segment;
+      }, { draw: false });
       // Player checks — revert if locked or too far (tryToggleDoor already mutated)
       if (!canEditEncounter()) {
         if (door.locked) {
           door.doorOpen = !door.doorOpen;
+          updateEncounterWallSegment(door.id, function (segment) {
+            segment.doorOpen = !!door.doorOpen;
+            return segment;
+          }, { draw: false });
           state.map.draw();
           return;
         }
@@ -721,6 +928,10 @@
         var midY = (door.y1 + door.y2) / 2;
         if (!isPlayerNearPosition(midX, midY, PLAYER_INTERACT_RANGE)) {
           door.doorOpen = !door.doorOpen;
+          updateEncounterWallSegment(door.id, function (segment) {
+            segment.doorOpen = !!door.doorOpen;
+            return segment;
+          }, { draw: false });
           state.map.draw();
           return;
         }
@@ -757,6 +968,7 @@
 
     setupMapControls();
     setupElementsToolbarListener();
+    setupEncounterViewPersistence();
     applyPermissionsUI();
     render();
     registerGlobalLifecycleListeners();
@@ -888,6 +1100,59 @@
     data.map = normalizeMapLayerData(data.map);
     data.designTokens = normalizeDesignTokensData(data.designTokens);
     data.mapEffects = normalizeMapEffectsData(data.mapEffects);
+  }
+
+  function ensureEncounterWallData(data) {
+    if (!data || typeof data !== "object") return;
+    var wallPathsDomain = window.AEWallPaths;
+    var sourcePaths = Array.isArray(data.wallPaths) ? data.wallPaths : null;
+    if (!sourcePaths && Array.isArray(data.walls) && data.walls.length) {
+      sourcePaths = wallPathsDomain?.createWallPathsFromWalls?.(data.walls) || [];
+    }
+    data.wallPaths = wallPathsDomain?.normalizeWallPaths?.(sourcePaths || []) || [];
+    data.walls = wallPathsDomain?.compileWalls?.(data.wallPaths) || [];
+  }
+
+  function syncEncounterWalls(options) {
+    if (!state.encounter?.data) return [];
+    ensureEncounterWallData(state.encounter.data);
+    var walls = state.encounter.data.walls || [];
+    if (state.map) {
+      state.map.walls = walls;
+      if (options?.invalidateFog) state.map.invalidateFog?.();
+      if (options?.invalidateFogWalls) state.map.invalidateFogWalls?.();
+      if (options?.invalidateLightingWalls) state.map.invalidateLightingWalls?.();
+      if (options?.draw) state.map.draw();
+    }
+    return walls;
+  }
+
+  function setEncounterWallPaths(nextWallPaths, options = {}) {
+    if (!state.encounter?.data) return [];
+    state.encounter.data.wallPaths = window.AEWallPaths?.normalizeWallPaths?.(nextWallPaths || []) || [];
+    state.encounter.data.walls = window.AEWallPaths?.compileWalls?.(state.encounter.data.wallPaths) || [];
+    if (!options.skipMapSync) {
+      syncEncounterWalls({
+        invalidateFog: !!options.invalidateFog,
+        invalidateFogWalls: !!options.invalidateFogWalls,
+        invalidateLightingWalls: !!options.invalidateLightingWalls,
+        draw: !!options.draw,
+      });
+    }
+    return state.encounter.data.walls;
+  }
+
+  function updateEncounterWallSegment(wallId, updater, options = {}) {
+    if (!state.encounter?.data?.wallPaths) return null;
+    var result = window.AEWallPaths?.updateWallSegment?.(state.encounter.data.wallPaths, wallId, updater);
+    if (!result?.changed) return result?.wall || null;
+    setEncounterWallPaths(result.wallPaths, {
+      invalidateFog: !!options.invalidateFog,
+      invalidateFogWalls: !!options.invalidateFogWalls,
+      invalidateLightingWalls: !!options.invalidateLightingWalls,
+      draw: !!options.draw,
+    });
+    return result.wall || null;
   }
 
   function normalizeMapEffectsData(rawEffects) {
@@ -1149,8 +1414,8 @@
     }
     const toolsDrawer = document.getElementById("ae-tools-drawer");
     if (toolsDrawer) {
-      toolsDrawer.classList.remove("open");
       toolsDrawer.style.display = canEditEncounter() ? "" : "none";
+      setToolsDrawerOpen(canEditEncounter() && !!state.encounterViewState?.toolsDrawerOpen);
     }
     if (els.layerToolbar) {
       els.layerToolbar.style.display = "flex";
@@ -1216,6 +1481,7 @@
         state.map.offsetX = 0;
         state.map.offsetY = 0;
         state.map.scale = 1.0;
+        state.map.dispatchTransformEvent?.();
         state.map.draw();
       }
     });
@@ -1226,6 +1492,7 @@
         return;
       }
       const nextActive = !state.map.measureToolActive;
+      elementsToolbarController?.setMeasurementMode?.(nextActive);
       state.map.setMeasurementToolActive(nextActive);
       rulerBtn.classList.toggle("is-active", nextActive);
     });
@@ -1738,12 +2005,9 @@
       state.encounter.data.tokens = [];
     }
     normalizeEncounterLayerData(state.encounter.data);
-    const uiLayer = state.encounter.data?.ui?.activeLayer;
-    if (MAP_LAYER_LABELS[uiLayer]) {
-      state.activeMapLayer = uiLayer;
-    } else {
-      state.activeMapLayer = "entities";
-    }
+    ensureEncounterWallData(state.encounter.data);
+    state.lastEncounterSyncKey = buildEncounterSyncKey(state.encounter);
+    state.activeMapLayer = "entities";
 
     const { changed } = sanitizeEncounterTokens();
 
