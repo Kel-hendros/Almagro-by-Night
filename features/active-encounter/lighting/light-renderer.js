@@ -120,6 +120,11 @@
     return Math.min(1, Math.max(0, n));
   }
 
+  function getLightTintStrength(light) {
+    var tint = clamp01(light && light.tintStrength != null ? light.tintStrength : 0.35);
+    return Math.max(0.1, tint);
+  }
+
   function normalizeVisionProfile(source) {
     var profile = source && typeof source === "object" ? source : {};
     return {
@@ -632,6 +637,9 @@
               this.ctx.drawImage(lighting.overlayCanvas, bounds.minX * this.gridSize, bounds.minY * this.gridSize);
             }
           }
+          // Keep the map draw loop alive for one more frame so the throttled
+          // lighting rebuild actually happens once the cooldown expires.
+          this._drawDirty = true;
           return;
         }
         lighting._lastFullRender = now;
@@ -726,9 +734,14 @@
       var isBackgroundLayer = this.activeLayer === "background";
       var fog = this._fog;
       var isNarratorNormal = !fog || !fog.isNarrator || (!fog.impersonateInstanceId && fog.isNarrator);
+      var hasSelectionConnections = !!selectedLightId || !!selectedSwitchId;
 
-      // Connection lines (narrator only, background layer)
-      if (isNarratorNormal && isBackgroundLayer && switches.length > 0 && lights.length > 0) {
+      var linkMode = this._lightLinkMode || null;
+      var linkPointer = this._lightLinkPointer || null;
+      var showConnectionLines = isNarratorNormal && (isBackgroundLayer || !!linkMode || hasSelectionConnections);
+
+      // Connection lines
+      if (showConnectionLines && switches.length > 0 && lights.length > 0) {
         ctx.save();
         for (var si = 0; si < switches.length; si++) {
           var sw = switches[si];
@@ -746,6 +759,7 @@
             var lx = light.x * gs;
             var ly = light.y * gs;
             var isConnSelected = isSwSelected || selectedLightId === light.id;
+            if (!isBackgroundLayer && !linkMode && !isConnSelected) continue;
 
             ctx.strokeStyle = isConnSelected ? "rgba(255,220,80,0.7)" : "rgba(255,220,80,0.25)";
             ctx.lineWidth = (isConnSelected ? 2 : 1) / sc;
@@ -757,6 +771,47 @@
           }
         }
         ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      if (showConnectionLines && linkMode) {
+        ctx.save();
+        var previewSwitch = null;
+        if (linkMode.fromType === "switch") {
+          for (var swi = 0; swi < switches.length; swi++) {
+            if (switches[swi].id === linkMode.fromId) {
+              previewSwitch = switches[swi];
+              break;
+            }
+          }
+        } else if (linkMode.fromType === "light") {
+          var previewLight = null;
+          for (var lgi = 0; lgi < lights.length; lgi++) {
+            if (lights[lgi].id === linkMode.fromId) {
+              previewLight = lights[lgi];
+              break;
+            }
+          }
+          if (previewLight) {
+            for (var swi2 = 0; swi2 < switches.length; swi2++) {
+              if ((switches[swi2].lightIds || []).indexOf(previewLight.id) >= 0) {
+                previewSwitch = switches[swi2];
+                break;
+              }
+            }
+          }
+        }
+
+        if (previewSwitch && linkPointer) {
+          ctx.strokeStyle = "rgba(255,220,80,0.85)";
+          ctx.lineWidth = 2 / sc;
+          ctx.setLineDash([6 / sc, 3 / sc]);
+          ctx.beginPath();
+          ctx.moveTo(previewSwitch.x * gs, previewSwitch.y * gs);
+          ctx.lineTo(linkPointer.x * gs, linkPointer.y * gs);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
         ctx.restore();
       }
 
@@ -981,15 +1036,17 @@
   function computeWallsHash(walls) {
     if (!walls || walls.length === 0) return "0";
     var hash = walls.length + ":";
-    // Sample first, middle, and last walls + door states
-    var indices = [0, Math.floor(walls.length / 2), walls.length - 1];
-    for (var i = 0; i < indices.length; i++) {
-      var w = walls[indices[i]];
-      if (w) {
-        hash += (w.x1 || 0).toFixed(2) + "," + (w.y1 || 0).toFixed(2) + "," +
-                (w.x2 || 0).toFixed(2) + "," + (w.y2 || 0).toFixed(2) + "," +
-                (w.doorOpen ? 1 : 0) + ";";
-      }
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      if (!w) continue;
+      hash +=
+        (w.id || i) + "," +
+        (w.type || "wall") + "," +
+        (w.x1 || 0).toFixed(2) + "," +
+        (w.y1 || 0).toFixed(2) + "," +
+        (w.x2 || 0).toFixed(2) + "," +
+        (w.y2 || 0).toFixed(2) + "," +
+        (w.doorOpen ? 1 : 0) + ";";
     }
     return hash;
   }
@@ -1223,7 +1280,8 @@
       var tintCx = tintEntry.light.x * gs + offX;
       var tintCy = tintEntry.light.y * gs + offY;
       var tintRadiusPx = tintEntry.radius * gs;
-      var tintAlpha = tintIntensity * 0.08;
+      var tintStrength = getLightTintStrength(tintEntry.light);
+      var tintAlpha = tintIntensity * 0.22 * tintStrength;
       var tintRgb = hexToRgb(tintEntry.light.color || "#ffcc66");
 
       ctx.save();

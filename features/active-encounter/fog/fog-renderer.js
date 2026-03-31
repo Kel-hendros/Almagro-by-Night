@@ -5,9 +5,10 @@
 
   var BLUR_RADIUS = 6;
   var BLUR_PAD = 2;
-  // Explored memory should preserve the underlying map art and only dim it
-  // heavily; a neutral gray tint turns remembered terrain into a flat blob.
-  var EXPLORED_MEMORY_FILL = "rgba(0,0,0,0.72)";
+  // Explored memory should read as darker and more washed out than live sight,
+  // but without adding expensive post-processing passes.
+  var EXPLORED_MEMORY_TINT_RGB = { r: 12, g: 13, b: 16 };
+  var EXPLORED_MEMORY_FILL = "rgba(12,13,16,0.92)";
 
   function clamp01(value) {
     var n = parseFloat(value);
@@ -17,25 +18,32 @@
 
   /**
    * Compute the explored memory fill based on ambient light.
-   * When ambient light is low, memory should be at least as dark as the
-   * current visibility to avoid the "I see more in what I don't see" effect.
+   * Keep memory visibly darker and slightly desaturated compared to live sight,
+   * using a single solid fill so we don't pay extra render cost.
    * @param {Object} map - The TacticalMap instance
    * @returns {string} CSS rgba color string
    */
   function computeExploredMemoryFill(map) {
-    var BASELINE_OPACITY = 0.72; // Minimum darkness for memory
-    var EXTRA_DIMMING = 0.15;    // Extra darkness to indicate "memory"
+    var BASELINE_OPACITY = 0.92;
+    var EXTRA_DIMMING = 0.08;
 
     var ambient = map._ambientLight;
     if (!ambient || ambient.intensity >= 1) {
-      return EXPLORED_MEMORY_FILL; // Fallback to fixed value
+      return EXPLORED_MEMORY_FILL;
     }
 
     var ambientIntensity = clamp01(ambient.intensity);
     var ambientDarkness = 1 - ambientIntensity;
     var exploredOpacity = Math.max(BASELINE_OPACITY, Math.min(1, ambientDarkness + EXTRA_DIMMING));
 
-    return "rgba(0,0,0," + exploredOpacity.toFixed(2) + ")";
+    return (
+      "rgba(" +
+      EXPLORED_MEMORY_TINT_RGB.r + "," +
+      EXPLORED_MEMORY_TINT_RGB.g + "," +
+      EXPLORED_MEMORY_TINT_RGB.b + "," +
+      exploredOpacity.toFixed(2) +
+      ")"
+    );
   }
   function hexToRgb(hex) {
     var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -239,15 +247,17 @@
   function computeWallsHash(walls) {
     if (!walls || walls.length === 0) return "0";
     var hash = walls.length + ":";
-    // Sample first, middle, and last walls + door states
-    var indices = [0, Math.floor(walls.length / 2), walls.length - 1];
-    for (var i = 0; i < indices.length; i++) {
-      var w = walls[indices[i]];
-      if (w) {
-        hash += (w.x1 || 0).toFixed(2) + "," + (w.y1 || 0).toFixed(2) + "," +
-                (w.x2 || 0).toFixed(2) + "," + (w.y2 || 0).toFixed(2) + "," +
-                (w.doorOpen ? 1 : 0) + ";";
-      }
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      if (!w) continue;
+      hash +=
+        (w.id || i) + "," +
+        (w.type || "wall") + "," +
+        (w.x1 || 0).toFixed(2) + "," +
+        (w.y1 || 0).toFixed(2) + "," +
+        (w.x2 || 0).toFixed(2) + "," +
+        (w.y2 || 0).toFixed(2) + "," +
+        (w.doorOpen ? 1 : 0) + ";";
     }
     return hash;
   }

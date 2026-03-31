@@ -563,7 +563,7 @@
       // Escape to exit light placement / link mode
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && ctx.isLinkMode?.()) {
-          ctx.handleLinkModeClick?.(-9999, -9999); // cancel
+          ctx.handleLinkModeClick?.(-9999, -9999, { cancel: true });
           e.preventDefault();
           return;
         }
@@ -586,12 +586,6 @@
           var wy = (my - map.offsetY) / map.scale;
           var cellX = wx / map.gridSize;
           var cellY = wy / map.gridSize;
-
-          // Link mode takes priority
-          if (ctx.isLinkMode?.()) {
-            ctx.handleLinkModeClick?.(cellX, cellY);
-            return;
-          }
 
           if (!lightPlaceMode || !canEditEncounter()) return;
 

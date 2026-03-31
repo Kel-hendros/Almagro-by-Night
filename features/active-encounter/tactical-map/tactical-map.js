@@ -773,11 +773,12 @@ window.TacticalMap = class TacticalMap {
     return true;
   }
 
-  setActiveInstance(id) {
+  setActiveInstance(id, options) {
+    const animate = options?.animate !== false;
     if (this.activeInstanceId !== id) {
       this.activeInstanceId = id;
       const token = this.tokens.find((t) => t.instanceId === id);
-      if (token) {
+      if (token && animate) {
         this.activeTokenAnim = {
           tokenId: token.id,
           startAt: performance.now(),
@@ -1047,7 +1048,8 @@ window.TacticalMap = class TacticalMap {
         || this.isResizingBackground
         || this._isDraggingLight || this._isDraggingSwitch
         || (this._fog && this._fog.dirty)
-        || (this.mapEffects && this.mapEffects.length > 0);
+        || (this.mapEffects && this.mapEffects.length > 0)
+        || !!this.activeTokenAnim;
       if (!needsDraw) {
         // Check for active token animations
         var states = this.tokenRenderState;

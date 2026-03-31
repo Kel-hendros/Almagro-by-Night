@@ -271,11 +271,10 @@
       if (visibilityBtnEl) visibilityBtnEl.style.display = canManage ? "" : "none";
       if (deleteBtnEl) deleteBtnEl.style.display = canManage ? "" : "none";
 
-      // Impersonate: only for narrator, only when fog is enabled
+      // Impersonate: narrator-only, and only meaningful for PJ instances.
       if (impersonateBtnEl) {
-        var fogEnabled = !!state.encounter?.data?.fog?.enabled;
         var instance = getInstanceByTokenId(tokenId);
-        var showImpersonate = canManage && fogEnabled && instance;
+        var showImpersonate = canManage && !!instance?.isPC;
         impersonateBtnEl.style.display = showImpersonate ? "" : "none";
         if (showImpersonate) {
           refreshImpersonateState(tokenId);

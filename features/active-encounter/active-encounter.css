@@ -2635,9 +2635,9 @@ html.embed-mode .ae-vtt-layout {
 
 /* ── Marker Context Menu ── */
 .ae-marker-context-menu {
-    width: 210px;
+    width: auto;
     min-width: 210px;
-    max-width: 210px;
+    max-width: min(340px, calc(100vw - 24px));
 }
 .ae-marker-context-menu.is-expanded {
     width: 460px;
@@ -2713,6 +2713,9 @@ html.embed-mode .ae-vtt-layout {
     align-items: center;
     gap: 6px;
 }
+.ae-marker-prop--color-row {
+    align-items: flex-start;
+}
 .ae-marker-prop label {
     font-size: 0.68rem;
     color: #999;
@@ -2720,6 +2723,31 @@ html.embed-mode .ae-vtt-layout {
     letter-spacing: 0.4px;
     min-width: 46px;
     flex-shrink: 0;
+}
+.ae-marker-inline-label {
+    min-width: auto;
+    margin: 0;
+    font-size: 0.65rem;
+    opacity: 0.8;
+}
+.ae-marker-color-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+.ae-marker-tint-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 140px;
+}
+.ae-marker-tint-controls input[type="range"] {
+    flex: 1;
+    min-width: 72px;
 }
 .ae-marker-prop input[type="range"] {
     flex: 1;

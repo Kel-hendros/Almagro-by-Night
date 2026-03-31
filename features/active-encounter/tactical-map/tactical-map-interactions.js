@@ -260,33 +260,64 @@
      * Find an interactive marker (door/window, light, switch) near a cell position.
      * Returns { type, wall|light|sw } or null.
      */
-    proto.getMarkerAt = function getMarkerAt(cellX, cellY) {
-      var THRESHOLD = 0.6;
+    proto.getMarkerAt = function getMarkerAt(cellX, cellY, screenX, screenY) {
+      var CELL_THRESHOLD = 0.6;
+      var SCREEN_THRESHOLD_PX = 14;
+      var bestHit = null;
+      var bestDistance = Infinity;
+
+      function considerMarker(markerCellX, markerCellY, payload) {
+        var distance = Infinity;
+        if (Number.isFinite(screenX) && Number.isFinite(screenY)) {
+          var markerScreenX = markerCellX * this.gridSize * this.scale + this.offsetX;
+          var markerScreenY = markerCellY * this.gridSize * this.scale + this.offsetY;
+          var dxPx = screenX - markerScreenX;
+          var dyPx = screenY - markerScreenY;
+          distance = Math.sqrt(dxPx * dxPx + dyPx * dyPx);
+          if (distance > SCREEN_THRESHOLD_PX) return;
+        } else {
+          var dxCell = cellX - markerCellX;
+          var dyCell = cellY - markerCellY;
+          distance = Math.sqrt(dxCell * dxCell + dyCell * dyCell);
+          if (distance > CELL_THRESHOLD) return;
+        }
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestHit = payload;
+        }
+      }
+
       // Doors / Windows
       var walls = this.walls || [];
       for (var i = 0; i < walls.length; i++) {
         var w = walls[i];
         if (w.type !== "door" && w.type !== "window") continue;
+        if (typeof this.isWallMarkerVisibleToViewer === "function" && !this.isWallMarkerVisibleToViewer(w)) {
+          continue;
+        }
         var mx = (w.x1 + w.x2) / 2;
         var my = (w.y1 + w.y2) / 2;
-        var dd = Math.sqrt((cellX - mx) * (cellX - mx) + (cellY - my) * (cellY - my));
-        if (dd < THRESHOLD) return { type: w.type, wall: w };
+        considerMarker.call(this, mx, my, { type: w.type, wall: w });
       }
       // Lights
       var lights = this.lights || [];
       for (var li = 0; li < lights.length; li++) {
         var l = lights[li];
-        var ld = Math.sqrt((cellX - l.x) * (cellX - l.x) + (cellY - l.y) * (cellY - l.y));
-        if (ld < THRESHOLD) return { type: "light", light: l };
+        if (typeof this.isMarkerVisibleToViewer === "function" && !this.isMarkerVisibleToViewer(l.x, l.y)) {
+          continue;
+        }
+        considerMarker.call(this, l.x, l.y, { type: "light", light: l });
       }
       // Switches
       var switches = this.switches || [];
       for (var si = 0; si < switches.length; si++) {
         var s = switches[si];
-        var sd = Math.sqrt((cellX - s.x) * (cellX - s.x) + (cellY - s.y) * (cellY - s.y));
-        if (sd < THRESHOLD) return { type: "switch", sw: s };
+        if (typeof this.isMarkerVisibleToViewer === "function" && !this.isMarkerVisibleToViewer(s.x, s.y)) {
+          continue;
+        }
+        considerMarker.call(this, s.x, s.y, { type: "switch", sw: s });
       }
-      return null;
+      return bestHit;
     };
 
     proto.getDesignTokenRotateHandleAt = function getDesignTokenRotateHandleAt(
@@ -485,6 +516,7 @@
       const worldCellX = worldX / this.gridSize;
       const worldCellY = worldY / this.gridSize;
       const layer = this.activeLayer || "entities";
+      const markerHit = this.getMarkerAt(worldCellX, worldCellY, mouseX, mouseY);
 
       // Tile painter intercept
       if (this._tilePainter && this._tilePainter.isActive()) {
@@ -523,18 +555,18 @@
         }
       }
 
+      if (e.button === 0 && typeof this.isLinkModeActive === "function" && this.isLinkModeActive()) {
+        if (typeof this.onLinkModeClick === "function") {
+          this.onLinkModeClick(worldCellX, worldCellY);
+          e.preventDefault();
+          this.draw();
+          return;
+        }
+      }
+
       // Light interaction: only on elements layer
       if (e.button === 0 && layer === "elements" && this.lights && this.lights.length) {
-        var clickedLight = null;
-        var lightThreshold = 0.5; // in grid cells (~25px at zoom 1)
-        for (var li = 0; li < this.lights.length; li++) {
-          var lt = this.lights[li];
-          var ldx = worldCellX - lt.x, ldy = worldCellY - lt.y;
-          if (Math.sqrt(ldx * ldx + ldy * ldy) < lightThreshold) {
-            clickedLight = lt;
-            break;
-          }
-        }
+        var clickedLight = markerHit && markerHit.type === "light" ? markerHit.light : null;
         if (clickedLight) {
           this.selectedLightId = clickedLight.id;
           this._isDraggingLight = true;
@@ -560,12 +592,7 @@
 
       // Switch interaction: only on elements layer
       if (e.button === 0 && layer === "elements" && this.switches && this.switches.length) {
-        var clickedSwitch = null;
-        for (var swi = 0; swi < this.switches.length; swi++) {
-          var swt = this.switches[swi];
-          var sdx = worldCellX - swt.x, sdy = worldCellY - swt.y;
-          if (Math.sqrt(sdx * sdx + sdy * sdy) < 0.5) { clickedSwitch = swt; break; }
-        }
+        var clickedSwitch = markerHit && markerHit.type === "switch" ? markerHit.sw : null;
         if (clickedSwitch) {
           this.selectedSwitchId = clickedSwitch.id;
           this.selectedLightId = null;
@@ -601,16 +628,10 @@
 
       // Switch toggle from any layer (like door toggle)
       if (e.button === 0 && this.switches && this.switches.length && layer !== "background") {
-        for (var swi = 0; swi < this.switches.length; swi++) {
-          var swt = this.switches[swi];
-          var sdx = worldCellX - swt.x, sdy = worldCellY - swt.y;
-          if (Math.sqrt(sdx * sdx + sdy * sdy) < 0.5) {
-            if (typeof this.onSwitchToggle === "function") {
-              this.onSwitchToggle(swt.id);
-              e.preventDefault();
-              return;
-            }
-          }
+        if (markerHit && markerHit.type === "switch" && typeof this.onSwitchToggle === "function") {
+          this.onSwitchToggle(markerHit.sw.id);
+          e.preventDefault();
+          return;
         }
       }
 
@@ -620,7 +641,7 @@
           typeof window.WallDrawer?.tryToggleDoor === "function" &&
           !(this._wallDrawer && this._wallDrawer.isActive())) {
         var tokenAtClick = typeof this.getTokenAt === "function" ? this.getTokenAt(worldX, worldY) : null;
-        if (!tokenAtClick) {
+        if (!tokenAtClick && (!markerHit || markerHit.type === "door" || markerHit.type === "window")) {
           var toggledDoor = window.WallDrawer.tryToggleDoor(worldCellX, worldCellY, this.walls);
           if (toggledDoor && typeof this.onWallDoorToggle === "function") {
             this.onWallDoorToggle(toggledDoor);
@@ -633,7 +654,6 @@
 
       // Right-click on interactive markers — works from any layer
       if (e.button === 2) {
-        var markerHit = this.getMarkerAt(worldCellX, worldCellY);
         if (markerHit && this.onMarkerContext) {
           e.preventDefault();
           markerHit.clientX = e.clientX;
@@ -962,15 +982,22 @@
     };
 
     proto.handleMouseMove = function handleMouseMove(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const worldX = (mouseX - this.offsetX) / this.scale;
+      const worldY = (mouseY - this.offsetY) / this.scale;
+      const cellX = worldX / this.gridSize;
+      const cellY = worldY / this.gridSize;
+
+      if (typeof this.isLinkModeActive === "function" && this.isLinkModeActive()) {
+        if (typeof this.onLinkModeHover === "function") {
+          this.onLinkModeHover(cellX, cellY);
+        }
+      }
+
       // Tile painter intercept
       if (this._tilePainter && this._tilePainter.isActive()) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        const worldX = (mouseX - this.offsetX) / this.scale;
-        const worldY = (mouseY - this.offsetY) / this.scale;
-        const cellX = worldX / this.gridSize;
-        const cellY = worldY / this.gridSize;
         if (this._tilePainter.handleMouseMove(cellX, cellY)) return;
       }
 

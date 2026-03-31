@@ -8,6 +8,26 @@
     var _switchPopover = null;
     var _linkMode = null;
 
+    function syncLinkModeToMap() {
+      var map = getMap();
+      if (!map) return;
+      map._lightLinkMode = _linkMode
+        ? {
+            fromType: _linkMode.fromType,
+            fromId: _linkMode.fromId,
+          }
+        : null;
+      map._lightLinkPointer = _linkMode?.pointer
+        ? { x: _linkMode.pointer.x, y: _linkMode.pointer.y }
+        : null;
+
+      if (_linkMode) {
+        map.selectedSwitchId = _linkMode.fromType === "switch" ? _linkMode.fromId : null;
+        map.selectedLightId = _linkMode.fromType === "light" ? _linkMode.fromId : null;
+      }
+      map.draw?.();
+    }
+
     // ── Light management ──
 
     function generateLightId() {
@@ -19,7 +39,7 @@
       if (!data) return;
       var lights = data.lights || [];
       var count = lights.length + 1;
-      lights.push({ id: generateLightId(), name: "Luz " + count, x: x, y: y, radius: 4, color: "#ffcc66", intensity: 0.8 });
+      lights.push({ id: generateLightId(), name: "Luz " + count, x: x, y: y, radius: 4, color: "#ffcc66", intensity: 0.8, tintStrength: 0.35 });
       data.lights = lights;
       var map = getMap();
       if (map) { map.lights = lights; map.invalidateLighting?.(); map.draw(); }
@@ -69,11 +89,12 @@
       var rect = map.canvas.getBoundingClientRect();
       var screenX = rect.left + map.offsetX + light.x * gs * scale;
       var screenY = rect.top + map.offsetY + light.y * gs * scale;
+      var tintStrength = Math.max(0.1, Math.min(1, parseFloat(light.tintStrength != null ? light.tintStrength : 0.35) || 0.35));
 
       var pop = document.createElement("div");
       pop.className = "ae-light-popover";
       pop.innerHTML =
-        '<div class="ae-light-popover-row"><label>Color</label><input type="color" id="ae-lp-color" value="' + (light.color || "#ffcc66") + '"></div>' +
+        '<div class="ae-light-popover-row"><label>Color</label><div style="display:flex;align-items:center;gap:8px;flex:1;"><input type="color" id="ae-lp-color" value="' + (light.color || "#ffcc66") + '"><label style="font-size:0.72rem;color:#bbb;">Tinte</label><input type="range" id="ae-lp-tint" min="0.1" max="1" step="0.05" value="' + tintStrength + '" style="flex:1;min-width:72px;"><span class="ae-light-range-val" id="ae-lp-tint-val">' + Math.round(tintStrength * 100) + '%</span></div></div>' +
         '<div class="ae-light-popover-row"><label>Radio</label><input type="range" id="ae-lp-radius" min="1" max="15" step="0.5" value="' + (light.radius || 4) + '"><span class="ae-light-range-val" id="ae-lp-radius-val">' + (light.radius || 4) + '</span></div>' +
         '<div class="ae-light-popover-row"><label>Fuerza</label><input type="range" id="ae-lp-intensity" min="0.1" max="1" step="0.05" value="' + (light.intensity != null ? light.intensity : 0.8) + '"><span class="ae-light-range-val" id="ae-lp-int-val">' + Math.round((light.intensity != null ? light.intensity : 0.8) * 100) + '%</span></div>' +
         '<button class="ae-btn ae-btn--secondary ae-btn--full" id="ae-lp-create-switch" type="button" style="margin-top:4px;">Crear interruptor</button>' +
@@ -87,6 +108,11 @@
 
       pop.querySelector("#ae-lp-color").addEventListener("input", function (e) {
         updateLight(light.id, { color: e.target.value });
+      });
+      pop.querySelector("#ae-lp-tint").addEventListener("input", function (e) {
+        var v = parseFloat(e.target.value);
+        pop.querySelector("#ae-lp-tint-val").textContent = Math.round(v * 100) + "%";
+        updateLight(light.id, { tintStrength: v });
       });
       pop.querySelector("#ae-lp-radius").addEventListener("input", function (e) {
         var v = parseFloat(e.target.value); pop.querySelector("#ae-lp-radius-val").textContent = v;
@@ -282,38 +308,52 @@
     // ── Link mode (connect lights ↔ switches) ──
 
     function enterLinkMode(fromType, fromId) {
-      _linkMode = { fromType: fromType, fromId: fromId };
+      _linkMode = { fromType: fromType, fromId: fromId, pointer: null };
       var map = getMap();
       map?.canvas?.classList.add("light-placer-active");
+      syncLinkModeToMap();
     }
 
     function exitLinkMode() {
       _linkMode = null;
       var map = getMap();
       map?.canvas?.classList.remove("light-placer-active");
+      syncLinkModeToMap();
     }
 
-    function handleLinkModeClick(cellX, cellY) {
+    function updateLinkModePointer(cellX, cellY) {
       if (!_linkMode) return false;
+      if (!Number.isFinite(cellX) || !Number.isFinite(cellY)) return false;
+      _linkMode.pointer = { x: cellX, y: cellY };
+      syncLinkModeToMap();
+      return true;
+    }
+
+    function handleLinkModeClick(cellX, cellY, options) {
+      if (!_linkMode) return false;
+      if (options?.cancel === true || !Number.isFinite(cellX) || !Number.isFinite(cellY)) {
+        exitLinkMode();
+        return true;
+      }
       var mode = _linkMode;
+      _linkMode.pointer = { x: cellX, y: cellY };
 
       if (mode.fromType === "switch") {
         var light = findLightAt(cellX, cellY);
         if (light) {
           linkSwitchToLight(mode.fromId, light.id);
-          exitLinkMode();
-          return true;
+          syncLinkModeToMap();
         }
+        return true;
       } else if (mode.fromType === "light") {
         var sw = findSwitchAt(cellX, cellY);
         if (sw) {
           linkSwitchToLight(sw.id, mode.fromId);
-          exitLinkMode();
-          return true;
+          syncLinkModeToMap();
         }
+        return true;
       }
-
-      exitLinkMode();
+      syncLinkModeToMap();
       return true;
     }
 
@@ -334,7 +374,17 @@
       closeSwitchPopover: closeSwitchPopover,
       enterLinkMode: enterLinkMode,
       exitLinkMode: exitLinkMode,
+      updateLinkModePointer: updateLinkModePointer,
       handleLinkModeClick: handleLinkModeClick,
+      getLinkMode: function () {
+        return _linkMode
+          ? {
+              fromType: _linkMode.fromType,
+              fromId: _linkMode.fromId,
+              pointer: _linkMode.pointer ? { x: _linkMode.pointer.x, y: _linkMode.pointer.y } : null,
+            }
+          : null;
+      },
       isLinkMode: function () { return !!_linkMode; },
       destroy: function () { closeLightPopover(); closeSwitchPopover(); exitLinkMode(); },
     };

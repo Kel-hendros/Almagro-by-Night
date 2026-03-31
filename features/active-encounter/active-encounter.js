@@ -488,7 +488,7 @@
       addLight: (x, y) => lightSwitchManager?.addLight(x, y),
       findLightAt: (x, y) => lightSwitchManager?.findLightAt(x, y),
       removeLight: (id) => lightSwitchManager?.removeLight(id),
-      handleLinkModeClick: (x, y) => lightSwitchManager?.handleLinkModeClick(x, y),
+      handleLinkModeClick: (x, y, options) => lightSwitchManager?.handleLinkModeClick(x, y, options),
       isLinkMode: () => lightSwitchManager?.isLinkMode() || false,
     });
     modalController = window.AEInstanceModal?.createController?.({
@@ -654,8 +654,14 @@
         },
         setWalls: (walls) => {
           if (state.encounter?.data) {
+            var previousWalls = state.map?.walls || state.encounter.data.walls || [];
             state.encounter.data.walls = walls;
-            if (state.map) state.map.walls = walls;
+            if (state.map) {
+              state.map.walls = walls;
+              if (typeof state.map._updateWallSpatialIndex === "function") {
+                state.map._updateWallSpatialIndex(previousWalls, walls);
+              }
+            }
           }
         },
         onChanged: () => {
@@ -685,6 +691,14 @@
           return typeof state.map.getMarkerAt === "function"
             ? state.map.getMarkerAt(x, y)
             : null;
+        },
+        clearInteractiveMarkerSelection: () => {
+          if (!state.map) return;
+          if (!state.map.selectedLightId && !state.map.selectedSwitchId) return;
+          state.map.selectedLightId = null;
+          state.map.selectedSwitchId = null;
+          state.map.invalidateLighting?.();
+          state.map.draw?.();
         },
         // Start panning on the map directly
         onStartPan: (clientX, clientY) => {
@@ -865,8 +879,14 @@
     };
     state.map.onMarkerContext = (info) => {
       if (!canEditEncounter()) return;
-      // Only show marker context menu in entities layer
-      if (state.activeMapLayer !== "entities") return;
+      const isElementsLayer = state.activeMapLayer === "elements";
+      const isEntitiesLayer = state.activeMapLayer === "entities";
+      const isLightMarker = info?.type === "light" || info?.type === "switch";
+      if (isLightMarker) {
+        if (!isElementsLayer) return;
+      } else if (!isEntitiesLayer) {
+        return;
+      }
       markerContextMenuController?.open(info);
     };
     state.map.onWallContext = (info) => {
@@ -910,6 +930,14 @@
       if (!state.encounter?.data) return;
       saveEncounter();
     };
+
+    state.map.onLinkModeClick = (x, y) => {
+      lightSwitchManager?.handleLinkModeClick(x, y);
+    };
+    state.map.onLinkModeHover = (x, y) => {
+      lightSwitchManager?.updateLinkModePointer(x, y);
+    };
+    state.map.isLinkModeActive = () => lightSwitchManager?.isLinkMode() || false;
 
     state.map.onCreateLight = (x, y) => {
       if (!state.encounter?.data || !canEditEncounter()) return;
@@ -1139,7 +1167,11 @@
     ensureEncounterWallData(state.encounter.data);
     var walls = state.encounter.data.walls || [];
     if (state.map) {
+      var previousWalls = state.map.walls || [];
       state.map.walls = walls;
+      if (typeof state.map._updateWallSpatialIndex === "function") {
+        state.map._updateWallSpatialIndex(previousWalls, walls);
+      }
       if (options?.invalidateFog) state.map.invalidateFog?.();
       if (options?.invalidateFogWalls) state.map.invalidateFogWalls?.();
       if (options?.invalidateLightingWalls) state.map.invalidateLightingWalls?.();
@@ -1717,6 +1749,7 @@
         mapContextMenuController?.close?.();
         markerContextMenuController?.hide?.();
         wallContextMenuController?.hide?.();
+        lightSwitchManager?.exitLinkMode?.();
       }
 
       if (!canEditEncounter()) return;

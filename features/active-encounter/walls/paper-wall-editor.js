@@ -22,6 +22,7 @@
     var getGridState = opts.getGridState;
     var onGridStateChange = opts.onGridStateChange || function () {};
     var getInteractiveMarkerAt = opts.getInteractiveMarkerAt;
+    var clearInteractiveMarkerSelection = opts.clearInteractiveMarkerSelection || function () {};
     var onStartPan = opts.onStartPan;       // Callback to start map panning
     var onWallContext = opts.onWallContext; // Callback for right-click context menu
 
@@ -1247,6 +1248,7 @@
       selectedSegment = null;
       selectedSegments = [];
       hoveredPath = null;
+      clearInteractiveMarkerSelection();
       syncSelectionStyles();
     }
 
@@ -1255,6 +1257,7 @@
       selectedItems = item ? [item] : [];
       selectedSegment = null;
       selectedSegments = [];
+      clearInteractiveMarkerSelection();
       syncSelectionStyles();
     }
 
@@ -1274,6 +1277,7 @@
         null;
       selectedItem = null;
       selectedItems = [];
+      clearInteractiveMarkerSelection();
       syncSelectionStyles();
     }
 
@@ -1299,6 +1303,9 @@
       dragHasExceededThreshold = false;
       pendingEmptyInteraction = false;
       emptyInteractionDidPan = false;
+      var markerHit = typeof getInteractiveMarkerAt === "function"
+        ? getInteractiveMarkerAt(event.point.x, event.point.y)
+        : null;
 
       // Middle click or Cmd+click: pan
       if (button === 1 || event.event.metaKey) {
@@ -1316,6 +1323,13 @@
             return !(hit.item && hit.item.data && hit.item.data.isOverlay);
           }
         });
+
+        if (markerHit && (!hitResult || hitResult.type !== "segment")) {
+          event.event.preventDefault();
+          event.event.stopPropagation();
+          passEventThroughToMap(event.event);
+          return;
+        }
 
         if (hitResult && onWallContext) {
           event.event.preventDefault();
@@ -1449,6 +1463,15 @@
         }
       });
 
+      if (markerHit && (!hitResult || hitResult.type !== "segment")) {
+        clearSelection();
+        event.event.preventDefault();
+        event.event.stopPropagation();
+        passEventThroughToMap(event.event);
+        dragging = false;
+        return;
+      }
+
       if (hitResult && hitResult.item) {
         var clickedPath = hitResult.item;
         var isShiftSelection = !!(event.modifiers && event.modifiers.shift);
@@ -1474,16 +1497,13 @@
 
         dragging = true;
       } else {
-        if (typeof getInteractiveMarkerAt === "function") {
-          var markerHit = getInteractiveMarkerAt(event.point.x, event.point.y);
-          if (markerHit) {
-            clearSelection();
-            event.event.preventDefault();
-            event.event.stopPropagation();
-            passEventThroughToMap(event.event);
-            dragging = false;
-            return;
-          }
+        if (markerHit) {
+          clearSelection();
+          event.event.preventDefault();
+          event.event.stopPropagation();
+          passEventThroughToMap(event.event);
+          dragging = false;
+          return;
         }
 
         // Clicked on empty space. Defer deselect/pan until we know whether this

@@ -33,6 +33,7 @@
     var lastInfo = null;
     var lastPlacement = null;
     var activePanel = null;
+    var outsideMouseDownHandler = null;
 
     // ── DOM construction ──
 
@@ -190,20 +191,22 @@
       });
       var label = light.name || light.id;
       var isOn = light.on !== false;
+      var tintStrength = Math.max(0.1, Math.min(1, parseFloat(light.tintStrength != null ? light.tintStrength : 0.35) || 0.35));
 
       bodyEl.innerHTML =
         renderHeader(MARKER_EMOJIS.light, label) +
         '<button class="ae-token-context-action" data-action="toggle-light">' + (isOn ? "Apagar" : "Encender") + '</button>' +
         '<div class="ae-marker-props">' +
-          '<div class="ae-marker-prop"><label>Color</label><input type="color" data-field="color" value="' + (light.color || "#ffcc66") + '"></div>' +
+          '<div class="ae-marker-prop ae-marker-prop--color-row"><label>Color</label><div class="ae-marker-color-controls"><input type="color" data-field="color" value="' + (light.color || "#ffcc66") + '"><div class="ae-marker-tint-controls"><label class="ae-marker-inline-label">Tinte</label><input type="range" data-field="tintStrength" min="0.1" max="1" step="0.05" value="' + tintStrength + '"><span class="ae-marker-prop-val" data-val="tintStrength">' + Math.round(tintStrength * 100) + '%</span></div></div></div>' +
           '<div class="ae-marker-prop"><label>Fuerza</label><input type="range" data-field="intensity" min="0.1" max="1" step="0.05" value="' + (light.intensity != null ? light.intensity : 0.8) + '"><span class="ae-marker-prop-val" data-val="intensity">' + Math.round((light.intensity != null ? light.intensity : 0.8) * 100) + '%</span></div>' +
           '<div class="ae-marker-prop"><label>Radio</label><input type="range" data-field="radius" min="1" max="15" step="0.5" value="' + (light.radius || 4) + '"><span class="ae-marker-prop-val" data-val="radius">' + (light.radius || 4) + '</span></div>' +
         '</div>' +
         (linkedSwitches.length > 0
           ? '<div class="ae-marker-linked-title">Interruptores</div>' +
             linkedSwitches.map(function (sw) {
+              var switchLabel = sw.name || sw.id || MARKER_TYPE_LABELS.switch;
               return '<div class="ae-marker-linked-row">' +
-                '<span>' + MARKER_EMOJIS["switch"] + ' ' + escapeHtml(sw.id) + '</span>' +
+                '<span>' + MARKER_EMOJIS["switch"] + ' ' + escapeHtml(switchLabel) + '</span>' +
                 '<button class="ae-marker-unlink" data-switch-id="' + sw.id + '" title="Desvincular">\u2715</button>' +
                 '</div>';
             }).join("")
@@ -223,6 +226,11 @@
       // Color
       bodyEl.querySelector('[data-field="color"]').addEventListener("input", function (e) {
         lsm?.updateLight(light.id, { color: e.target.value });
+      });
+      bodyEl.querySelector('[data-field="tintStrength"]').addEventListener("input", function (e) {
+        var v = parseFloat(e.target.value);
+        bodyEl.querySelector('[data-val="tintStrength"]').textContent = Math.round(v * 100) + "%";
+        lsm?.updateLight(light.id, { tintStrength: v });
       });
       // Intensity
       bodyEl.querySelector('[data-field="intensity"]').addEventListener("input", function (e) {
@@ -388,11 +396,18 @@
       }
     }
 
+    function detachOutsideListener() {
+      if (!outsideMouseDownHandler) return;
+      document.removeEventListener("mousedown", outsideMouseDownHandler);
+      outsideMouseDownHandler = null;
+    }
+
     // ── Public API ──
 
     function open(info) {
       if (!info || !canEditEncounter?.()) { hide(); return; }
       ensureMenu();
+      detachOutsideListener();
       collapsePanel();
       lastInfo = { x: info.clientX, y: info.clientY };
       lastPlacement = null;
@@ -413,17 +428,17 @@
 
       // Close on outside click
       setTimeout(function () {
-        function onOutside(e) {
+        outsideMouseDownHandler = function onOutside(e) {
           if (menuEl && menuEl.contains(e.target)) return;
           hide();
-          document.removeEventListener("mousedown", onOutside);
-        }
-        document.addEventListener("mousedown", onOutside);
+        };
+        document.addEventListener("mousedown", outsideMouseDownHandler);
       }, 50);
     }
 
     function hide() {
       if (!menuEl) return;
+      detachOutsideListener();
       menuEl.classList.remove("is-open", "is-measuring");
       lastInfo = null;
     }
@@ -438,6 +453,7 @@
 
     function destroy() {
       hide();
+      detachOutsideListener();
       if (menuEl?.parentNode) menuEl.parentNode.removeChild(menuEl);
       menuEl = null;
       arrowEl = null;

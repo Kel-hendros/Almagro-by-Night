@@ -194,16 +194,17 @@
   function computeWallsHash(walls) {
     if (!walls || walls.length === 0) return "0";
     var hash = walls.length + ":";
-
-    // Sample first, middle, and last walls for fingerprint
-    var indices = [0, Math.floor(walls.length / 2), walls.length - 1];
-    for (var i = 0; i < indices.length; i++) {
-      var w = walls[indices[i]];
-      if (w) {
-        hash += (w.x1 || 0).toFixed(2) + "," + (w.y1 || 0).toFixed(2) + "," +
-                (w.x2 || 0).toFixed(2) + "," + (w.y2 || 0).toFixed(2) + "," +
-                (w.doorOpen ? 1 : 0) + ";";
-      }
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      if (!w) continue;
+      hash +=
+        (w.id || i) + "," +
+        (w.type || "wall") + "," +
+        (w.x1 || 0).toFixed(2) + "," +
+        (w.y1 || 0).toFixed(2) + "," +
+        (w.x2 || 0).toFixed(2) + "," +
+        (w.y2 || 0).toFixed(2) + "," +
+        (w.doorOpen ? 1 : 0) + ";";
     }
     return hash;
   }
