@@ -54,7 +54,7 @@
       if (map) {
         map._tilePainterHover = null;
         map.canvas.classList.remove("tile-painter-active");
-        map.draw();
+        map.requestDraw?.();
       }
     }
 
@@ -102,7 +102,10 @@
       if (changed) {
         setTileMap(tileMap);
         const map = getMap();
-        if (map) map.draw();
+        if (map) {
+          map.invalidateTileRenderCache?.();
+          map.requestDraw?.();
+        }
       }
       return changed;
     }
@@ -110,7 +113,10 @@
     function clearAll() {
       setTileMap({});
       const map = getMap();
-      if (map) map.draw();
+      if (map) {
+        map.invalidateTileRenderCache?.();
+        map.requestDraw?.();
+      }
       if (onChanged) onChanged();
     }
 
@@ -143,7 +149,7 @@
       const map = getMap();
       if (map) {
         map._tilePainterHover = { cellX: Math.floor(cellX), cellY: Math.floor(cellY), brushSize, textureId: selectedTexture };
-        map.draw();
+        map.requestDraw?.();
       }
       return false;
     }

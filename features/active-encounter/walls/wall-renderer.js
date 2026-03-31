@@ -25,6 +25,7 @@
     grate:  0.16,
     curtain: 0.18,
   };
+  var WALL_VISIBILITY_SAMPLE_OFFSET = 0.18;
   var ERASE_HOVER_COLOR = "#e53935";
 
   function apply(TacticalMap) {
@@ -57,24 +58,32 @@
         return;
       }
 
-      var ctx = this.ctx;
-      var gs = this.gridSize;
-      var currentAreas = [].concat(state.currentAreas || [], state.revealedAreas || []);
-      var exploredAreas = state.exploredAreas || [];
-      var hiddenAreas = state.hiddenAreas || [];
-
-      if (currentAreas.length) {
-        ctx.save();
-        clipToAreas(ctx, currentAreas, hiddenAreas, gs);
-        drawWallsInternal(this, 0.95);
-        ctx.restore();
+      var buckets = getFogVisibleWallBuckets(this, state);
+      if (
+        buckets.explored.length ||
+        buckets.exploredWallChains.length ||
+        buckets.exploredCurtainChains.length
+      ) {
+        drawWallsSubset(
+          this,
+          buckets.explored,
+          buckets.exploredWallChains,
+          buckets.exploredCurtainChains,
+          0.42,
+        );
       }
-
-      if (exploredAreas.length) {
-        ctx.save();
-        clipToAreas(ctx, exploredAreas, currentAreas.concat(hiddenAreas), gs);
-        drawWallsInternal(this, 0.42);
-        ctx.restore();
+      if (
+        buckets.current.length ||
+        buckets.currentWallChains.length ||
+        buckets.currentCurtainChains.length
+      ) {
+        drawWallsSubset(
+          this,
+          buckets.current,
+          buckets.currentWallChains,
+          buckets.currentCurtainChains,
+          0.95,
+        );
       }
     };
 
@@ -401,37 +410,39 @@
     var scale = map.scale;
     var eraseHoverId = map._wallDrawerState?.eraseHoverWallId || null;
     var isElementsActive = !!map._elementsLayerActive;
+    var perfMode = !!map.isPerformanceConstrained?.();
+    var renderCache = ensureWallRenderCache(map, eraseHoverId);
 
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
 
-    // Separate walls by type for continuous path rendering
-    var vectorWallGroups = {
-      wall: [],
-      curtain: [],
-    };
-    var specialWalls = []; // non-standard walls need individual rendering
-
-    for (var i = 0; i < walls.length; i++) {
-      var w = walls[i];
-      if (w.id !== eraseHoverId && (w.type === "wall" || w.type === "curtain")) {
-        vectorWallGroups[w.type].push(w);
-      } else {
-        specialWalls.push(w);
-      }
-    }
-
     // Draw continuous wall families as joined vector paths.
-    if (vectorWallGroups.wall.length > 0) {
-      drawWallsAsVectorPaths(ctx, vectorWallGroups.wall, gs, scale, isElementsActive, "wall");
+    if (renderCache.wallChains.length > 0) {
+      drawWallsAsVectorPaths(
+        ctx,
+        renderCache.wallChains,
+        gs,
+        scale,
+        isElementsActive,
+        "wall",
+        perfMode,
+      );
     }
-    if (vectorWallGroups.curtain.length > 0) {
-      drawWallsAsVectorPaths(ctx, vectorWallGroups.curtain, gs, scale, isElementsActive, "curtain");
+    if (renderCache.curtainChains.length > 0) {
+      drawWallsAsVectorPaths(
+        ctx,
+        renderCache.curtainChains,
+        gs,
+        scale,
+        isElementsActive,
+        "curtain",
+        perfMode,
+      );
     }
 
     // Draw special walls individually so each type can keep its own render rules.
-    for (var j = 0; j < specialWalls.length; j++) {
-      var sw = specialWalls[j];
+    for (var j = 0; j < renderCache.specialWalls.length; j++) {
+      var sw = renderCache.specialWalls[j];
       drawWallSegment(ctx, sw, sw.x1 * gs, sw.y1 * gs, sw.x2 * gs, sw.y2 * gs, gs, scale, eraseHoverId, isElementsActive);
     }
 
@@ -448,31 +459,312 @@
     var gs = map.gridSize;
     var scale = map.scale;
     var isElementsActive = !!map._elementsLayerActive;
+    var perfMode = !!map.isPerformanceConstrained?.();
+    var renderCache = ensureWallRenderCache(map, null);
 
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
 
-    var curtains = [];
-    for (var i = 0; i < walls.length; i++) {
-      var w = walls[i];
-      if (w.type === "curtain") {
-        curtains.push(w);
-      } else if (w.type === "door" || w.type === "window") {
-        drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, null, isElementsActive);
-      }
+    for (var i = 0; i < renderCache.runtimeSpecialWalls.length; i++) {
+      var w = renderCache.runtimeSpecialWalls[i];
+      drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, null, isElementsActive);
     }
-    if (curtains.length > 0) {
-      drawWallsAsVectorPaths(ctx, curtains, gs, scale, isElementsActive, "curtain");
+    if (renderCache.curtainChains.length > 0) {
+      drawWallsAsVectorPaths(
+        ctx,
+        renderCache.curtainChains,
+        gs,
+        scale,
+        isElementsActive,
+        "curtain",
+        perfMode,
+      );
     }
 
     ctx.restore();
   }
 
+  function drawWallsSubset(map, walls, wallChains, curtainChains, alpha) {
+    if (
+      (!walls || walls.length === 0) &&
+      (!wallChains || wallChains.length === 0) &&
+      (!curtainChains || curtainChains.length === 0)
+    ) {
+      return;
+    }
+    var ctx = map.ctx;
+    var gs = map.gridSize;
+    var scale = map.scale;
+    var eraseHoverId = map._wallDrawerState?.eraseHoverWallId || null;
+    var isElementsActive = !!map._elementsLayerActive;
+    var perfMode = !!map.isPerformanceConstrained?.();
+
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    if (wallChains && wallChains.length > 0) {
+      drawWallsAsVectorPaths(
+        ctx,
+        wallChains,
+        gs,
+        scale,
+        isElementsActive,
+        "wall",
+        perfMode,
+      );
+    }
+    if (curtainChains && curtainChains.length > 0) {
+      drawWallsAsVectorPaths(
+        ctx,
+        curtainChains,
+        gs,
+        scale,
+        isElementsActive,
+        "curtain",
+        perfMode,
+      );
+    }
+    for (var i = 0; i < walls.length; i++) {
+      var wall = walls[i];
+      drawWallSegment(
+        ctx,
+        wall,
+        wall.x1 * gs,
+        wall.y1 * gs,
+        wall.x2 * gs,
+        wall.y2 * gs,
+        gs,
+        scale,
+        eraseHoverId,
+        isElementsActive,
+      );
+    }
+    ctx.restore();
+  }
+
+  function getFogVisibleWallBuckets(map, state) {
+    var walls = map.walls || [];
+    var fog = map._fog || null;
+    var currentAreas = [].concat(state.currentAreas || [], state.revealedAreas || []);
+    var exploredAreas = state.exploredAreas || [];
+    var hiddenAreas = state.hiddenAreas || [];
+    var grouped = createWallRenderGroups(walls, null);
+    var wallChains = buildConnectedWallChains(grouped.vectorWallGroups.wall);
+    var curtainChains = buildConnectedWallChains(grouped.vectorWallGroups.curtain);
+    var cacheKey = [
+      fog ? fog._cacheGen || 0 : 0,
+      walls.length,
+      currentAreas.length,
+      exploredAreas.length,
+      hiddenAreas.length,
+    ].join(":");
+    var cache = map._wallFogVisibilityCache;
+    if (cache && cache.key === cacheKey && cache.wallsRef === walls) {
+      return cache.value;
+    }
+
+    var buckets = {
+      current: [],
+      explored: [],
+      currentWallChains: [],
+      exploredWallChains: [],
+      currentCurtainChains: [],
+      exploredCurtainChains: [],
+    };
+    for (var i = 0; i < grouped.specialWalls.length; i++) {
+      var wall = grouped.specialWalls[i];
+      var visibility = classifyWallVisibility(map, wall, currentAreas, exploredAreas, hiddenAreas);
+      if (visibility === "current") buckets.current.push(wall);
+      else if (visibility === "explored") buckets.explored.push(wall);
+    }
+    for (var wi = 0; wi < wallChains.length; wi++) {
+      var wallChain = wallChains[wi];
+      var wallChainVisibility = classifyChainVisibility(
+        map,
+        wallChain,
+        currentAreas,
+        exploredAreas,
+        hiddenAreas,
+      );
+      if (wallChainVisibility === "current") buckets.currentWallChains.push(wallChain);
+      else if (wallChainVisibility === "explored") buckets.exploredWallChains.push(wallChain);
+    }
+    for (var ci = 0; ci < curtainChains.length; ci++) {
+      var curtainChain = curtainChains[ci];
+      var curtainVisibility = classifyChainVisibility(
+        map,
+        curtainChain,
+        currentAreas,
+        exploredAreas,
+        hiddenAreas,
+      );
+      if (curtainVisibility === "current") buckets.currentCurtainChains.push(curtainChain);
+      else if (curtainVisibility === "explored") buckets.exploredCurtainChains.push(curtainChain);
+    }
+
+    map._wallFogVisibilityCache = {
+      key: cacheKey,
+      wallsRef: walls,
+      value: buckets,
+    };
+    return buckets;
+  }
+
+  function classifyChainVisibility(map, chain, currentAreas, exploredAreas, hiddenAreas) {
+    var walls = chain && Array.isArray(chain.walls) ? chain.walls : [];
+    var hasExplored = false;
+    for (var i = 0; i < walls.length; i++) {
+      var visibility = classifyWallVisibility(
+        map,
+        walls[i],
+        currentAreas,
+        exploredAreas,
+        hiddenAreas,
+      );
+      if (visibility === "current") return "current";
+      if (visibility === "explored") hasExplored = true;
+    }
+    return hasExplored ? "explored" : null;
+  }
+
+  function classifyWallVisibility(map, wall, currentAreas, exploredAreas, hiddenAreas) {
+    var samplePoints = getWallVisibilitySamplePoints(wall);
+    var currentVisible = false;
+
+    for (var i = 0; i < samplePoints.length; i++) {
+      var sample = samplePoints[i];
+      if (pointInAreaList(sample.x, sample.y, hiddenAreas)) continue;
+      if (
+        typeof map.isPointVisibleToFogViewer === "function" &&
+        map.isPointVisibleToFogViewer(sample.x, sample.y)
+      ) {
+        currentVisible = true;
+        break;
+      }
+      if (pointInAreaList(sample.x, sample.y, currentAreas)) {
+        currentVisible = true;
+        break;
+      }
+    }
+    if (currentVisible) return "current";
+
+    for (var j = 0; j < samplePoints.length; j++) {
+      var sampleExplored = samplePoints[j];
+      if (pointInAreaList(sampleExplored.x, sampleExplored.y, hiddenAreas)) continue;
+      if (pointInAreaList(sampleExplored.x, sampleExplored.y, exploredAreas)) {
+        return "explored";
+      }
+    }
+
+    return null;
+  }
+
+  function getWallVisibilitySamplePoints(wall) {
+    if (!wall) return [];
+    var x1 = Number(wall.x1) || 0;
+    var y1 = Number(wall.y1) || 0;
+    var x2 = Number(wall.x2) || 0;
+    var y2 = Number(wall.y2) || 0;
+    var mx = (x1 + x2) * 0.5;
+    var my = (y1 + y2) * 0.5;
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    var nx = 0;
+    var ny = 0;
+    if (len >= 1e-6) {
+      nx = (-dy / len) * WALL_VISIBILITY_SAMPLE_OFFSET;
+      ny = (dx / len) * WALL_VISIBILITY_SAMPLE_OFFSET;
+    }
+    return [
+      { x: mx, y: my },
+      { x: mx + nx, y: my + ny },
+      { x: mx - nx, y: my - ny },
+      { x: x1, y: y1 },
+      { x: x2, y: y2 },
+    ];
+  }
+
+  function pointInAreaList(x, y, areas) {
+    if (!Array.isArray(areas) || areas.length === 0) return false;
+    for (var i = 0; i < areas.length; i++) {
+      var area = areas[i];
+      if (Array.isArray(area)) {
+        if (
+          window.FogVisibility &&
+          typeof window.FogVisibility.pointInPolygon === "function" &&
+          area.length >= 3 &&
+          window.FogVisibility.pointInPolygon(x, y, area)
+        ) {
+          return true;
+        }
+      } else if (
+        area &&
+        x >= area.x &&
+        x <= area.x + area.width &&
+        y >= area.y &&
+        y <= area.y + area.height
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
-   * Build connected chains from wall segments and draw as continuous paths.
+   * Cache grouped walls and their precomputed connected chains.
    */
-  function drawWallsAsVectorPaths(ctx, walls, gs, scale, isElementsActive, wallType) {
-    // Build adjacency map: vertex key -> list of { wall, otherEnd }
+  function ensureWallRenderCache(map, eraseHoverId) {
+    var walls = map.walls || [];
+    var cache = map._wallRenderCache;
+    if (cache && cache.ref === walls && cache.eraseHoverId === eraseHoverId) {
+      return cache;
+    }
+
+    var grouped = createWallRenderGroups(walls, eraseHoverId);
+
+    cache = {
+      ref: walls,
+      eraseHoverId: eraseHoverId,
+      specialWalls: grouped.specialWalls,
+      runtimeSpecialWalls: grouped.runtimeSpecialWalls,
+      wallChains: buildConnectedWallChains(grouped.vectorWallGroups.wall),
+      curtainChains: buildConnectedWallChains(grouped.vectorWallGroups.curtain),
+    };
+    map._wallRenderCache = cache;
+    return cache;
+  }
+
+  function createWallRenderGroups(walls, eraseHoverId) {
+    var vectorWallGroups = {
+      wall: [],
+      curtain: [],
+    };
+    var specialWalls = [];
+    var runtimeSpecialWalls = [];
+
+    for (var i = 0; i < walls.length; i++) {
+      var w = walls[i];
+      if (!w) continue;
+      if (w.type === "door" || w.type === "window") {
+        runtimeSpecialWalls.push(w);
+      }
+      if (w.id !== eraseHoverId && (w.type === "wall" || w.type === "curtain")) {
+        vectorWallGroups[w.type].push(w);
+      } else {
+        specialWalls.push(w);
+      }
+    }
+
+    return {
+      vectorWallGroups: vectorWallGroups,
+      specialWalls: specialWalls,
+      runtimeSpecialWalls: runtimeSpecialWalls,
+    };
+  }
+
+  function buildConnectedWallChains(walls) {
+    if (!walls || walls.length === 0) return [];
+
     var adjacency = {};
 
     function makeKey(x, y) {
@@ -491,24 +783,27 @@
       adjacency[key2].push({ wall: w, thisEnd: 2, otherKey: key1 });
     }
 
-    // Track which walls have been drawn
     var drawn = {};
-
-    // Build chains starting from endpoints or junctions
     var chains = [];
 
     for (var wi = 0; wi < walls.length; wi++) {
       var wall = walls[wi];
       if (drawn[wall.id]) continue;
-
-      // Start a new chain from this wall
       var chain = buildChain(wall, adjacency, drawn, makeKey);
-      if (chain.length > 0) {
+      if (chain.points.length > 0) {
         chains.push(chain);
       }
     }
 
-    // Draw each chain as a continuous path
+    return chains;
+  }
+
+  /**
+   * Draw connected chains as continuous vector paths.
+   */
+  function drawWallsAsVectorPaths(ctx, chains, gs, scale, isElementsActive, wallType, perfMode) {
+    if (!chains || chains.length === 0) return;
+
     var type = wallType || "wall";
     var lineWidth = (WALL_WIDTHS[type] || WALL_WIDTHS.wall) * gs;
     var baseColor = isElementsActive
@@ -519,41 +814,43 @@
     ctx.lineCap = type === "curtain" ? "round" : "butt";
     ctx.lineJoin = "round";
 
-    // Soft shadow bloom under the wall so it feels elevated instead of outlined.
-    var shadowBlurPx = Math.max(lineWidth * 0.55, 2.5 / Math.max(scale, 0.5));
-    ctx.strokeStyle = "rgba(0,0,0,0.16)";
-    ctx.lineWidth = lineWidth * 1.9;
-    ctx.filter = "blur(" + shadowBlurPx.toFixed(2) + "px)";
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
+    if (!perfMode) {
+      // Soft shadow bloom under the wall so it feels elevated instead of outlined.
+      var shadowBlurPx = Math.max(lineWidth * 0.55, 2.5 / Math.max(scale, 0.5));
+      ctx.strokeStyle = "rgba(0,0,0,0.16)";
+      ctx.lineWidth = lineWidth * 1.9;
+      ctx.filter = "blur(" + shadowBlurPx.toFixed(2) + "px)";
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
 
-    for (var ci = 0; ci < chains.length; ci++) {
-      var pts = chains[ci];
-      if (pts.length < 2) continue;
+      for (var ci = 0; ci < chains.length; ci++) {
+        var pts = chains[ci].points || chains[ci];
+        if (pts.length < 2) continue;
 
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x * gs, pts[0].y * gs);
-      for (var pi = 1; pi < pts.length; pi++) {
-        ctx.lineTo(pts[pi].x * gs, pts[pi].y * gs);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x * gs, pts[0].y * gs);
+        for (var pi = 1; pi < pts.length; pi++) {
+          ctx.lineTo(pts[pi].x * gs, pts[pi].y * gs);
+        }
+        ctx.stroke();
       }
-      ctx.stroke();
-    }
 
-    // A tighter contact pass keeps some depth near the wall without a hard outline.
-    ctx.filter = "none";
-    ctx.strokeStyle = "rgba(0,0,0,0.10)";
-    ctx.lineWidth = lineWidth * 1.22;
+      // A tighter contact pass keeps some depth near the wall without a hard outline.
+      ctx.filter = "none";
+      ctx.strokeStyle = "rgba(0,0,0,0.10)";
+      ctx.lineWidth = lineWidth * 1.22;
 
-    for (var ciMid = 0; ciMid < chains.length; ciMid++) {
-      var ptsMid = chains[ciMid];
-      if (ptsMid.length < 2) continue;
+      for (var ciMid = 0; ciMid < chains.length; ciMid++) {
+        var ptsMid = chains[ciMid].points || chains[ciMid];
+        if (ptsMid.length < 2) continue;
 
-      ctx.beginPath();
-      ctx.moveTo(ptsMid[0].x * gs, ptsMid[0].y * gs);
-      for (var piMid = 1; piMid < ptsMid.length; piMid++) {
-        ctx.lineTo(ptsMid[piMid].x * gs, ptsMid[piMid].y * gs);
+        ctx.beginPath();
+        ctx.moveTo(ptsMid[0].x * gs, ptsMid[0].y * gs);
+        for (var piMid = 1; piMid < ptsMid.length; piMid++) {
+          ctx.lineTo(ptsMid[piMid].x * gs, ptsMid[piMid].y * gs);
+        }
+        ctx.stroke();
       }
-      ctx.stroke();
     }
 
     // Main wall stroke on top.
@@ -564,7 +861,7 @@
     ctx.filter = "none";
 
     for (var ci2 = 0; ci2 < chains.length; ci2++) {
-      var pts2 = chains[ci2];
+      var pts2 = chains[ci2].points || chains[ci2];
       if (pts2.length < 2) continue;
 
       ctx.beginPath();
@@ -612,6 +909,7 @@
    */
   function buildChain(startWall, adjacency, drawn, makeKey) {
     var points = [];
+    var walls = [startWall];
     drawn[startWall.id] = true;
 
     // Start with the first wall's endpoints
@@ -619,18 +917,18 @@
     points.push({ x: startWall.x2, y: startWall.y2 });
 
     // Extend forward from the second point
-    extendChain(points, adjacency, drawn, makeKey, false);
+    extendChain(points, walls, adjacency, drawn, makeKey, false);
 
     // Extend backward from the first point
-    extendChain(points, adjacency, drawn, makeKey, true);
+    extendChain(points, walls, adjacency, drawn, makeKey, true);
 
-    return points;
+    return { points: points, walls: walls };
   }
 
   /**
    * Extend a chain in one direction by following connected walls.
    */
-  function extendChain(points, adjacency, drawn, makeKey, prepend) {
+  function extendChain(points, walls, adjacency, drawn, makeKey, prepend) {
     while (true) {
       var endPoint = prepend ? points[0] : points[points.length - 1];
       var endKey = makeKey(endPoint.x, endPoint.y);
@@ -657,37 +955,11 @@
       if (!nextWall) break;
 
       drawn[nextWall.id] = true;
+      walls.push(nextWall);
       if (prepend) {
         points.unshift(nextPoint);
       } else {
         points.push(nextPoint);
-      }
-    }
-  }
-
-  function clipToAreas(ctx, includeAreas, excludeAreas, gs) {
-    ctx.beginPath();
-    appendAreasPath(ctx, includeAreas, gs);
-    appendAreasPath(ctx, excludeAreas, gs);
-    try {
-      ctx.clip("evenodd");
-    } catch (_err) {
-      ctx.clip();
-    }
-  }
-
-  function appendAreasPath(ctx, areas, gs) {
-    if (!Array.isArray(areas)) return;
-    for (var i = 0; i < areas.length; i++) {
-      var area = areas[i];
-      if (Array.isArray(area) && area.length >= 3) {
-        ctx.moveTo(area[0].x * gs, area[0].y * gs);
-        for (var j = 1; j < area.length; j++) {
-          ctx.lineTo(area[j].x * gs, area[j].y * gs);
-        }
-        ctx.closePath();
-      } else if (area && area.type === "rect") {
-        ctx.rect(area.x * gs, area.y * gs, area.width * gs, area.height * gs);
       }
     }
   }

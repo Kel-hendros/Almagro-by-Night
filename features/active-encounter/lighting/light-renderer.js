@@ -655,7 +655,11 @@
           if (lighting.overlayCanvas) {
             var bounds = typeof this.getOverlayBounds === "function" ? this.getOverlayBounds() : null;
             if (bounds) {
-              this.ctx.drawImage(lighting.overlayCanvas, bounds.minX * this.gridSize, bounds.minY * this.gridSize);
+              this.drawWorldCanvasVisible?.(
+                lighting.overlayCanvas,
+                bounds.minX * this.gridSize,
+                bounds.minY * this.gridSize,
+              );
             }
           }
           // Keep the map draw loop alive for one more frame so the throttled
@@ -692,7 +696,11 @@
 
       var canvas = lighting.overlayCanvas;
       if (!canvas) return;
-      this.ctx.drawImage(canvas, bounds.minX * this.gridSize, bounds.minY * this.gridSize);
+      this.drawWorldCanvasVisible?.(
+        canvas,
+        bounds.minX * this.gridSize,
+        bounds.minY * this.gridSize,
+      );
     };
 
     /**
@@ -761,6 +769,8 @@
       var sc = Math.max(this.scale, 0.5);
       var lights = this.lights || [];
       var switches = this.switches || [];
+      var perfMode = !!this.isPerformanceConstrained?.();
+      var viewRect = this.getViewportWorldRect?.(gs * 3) || null;
       var selectedLightId = this.selectedLightId || null;
       var selectedSwitchId = this.selectedSwitchId || null;
       var isBackgroundLayer = this.activeLayer === "background";
@@ -770,7 +780,10 @@
 
       var linkMode = this._lightLinkMode || null;
       var linkPointer = this._lightLinkPointer || null;
-      var showConnectionLines = isNarratorNormal && (isBackgroundLayer || !!linkMode || hasSelectionConnections);
+      var showConnectionLines =
+        !perfMode &&
+        isNarratorNormal &&
+        (isBackgroundLayer || !!linkMode || hasSelectionConnections);
 
       // Connection lines
       if (showConnectionLines && switches.length > 0 && lights.length > 0) {
@@ -853,6 +866,15 @@
         if (!this.isLightVisibleToViewer(light)) continue;
         var sx = light.x * gs;
         var sy = light.y * gs;
+        if (
+          viewRect &&
+          (sx < viewRect.x ||
+            sy < viewRect.y ||
+            sx > viewRect.x + viewRect.width ||
+            sy > viewRect.y + viewRect.height)
+        ) {
+          continue;
+        }
         var rgb = hexToRgb(light.color || "#ffcc66");
         var isSelected = selectedLightId === light.id;
         var isOff = light.on === false;
@@ -861,7 +883,7 @@
           ctx.save();
           ctx.strokeStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",0.7)";
           ctx.lineWidth = 2 / sc;
-          ctx.setLineDash([4 / sc, 3 / sc]);
+          if (!perfMode) ctx.setLineDash([4 / sc, 3 / sc]);
           ctx.beginPath();
           ctx.arc(sx, sy, 14 / sc, 0, Math.PI * 2);
           ctx.stroke();
@@ -870,8 +892,10 @@
         }
 
         ctx.save();
-        ctx.shadowColor = isOff ? "rgba(80,80,80,0.4)" : "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",0.8)";
-        ctx.shadowBlur = (isSelected ? 12 : 8) / sc;
+        if (!perfMode) {
+          ctx.shadowColor = isOff ? "rgba(80,80,80,0.4)" : "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",0.8)";
+          ctx.shadowBlur = (isSelected ? 12 : 8) / sc;
+        }
         ctx.beginPath();
         ctx.arc(sx, sy, (isSelected ? 6 : 4) / sc, 0, Math.PI * 2);
         ctx.fillStyle = isOff ? "rgba(80,80,80,0.6)" : "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ",0.9)";
@@ -893,6 +917,15 @@
 
         var swx = sw.x * gs;
         var swy = sw.y * gs;
+        if (
+          viewRect &&
+          (swx < viewRect.x ||
+            swy < viewRect.y ||
+            swx > viewRect.x + viewRect.width ||
+            swy > viewRect.y + viewRect.height)
+        ) {
+          continue;
+        }
         var isOn = sw.on !== false;
         var isSelected = selectedSwitchId === sw.id;
         var halfSize = (isSelected ? 7 : 5) / sc;
@@ -902,7 +935,7 @@
           ctx.save();
           ctx.strokeStyle = "rgba(255,220,80,0.7)";
           ctx.lineWidth = 2 / sc;
-          ctx.setLineDash([4 / sc, 3 / sc]);
+          if (!perfMode) ctx.setLineDash([4 / sc, 3 / sc]);
           ctx.beginPath();
           ctx.arc(swx, swy, 14 / sc, 0, Math.PI * 2);
           ctx.stroke();
@@ -912,8 +945,10 @@
 
         // Switch body (rounded square)
         ctx.save();
-        ctx.shadowColor = isOn ? "rgba(255,220,80,0.6)" : "rgba(60,60,60,0.4)";
-        ctx.shadowBlur = 6 / sc;
+        if (!perfMode) {
+          ctx.shadowColor = isOn ? "rgba(255,220,80,0.6)" : "rgba(60,60,60,0.4)";
+          ctx.shadowBlur = 6 / sc;
+        }
         ctx.fillStyle = isOn ? "rgba(255,220,80,0.9)" : "rgba(100,100,100,0.8)";
         ctx.beginPath();
         var r = 2 / sc;
@@ -1020,6 +1055,7 @@
       var ctx = ctxOverride || this.ctx;
       var gs = this.gridSize;
       var sc = Math.max(this.scale, 0.5);
+      var viewRect = this.getViewportWorldRect?.(gs * 3) || null;
       var walls = this.walls || [];
       var lights = this.lights || [];
       var switches = this.switches || [];
@@ -1032,10 +1068,18 @@
         if (wall.type !== "door" && wall.type !== "window") continue;
         var mx = (wall.x1 + wall.x2) / 2;
         var my = (wall.y1 + wall.y2) / 2;
-        if (!this.isWallMarkerVisibleToViewer(wall)) continue;
-
         var markerX = mx * gs;
         var markerY = my * gs;
+        if (
+          viewRect &&
+          (markerX < viewRect.x ||
+            markerY < viewRect.y ||
+            markerX > viewRect.x + viewRect.width ||
+            markerY > viewRect.y + viewRect.height)
+        ) {
+          continue;
+        }
+        if (!this.isWallMarkerVisibleToViewer(wall)) continue;
 
         if (wall.type === "door") {
           var doorImage = wall.doorOpen ? DOOR_MARKER_IMAGES.open : DOOR_MARKER_IMAGES.closed;
@@ -1049,16 +1093,38 @@
       for (var li = 0; li < lights.length; li++) {
         var light = lights[li];
         if (!this.isLightVisibleToViewer(light)) continue;
+        var lightX = light.x * gs;
+        var lightY = light.y * gs;
+        if (
+          viewRect &&
+          (lightX < viewRect.x ||
+            lightY < viewRect.y ||
+            lightX > viewRect.x + viewRect.width ||
+            lightY > viewRect.y + viewRect.height)
+        ) {
+          continue;
+        }
         var isSelected = selectedLightId === light.id;
-        drawInteractiveMarker(ctx, light.x * gs, light.y * gs, MARKER_EMOJIS.light, sc, isSelected);
+        drawInteractiveMarker(ctx, lightX, lightY, MARKER_EMOJIS.light, sc, isSelected);
       }
 
       // Switches
       for (var si = 0; si < switches.length; si++) {
         var sw = switches[si];
         if (!this.isSwitchVisibleToViewer(sw)) continue;
+        var switchX = sw.x * gs;
+        var switchY = sw.y * gs;
+        if (
+          viewRect &&
+          (switchX < viewRect.x ||
+            switchY < viewRect.y ||
+            switchX > viewRect.x + viewRect.width ||
+            switchY > viewRect.y + viewRect.height)
+        ) {
+          continue;
+        }
         var isSelected = selectedSwitchId === sw.id;
-        drawInteractiveMarker(ctx, sw.x * gs, sw.y * gs, MARKER_EMOJIS["switch"], sc, isSelected);
+        drawInteractiveMarker(ctx, switchX, switchY, MARKER_EMOJIS["switch"], sc, isSelected);
       }
     };
   }
@@ -1102,8 +1168,6 @@
 
     // Track which lights are still active (for cleanup)
     var activeLightIds = new Set();
-    var cacheHits = 0;
-    var cacheMisses = 0;
 
     // Get spatial index if available
     var spatialIndex = map._wallSpatialIndex || null;
@@ -1130,7 +1194,6 @@
 
       var poly;
       if (needsRecalc) {
-        cacheMisses++;
         // Use spatial index to get only relevant walls if available
         var relevantWalls = walls;
         if (spatialIndex) {
@@ -1148,7 +1211,6 @@
           wallsHash: currentWallsHash,
         });
       } else {
-        cacheHits++;
         poly = cached.poly;
       }
 
@@ -1166,11 +1228,6 @@
         perLightCache.delete(key);
       }
     });
-
-    // Debug logging (can be removed in production)
-    if (cacheMisses > 0 && typeof console !== "undefined" && console.log) {
-      console.log("[LightCache] Recalculados:", cacheMisses, "/", cacheMisses + cacheHits);
-    }
 
     return cache;
   }

@@ -232,6 +232,28 @@
     return nextState;
   }
 
+  function scheduleEncounterViewStatePersist(patch = {}, delayMs = 120) {
+    const nextState = sanitizeEncounterViewState({
+      ...(state.encounterViewState || createDefaultEncounterViewState()),
+      ...(patch || {}),
+    });
+    state.encounterViewState = nextState;
+
+    const key = getEncounterViewStateStorageKey();
+    if (!key) return nextState;
+
+    if (runtime.encounterViewPersistTimer) {
+      clearTimeout(runtime.encounterViewPersistTimer);
+    }
+    runtime.encounterViewPersistTimer = setTimeout(function () {
+      runtime.encounterViewPersistTimer = null;
+      try {
+        window.localStorage.setItem(key, JSON.stringify(state.encounterViewState || nextState));
+      } catch (_error) {}
+    }, Math.max(0, delayMs));
+    return nextState;
+  }
+
   function setToolsDrawerOpen(isOpen) {
     const drawer = document.getElementById("ae-tools-drawer");
     if (!drawer) return;
@@ -278,7 +300,7 @@
       ) {
         return;
       }
-      persistEncounterViewState({
+      scheduleEncounterViewStatePersist({
         mapTransform: {
           scale: detail.scale,
           offsetX: detail.offsetX,
@@ -632,7 +654,10 @@
         setTileMap: (newMap) => {
           if (state.encounter?.data) {
             state.encounter.data.tileMap = newMap;
-            if (state.map) state.map.tileMap = newMap;
+            if (state.map) {
+              state.map.tileMap = newMap;
+              state.map.invalidateTileRenderCache?.();
+            }
           }
         },
         onChanged: () => saveEncounter(),
@@ -2662,6 +2687,14 @@
     teardownRealtimeSubscriptions();
     teardownGlobalDocumentListeners();
     removeGlobalLifecycleListeners();
+    if (runtime.encounterViewPersistTimer) {
+      clearTimeout(runtime.encounterViewPersistTimer);
+      runtime.encounterViewPersistTimer = null;
+    }
+    runtime.toolsDrawerObserver?.disconnect?.();
+    runtime.toolsDrawerObserver = null;
+    runtime.timelineSidebarObserver?.disconnect?.();
+    runtime.timelineSidebarObserver = null;
     tokenContextMenuController?.destroy?.();
     tokenContextMenuController = null;
     lightSwitchManager?.destroy?.();

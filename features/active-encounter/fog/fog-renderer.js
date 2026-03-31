@@ -237,7 +237,7 @@
           fog.dirty = false;
           var narratorCanvas = fog.offscreenCanvas;
           if (!narratorCanvas || !fog._bounds) return;
-          this.ctx.drawImage(
+          this.drawWorldCanvasVisible?.(
             narratorCanvas,
             fog._bounds.minX * this.gridSize,
             fog._bounds.minY * this.gridSize,
@@ -251,7 +251,11 @@
           // Skip recalc but still draw cached overlay
           var oc = fog.offscreenCanvas;
           if (oc && fog._bounds) {
-            this.ctx.drawImage(oc, fog._bounds.minX * this.gridSize, fog._bounds.minY * this.gridSize);
+            this.drawWorldCanvasVisible?.(
+              oc,
+              fog._bounds.minX * this.gridSize,
+              fog._bounds.minY * this.gridSize,
+            );
           }
           return;
         }
@@ -264,7 +268,11 @@
 
       var oc = fog.offscreenCanvas;
       if (!oc || !fog._bounds) return;
-      this.ctx.drawImage(oc, fog._bounds.minX * this.gridSize, fog._bounds.minY * this.gridSize);
+      this.drawWorldCanvasVisible?.(
+        oc,
+        fog._bounds.minX * this.gridSize,
+        fog._bounds.minY * this.gridSize,
+      );
     };
   }
 
@@ -334,8 +342,6 @@
     // Track active instance IDs for cache cleanup
     var activeInstanceIds = new Set();
     var polygons = [];
-    var cacheHits = 0;
-    var cacheMisses = 0;
     var dragPreview = fog.dragPreview || null;
 
     // Get spatial index if available
@@ -360,7 +366,6 @@
 
       var poly;
       if (needsRecalc) {
-        cacheMisses++;
         // Use spatial index to get only relevant walls if available
         var visionRadius = 30; // DEFAULT_VISION_RADIUS from fog-visibility.js
         var relevantWalls = walls;
@@ -377,7 +382,6 @@
           wallsHash: currentWallsHash,
         });
       } else {
-        cacheHits++;
         poly = cached.poly;
       }
 
@@ -411,10 +415,6 @@
     // Clear dirty tokens set after processing
     dirtyTokens.clear();
 
-    // Debug logging (can be removed in production)
-    if (cacheMisses > 0 && typeof console !== "undefined" && console.log) {
-      console.log("[FogCache] Cache hits:", cacheHits, "/ Recalculados:", cacheMisses);
-    }
   }
 
   // ── Fog overlay rendering ──
@@ -793,10 +793,6 @@
     list.length = 0;
     for (var i = 0; i < newList.length; i++) {
       list.push(newList[i]);
-    }
-
-    if (typeof console !== "undefined" && console.log) {
-      console.log("[FogCompact] Compacted from", keep.size, "kept of original, now", list.length, "polygons");
     }
   }
 

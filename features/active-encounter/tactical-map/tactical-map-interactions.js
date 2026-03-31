@@ -569,13 +569,15 @@
         var clickedLight = markerHit && markerHit.type === "light" ? markerHit.light : null;
         if (clickedLight) {
           this.selectedLightId = clickedLight.id;
-          this._isDraggingLight = true;
+          this.selectedSwitchId = null;
+          this._isDraggingLight = false;
+          this._lightDragPending = true;
           this._draggedLight = clickedLight;
+          this._dragLightStartPointer = { x: e.clientX, y: e.clientY };
           this._dragLightOffset = {
             x: worldX - clickedLight.x * this.gridSize,
             y: worldY - clickedLight.y * this.gridSize,
           };
-          if (typeof this.invalidateLighting === "function") this.invalidateLighting();
           e.preventDefault();
           this.draw();
           return;
@@ -584,6 +586,10 @@
           if (this.selectedLightId || this.selectedSwitchId) {
             this.selectedLightId = null;
             this.selectedSwitchId = null;
+            this._lightDragPending = false;
+            this._switchDragPending = false;
+            this._draggedLight = null;
+            this._draggedSwitch = null;
             if (typeof this.invalidateLighting === "function") this.invalidateLighting();
             this.draw();
           }
@@ -596,13 +602,14 @@
         if (clickedSwitch) {
           this.selectedSwitchId = clickedSwitch.id;
           this.selectedLightId = null;
-          this._isDraggingSwitch = true;
+          this._isDraggingSwitch = false;
+          this._switchDragPending = true;
           this._draggedSwitch = clickedSwitch;
+          this._dragSwitchStartPointer = { x: e.clientX, y: e.clientY };
           this._dragSwitchOffset = {
             x: worldX - clickedSwitch.x * this.gridSize,
             y: worldY - clickedSwitch.y * this.gridSize,
           };
-          if (typeof this.invalidateLighting === "function") this.invalidateLighting();
           e.preventDefault();
           this.draw();
           return;
@@ -995,6 +1002,25 @@
       const cellX = worldX / this.gridSize;
       const cellY = worldY / this.gridSize;
 
+      if (this._lightDragPending && this._draggedLight && !this._isDraggingLight) {
+        const start = this._dragLightStartPointer || null;
+        const threshold = this._dragActivationThresholdPx || 4;
+        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) >= threshold) {
+          this._isDraggingLight = true;
+          this._lightDragPending = false;
+          if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+        }
+      }
+      if (this._switchDragPending && this._draggedSwitch && !this._isDraggingSwitch) {
+        const start = this._dragSwitchStartPointer || null;
+        const threshold = this._dragActivationThresholdPx || 4;
+        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) >= threshold) {
+          this._isDraggingSwitch = true;
+          this._switchDragPending = false;
+          if (typeof this.invalidateLighting === "function") this.invalidateLighting();
+        }
+      }
+
       if (typeof this.isLinkModeActive === "function" && this.isLinkModeActive()) {
         if (typeof this.onLinkModeHover === "function") {
           this.onLinkModeHover(cellX, cellY);
@@ -1029,7 +1055,7 @@
         );
         this._draggedSwitch.x = snappedSwitch.x;
         this._draggedSwitch.y = snappedSwitch.y;
-        this.draw();
+        this.requestDraw?.();
         return;
       }
 
@@ -1052,7 +1078,7 @@
         } else if (typeof this.invalidateLighting === "function") {
           this.invalidateLighting();
         }
-        this.draw();
+        this.requestDraw?.();
         return;
       }
 
@@ -1063,7 +1089,7 @@
         this.offsetY += dy;
         this.dragStart = { x: e.clientX, y: e.clientY };
         this.dispatchTransformEvent();
-        this.draw();
+        this.requestDraw?.();
       } else if (this.measureToolActive && this.measureStart && !this.measureEnd) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1074,7 +1100,7 @@
           x: worldX / this.gridSize,
           y: worldY / this.gridSize,
         };
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isDraggingToken && this.draggedToken) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1174,7 +1200,7 @@
           this.draggedMapEffect.x = nextX;
           this.draggedMapEffect.y = nextY;
         }
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isDraggingDesignToken && this.draggedDesignToken) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1196,7 +1222,7 @@
           this.draggedDesignToken.x = rawGridX;
           this.draggedDesignToken.y = rawGridY;
         }
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isRotatingDesignToken && this.rotatingDesignTokenId) {
         const token = (this.designTokens || []).find(
           (item) => item.id === this.rotatingDesignTokenId,
@@ -1213,7 +1239,7 @@
         token.rotationDeg =
           (this.rotatingDesignTokenStartDeg + (deltaRad * 180) / Math.PI + 3600) %
           360;
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isResizingDesignToken && this.resizingDesignTokenId) {
         const token = (this.designTokens || []).find(
           (item) => item.id === this.resizingDesignTokenId,
@@ -1230,7 +1256,7 @@
           worldX,
           worldY,
         );
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isResizingBackground && this.resizingBackgroundHandle) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1242,7 +1268,7 @@
           worldX,
           worldY,
         );
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isDraggingBackground && this.backgroundDragStart) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1258,11 +1284,12 @@
           x: this.backgroundDragStart.mapX + deltaCellsX,
           y: this.backgroundDragStart.mapY + deltaCellsY,
         };
-        this.draw();
+        this.requestDraw?.();
       }
     };
 
     proto.handleMouseUp = function handleMouseUp(e) {
+      var wasPanning = !!this.isPanning;
       // Tile painter intercept
       if (this._tilePainter && this._tilePainter.isActive()) {
         this._tilePainter.handleMouseUp();
@@ -1283,8 +1310,11 @@
         if (typeof this.onSwitchMove === "function" && this._draggedSwitch) {
           this.onSwitchMove(this._draggedSwitch);
         }
-        this._draggedSwitch = null;
+        this.requestDraw?.();
       }
+      this._switchDragPending = false;
+      this._draggedSwitch = null;
+      this._dragSwitchStartPointer = null;
 
       // Light drag end
       if (this._isDraggingLight) {
@@ -1292,10 +1322,16 @@
         if (typeof this.onLightMove === "function" && this._draggedLight) {
           this.onLightMove(this._draggedLight);
         }
-        this._draggedLight = null;
+        this.requestDraw?.();
       }
+      this._lightDragPending = false;
+      this._draggedLight = null;
+      this._dragLightStartPointer = null;
 
       this.isPanning = false;
+      if (wasPanning) {
+        this.requestDraw?.();
+      }
       if (this.isDraggingToken) {
         this.isDraggingToken = false;
         this._lastDragFogUpdate = 0;

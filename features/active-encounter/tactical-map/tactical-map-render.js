@@ -31,6 +31,7 @@
      * Called after drawFogOfWar in the pipeline so it's never dimmed.
      */
     proto.drawTokenHoverOverlay = function drawTokenHoverOverlay(timestamp) {
+      if (this.isPerformanceConstrained?.()) return;
       if (!this.hoverFocus || this.hoverFocus.type !== "entity") return;
       var hover = this.hoverFocus;
       var token = null;
@@ -148,14 +149,16 @@
       const now = typeof timestamp === "number" ? timestamp : performance.now();
       const effects = Array.isArray(this.mapEffects) ? this.mapEffects : [];
       if (!effects.length) return;
+      const perfMode = !!this.isPerformanceConstrained?.();
+      if (!perfMode) {
+        this.scheduleCosmeticAnimationFrame?.(80, now);
+      }
 
       effects.forEach((effect) => {
         if (!effect || (effect.type !== "silence_sphere" && effect.type !== "night_shroud")) return;
         const sourceToken =
-          (this.tokens || []).find((token) => token.id === effect.sourceTokenId) ||
-          (this.tokens || []).find(
-            (token) => token.instanceId === effect.sourceInstanceId,
-          );
+          this.getTokenById?.(effect.sourceTokenId) ||
+          this.getTokenByInstanceId?.(effect.sourceInstanceId);
         const center =
           typeof this.getMapEffectCenter === "function"
             ? this.getMapEffectCenter(effect, now)
@@ -169,6 +172,33 @@
         const t = now / 1000;
         const breath = 0.5 + 0.5 * Math.sin(t * 1.65);
         const shimmer = 0.5 + 0.5 * Math.sin(t * 2.35 + 0.9);
+
+        if (perfMode) {
+          this.ctx.save();
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, radiusPx, 0, Math.PI * 2);
+          this.ctx.closePath();
+          this.ctx.fillStyle =
+            effect.type === "night_shroud"
+              ? "rgba(8, 10, 16, 0.72)"
+              : "rgba(120, 156, 214, 0.14)";
+          this.ctx.fill();
+          this.ctx.strokeStyle =
+            effect.type === "night_shroud"
+              ? "rgba(28, 30, 48, 0.72)"
+              : "rgba(198, 222, 255, 0.56)";
+          this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+          this.ctx.stroke();
+          if (this.selectedMapEffectId === effect.id) {
+            this.ctx.strokeStyle = "rgba(255, 172, 68, 0.92)";
+            this.ctx.lineWidth = Math.max(2.2 / this.scale, 1.2);
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, radiusPx * 1.03, 0, Math.PI * 2);
+            this.ctx.stroke();
+          }
+          this.ctx.restore();
+          return;
+        }
 
         if (effect.type === "night_shroud") {
           this.ctx.save();
@@ -281,8 +311,11 @@
     proto.drawTileMap = function drawTileMap() {
       const tileMap = this.tileMap;
       if (!tileMap || typeof tileMap !== "object") return;
-      const keys = Object.keys(tileMap);
-      if (!keys.length) return;
+      const cache =
+        typeof this.ensureTileRenderCache === "function"
+          ? this.ensureTileRenderCache()
+          : null;
+      if (!cache || !cache.chunks || cache.chunks.size === 0) return;
 
       const gs = this.gridSize;
       const viewportWidth = this.canvas.width / this.scale;
@@ -296,24 +329,33 @@
 
       const TT = global.TileTextures;
       if (!TT) return;
+      const chunkSize = cache.chunkSize || 8;
+      const minChunkX = Math.floor(minCellX / chunkSize);
+      const maxChunkX = Math.floor(maxCellX / chunkSize);
+      const minChunkY = Math.floor(minCellY / chunkSize);
+      const maxChunkY = Math.floor(maxCellY / chunkSize);
 
       this.ctx.save();
-      for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
-        const parts = key.split(",");
-        const cx = parseInt(parts[0], 10);
-        const cy = parseInt(parts[1], 10);
-        if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
-        const textureId = tileMap[key];
-        const pattern = TT.getOrCreatePattern(this.ctx, textureId);
-        if (!pattern) continue;
-        // Align pattern origin to cell so every cell looks identical
-        if (typeof pattern.setTransform === "function") {
-          pattern.setTransform(new DOMMatrix().translateSelf(cx * gs, cy * gs));
+      for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+        for (let chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+          const chunk = cache.chunks.get(chunkX + "," + chunkY);
+          if (!chunk || chunk.length === 0) continue;
+          for (let i = 0; i < chunk.length; i++) {
+            const entry = chunk[i];
+            const cx = entry.cx;
+            const cy = entry.cy;
+            if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
+            const pattern = TT.getOrCreatePattern(this.ctx, entry.textureId);
+            if (!pattern) continue;
+            // Align pattern origin to cell so every cell looks identical
+            if (typeof pattern.setTransform === "function") {
+              pattern.setTransform(new DOMMatrix().translateSelf(cx * gs, cy * gs));
+            }
+            this.ctx.fillStyle = pattern;
+            // Overlap by 0.5px to eliminate grid-line gaps between tiles
+            this.ctx.fillRect(cx * gs - 0.5, cy * gs - 0.5, gs + 1, gs + 1);
+          }
         }
-        this.ctx.fillStyle = pattern;
-        // Overlap by 0.5px to eliminate grid-line gaps between tiles
-        this.ctx.fillRect(cx * gs - 0.5, cy * gs - 0.5, gs + 1, gs + 1);
       }
       this.ctx.restore();
     };
@@ -547,6 +589,8 @@
     proto.drawDesignTokens = function drawDesignTokens(layerName = "underlay") {
       const tokensForLayer = this.designTokenLayers?.[layerName] || [];
       if (!Array.isArray(tokensForLayer) || tokensForLayer.length === 0) return;
+      const perfMode = !!this.isPerformanceConstrained?.();
+      const viewRect = this.getViewportWorldRect?.(this.gridSize * 3) || null;
 
       tokensForLayer.forEach((token) => {
         const rect = this.getDesignTokenRect(token);
@@ -554,6 +598,15 @@
         const y = rect.y;
         const width = rect.width;
         const height = rect.height;
+        if (
+          viewRect &&
+          (x + width < viewRect.x ||
+            y + height < viewRect.y ||
+            x > viewRect.x + viewRect.width ||
+            y > viewRect.y + viewRect.height)
+        ) {
+          return;
+        }
         const cx = x + width / 2;
         const cy = y + height / 2;
         const rotation = this.getDesignTokenRotationRad(token);
@@ -563,10 +616,12 @@
         const isDimmed = !!hoverType && !isFocused;
 
         this.ctx.save();
-        this.ctx.shadowColor = "rgba(0,0,0,0.45)";
-        this.ctx.shadowBlur = 4;
-        this.ctx.shadowOffsetX = 1;
-        this.ctx.shadowOffsetY = 1;
+        if (!perfMode) {
+          this.ctx.shadowColor = "rgba(0,0,0,0.45)";
+          this.ctx.shadowBlur = 4;
+          this.ctx.shadowOffsetX = 1;
+          this.ctx.shadowOffsetY = 1;
+        }
 
         const isNarratorHidden = token.visible === false;
         this.ctx.globalAlpha =
@@ -696,6 +751,8 @@
 
     proto.drawTokens = function drawTokens(timestamp) {
       const now = typeof timestamp === "number" ? timestamp : performance.now();
+      const perfMode = !!this.isPerformanceConstrained?.();
+      const viewRect = this.getViewportWorldRect?.(this.gridSize * 3) || null;
 
       // In player/impersonate view with fog enabled, hide enemy tokens outside vision.
       // Viewer tokens (player's own) are ALWAYS visible — fog never hides them.
@@ -775,7 +832,7 @@
         var fogTarget = 1;
         if (fogHidesTokens && window.FogVisibility) {
           // Viewer tokens (player's own characters) are always visible
-          var inst = this.instances.find(function (i) { return i.id === token.instanceId; });
+          var inst = this.getInstanceById?.(token.instanceId);
           var isViewerToken = viewerIdSet
             ? viewerIdSet.has(token.instanceId)
             : (inst && inst.isPC);
@@ -843,22 +900,33 @@
         const screenX = pos.x * this.gridSize;
         const screenY = pos.y * this.gridSize;
         const size = (token.size || 1) * this.gridSize;
+        if (
+          viewRect &&
+          (screenX + size < viewRect.x ||
+            screenY + size < viewRect.y ||
+            screenX > viewRect.x + viewRect.width ||
+            screenY > viewRect.y + viewRect.height)
+        ) {
+          return;
+        }
         const radius = size * 0.4;
         const cx = screenX + size / 2;
         const cy = screenY + size / 2;
-        const instance = this.instances.find((i) => i.id === token.instanceId);
+        const instance = this.getInstanceById?.(token.instanceId);
         const conditions =
           instance?.conditions && typeof instance.conditions === "object"
             ? instance.conditions
             : {};
         const isFlying = !!conditions.flying;
-        if (isFlying) this._drawDirty = true; // flying bob needs continuous frames
+        if (isFlying && !perfMode) {
+          this.scheduleCosmeticAnimationFrame?.(50, now);
+        }
         const flightSeed = String(token.id || "")
           .split("")
           .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
         const flightPhase = ((flightSeed % 360) * Math.PI) / 180;
         const flightBob = isFlying
-          ? Math.sin(now / 420 + flightPhase) *
+          ? (perfMode ? 0 : Math.sin(now / 420 + flightPhase)) *
             Math.max(1.4 / this.scale, radius * 0.09)
           : 0;
         const flightLift = isFlying
@@ -869,7 +937,7 @@
         const isNarratorHidden = instance && instance.visible === false;
         const alpha = (isDimmed ? 0.2 : isNarratorHidden ? 0.45 : 1) * curOpacity * darknessDim;
 
-        if (isFlying) {
+        if (isFlying && !perfMode) {
           // Ground shadow stays on the real token position while the token body "floats".
           this.ctx.save();
           this.ctx.globalAlpha = alpha;
@@ -931,10 +999,12 @@
         // Inner save: holds the clip region for the token face (fill + image).
         this.ctx.save();
 
-        this.ctx.shadowColor = isFlying ? "rgba(0,0,0,0.34)" : "rgba(0,0,0,0.5)";
-        this.ctx.shadowBlur = isFlying ? 3 : 4;
-        this.ctx.shadowOffsetX = isFlying ? 1 : 2;
-        this.ctx.shadowOffsetY = isFlying ? 1 : 2;
+        if (!perfMode) {
+          this.ctx.shadowColor = isFlying ? "rgba(0,0,0,0.34)" : "rgba(0,0,0,0.5)";
+          this.ctx.shadowBlur = isFlying ? 3 : 4;
+          this.ctx.shadowOffsetX = isFlying ? 1 : 2;
+          this.ctx.shadowOffsetY = isFlying ? 1 : 2;
+        }
 
         this.ctx.globalAlpha = alpha;
         this.ctx.beginPath();
@@ -974,7 +1044,7 @@
 
         if (hasImage) {
           this.ctx.save();
-          if (isObfuscated) {
+          if (isObfuscated && !perfMode) {
             this.ctx.globalAlpha *= 0.44;
             this.ctx.filter = "saturate(0.35) brightness(0.58)";
           }
@@ -1088,7 +1158,7 @@
         }
 
         const satellites =
-          typeof this.getTokenSatelliteKinds === "function"
+          !perfMode && typeof this.getTokenSatelliteKinds === "function"
             ? this.getTokenSatelliteKinds(token, instance)
             : [];
         if (satellites.length > 0) {
@@ -1108,7 +1178,7 @@
           });
         }
 
-        if (isFocused) {
+        if (isFocused && !perfMode) {
           this.drawHoverHalo(visualCx, visualCy, radius + 5);
         }
 

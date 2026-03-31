@@ -62,8 +62,8 @@ window.TacticalMap = class TacticalMap {
     this.tokens = [];
     this.designTokens = [];
     this.mapEffects = [];
-    this.tileMap = {};
-    this.walls = [];
+    this._tileMapData = {};
+    this._wallsData = [];
     this.lights = [];
     this.switches = [];
     this.selectedSwitchId = null;
@@ -110,6 +110,14 @@ window.TacticalMap = class TacticalMap {
     this._remoteDragPositions = new Map();
     this.remoteMoveAnimMs = 280;
     this._drawDirty = true; // dirty flag for draw loop optimization
+    this._nextCosmeticFrameAt = null;
+    this._tileRenderCache = null;
+    this._wallRenderCache = null;
+    this._instanceById = new Map();
+    this._tokenById = new Map();
+    this._tokenByInstanceId = new Map();
+    this._designTokenById = new Map();
+    this.installTrackedRenderDataProperties();
 
     this.onTokenMove = null;
     this.onTokenSelect = null;
@@ -131,6 +139,9 @@ window.TacticalMap = class TacticalMap {
     this.onLightMove = null;
     this.onSwitchToggle = null;
     this.onSwitchMove = null;
+    this._lightDragPending = false;
+    this._switchDragPending = false;
+    this._dragActivationThresholdPx = 4;
     this.selectedLightId = null;
     this.activeLayer = "entities";
     this.selectedDesignTokenId = null;
@@ -205,6 +216,34 @@ window.TacticalMap = class TacticalMap {
     return this.statusBadgeImages?.[kind] || null;
   }
 
+  installTrackedRenderDataProperties() {
+    if (this._trackedRenderDataPropertiesInstalled) return;
+    this._trackedRenderDataPropertiesInstalled = true;
+
+    Object.defineProperty(this, "tileMap", {
+      configurable: true,
+      enumerable: true,
+      get: () => this._tileMapData,
+      set: (value) => {
+        this._tileMapData = value && typeof value === "object" ? value : {};
+        this.invalidateTileRenderCache();
+      },
+    });
+
+    Object.defineProperty(this, "walls", {
+      configurable: true,
+      enumerable: true,
+      get: () => this._wallsData,
+      set: (value) => {
+        var oldWalls = Array.isArray(this._wallsData) ? this._wallsData : [];
+        this._wallsData = Array.isArray(value) ? value : [];
+        this.invalidateWallRenderCache();
+        this._updateWallSpatialIndex(oldWalls, this._wallsData);
+        this._enclosedPolygonsStale = true;
+      },
+    });
+  }
+
   setData(tokens, instances, extras = {}) {
     this.tokens = tokens || [];
     this.designTokens = this.normalizeDesignTokens(extras?.designTokens || []);
@@ -214,15 +253,13 @@ window.TacticalMap = class TacticalMap {
       overlay: this.designTokens.filter((token) => token.layer === "overlay"),
     };
     this.instances = instances || [];
+    this.rebuildEntityCaches();
     this.mapLayer = this.normalizeMapLayer(extras?.map || null);
     if (extras?.tileMap && typeof extras.tileMap === "object") {
       this.tileMap = extras.tileMap;
     }
     if (Array.isArray(extras?.walls)) {
-      var oldWalls = this.walls;
       this.walls = extras.walls;
-      // Update spatial index if walls changed
-      this._updateWallSpatialIndex(oldWalls, extras.walls);
     }
     if (Array.isArray(extras?.lights)) {
       this.lights = extras.lights;
@@ -382,6 +419,151 @@ window.TacticalMap = class TacticalMap {
     });
 
     this.draw();
+  }
+
+  rebuildEntityCaches() {
+    this._instanceById = new Map();
+    this._tokenById = new Map();
+    this._tokenByInstanceId = new Map();
+    this._designTokenById = new Map();
+
+    for (var i = 0; i < (this.instances || []).length; i++) {
+      var instance = this.instances[i];
+      if (instance && instance.id) this._instanceById.set(instance.id, instance);
+    }
+
+    for (var j = 0; j < (this.tokens || []).length; j++) {
+      var token = this.tokens[j];
+      if (!token || !token.id) continue;
+      this._tokenById.set(token.id, token);
+      if (token.instanceId) this._tokenByInstanceId.set(token.instanceId, token);
+    }
+
+    for (var k = 0; k < (this.designTokens || []).length; k++) {
+      var designToken = this.designTokens[k];
+      if (designToken && designToken.id) this._designTokenById.set(designToken.id, designToken);
+    }
+  }
+
+  getInstanceById(id) {
+    return id ? this._instanceById.get(id) || null : null;
+  }
+
+  getTokenById(id) {
+    return id ? this._tokenById.get(id) || null : null;
+  }
+
+  getTokenByInstanceId(instanceId) {
+    return instanceId ? this._tokenByInstanceId.get(instanceId) || null : null;
+  }
+
+  invalidateTileRenderCache() {
+    this._tileRenderCache = null;
+  }
+
+  invalidateWallRenderCache() {
+    this._wallRenderCache = null;
+  }
+
+  ensureTileRenderCache() {
+    var tileMap = this.tileMap;
+    if (!tileMap || typeof tileMap !== "object") {
+      this._tileRenderCache = null;
+      return null;
+    }
+
+    var keys = Object.keys(tileMap);
+    var cache = this._tileRenderCache;
+    if (cache && cache.ref === tileMap && cache.count === keys.length) {
+      return cache;
+    }
+
+    var chunkSize = 8;
+    var chunks = new Map();
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var parts = key.split(",");
+      var cx = parseInt(parts[0], 10);
+      var cy = parseInt(parts[1], 10);
+      if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
+      var chunkX = Math.floor(cx / chunkSize);
+      var chunkY = Math.floor(cy / chunkSize);
+      var chunkKey = chunkX + "," + chunkY;
+      var chunk = chunks.get(chunkKey);
+      if (!chunk) {
+        chunk = [];
+        chunks.set(chunkKey, chunk);
+      }
+      chunk.push({
+        cx: cx,
+        cy: cy,
+        textureId: tileMap[key],
+      });
+    }
+
+    cache = {
+      ref: tileMap,
+      count: keys.length,
+      chunkSize: chunkSize,
+      chunks: chunks,
+    };
+    this._tileRenderCache = cache;
+    return cache;
+  }
+
+  getViewportWorldRect(padPx = 0) {
+    var scale = this.scale || 1;
+    var worldPad = padPx / scale;
+    return {
+      x: -this.offsetX / scale - worldPad,
+      y: -this.offsetY / scale - worldPad,
+      width: this.canvas.width / scale + worldPad * 2,
+      height: this.canvas.height / scale + worldPad * 2,
+    };
+  }
+
+  drawWorldCanvasVisible(sourceCanvas, originX, originY) {
+    if (!sourceCanvas) return;
+
+    var viewport = this.getViewportWorldRect();
+    var sourceWidth = sourceCanvas.width;
+    var sourceHeight = sourceCanvas.height;
+    var sourceMaxX = originX + sourceWidth;
+    var sourceMaxY = originY + sourceHeight;
+    var viewportMaxX = viewport.x + viewport.width;
+    var viewportMaxY = viewport.y + viewport.height;
+    var drawX = Math.max(originX, viewport.x);
+    var drawY = Math.max(originY, viewport.y);
+    var drawMaxX = Math.min(sourceMaxX, viewportMaxX);
+    var drawMaxY = Math.min(sourceMaxY, viewportMaxY);
+    var drawWidth = drawMaxX - drawX;
+    var drawHeight = drawMaxY - drawY;
+
+    if (drawWidth <= 0 || drawHeight <= 0) return;
+
+    this.ctx.drawImage(
+      sourceCanvas,
+      drawX - originX,
+      drawY - originY,
+      drawWidth,
+      drawHeight,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight,
+    );
+  }
+
+  isPerformanceConstrained() {
+    return !!this.isPanning;
+  }
+
+  scheduleCosmeticAnimationFrame(delayMs, now) {
+    var baseNow = Number.isFinite(now) ? now : performance.now();
+    var nextAt = baseNow + Math.max(16, delayMs || 16);
+    if (this._nextCosmeticFrameAt == null || nextAt < this._nextCosmeticFrameAt) {
+      this._nextCosmeticFrameAt = nextAt;
+    }
   }
 
   /**
@@ -1048,8 +1230,11 @@ window.TacticalMap = class TacticalMap {
         || this.isResizingBackground
         || this._isDraggingLight || this._isDraggingSwitch
         || (this._fog && this._fog.dirty)
-        || (this.mapEffects && this.mapEffects.length > 0)
         || !!this.activeTokenAnim;
+      if (!needsDraw && this._nextCosmeticFrameAt != null && timestamp >= this._nextCosmeticFrameAt) {
+        this._nextCosmeticFrameAt = null;
+        needsDraw = true;
+      }
       if (!needsDraw) {
         // Check for active token animations
         var states = this.tokenRenderState;
@@ -1173,10 +1358,19 @@ window.TacticalMap = class TacticalMap {
         "TacticalMap render module not loaded (tactical-map-render.js).",
       );
     }
+    const fogVisibleState =
+      typeof this.getFogVisibleState === "function"
+        ? this.getFogVisibleState()
+        : null;
+    const shouldDrawFogAwareWalls = !!(
+      fogVisibleState &&
+      fogVisibleState.enabled &&
+      fogVisibleState.isPlayerView
+    );
 
     // Keep image downscaling smooth when zooming out (background/decor assets).
     this.ctx.imageSmoothingEnabled = true;
-    this.ctx.imageSmoothingQuality = "high";
+    this.ctx.imageSmoothingQuality = this.isPerformanceConstrained() ? "medium" : "high";
 
     this.ctx.fillStyle = "#1a1a1a";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -1193,10 +1387,7 @@ window.TacticalMap = class TacticalMap {
     if (this.mapLayer.showGrid !== false) {
       this.drawGrid();
     }
-    if (
-      typeof this.drawWalls === "function" &&
-      (!this._fog || (this._fog.isNarrator && !this._fog.impersonateInstanceId))
-    ) {
+    if (typeof this.drawWalls === "function" && !shouldDrawFogAwareWalls) {
       this.drawWalls();
     }
     if (typeof this.drawRooms === "function") {
@@ -1224,9 +1415,20 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawLightingOverlay === "function") {
       this.drawLightingOverlay();
     }
+    if (
+      shouldDrawFogAwareWalls &&
+      typeof this.drawWallsForFogState === "function"
+    ) {
+      this.drawWallsForFogState(fogVisibleState);
+    }
     // Narrator (not impersonating): redraw walls ON TOP of the fog/lighting
     // overlay so they are always fully visible and never dimmed.
-    if (this._fog && this._fog.isNarrator && !this._fog.impersonateInstanceId) {
+    if (
+      !shouldDrawFogAwareWalls &&
+      this._fog &&
+      this._fog.isNarrator &&
+      !this._fog.impersonateInstanceId
+    ) {
       if (typeof this.drawWalls === "function") this.drawWalls();
       if (typeof this.drawLightIndicators === "function") this.drawLightIndicators();
     }

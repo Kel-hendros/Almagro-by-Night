@@ -55,7 +55,7 @@
       var map = getMap?.();
       if (map) {
         map.canvas?.classList.add("fog-brush-active");
-        map.draw();
+        map.requestDraw?.();
       }
     }
 
@@ -66,7 +66,7 @@
       if (map) {
         map.canvas?.classList.remove("fog-brush-active");
         map._fogBrushHover = null;
-        map.draw();
+        map.requestDraw?.();
       }
     }
 
@@ -113,7 +113,7 @@
       if (map) {
         map.setFogConfig?.(fog);
         map.invalidateFog?.();
-        map.draw();
+        map.requestDraw?.();
       }
     }
 
@@ -161,7 +161,7 @@
       }
 
       // Request redraw for hover preview
-      if (map) map.draw();
+      if (map) map.requestDraw?.();
       return false;
     }
 
@@ -190,7 +190,7 @@
         map.setFogConfig?.(fog);
         map.invalidateFog?.();
         map.invalidateLighting?.();
-        map.draw();
+        map.requestDraw?.();
       }
       onChanged?.();
     }
