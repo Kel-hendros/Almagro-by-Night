@@ -6,6 +6,12 @@
   var SNAP_RADIUS = 0.45; // units — max distance to snap to a wall endpoint
   var SNAP_DISPLAY_RANGE = 3; // units — show nearby wall endpoints within this range
   var ERASE_DISTANCE_THRESHOLD = 0.35; // units — max distance to select a wall for erasing
+  // Movement collision should use a slightly smaller hull than the token art.
+  // Otherwise a 1x1 token trying to pass through a 1-unit doorway has to be
+  // almost mathematically centered, which feels sticky and imprecise.
+  var TOKEN_COLLISION_INSET_RATIO = 0.10;
+  var TOKEN_COLLISION_INSET_MIN = 0.03;
+  var TOKEN_COLLISION_INSET_MAX = 0.10;
 
   function generateWallId() {
     return "wall-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 6);
@@ -1628,7 +1634,10 @@
     if (!walls || !walls.length) return false;
 
     var size = tokenSize || 1;
-    var epsilon = Math.min(1e-4, size * 0.25);
+    var epsilon = Math.min(
+      TOKEN_COLLISION_INSET_MAX,
+      Math.max(TOKEN_COLLISION_INSET_MIN, size * TOKEN_COLLISION_INSET_RATIO)
+    );
     var left = x + epsilon;
     var top = y + epsilon;
     var right = x + size - epsilon;

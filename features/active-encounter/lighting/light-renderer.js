@@ -193,6 +193,19 @@
     ].join("|");
   }
 
+  function getLightingViewKey(map) {
+    var fog = map && map._fog;
+    if (!fog) return "no-fog";
+    var viewerIds = Array.isArray(fog.viewerInstanceIds)
+      ? fog.viewerInstanceIds.slice().sort().join(",")
+      : "";
+    return [
+      fog.isNarrator ? "narrator" : "player",
+      fog.impersonateInstanceId || "",
+      viewerIds,
+    ].join("|");
+  }
+
   function apply(TacticalMap) {
     var proto = TacticalMap.prototype;
 
@@ -207,6 +220,7 @@
         overlayFogGen: -1,
         overlayBoundsKey: "",
         overlayProfileKey: "",
+        overlayViewKey: "",
         // Per-light polygon cache: Map<lightId, {poly, x, y, radius, intensity, wallsHash}>
         perLightCache: new Map(),
         // Hash of walls for invalidation detection
@@ -218,6 +232,7 @@
       if (!this._lighting) this.initLighting();
       this._lighting.dirty = true;
       this._lighting.cacheGen = (this._lighting.cacheGen || 0) + 1;
+      this._lighting._lastFullRender = 0;
       this._drawDirty = true;
     };
 
@@ -231,6 +246,7 @@
         this._lighting.perLightCache.delete(lightId);
       }
       this._lighting.dirty = true;
+      this._lighting._lastFullRender = 0;
       this._drawDirty = true;
     };
 
@@ -242,6 +258,7 @@
       if (!this._lighting) this.initLighting();
       this._lighting.wallsHash = null;
       this._lighting.dirty = true;
+      this._lighting._lastFullRender = 0;
       this._drawDirty = true;
       // Mark enclosed polygons for lazy recomputation (not sync to avoid loops)
       this._enclosedPolygonsStale = true;
@@ -652,17 +669,20 @@
       var boundsKey = [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].join(":");
       var profile = this.getActiveViewerVisionAggregateProfile();
       var profileKey = getProfileKey(profile);
+      var viewKey = getLightingViewKey(this);
 
       if (
         lighting.dirty ||
         lighting.overlayFogGen !== fogGen ||
         lighting.overlayBoundsKey !== boundsKey ||
-        lighting.overlayProfileKey !== profileKey
+        lighting.overlayProfileKey !== profileKey ||
+        lighting.overlayViewKey !== viewKey
       ) {
         renderLightingOverlay(this, lighting, bounds, profile);
         lighting.overlayFogGen = fogGen;
         lighting.overlayBoundsKey = boundsKey;
         lighting.overlayProfileKey = profileKey;
+        lighting.overlayViewKey = viewKey;
         lighting.dirty = false;
       }
 

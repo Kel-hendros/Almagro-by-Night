@@ -1157,6 +1157,15 @@ window.TacticalMap = class TacticalMap {
   /** Mark the map as needing a redraw on the next animation frame. */
   requestDraw() { this._drawDirty = true; }
 
+  isFogPlayerViewActive() {
+    return !!(
+      this._fog &&
+      this._fog.config &&
+      this._fog.config.enabled &&
+      (!this._fog.isNarrator || !!this._fog.impersonateInstanceId)
+    );
+  }
+
   draw(timestamp) {
     this._drawDirty = false;
     if (typeof this.drawGrid !== "function" || typeof this.drawTokens !== "function") {

@@ -917,7 +917,12 @@
           this.isDraggingToken = canDrag;
           this.selectedTokenId = clickedToken.id;
           this.draggedToken = canDrag ? clickedToken : null;
-          if (canDrag && clickedInstance?.isPC) {
+          if (
+            canDrag &&
+            clickedInstance?.isPC &&
+            typeof this.isFogPlayerViewActive === "function" &&
+            this.isFogPlayerViewActive()
+          ) {
             this.beginFogDragPreview?.(clickedInstance.id);
           } else {
             this.clearFogDragPreview?.();
@@ -1129,7 +1134,11 @@
         }
         // Fog: update during drag for PCs so walls occlude vision.
         // Throttle to every 50ms during drag for smoother movement (~20 FPS).
-        if (dragIsPC && this._fog?.config?.enabled) {
+        if (
+          dragIsPC &&
+          typeof this.isFogPlayerViewActive === "function" &&
+          this.isFogPlayerViewActive()
+        ) {
           var now = performance.now();
           var DRAG_FOG_THROTTLE = 50; // ms between fog updates during drag
           if (!this._lastDragFogUpdate || (now - this._lastDragFogUpdate) >= DRAG_FOG_THROTTLE) {
@@ -1145,7 +1154,7 @@
         if (typeof this.onTokenDrag === "function") {
           this.onTokenDrag(curToken.id, curToken.x, curToken.y);
         }
-        this.draw();
+        this.requestDraw?.();
       } else if (this.isDraggingMapEffect && this.draggedMapEffect) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1296,7 +1305,12 @@
           for (var ui = 0; ui < (this.instances || []).length; ui++) {
             if (this.instances[ui].id === this.draggedToken.instanceId) { upInst = this.instances[ui]; break; }
           }
-          if (upInst && upInst.isPC) {
+          if (
+            upInst &&
+            upInst.isPC &&
+            typeof this.isFogPlayerViewActive === "function" &&
+            this.isFogPlayerViewActive()
+          ) {
             // Persist what the viewer discovered during the drag so explored
             // memory matches what was already visible while moving.
             this.commitFogDragPreview?.();
@@ -1483,7 +1497,15 @@
       if (this.activeLayer === "background") return;
       var clickedToken = this.getTokenAt(worldX, worldY);
       var clickedDecor = this.getDesignTokenAt(worldX, worldY);
-      if (!clickedToken && !clickedDecor && this.onPing) {
+      var clickedMapEffect =
+        typeof this.getMapEffectAt === "function"
+          ? this.getMapEffectAt(worldX, worldY)
+          : null;
+      var clickedMarker =
+        typeof this.getMarkerAt === "function"
+          ? this.getMarkerAt(worldCellX, worldCellY, mouseX, mouseY)
+          : null;
+      if (!clickedToken && !clickedDecor && !clickedMapEffect && !clickedMarker && this.onPing) {
         this.onPing({
           cellX: worldCellX,
           cellY: worldCellY,

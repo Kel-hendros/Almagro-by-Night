@@ -133,12 +133,28 @@
       if (!this._fog) return;
       this._fog.viewerInstanceIds = instanceIds || null;
       this._fog.dirty = true;
+      this._fog._lastFullRender = 0;
+      this._tokenFogCacheGeneration = -1;
+      this._tokenFogTargetCache = {};
+      if (typeof this.invalidateLighting === "function") {
+        this.invalidateLighting();
+      } else {
+        this._drawDirty = true;
+      }
     };
 
     proto.setFogImpersonate = function (instanceId) {
       if (!this._fog) return;
       this._fog.impersonateInstanceId = instanceId || null;
       this._fog.dirty = true;
+      this._fog._lastFullRender = 0;
+      this._tokenFogCacheGeneration = -1;
+      this._tokenFogTargetCache = {};
+      if (typeof this.invalidateLighting === "function") {
+        this.invalidateLighting();
+      } else {
+        this._drawDirty = true;
+      }
     };
 
     proto.beginFogDragPreview = function (instanceId) {
@@ -210,11 +226,24 @@
     proto.drawFogOfWar = function () {
       var fog = this._fog;
       var fogEnabled = fog && fog.config && fog.config.enabled;
+      var isNarratorNormalView = !!(fog && fog.isNarrator && !fog.impersonateInstanceId);
 
       if (!fogEnabled) return;
       if (!fog) { this.initFog(null, true); fog = this._fog; }
 
       if (fog.dirty) {
+        if (isNarratorNormalView) {
+          renderFogOverlay(this, fog);
+          fog.dirty = false;
+          var narratorCanvas = fog.offscreenCanvas;
+          if (!narratorCanvas || !fog._bounds) return;
+          this.ctx.drawImage(
+            narratorCanvas,
+            fog._bounds.minX * this.gridSize,
+            fog._bounds.minY * this.gridSize,
+          );
+          return;
+        }
         // Throttle full recalculation to max 12 times per second
         var now = Date.now();
         var FOG_THROTTLE_MS = 83;
