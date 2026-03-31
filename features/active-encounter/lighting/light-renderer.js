@@ -125,6 +125,10 @@
     return Math.max(0.1, tint);
   }
 
+  function getAmbientTintStrength(ambient) {
+    return clamp01(ambient && ambient.tintStrength != null ? ambient.tintStrength : 0.35);
+  }
+
   function normalizeVisionProfile(source) {
     var profile = source && typeof source === "object" ? source : {};
     return {
@@ -740,6 +744,14 @@
       return false;
     };
 
+    proto.isLightVisibleToViewer = function (light) {
+      if (!light) return false;
+      var fog = this._fog;
+      if (!fog) return true;
+      var isPlayerView = !fog.isNarrator || !!fog.impersonateInstanceId;
+      return !isPlayerView;
+    };
+
     /**
      * Draw light dots, switch icons, and connection lines.
      */
@@ -838,6 +850,7 @@
       // Light dots
       for (var i = 0; i < lights.length; i++) {
         var light = lights[i];
+        if (!this.isLightVisibleToViewer(light)) continue;
         var sx = light.x * gs;
         var sy = light.y * gs;
         var rgb = hexToRgb(light.color || "#ffcc66");
@@ -1035,7 +1048,7 @@
       // Lights
       for (var li = 0; li < lights.length; li++) {
         var light = lights[li];
-        if (!this.isMarkerVisibleToViewer(light.x, light.y)) continue;
+        if (!this.isLightVisibleToViewer(light)) continue;
         var isSelected = selectedLightId === light.id;
         drawInteractiveMarker(ctx, light.x * gs, light.y * gs, MARKER_EMOJIS.light, sc, isSelected);
       }
@@ -1043,7 +1056,7 @@
       // Switches
       for (var si = 0; si < switches.length; si++) {
         var sw = switches[si];
-        if (!this.isMarkerVisibleToViewer(sw.x, sw.y)) continue;
+        if (!this.isSwitchVisibleToViewer(sw)) continue;
         var isSelected = selectedSwitchId === sw.id;
         drawInteractiveMarker(ctx, sw.x * gs, sw.y * gs, MARKER_EMOJIS["switch"], sc, isSelected);
       }
@@ -1228,7 +1241,7 @@
       }
 
       var ambientRgb = hexToRgb(ambient.color || "#8090b0");
-      var ambientTint = ambientI * 0.05;
+      var ambientTint = ambientI * 0.05 * getAmbientTintStrength(ambient);
       if (ambientTint > 0.005) {
         // If we have enclosed areas, use clipping to apply tint only outside them (single pass)
         if (enclosedPolys && enclosedPolys.length > 0) {

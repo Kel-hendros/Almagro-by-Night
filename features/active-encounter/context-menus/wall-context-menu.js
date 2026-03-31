@@ -65,12 +65,21 @@
 
     function renderWallMenu(info) {
       var curveType = info.curveType || "wall";
-      var isDoorOrWindow = curveType === "door" || curveType === "window";
+      var isSpecialType = curveType !== "wall";
       var isDoor = curveType === "door";
       var isOpen = info.isDoorOpen || false;
 
-      var headerIcon = isDoor ? "\uD83D\uDEAA" : (curveType === "window" ? "\uD83E\uDE9F" : "\u2501");
-      var headerText = isDoor ? "Puerta" : (curveType === "window" ? "Ventana" : "Pared");
+      var headerIcon = "\u2501";
+      if (curveType === "door") headerIcon = "\uD83D\uDEAA";
+      else if (curveType === "window") headerIcon = "\uD83E\uDE9F";
+      else if (curveType === "grate") headerIcon = "#";
+      else if (curveType === "curtain") headerIcon = "~";
+
+      var headerText = "Pared";
+      if (curveType === "door") headerText = "Puerta";
+      else if (curveType === "window") headerText = "Ventana";
+      else if (curveType === "grate") headerText = "Reja";
+      else if (curveType === "curtain") headerText = "Cortina";
 
       var html =
         '<div class="ae-wall-context-header">' +
@@ -86,7 +95,7 @@
       }
 
       // Convert to wall (for doors/windows)
-      if (isDoorOrWindow) {
+      if (isSpecialType) {
         html += '<button class="ae-token-context-action" data-action="convert-to-wall">\u2501 Convertir a pared</button>';
       }
 

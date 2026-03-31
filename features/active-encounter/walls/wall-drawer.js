@@ -124,7 +124,7 @@
     }
 
     // Add the new segment itself
-    var typeLabels = { wall: "Pared", door: "Puerta", window: "Ventana" };
+    var typeLabels = { wall: "Pared", door: "Puerta", window: "Ventana", grate: "Reja", curtain: "Cortina" };
     var typeCount = walls.filter(function (w) { return w.type === newType; }).length + 1;
     walls.push({
       id: generateWallId(),
@@ -155,7 +155,7 @@
     var onReturnToSelection = opts.onReturnToSelection || null;
 
     var active = false;
-    var wallType = "wall"; // "wall" | "door" | "window"
+    var wallType = "wall"; // "wall" | "door" | "window" | "grate" | "curtain"
     var mode = "draw"; // "draw" | "edit" | "erase"
     var drawShape = "polygon"; // "polygon" | "rectangle" | "circle"
     var chainStart = null; // { x, y } grid intersection
@@ -1580,6 +1580,7 @@
   function blocksMovement(w) {
     if (w.type === "door" && w.doorOpen) return false;
     if (w.type === "window" && w.doorOpen) return false;
+    if (w.type === "curtain") return false;
     return true;
   }
 

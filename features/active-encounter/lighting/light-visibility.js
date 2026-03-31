@@ -10,6 +10,7 @@
 
   function blocksLight(wall) {
     if ((wall.type === "door" || wall.type === "window") && wall.doorOpen) return false;
+    if (wall.type === "grate") return false;
     return true;
   }
 

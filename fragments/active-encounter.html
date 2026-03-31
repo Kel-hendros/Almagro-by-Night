@@ -123,6 +123,14 @@
                                             <span class="ae-wall-type-icon ae-wall-type-icon--window"></span>
                                             <span>Ventana</span>
                                         </button>
+                                        <button class="ae-wall-type-btn" data-wall-type="grate" title="Reja">
+                                            <span class="ae-wall-type-icon ae-wall-type-icon--grate"></span>
+                                            <span>Reja</span>
+                                        </button>
+                                        <button class="ae-wall-type-btn" data-wall-type="curtain" title="Cortina">
+                                            <span class="ae-wall-type-icon ae-wall-type-icon--curtain"></span>
+                                            <span>Cortina</span>
+                                        </button>
                                     </div>
                                     <label class="ae-setting-label">Forma</label>
                                     <div class="ae-wall-shape-btns ae-levels">
@@ -184,6 +192,11 @@
                                         <label class="ae-setting-label">Intensidad</label>
                                         <input type="range" id="ae-ambient-intensity" min="0" max="1" step="0.05" value="0">
                                         <span id="ae-ambient-intensity-val" class="ae-light-range-val">0%</span>
+                                    </div>
+                                    <div class="ae-setting-row">
+                                        <label class="ae-setting-label">Tinte</label>
+                                        <input type="range" id="ae-ambient-tint" min="0" max="1" step="0.05" value="0.35">
+                                        <span id="ae-ambient-tint-val" class="ae-light-range-val">35%</span>
                                     </div>
                                 </div>
                                 <div id="ae-list-lights" class="ae-drawer-list"></div>

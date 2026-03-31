@@ -6,6 +6,7 @@
 
   var TOOL_STATE = {
     activeTool: "selection", // "selection" | "walls" | "doors" | "lights"
+    wallElement: "wall",     // "wall" | "grate" | "curtain"
     wallShape: "polygon",    // "polygon" | "rectangle" | "circle"
     wallMode: "draw",        // "draw" | "erase"
     doorElement: "door",     // "door" | "window"
@@ -124,7 +125,7 @@
           paperEditor.setDrawMode(null);
         } else if (tool === "walls") {
           paperEditor.setInputEnabled(true);
-          paperEditor.setDrawMode("wall");
+          paperEditor.setDrawMode(TOOL_STATE.wallElement || "wall");
           paperEditor.setShapeMode(TOOL_STATE.wallShape);
         } else if (tool === "doors") {
           paperEditor.setInputEnabled(true);
@@ -215,13 +216,6 @@
     }
 
     function renderWallsContextual() {
-      var hints = {
-        polygon: "Click para agregar puntos, doble-click o Enter para terminar",
-        rectangle: "Arrastra para dibujar un rectángulo (Shift = cuadrado)",
-        circle: "Arrastra desde el centro para dibujar un círculo"
-      };
-      var hint = hints[TOOL_STATE.wallShape] || "";
-
       contextualEl.innerHTML =
         '<div class="ae-elements-ctx-group">' +
           '<span class="ae-elements-ctx-label">Forma</span>' +
@@ -231,7 +225,15 @@
             '<button class="ae-elements-ctx-btn' + (TOOL_STATE.wallShape === "circle" ? " is-active" : "") + '" data-shape="circle" title="Círculo"><i data-lucide="circle"></i></button>' +
           '</div>' +
         '</div>' +
-        '<span class="ae-elements-ctx-hint">' + hint + '</span>';
+        '<div class="ae-elements-ctx-divider"></div>' +
+        '<div class="ae-elements-ctx-group">' +
+          '<span class="ae-elements-ctx-label">Tipo</span>' +
+          '<div class="ae-elements-ctx-btns">' +
+            '<button class="ae-elements-ctx-btn ae-elements-ctx-btn--text' + (TOOL_STATE.wallElement === "wall" ? " is-active" : "") + '" data-wall-element="wall" title="Pared">Pared</button>' +
+            '<button class="ae-elements-ctx-btn ae-elements-ctx-btn--text' + (TOOL_STATE.wallElement === "grate" ? " is-active" : "") + '" data-wall-element="grate" title="Reja">Reja</button>' +
+            '<button class="ae-elements-ctx-btn ae-elements-ctx-btn--text' + (TOOL_STATE.wallElement === "curtain" ? " is-active" : "") + '" data-wall-element="curtain" title="Cortina">Cortina</button>' +
+          '</div>' +
+        '</div>';
 
       // Re-init lucide icons
       if (window.lucide) window.lucide.createIcons();
@@ -246,7 +248,22 @@
 
           var paperEditor = getPaperEditor?.();
           if (paperEditor && paperEditor.isActive()) {
-            paperEditor.setDrawMode("wall");
+            paperEditor.setDrawMode(TOOL_STATE.wallElement || "wall");
+            paperEditor.setShapeMode(TOOL_STATE.wallShape);
+          }
+        });
+      });
+
+      contextualEl.querySelectorAll("[data-wall-element]").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          e.preventDefault();
+          TOOL_STATE.wallElement = btn.dataset.wallElement || "wall";
+          renderWallsContextual();
+
+          var paperEditor = getPaperEditor?.();
+          if (paperEditor && paperEditor.isActive()) {
+            paperEditor.setDrawMode(TOOL_STATE.wallElement);
             paperEditor.setShapeMode(TOOL_STATE.wallShape);
           }
         });

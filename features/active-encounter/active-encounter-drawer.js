@@ -507,6 +507,8 @@
       var ambientColor = document.getElementById("ae-ambient-color");
       var ambientIntensity = document.getElementById("ae-ambient-intensity");
       var ambientVal = document.getElementById("ae-ambient-intensity-val");
+      var ambientTint = document.getElementById("ae-ambient-tint");
+      var ambientTintVal = document.getElementById("ae-ambient-tint-val");
       var _ambientSaveTimer = null;
 
       function debouncedSaveAmbient() {
@@ -535,6 +537,18 @@
           if (!al) return;
           al.intensity = parseFloat(ambientIntensity.value) || 0;
           if (ambientVal) ambientVal.textContent = Math.round(al.intensity * 100) + "%";
+          var map = getMap?.();
+          if (map) { map.invalidateLighting?.(); map.draw(); }
+          debouncedSaveAmbient();
+        });
+      }
+      if (ambientTint) {
+        ambientTint.addEventListener("input", function () {
+          if (!requireAdminAction()) return;
+          var al = state.encounter?.data?.ambientLight;
+          if (!al) return;
+          al.tintStrength = Math.min(1, Math.max(0, parseFloat(ambientTint.value) || 0));
+          if (ambientTintVal) ambientTintVal.textContent = Math.round(al.tintStrength * 100) + "%";
           var map = getMap?.();
           if (map) { map.invalidateLighting?.(); map.draw(); }
           debouncedSaveAmbient();
@@ -698,9 +712,14 @@
       var ambientColor = document.getElementById("ae-ambient-color");
       var ambientIntensity = document.getElementById("ae-ambient-intensity");
       var ambientVal = document.getElementById("ae-ambient-intensity-val");
+      var ambientTint = document.getElementById("ae-ambient-tint");
+      var ambientTintVal = document.getElementById("ae-ambient-tint-val");
+      var tintStrength = Math.min(1, Math.max(0, parseFloat(al.tintStrength != null ? al.tintStrength : 0.35) || 0.35));
       if (ambientColor) ambientColor.value = al.color || "#8090b0";
       if (ambientIntensity) ambientIntensity.value = al.intensity != null ? al.intensity : 0;
       if (ambientVal) ambientVal.textContent = Math.round((al.intensity != null ? al.intensity : 0) * 100) + "%";
+      if (ambientTint) ambientTint.value = tintStrength;
+      if (ambientTintVal) ambientTintVal.textContent = Math.round(tintStrength * 100) + "%";
     }
 
     function renderAssetLists() {

@@ -1,6 +1,8 @@
 (function initAEWallPathsModule(global) {
   "use strict";
 
+  var SEGMENT_TYPES = new Set(["wall", "door", "window", "grate", "curtain"]);
+
   function cloneJson(value) {
     if (value == null) return value;
     return JSON.parse(JSON.stringify(value));
@@ -23,12 +25,13 @@
 
   function normalizeSegment(segment) {
     var type = segment && typeof segment.type === "string" ? segment.type : "wall";
-    if (type !== "door" && type !== "window") type = "wall";
+    if (!SEGMENT_TYPES.has(type)) type = "wall";
+    var supportsOpenState = type === "door" || type === "window";
     return {
       id: segment && segment.id ? String(segment.id) : generateSegmentId(),
       type: type,
-      doorOpen: !!(segment && segment.doorOpen),
-      locked: !!(segment && segment.locked),
+      doorOpen: supportsOpenState && !!(segment && segment.doorOpen),
+      locked: supportsOpenState && !!(segment && segment.locked),
       name: segment && typeof segment.name === "string" ? segment.name : "",
     };
   }

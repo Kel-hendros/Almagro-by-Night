@@ -9,8 +9,11 @@
   var WALL_COLOR = "#5588cc";   // Blue for walls
   var DOOR_COLOR = "#8b6914";   // Brown for doors
   var WINDOW_COLOR = "#7bb3d4"; // Light blue for windows
+  var GRATE_COLOR = "#f08a24";  // Orange for grates
+  var CURTAIN_COLOR = "#9c5cff"; // Violet for curtains
   var DEFAULT_GRID_SPACING = 1.0;
   var GRID_NUDGE_STEP = 0.1;
+  var SEGMENT_TYPES = new Set(["wall", "door", "window", "grate", "curtain"]);
 
   function createPaperWallEditor(opts) {
     var container = opts.container;
@@ -29,7 +32,7 @@
     var canvas = null;
     var scope = null;
     var isActive = false;
-    var drawMode = null; // null | "wall" | "door" | "window"
+    var drawMode = null; // null | "wall" | "door" | "window" | "grate" | "curtain"
     var shapeMode = "polygon"; // "polygon" | "rectangle" | "circle"
     var currentPath = null;
     var snapIndicator = null;
@@ -84,26 +87,39 @@
 
     // ── Segment Metadata Helpers ──
 
-    function createDefaultSegmentData() {
+    function createDefaultSegmentData(type) {
+      var normalizedType = SEGMENT_TYPES.has(type) ? type : "wall";
       return {
         id: global.AEWallPaths?.generateSegmentId?.() ||
           ("ws-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8)),
-        type: "wall",
+        type: normalizedType,
         doorOpen: false,
         locked: false,
         name: "",
       };
     }
 
+    function getDefaultSegmentType(path) {
+      if (!path || !path.data) return "wall";
+      if (SEGMENT_TYPES.has(path.data.defaultSegmentType)) return path.data.defaultSegmentType;
+      if (Array.isArray(path.data.segmentData) && path.data.segmentData.length) {
+        var firstType = path.data.segmentData[0] && path.data.segmentData[0].type;
+        if (SEGMENT_TYPES.has(firstType)) return firstType;
+      }
+      return "wall";
+    }
+
     function normalizeSegmentData(segment) {
       var base = createDefaultSegmentData();
       if (!segment || typeof segment !== "object") return base;
       if (segment.id) base.id = String(segment.id);
-      if (segment.type === "door" || segment.type === "window") {
+      if (SEGMENT_TYPES.has(segment.type)) {
         base.type = segment.type;
       }
-      base.doorOpen = !!segment.doorOpen;
-      base.locked = !!segment.locked;
+      if (base.type === "door" || base.type === "window") {
+        base.doorOpen = !!segment.doorOpen;
+        base.locked = !!segment.locked;
+      }
       base.name = typeof segment.name === "string" ? segment.name : "";
       return base;
     }
@@ -122,7 +138,7 @@
       if (numCurves < 0) numCurves = 0;
 
       while (path.data.segmentData.length < numCurves) {
-        path.data.segmentData.push(createDefaultSegmentData());
+        path.data.segmentData.push(createDefaultSegmentData(getDefaultSegmentType(path)));
       }
       if (path.data.segmentData.length > numCurves) {
         path.data.segmentData.length = numCurves;
@@ -144,8 +160,8 @@
       ensureSegmentData(path);
       if (curveIndex >= 0 && curveIndex < path.data.segmentData.length) {
         var segment = getSegmentData(path, curveIndex);
-        segment.type = type === "door" || type === "window" ? type : "wall";
-        if (segment.type === "wall") {
+        segment.type = SEGMENT_TYPES.has(type) ? type : "wall";
+        if (segment.type !== "door" && segment.type !== "window") {
           segment.doorOpen = false;
           segment.locked = false;
         }
@@ -161,9 +177,9 @@
       getSegmentData(path, curveIndex).doorOpen = !!isOpen;
     }
 
-    function createPathStyle() {
+    function createPathStyle(type) {
       return {
-        strokeColor: WALL_COLOR,
+        strokeColor: getStrokeColorForType(type),
         strokeWidth: 0.08,
         strokeCap: "butt",
         strokeJoin: "round",
@@ -173,6 +189,8 @@
     function getStrokeColorForType(type) {
       if (type === "door") return DOOR_COLOR;
       if (type === "window") return WINDOW_COLOR;
+      if (type === "grate") return GRATE_COLOR;
+      if (type === "curtain") return CURTAIN_COLOR;
       return WALL_COLOR;
     }
 
@@ -282,10 +300,15 @@
       var pathData = global.AEWallPaths?.normalizeWallPath?.(pathLike) || pathLike;
       if (!pathData || !Array.isArray(pathData.points) || pathData.points.length < 2) return null;
 
-      var path = new scope.Path(createPathStyle());
+      var path = new scope.Path(createPathStyle(
+        Array.isArray(pathData.segments) && pathData.segments[0] ? pathData.segments[0].type : "wall"
+      ));
       path.closed = !!pathData.closed;
       path.data = {
         id: pathData.id || (global.AEWallPaths?.generatePathId?.() || generateId()),
+        defaultSegmentType: Array.isArray(pathData.segments) && pathData.segments[0]
+          ? pathData.segments[0].type
+          : "wall",
         segmentData: Array.isArray(pathData.segments) ? pathData.segments.map(normalizeSegmentData) : [],
       };
 
@@ -1392,9 +1415,9 @@
 
           // Create preview shape
           if (shapeMode === "rectangle") {
-            currentPath = new scope.Path(Object.assign(createPathStyle(), {
+            currentPath = new scope.Path(Object.assign(createPathStyle(drawMode), {
               closed: true,
-              data: { id: generateId(), segmentData: [] }
+              data: { id: generateId(), defaultSegmentType: drawMode, segmentData: [] }
             }));
             // Add 4 corners (will be updated on drag)
             currentPath.add(startPoint);
@@ -1403,9 +1426,9 @@
             currentPath.add(startPoint);
           } else {
             // Circle: create polygon approximation
-            currentPath = new scope.Path(Object.assign(createPathStyle(), {
+            currentPath = new scope.Path(Object.assign(createPathStyle(drawMode), {
               closed: true,
-              data: { id: generateId(), segmentData: [] }
+              data: { id: generateId(), defaultSegmentType: drawMode, segmentData: [] }
             }));
             // Add segments for circle (will be updated on drag)
             for (var i = 0; i < CIRCLE_SEGMENTS; i++) {
@@ -1440,8 +1463,8 @@
         var clickPoint = resolveSnapPoint(targetPoint, { excludePath: currentPath }) || targetPoint;
 
         if (!currentPath) {
-          currentPath = new scope.Path(Object.assign(createPathStyle(), {
-            data: { id: generateId(), segmentData: [] }
+          currentPath = new scope.Path(Object.assign(createPathStyle(drawMode), {
+            data: { id: generateId(), defaultSegmentType: drawMode, segmentData: [] }
           }));
           currentPath.add(clickPoint);
           currentPath.add(clickPoint); // Preview point

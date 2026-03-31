@@ -7,17 +7,23 @@
     wall:   "#d4a574",
     door:   "#8b6914",
     window: "#7bb3d4",
+    grate:  "#f08a24",
+    curtain: "#9c5cff",
   };
   // Muted colors when not in elements layer (structural view)
   var WALL_COLORS_INACTIVE = {
     wall:   "#4a4a4a",
     door:   "#5a5a5a",
-    window: "#555555",
+    window: "#7bb3d4",
+    grate:  "rgba(0,0,0,0)",
+    curtain: "#d2d2da",
   };
   var WALL_WIDTHS = {
     wall:   0.22,
     door:   0.16,
     window: 0.14,
+    grate:  0.16,
+    curtain: 0.18,
   };
   var ERASE_HOVER_COLOR = "#e53935";
 
@@ -27,7 +33,7 @@
     /**
      * Draw all wall segments on the canvas.
      * When Paper.js is active in Elements layer, Paper.js handles ALL rendering.
-     * When Paper.js is active in other layers, we draw doors/windows.
+     * When Paper.js is active in other layers, we draw runtime-visible special walls.
      * When Paper.js is not active, we draw everything.
      */
     proto.drawWalls = function drawWalls() {
@@ -36,8 +42,8 @@
         if (this._elementsLayerActive) {
           return;
         }
-        // In other layers: draw doors/windows for visual feedback
-        drawDoorsAndWindowsOnly(this, 1);
+        // In other layers: draw runtime-visible special walls for visual feedback
+        drawRuntimeSpecialWalls(this, 1);
         return;
       }
       drawWallsInternal(this, 1);
@@ -248,7 +254,19 @@
 
     ctx.save();
 
-    if (!isEraseHover) {
+    if (!isElementsActive && wall.type === "grate" && !isEraseHover) {
+      ctx.restore();
+      return;
+    }
+
+    var disableSegmentShadow = !isEraseHover && !isElementsActive && wall.type === "window";
+
+    if (disableSegmentShadow) {
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    } else if (!isEraseHover) {
       ctx.shadowColor = "rgba(0,0,0,0.4)";
       ctx.shadowBlur = 2 / Math.max(scale, 0.5);
       ctx.shadowOffsetY = 1 / Math.max(scale, 0.5);
@@ -292,8 +310,8 @@
       ctx.lineTo(px2, py2);
       ctx.stroke();
     } else if (wall.type === "window" && wall.doorOpen) {
-      var windowOpenColor = isElementsActive ? "rgba(123,179,212,0.45)" : "rgba(85,85,85,0.45)";
-      var windowTickColor = isElementsActive ? "rgba(123,179,212,0.4)" : "rgba(85,85,85,0.4)";
+      var windowOpenColor = isElementsActive ? "rgba(123,179,212,0.45)" : "rgba(123,179,212,0.4)";
+      var windowTickColor = isElementsActive ? "rgba(123,179,212,0.4)" : "rgba(123,179,212,0.36)";
       ctx.strokeStyle = isEraseHover ? ERASE_HOVER_COLOR : windowOpenColor;
       ctx.lineWidth = lineWidth * 0.6;
       ctx.setLineDash([4 / Math.max(scale, 0.5), 4 / Math.max(scale, 0.5)]);
@@ -313,6 +331,23 @@
       ctx.lineTo(px2, py2);
       ctx.stroke();
       drawWindowTicks(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : baseColor);
+    } else if (wall.type === "grate") {
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "butt";
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
+      drawGrateBars(ctx, px1, py1, px2, py2, gs, scale, isEraseHover ? ERASE_HOVER_COLOR : baseColor);
+    } else if (wall.type === "curtain") {
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(px1, py1);
+      ctx.lineTo(px2, py2);
+      ctx.stroke();
     } else {
       ctx.strokeStyle = baseColor;
       ctx.lineWidth = lineWidth;
@@ -371,24 +406,30 @@
     ctx.globalAlpha = alpha == null ? 1 : alpha;
 
     // Separate walls by type for continuous path rendering
-    var plainWalls = [];
-    var specialWalls = []; // doors, windows - need individual rendering
+    var vectorWallGroups = {
+      wall: [],
+      curtain: [],
+    };
+    var specialWalls = []; // non-standard walls need individual rendering
 
     for (var i = 0; i < walls.length; i++) {
       var w = walls[i];
-      if (w.type === "door" || w.type === "window" || w.id === eraseHoverId) {
-        specialWalls.push(w);
+      if (w.id !== eraseHoverId && (w.type === "wall" || w.type === "curtain")) {
+        vectorWallGroups[w.type].push(w);
       } else {
-        plainWalls.push(w);
+        specialWalls.push(w);
       }
     }
 
-    // Draw plain walls as continuous vector paths
-    if (plainWalls.length > 0) {
-      drawWallsAsVectorPaths(ctx, plainWalls, gs, scale, eraseHoverId, isElementsActive);
+    // Draw continuous wall families as joined vector paths.
+    if (vectorWallGroups.wall.length > 0) {
+      drawWallsAsVectorPaths(ctx, vectorWallGroups.wall, gs, scale, isElementsActive, "wall");
+    }
+    if (vectorWallGroups.curtain.length > 0) {
+      drawWallsAsVectorPaths(ctx, vectorWallGroups.curtain, gs, scale, isElementsActive, "curtain");
     }
 
-    // Draw special walls (doors, windows, erase hover) individually
+    // Draw special walls individually so each type can keep its own render rules.
     for (var j = 0; j < specialWalls.length; j++) {
       var sw = specialWalls[j];
       drawWallSegment(ctx, sw, sw.x1 * gs, sw.y1 * gs, sw.x2 * gs, sw.y2 * gs, gs, scale, eraseHoverId, isElementsActive);
@@ -398,9 +439,9 @@
   }
 
   /**
-   * Draw only doors and windows (for when Paper.js handles regular walls).
+   * Draw only runtime-visible special walls (for when Paper.js handles regular walls).
    */
-  function drawDoorsAndWindowsOnly(map, alpha) {
+  function drawRuntimeSpecialWalls(map, alpha) {
     var walls = map.walls;
     if (!walls || !walls.length) return;
     var ctx = map.ctx;
@@ -411,11 +452,17 @@
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
 
+    var curtains = [];
     for (var i = 0; i < walls.length; i++) {
       var w = walls[i];
-      if (w.type === "door" || w.type === "window") {
+      if (w.type === "curtain") {
+        curtains.push(w);
+      } else if (w.type === "door" || w.type === "window") {
         drawWallSegment(ctx, w, w.x1 * gs, w.y1 * gs, w.x2 * gs, w.y2 * gs, gs, scale, null, isElementsActive);
       }
+    }
+    if (curtains.length > 0) {
+      drawWallsAsVectorPaths(ctx, curtains, gs, scale, isElementsActive, "curtain");
     }
 
     ctx.restore();
@@ -424,7 +471,7 @@
   /**
    * Build connected chains from wall segments and draw as continuous paths.
    */
-  function drawWallsAsVectorPaths(ctx, walls, gs, scale, eraseHoverId, isElementsActive) {
+  function drawWallsAsVectorPaths(ctx, walls, gs, scale, isElementsActive, wallType) {
     // Build adjacency map: vertex key -> list of { wall, otherEnd }
     var adjacency = {};
 
@@ -462,11 +509,14 @@
     }
 
     // Draw each chain as a continuous path
-    var lineWidth = WALL_WIDTHS.wall * gs;
-    var baseColor = isElementsActive ? WALL_COLORS.wall : WALL_COLORS_INACTIVE.wall;
+    var type = wallType || "wall";
+    var lineWidth = (WALL_WIDTHS[type] || WALL_WIDTHS.wall) * gs;
+    var baseColor = isElementsActive
+      ? (WALL_COLORS[type] || WALL_COLORS.wall)
+      : (WALL_COLORS_INACTIVE[type] || WALL_COLORS_INACTIVE.wall);
 
     ctx.save();
-    ctx.lineCap = "butt";
+    ctx.lineCap = type === "curtain" ? "round" : "butt";
     ctx.lineJoin = "round";
 
     // Soft shadow bloom under the wall so it feels elevated instead of outlined.
@@ -522,6 +572,35 @@
       for (var pi2 = 1; pi2 < pts2.length; pi2++) {
         ctx.lineTo(pts2[pi2].x * gs, pts2[pi2].y * gs);
       }
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawGrateBars(ctx, px1, py1, px2, py2, gs, scale, color) {
+    var dx = px2 - px1;
+    var dy = py2 - py1;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1e-6) return;
+    var spacing = Math.max(10 / Math.max(scale, 0.5), gs * 0.18);
+    var barHalf = Math.max(4 / Math.max(scale, 0.5), gs * 0.08);
+    var nx = -dy / len;
+    var ny = dx / len;
+    var count = Math.max(1, Math.floor(len / spacing));
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.2 / Math.max(scale, 0.5), gs * 0.035);
+    ctx.lineCap = "round";
+
+    for (var i = 1; i <= count; i++) {
+      var t = i / (count + 1);
+      var cx = px1 + dx * t;
+      var cy = py1 + dy * t;
+      ctx.beginPath();
+      ctx.moveTo(cx - nx * barHalf, cy - ny * barHalf);
+      ctx.lineTo(cx + nx * barHalf, cy + ny * barHalf);
       ctx.stroke();
     }
 

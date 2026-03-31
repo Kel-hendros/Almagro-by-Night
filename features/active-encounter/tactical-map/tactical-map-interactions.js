@@ -303,7 +303,7 @@
       var lights = this.lights || [];
       for (var li = 0; li < lights.length; li++) {
         var l = lights[li];
-        if (typeof this.isMarkerVisibleToViewer === "function" && !this.isMarkerVisibleToViewer(l.x, l.y)) {
+        if (typeof this.isLightVisibleToViewer === "function" && !this.isLightVisibleToViewer(l)) {
           continue;
         }
         considerMarker.call(this, l.x, l.y, { type: "light", light: l });
@@ -312,7 +312,7 @@
       var switches = this.switches || [];
       for (var si = 0; si < switches.length; si++) {
         var s = switches[si];
-        if (typeof this.isMarkerVisibleToViewer === "function" && !this.isMarkerVisibleToViewer(s.x, s.y)) {
+        if (typeof this.isSwitchVisibleToViewer === "function" && !this.isSwitchVisibleToViewer(s)) {
           continue;
         }
         considerMarker.call(this, s.x, s.y, { type: "switch", sw: s });

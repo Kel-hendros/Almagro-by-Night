@@ -13,6 +13,7 @@
    */
   function blocksVision(wall) {
     if ((wall.type === "door" || wall.type === "window") && wall.doorOpen) return false;
+    if (wall.type === "grate") return false;
     return true;
   }
 
@@ -83,9 +84,7 @@
       if (blocksFilter) {
         if (!blocksFilter(w)) continue;
       } else {
-        // Default fog rules
-        if (w.type === "door" && w.doorOpen) continue;
-        if (w.type === "window" && w.doorOpen) continue;
+        if (!blocksVision(w)) continue;
       }
       appendWallOccluderSegments(segments, w);
     }

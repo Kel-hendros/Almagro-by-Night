@@ -126,7 +126,9 @@
         state.encounter.data.fog = mergeFogMemory(state.encounter.data.fog, localFog);
       }
       if (!state.encounter.data.ambientLight) {
-        state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5 };
+        state.encounter.data.ambientLight = { color: "#8090b0", intensity: 0.5, tintStrength: 0.35 };
+      } else if (state.encounter.data.ambientLight.tintStrength == null) {
+        state.encounter.data.ambientLight.tintStrength = 0.35;
       }
       if (localTileMap) state.encounter.data.tileMap = localTileMap;
       if (localWallPaths) {
