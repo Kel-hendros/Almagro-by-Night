@@ -1,18 +1,45 @@
 // Tile painting mode: lets the narrator paint terrain textures onto grid cells.
 (function initTilePainterModule(global) {
-  const BRUSH_SIZES = [1, 2, 3];
+  const BRUSH_SIZES = [1, 2, 4];
+
+  function normalizeBrushSize(size) {
+    const numericSize = Math.round(Number(size) || BRUSH_SIZES[0]);
+    if (BRUSH_SIZES.includes(numericSize)) return numericSize;
+
+    return BRUSH_SIZES.reduce(function (closest, candidate) {
+      return Math.abs(candidate - numericSize) < Math.abs(closest - numericSize)
+        ? candidate
+        : closest;
+    }, BRUSH_SIZES[0]);
+  }
 
   function createTilePainter(opts) {
-    const { getMap, getTileMap, setTileMap, onChanged } = opts;
+    const { getMap, getTileMap, setTileMap, onChanged, onSelectionChange } = opts;
 
     let active = false;
     let selectedTexture = null;
     let brushSize = 1;
+    let mode = "paint";
     let isPainting = false;
     let isErasing = false;
     let _dirty = false;
     let _saveTimer = null;
     const SAVE_DELAY = 800; // ms after last stroke before persisting
+
+    function resolveTextureId(textureId) {
+      return global.TileTextures?.resolveTextureId?.(textureId) || textureId || null;
+    }
+
+    function notifySelectionChange() {
+      if (typeof onSelectionChange === "function") {
+        onSelectionChange({
+          active,
+          textureId: selectedTexture,
+          brushSize,
+          mode,
+        });
+      }
+    }
 
     function scheduleSave() {
       _dirty = true;
@@ -40,9 +67,16 @@
 
     function activate(textureId) {
       active = true;
-      selectedTexture = textureId || null;
+      const resolvedTexture = resolveTextureId(textureId);
+      if (resolvedTexture) {
+        selectedTexture = resolvedTexture;
+        mode = "paint";
+      } else if (textureId === null) {
+        mode = "erase";
+      }
       const map = getMap();
       if (map) map.canvas.classList.add("tile-painter-active");
+      notifySelectionChange();
     }
 
     function deactivate() {
@@ -56,11 +90,19 @@
         map.canvas.classList.remove("tile-painter-active");
         map.requestDraw?.();
       }
+      notifySelectionChange();
     }
 
     function setTexture(textureId) {
-      selectedTexture = textureId;
-      if (!active && textureId) activate(textureId);
+      const resolvedTexture = resolveTextureId(textureId);
+      if (!resolvedTexture) return;
+      selectedTexture = resolvedTexture;
+      mode = "paint";
+      if (!active) {
+        activate(resolvedTexture);
+        return;
+      }
+      notifySelectionChange();
     }
 
     function getTexture() {
@@ -68,11 +110,54 @@
     }
 
     function setBrushSize(size) {
-      brushSize = Math.max(1, Math.min(3, size));
+      brushSize = normalizeBrushSize(size);
+      notifySelectionChange();
     }
 
     function getBrushSize() {
       return brushSize;
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode === "erase" ? "erase" : "paint";
+      if (!active) {
+        activate(mode === "erase" ? null : selectedTexture);
+        return;
+      }
+      notifySelectionChange();
+    }
+
+    function getMode() {
+      return mode;
+    }
+
+    function isEraseMode() {
+      return active && mode === "erase";
+    }
+
+    function sampleTexture(cellX, cellY) {
+      const tileMap = getTileMap();
+      if (!tileMap) return false;
+      const key = Math.floor(cellX) + "," + Math.floor(cellY);
+      const sampledTexture = resolveTextureId(tileMap[key]);
+      if (!sampledTexture) return false;
+      selectedTexture = sampledTexture;
+      mode = "paint";
+      isPainting = false;
+      isErasing = false;
+      const map = getMap();
+      if (map) {
+        map._tilePainterHover = {
+          cellX: Math.floor(cellX),
+          cellY: Math.floor(cellY),
+          brushSize,
+          textureId: selectedTexture,
+          mode,
+        };
+        map.requestDraw?.();
+      }
+      notifySelectionChange();
+      return true;
     }
 
     // Paint or erase cells covered by the brush at (cellX, cellY).
@@ -124,13 +209,17 @@
     // Painting is fully local; persistence is debounced until the stroke ends.
     function handleMouseDown(e, cellX, cellY) {
       if (e.button === 2) {
-        isErasing = true;
-        applyBrush(cellX, cellY, true);
+        sampleTexture(cellX, cellY);
         return true;
       }
       if (e.button === 0) {
-        isPainting = true;
-        applyBrush(cellX, cellY, false);
+        if (mode === "erase") {
+          isErasing = true;
+          applyBrush(cellX, cellY, true);
+        } else if (selectedTexture) {
+          isPainting = true;
+          applyBrush(cellX, cellY, false);
+        }
         return true;
       }
       return false;
@@ -148,7 +237,13 @@
       // Draw hover preview
       const map = getMap();
       if (map) {
-        map._tilePainterHover = { cellX: Math.floor(cellX), cellY: Math.floor(cellY), brushSize, textureId: selectedTexture };
+        map._tilePainterHover = {
+          cellX: Math.floor(cellX),
+          cellY: Math.floor(cellY),
+          brushSize,
+          textureId: mode === "erase" ? null : selectedTexture,
+          mode,
+        };
         map.requestDraw?.();
       }
       return false;
@@ -167,6 +262,9 @@
       deactivate,
       setTexture,
       getTexture,
+      setMode,
+      getMode,
+      isEraseMode,
       setBrushSize,
       getBrushSize,
       clearAll,

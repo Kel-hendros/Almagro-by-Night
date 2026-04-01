@@ -93,12 +93,14 @@
   const MAP_EFFECT_DEFAULTS = {
     id: "",
     type: "",
+    geometry: "circle",
     sourceTokenId: null,
     sourceInstanceId: null,
     radiusMeters: 0,
     radiusCells: 0,
     createdAt: null,
   };
+  const MAP_METERS_PER_UNIT = 1.5;
   const encounterTurns = window.AEEncounterTurns;
   let layersController = null;
   let assetsService = null;
@@ -661,6 +663,9 @@
           }
         },
         onChanged: () => saveEncounter(),
+        onSelectionChange: () => {
+          document.dispatchEvent(new CustomEvent("ae-terrain-selection-change"));
+        },
       });
       state.map._tilePainter = tilePainter;
     }
@@ -869,13 +874,53 @@
       tokenContextMenuController?.open?.(tokenInfo);
     };
     state.map.canDragToken = (token) => canCurrentUserControlToken(token);
-    state.map.canDragMapEffect = () => canEditEncounter();
-    state.map.onMapEffectChange = (id, patch = {}) => {
+    state.map.canDragMapEffect = (effect) => canCurrentUserControlMapEffect(effect);
+    state.map.onMapEffectChange = async (id, patch = {}, oldX, oldY) => {
       const list = state.encounter?.data?.mapEffects || [];
       const effect = list.find((item) => item.id === id);
       if (!effect) return;
+
+      const prevX =
+        oldX != null ? oldX : Number.isFinite(Number(effect.x)) ? Number(effect.x) : null;
+      const prevY =
+        oldY != null ? oldY : Number.isFinite(Number(effect.y)) ? Number(effect.y) : null;
+      const applyWallSync = () => {
+        if (isNightShroudEffect(effect)) {
+          syncEncounterWalls({
+            invalidateFog: true,
+            invalidateFogWalls: true,
+            invalidateLightingWalls: true,
+            draw: true,
+          });
+          return;
+        }
+        state.map?.draw?.();
+      };
+
+      if (!canCurrentUserControlMapEffect(effect)) {
+        effect.x = prevX;
+        effect.y = prevY;
+        applyWallSync();
+        return;
+      }
+
       Object.assign(effect, patch || {});
-      scheduleBackgroundPersist();
+      applyWallSync();
+
+      if (canEditEncounter()) {
+        scheduleBackgroundPersist();
+        return;
+      }
+
+      try {
+        state._playerInteractionUntil = Date.now() + 3000;
+        await moveMapEffectViaRpc(id, effect.x, effect.y);
+      } catch (err) {
+        effect.x = prevX;
+        effect.y = prevY;
+        applyWallSync();
+        alert(err?.message || "No tienes permisos para mover este efecto.");
+      }
     };
     state.map.canDragDesignToken = () => canEditEncounter();
     state.map.onDesignTokenMove = (id, x, y) => {
@@ -1171,6 +1216,90 @@
       .filter(Boolean);
   }
 
+  function isNightShroudEffect(effect) {
+    return !!effect && effect.type === "night_shroud";
+  }
+
+  function resolveMapEffectCenterCells(effect, data) {
+    if (!effect) return null;
+    var ex = parseFloat(effect.x);
+    var ey = parseFloat(effect.y);
+    if (Number.isFinite(ex) && Number.isFinite(ey)) {
+      return { x: ex, y: ey };
+    }
+    var tokens = Array.isArray(data?.tokens) ? data.tokens : [];
+    for (var i = 0; i < tokens.length; i++) {
+      var token = tokens[i];
+      if (!token) continue;
+      if (
+        (effect.sourceTokenId && token.id === effect.sourceTokenId) ||
+        (effect.sourceInstanceId && token.instanceId === effect.sourceInstanceId)
+      ) {
+        var size = Math.max(0.2, parseFloat(token.size) || 1);
+        return {
+          x: (parseFloat(token.x) || 0) + size / 2,
+          y: (parseFloat(token.y) || 0) + size / 2,
+        };
+      }
+    }
+    return null;
+  }
+
+  function buildRuntimeWallsFromMapEffect(effect, data) {
+    if (!isNightShroudEffect(effect)) return [];
+    var center = resolveMapEffectCenterCells(effect, data);
+    if (!center) return [];
+
+    var radiusCells = Math.max(0, parseFloat(effect?.radiusCells) || 0);
+    if (radiusCells <= 0) return [];
+
+    var circumference = Math.PI * 2 * radiusCells;
+    var segmentCount = Math.round(circumference / 2);
+    if (!Number.isFinite(segmentCount) || segmentCount < 16) segmentCount = 16;
+    if (segmentCount > 96) segmentCount = 96;
+
+    var walls = [];
+    for (var i = 0; i < segmentCount; i++) {
+      var angle1 = (i / segmentCount) * Math.PI * 2;
+      var angle2 = ((i + 1) / segmentCount) * Math.PI * 2;
+      walls.push({
+        id: "map-effect-wall:" + effect.id + ":" + i,
+        type: "curtain",
+        x1: center.x + Math.cos(angle1) * radiusCells,
+        y1: center.y + Math.sin(angle1) * radiusCells,
+        x2: center.x + Math.cos(angle2) * radiusCells,
+        y2: center.y + Math.sin(angle2) * radiusCells,
+        doorOpen: false,
+        locked: false,
+        name: "Manto de la Noche",
+        pathId: "map-effect-path:" + effect.id,
+        segmentIndex: i,
+        runtimeSource: "mapEffect",
+        sourceMapEffectId: effect.id,
+      });
+    }
+    return walls;
+  }
+
+  function buildRuntimeMapEffectWalls(data) {
+    if (!Array.isArray(data?.mapEffects)) return [];
+    var walls = [];
+    for (var i = 0; i < data.mapEffects.length; i++) {
+      walls.push.apply(walls, buildRuntimeWallsFromMapEffect(data.mapEffects[i], data));
+    }
+    return walls;
+  }
+
+  function composeEncounterWalls(data, structuralWalls) {
+    var baseWalls = Array.isArray(structuralWalls)
+      ? structuralWalls
+      : (window.AEWallPaths?.compileWalls?.(data?.wallPaths || []) || []);
+    baseWalls = baseWalls.filter(function (wall) {
+      return !!wall && wall.runtimeSource !== "mapEffect";
+    });
+    return baseWalls.concat(buildRuntimeMapEffectWalls(data));
+  }
+
   function normalizeEncounterLayerData(data) {
     if (!data || typeof data !== "object") return;
     data.map = normalizeMapLayerData(data.map);
@@ -1183,10 +1312,14 @@
     var wallPathsDomain = window.AEWallPaths;
     var sourcePaths = Array.isArray(data.wallPaths) ? data.wallPaths : null;
     if (!sourcePaths && Array.isArray(data.walls) && data.walls.length) {
-      sourcePaths = wallPathsDomain?.createWallPathsFromWalls?.(data.walls) || [];
+      var persistedWalls = data.walls.filter(function (wall) {
+        return !!wall && wall.runtimeSource !== "mapEffect" && !wall.sourceMapEffectId;
+      });
+      sourcePaths = wallPathsDomain?.createWallPathsFromWalls?.(persistedWalls) || [];
     }
     data.wallPaths = wallPathsDomain?.normalizeWallPaths?.(sourcePaths || []) || [];
-    data.walls = wallPathsDomain?.compileWalls?.(data.wallPaths) || [];
+    var structuralWalls = wallPathsDomain?.compileWalls?.(data.wallPaths) || [];
+    data.walls = composeEncounterWalls(data, structuralWalls);
   }
 
   function syncEncounterWalls(options) {
@@ -1210,7 +1343,12 @@
   function setEncounterWallPaths(nextWallPaths, options = {}) {
     if (!state.encounter?.data) return [];
     state.encounter.data.wallPaths = window.AEWallPaths?.normalizeWallPaths?.(nextWallPaths || []) || [];
-    state.encounter.data.walls = window.AEWallPaths?.compileWalls?.(state.encounter.data.wallPaths) || [];
+    var structuralWalls =
+      window.AEWallPaths?.compileWalls?.(state.encounter.data.wallPaths) || [];
+    state.encounter.data.walls = composeEncounterWalls(
+      state.encounter.data,
+      structuralWalls,
+    );
     if (!options.skipMapSync) {
       syncEncounterWalls({
         invalidateFog: !!options.invalidateFog,
@@ -1242,17 +1380,22 @@
         if (!effect || typeof effect !== "object") return null;
         const type = String(effect.type || "").trim();
         if (!type) return null;
+        const geometry = "circle";
         const radiusMeters = Math.max(0, parseFloat(effect.radiusMeters) || 0);
         const radiusCells = Math.max(
           0,
           parseFloat(effect.radiusCells) ||
-            (radiusMeters > 0 ? radiusMeters / 1.5 : 0),
+            (radiusMeters > 0 ? radiusMeters / MAP_METERS_PER_UNIT : 0),
         );
+        if (radiusCells <= 0) {
+          return null;
+        }
         return {
           ...MAP_EFFECT_DEFAULTS,
           ...effect,
           id: effect.id || `map-effect-${type}-${index}`,
           type,
+          geometry,
           sourceTokenId: effect.sourceTokenId || null,
           sourceInstanceId: effect.sourceInstanceId || null,
           radiusMeters,
@@ -1348,6 +1491,40 @@
     return !!sheet && !!state.user && sheet.user_id === state.user.id;
   }
 
+  function getMapEffectSourceInstance(effect) {
+    if (!effect || !state.encounter?.data) return null;
+
+    let sourceInstanceId = effect.sourceInstanceId || null;
+    if (!sourceInstanceId && effect.sourceTokenId) {
+      const sourceToken = (state.encounter.data.tokens || []).find(
+        (item) => item.id === effect.sourceTokenId,
+      );
+      sourceInstanceId = sourceToken?.instanceId || null;
+    }
+    if (!sourceInstanceId) return null;
+
+    return (state.encounter.data.instances || []).find(
+      (item) => item.id === sourceInstanceId,
+    ) || null;
+  }
+
+  function canCurrentUserControlMapEffect(effect) {
+    if (!effect || !state.encounter?.data) return false;
+    if (canEditEncounter()) return true;
+
+    const status = normalizeEncounterStatus(state.encounter.status);
+    if (status !== ENCOUNTER_STATUS.IN_GAME) return false;
+
+    if (effect.sourceTokenId) {
+      const sourceToken = (state.encounter.data.tokens || []).find(
+        (item) => item.id === effect.sourceTokenId,
+      );
+      if (sourceToken) return canCurrentUserControlToken(sourceToken);
+    }
+
+    return canCurrentUserOpenInstanceDetails(getMapEffectSourceInstance(effect));
+  }
+
   function canCurrentUserOpenInstanceDetails(instance) {
     if (!instance) return false;
     if (canEditEncounter()) return true;
@@ -1370,6 +1547,16 @@
     const { error } = await supabase.rpc("move_encounter_token", {
       p_encounter_id: state.encounterId,
       p_token_id: tokenId,
+      p_x: x,
+      p_y: y,
+    });
+    if (error) throw error;
+  }
+
+  async function moveMapEffectViaRpc(effectId, x, y) {
+    const { error } = await supabase.rpc("move_encounter_map_effect", {
+      p_encounter_id: state.encounterId,
+      p_effect_id: effectId,
       p_x: x,
       p_y: y,
     });
@@ -1572,6 +1759,9 @@
         return;
       }
       const nextActive = !state.map.measureToolActive;
+      if (nextActive) {
+        drawerController?.deactivateTerrainPainter?.();
+      }
       elementsToolbarController?.setMeasurementMode?.(nextActive);
       state.map.setMeasurementToolActive(nextActive);
       rulerBtn.classList.toggle("is-active", nextActive);
@@ -2206,6 +2396,7 @@
   function render() {
     if (!state.encounter) return;
     sanitizeEncounterTokens();
+    ensureEncounterWallData(state.encounter.data);
 
     els.name.textContent = state.encounter.name;
     const status = normalizeEncounterStatus(state.encounter.status);

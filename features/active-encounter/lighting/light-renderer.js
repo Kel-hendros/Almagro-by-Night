@@ -210,6 +210,29 @@
     ].join("|");
   }
 
+  function getIgnoredNightShroudEffectIdsForView(map) {
+    var ignored = new Set();
+    var effects = Array.isArray(map && map.mapEffects) ? map.mapEffects : [];
+    if (!effects.length || typeof map.getViewerInstances !== "function") return ignored;
+
+    var viewers = map.getViewerInstances() || [];
+    if (!viewers.length) return ignored;
+    var viewerIdSet = new Set();
+    for (var i = 0; i < viewers.length; i++) {
+      if (viewers[i] && viewers[i].id) viewerIdSet.add(viewers[i].id);
+    }
+    if (!viewerIdSet.size) return ignored;
+
+    for (var ei = 0; ei < effects.length; ei++) {
+      var effect = effects[ei];
+      if (!effect || effect.type !== "night_shroud" || !effect.id) continue;
+      if (effect.sourceInstanceId && viewerIdSet.has(effect.sourceInstanceId)) {
+        ignored.add(effect.id);
+      }
+    }
+    return ignored;
+  }
+
   function apply(TacticalMap) {
     var proto = TacticalMap.prototype;
 
@@ -645,11 +668,12 @@
       if (!this._lighting) this.initLighting();
 
       var lighting = this._lighting;
+      var viewKey = getLightingViewKey(this);
 
       // Throttle full recalculation to max 10 times per second when dirty
       var now = Date.now();
       var LIGHTING_THROTTLE_MS = 100;
-      if (lighting.dirty) {
+      if (lighting.dirty || lighting.lightPolygonViewKey !== viewKey) {
         if (lighting._lastFullRender && (now - lighting._lastFullRender) < LIGHTING_THROTTLE_MS) {
           // Skip recalc but still draw cached overlay if available
           if (lighting.overlayCanvas) {
@@ -669,6 +693,7 @@
         }
         lighting._lastFullRender = now;
         this._cachedLightPolygons = buildLightPolygonCache(this);
+        lighting.lightPolygonViewKey = viewKey;
       }
 
       var bounds = typeof this.getOverlayBounds === "function" ? this.getOverlayBounds() : null;
@@ -677,7 +702,6 @@
       var boundsKey = [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY].join(":");
       var profile = this.getActiveViewerVisionAggregateProfile();
       var profileKey = getProfileKey(profile);
-      var viewKey = getLightingViewKey(this);
 
       if (
         lighting.dirty ||
@@ -1168,6 +1192,10 @@
 
     // Track which lights are still active (for cleanup)
     var activeLightIds = new Set();
+    var ignoredEffectIds = getIgnoredNightShroudEffectIdsForView(map);
+    var ignoredEffectKey = ignoredEffectIds.size
+      ? Array.from(ignoredEffectIds).sort().join(",")
+      : "";
 
     // Get spatial index if available
     var spatialIndex = map._wallSpatialIndex || null;
@@ -1188,6 +1216,7 @@
       var cached = perLightCache.get(lightId);
       var needsRecalc = !cached ||
                         wallsChanged ||
+                        cached.ignoredEffectKey !== ignoredEffectKey ||
                         cached.x !== lightX ||
                         cached.y !== lightY ||
                         cached.radius !== radius;
@@ -1199,7 +1228,23 @@
         if (spatialIndex) {
           relevantWalls = spatialIndex.queryCircle(lightX, lightY, radius + 1);
         }
-        poly = global.AELightVisibility.computeLightPolygon(lightX, lightY, relevantWalls, radius);
+        poly = global.AELightVisibility.computeLightPolygon(
+          lightX,
+          lightY,
+          relevantWalls,
+          radius,
+          null,
+          function (wall) {
+            if (
+              wall &&
+              wall.sourceMapEffectId &&
+              ignoredEffectIds.has(wall.sourceMapEffectId)
+            ) {
+              return false;
+            }
+            return global.AELightVisibility.blocksLight(wall);
+          },
+        );
         if (!poly || poly.length < 3) continue;
 
         // Update cache
@@ -1208,6 +1253,7 @@
           x: lightX,
           y: lightY,
           radius: radius,
+          ignoredEffectKey: ignoredEffectKey,
           wallsHash: currentWallsHash,
         });
       } else {

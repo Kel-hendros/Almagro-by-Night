@@ -756,6 +756,7 @@ window.TacticalMap = class TacticalMap {
         if (!effect || typeof effect !== "object") return null;
         const type = String(effect.type || "").trim();
         if (!type) return null;
+        const geometry = "circle";
         const radiusMeters = Math.max(0, parseFloat(effect.radiusMeters) || 0);
         const radiusCells = Math.max(
           0,
@@ -767,6 +768,7 @@ window.TacticalMap = class TacticalMap {
           ...effect,
           id: effect.id || `map-effect-${type}-${index}`,
           type,
+          geometry,
           sourceTokenId: effect.sourceTokenId || null,
           sourceInstanceId: effect.sourceInstanceId || null,
           radiusMeters,

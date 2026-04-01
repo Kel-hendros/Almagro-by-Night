@@ -164,7 +164,7 @@
         }
         let overrides = null;
         if (action.promptDiameterMeters) {
-          overrides = promptMapEffectDiameter(action);
+          overrides = promptMapEffectDimensions(action);
           if (!overrides) return false;
         }
         return createOrUpdateMapEffectFromPower(tokenId, action, overrides);
@@ -256,7 +256,7 @@
       return true;
     }
 
-    function promptMapEffectDiameter(action) {
+    function promptMapEffectDimensions(action) {
       const minDiameter = Math.max(0.1, parseFloat(action?.minDiameterMeters) || 0.5);
       const maxDiameter = Math.max(minDiameter, parseFloat(action?.maxDiameterMeters) || 120);
       const defaultDiameter = Math.min(
@@ -323,6 +323,7 @@
         type: effectType,
         sourceTokenId,
         sourceInstanceId,
+        geometry: "circle",
         radiusMeters,
         diameterMeters,
         radiusCells,

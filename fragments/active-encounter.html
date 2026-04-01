@@ -74,27 +74,6 @@
                             </div>
                         </details>
 
-                        <details class="ae-collapse" id="ae-terrain-section">
-                            <summary>
-                                <span>Pintura</span>
-                            </summary>
-                            <div class="ae-collapse-body">
-                                <div id="ae-terrain-palette" class="ae-terrain-palette"></div>
-                                <div class="ae-terrain-controls">
-                                    <label class="ae-setting-label">Brocha</label>
-                                    <div id="ae-brush-sizes" class="ae-levels">
-                                        <button type="button" class="ae-level-btn active" data-brush="1">1</button>
-                                        <button type="button" class="ae-level-btn" data-brush="2">2</button>
-                                        <button type="button" class="ae-level-btn" data-brush="3">3</button>
-                                    </div>
-                                </div>
-                                <div class="ae-wall-mode-btns">
-                                    <button id="btn-ae-terrain-eraser" class="ae-btn ae-btn--secondary ae-btn--half" type="button">Borrador</button>
-                                    <button id="btn-ae-terrain-clear" class="ae-btn ae-btn--danger ae-btn--half" type="button">Limpiar</button>
-                                </div>
-                            </div>
-                        </details>
-
                         <details class="ae-collapse" id="ae-walls-section">
                             <summary>
                                 <span>Paredes</span>
@@ -307,6 +286,11 @@
 
                 <!-- Layer-specific tools (shown/hidden based on layer) -->
                 <div id="ae-layer-tools" class="ae-layer-tools">
+                    <button id="btn-ae-background-paint" class="ae-layer-tool-btn ae-layer-tool-btn--label" type="button" title="Pintura" style="display:none;">
+                        <i data-lucide="pencil"></i>
+                        <span>Pintura</span>
+                    </button>
+
                     <!-- Elements layer tools -->
                     <div id="ae-elements-tools" class="ae-elements-tools" style="display:none;">
                         <button class="ae-layer-tool-btn is-active" data-tool="selection" title="Selección">
@@ -385,6 +369,24 @@
             </div>
             <div id="ae-browser-tags" class="ae-browser-tags"></div>
             <div id="ae-browser-grid" class="ae-browser-grid">
+            </div>
+        </div>
+    </div>
+
+    <!-- Terrain Paint Modal -->
+    <div id="ae-terrain-modal" class="ae-browser-overlay ae-terrain-modal-overlay" style="display: none;">
+        <div class="ae-browser-content ae-terrain-modal-content">
+            <div class="ae-browser-header ae-terrain-modal-header">
+                <div class="ae-terrain-modal-titleblock">
+                    <h3>Pintura de Terreno</h3>
+                    <p>Elegí una textura y pintá sobre la grilla del fondo.</p>
+                </div>
+                <button id="btn-ae-terrain-modal-close" class="ae-btn-close" aria-label="Cerrar">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="ae-terrain-modal-body">
+                <div id="ae-terrain-palette" class="ae-terrain-palette"></div>
             </div>
         </div>
     </div>

@@ -208,6 +208,155 @@ $$;
 grant execute on function public.move_encounter_token(uuid, text, double precision, double precision)
 to authenticated;
 
+create or replace function public.move_encounter_map_effect(
+  p_encounter_id uuid,
+  p_effect_id text,
+  p_x double precision,
+  p_y double precision
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_enc record;
+  v_data jsonb;
+  v_map_effects jsonb;
+  v_instances jsonb;
+  v_tokens jsonb;
+  v_sheet_instances jsonb;
+  v_effect_idx integer;
+  v_effect jsonb;
+  v_source_token jsonb;
+  v_instance jsonb;
+  v_source_instance_id text;
+  v_source_token_id text;
+  v_sheet_id text;
+  v_owner_user_id uuid;
+  v_controller_user_id text;
+  v_is_admin boolean;
+  v_sheet_owner_user_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select public.is_current_user_admin() into v_is_admin;
+
+  select id, status, data
+    into v_enc
+  from public.encounters
+  where id = p_encounter_id
+  for update;
+
+  if not found then
+    raise exception 'Encounter not found';
+  end if;
+
+  if v_enc.data is null then
+    raise exception 'Encounter has no data';
+  end if;
+
+  if not v_is_admin and v_enc.status <> 'in_game' then
+    raise exception 'Encounter is not in_game';
+  end if;
+
+  v_data := v_enc.data;
+  v_map_effects := coalesce(v_data->'mapEffects', '[]'::jsonb);
+  v_instances := coalesce(v_data->'instances', '[]'::jsonb);
+  v_tokens := coalesce(v_data->'tokens', '[]'::jsonb);
+  v_sheet_instances := coalesce(v_data->'sheetInstances', '{}'::jsonb);
+
+  select e.ord::int - 1, e.elem
+    into v_effect_idx, v_effect
+  from jsonb_array_elements(v_map_effects) with ordinality as e(elem, ord)
+  where e.elem->>'id' = p_effect_id
+  limit 1;
+
+  if v_effect is null then
+    raise exception 'Map effect not found in encounter';
+  end if;
+
+  if not v_is_admin then
+    v_source_instance_id := nullif(v_effect->>'sourceInstanceId', '');
+
+    if v_source_instance_id is null then
+      v_source_token_id := nullif(v_effect->>'sourceTokenId', '');
+      if v_source_token_id is not null then
+        select t.elem
+          into v_source_token
+        from jsonb_array_elements(v_tokens) as t(elem)
+        where t.elem->>'id' = v_source_token_id
+        limit 1;
+
+        if v_source_token is not null then
+          v_source_instance_id := nullif(v_source_token->>'instanceId', '');
+        end if;
+      end if;
+    end if;
+
+    if v_source_instance_id is null then
+      raise exception 'Map effect has no controllable source';
+    end if;
+
+    select i.elem
+      into v_instance
+    from jsonb_array_elements(v_instances) as i(elem)
+    where i.elem->>'id' = v_source_instance_id
+    limit 1;
+
+    if v_instance is null then
+      raise exception 'Map effect source instance not found';
+    end if;
+
+    v_controller_user_id := nullif(v_instance->>'controllerUserId', '');
+    if v_controller_user_id is not null and v_controller_user_id = auth.uid()::text then
+      null;
+    else
+      if coalesce((v_instance->>'isPC')::boolean, false) is not true then
+        raise exception 'Only the controller can move this map effect';
+      end if;
+
+      v_sheet_id := coalesce(
+        nullif(v_instance->>'characterSheetId', ''),
+        nullif(v_instance->>'sheetId', '')
+      );
+      if v_sheet_id is null then
+        raise exception 'PC instance has no sheet id';
+      end if;
+
+      select cs.user_id
+        into v_owner_user_id
+      from public.character_sheets cs
+      where cs.id = v_sheet_id::uuid
+      limit 1;
+
+      v_sheet_owner_user_id := nullif(v_sheet_instances->v_sheet_id->>'ownerUserId', '')::uuid;
+      v_owner_user_id := coalesce(v_owner_user_id, v_sheet_owner_user_id);
+
+      if v_owner_user_id is distinct from auth.uid() then
+        raise exception 'Player does not own this map effect';
+      end if;
+    end if;
+  end if;
+
+  v_effect := jsonb_set(v_effect, '{x}', to_jsonb(p_x), true);
+  v_effect := jsonb_set(v_effect, '{y}', to_jsonb(p_y), true);
+  v_map_effects := jsonb_set(v_map_effects, array[v_effect_idx::text], v_effect, true);
+  v_data := jsonb_set(v_data, '{mapEffects}', v_map_effects, true);
+
+  update public.encounters
+  set data = v_data
+  where id = p_encounter_id;
+
+  return true;
+end;
+$$;
+
+grant execute on function public.move_encounter_map_effect(uuid, text, double precision, double precision)
+to authenticated;
+
 create or replace function public.unsummon_encounter_instance(
   p_encounter_id uuid,
   p_instance_id text

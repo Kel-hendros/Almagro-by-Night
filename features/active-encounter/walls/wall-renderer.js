@@ -263,7 +263,7 @@
 
     ctx.save();
 
-    if (!isElementsActive && wall.type === "grate" && !isEraseHover) {
+    if (!isElementsActive && (wall.type === "grate" || wall.type === "curtain") && !isEraseHover) {
       ctx.restore();
       return;
     }
@@ -805,6 +805,7 @@
     if (!chains || chains.length === 0) return;
 
     var type = wallType || "wall";
+    if (!isElementsActive && type === "curtain") return;
     var lineWidth = (WALL_WIDTHS[type] || WALL_WIDTHS.wall) * gs;
     var baseColor = isElementsActive
       ? (WALL_COLORS[type] || WALL_COLORS.wall)

@@ -346,6 +346,20 @@
 
     // Get spatial index if available
     var spatialIndex = map._wallSpatialIndex || null;
+    var mapEffects = Array.isArray(map.mapEffects) ? map.mapEffects : [];
+
+    function getIgnoredNightShroudEffectIds(instanceId) {
+      var ignored = new Set();
+      if (!instanceId) return ignored;
+      for (var mi = 0; mi < mapEffects.length; mi++) {
+        var effect = mapEffects[mi];
+        if (!effect || effect.type !== "night_shroud") continue;
+        if (effect.sourceInstanceId === instanceId && effect.id) {
+          ignored.add(effect.id);
+        }
+      }
+      return ignored;
+    }
 
     for (var ti = 0; ti < pcTokens.length; ti++) {
       var token = pcTokens[ti];
@@ -372,7 +386,23 @@
         if (spatialIndex) {
           relevantWalls = spatialIndex.queryCircle(tokenX, tokenY, visionRadius + 2);
         }
-        poly = global.FogVisibility.computeVisibilityPolygon(tokenX, tokenY, relevantWalls, visionRadius);
+        var ignoredEffectIds = getIgnoredNightShroudEffectIds(instId);
+        poly = global.FogVisibility.computeVisibilityPolygon(
+          tokenX,
+          tokenY,
+          relevantWalls,
+          visionRadius,
+          function (wall) {
+            if (
+              wall &&
+              wall.sourceMapEffectId &&
+              ignoredEffectIds.has(wall.sourceMapEffectId)
+            ) {
+              return false;
+            }
+            return global.FogVisibility.blocksVision(wall);
+          },
+        );
 
         // Update cache
         perTokenCache.set(instId, {

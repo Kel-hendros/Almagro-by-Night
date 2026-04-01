@@ -18,6 +18,7 @@
       findLightAt,
       removeLight,
     } = ctx;
+    let terrainModalOpen = false;
 
     function setDrawerTab(tab) {
       var tabs = ["entities", "terrain", "settings"];
@@ -89,6 +90,167 @@
       });
     }
 
+    function getTerrainDefaultTextureId() {
+      return global.TileTextures?.TEXTURE_IDS?.[0] || null;
+    }
+
+    function getTerrainContextualElements() {
+      return {
+        bar: document.getElementById("ae-elements-contextual-bar"),
+        content: document.getElementById("ae-elements-contextual"),
+      };
+    }
+
+    function openTerrainModal() {
+      if (!canEditEncounter() || state.activeMapLayer !== "background") return;
+      const modal = document.getElementById("ae-terrain-modal");
+      if (!modal) return;
+      renderTerrainPalette();
+      terrainModalOpen = true;
+      modal.style.display = "flex";
+      refreshTerrainPaletteUI();
+      refreshTerrainToolbarUI();
+    }
+
+    function closeTerrainModal() {
+      const modal = document.getElementById("ae-terrain-modal");
+      terrainModalOpen = false;
+      if (modal) modal.style.display = "none";
+      refreshTerrainToolbarUI();
+    }
+
+    function deactivateMeasurementTool() {
+      const map = getMap?.();
+      if (!map || typeof map.setMeasurementToolActive !== "function" || !map.measureToolActive) {
+        return;
+      }
+      map.setMeasurementToolActive(false);
+      document.getElementById("btn-ae-ruler")?.classList.remove("is-active");
+    }
+
+    function activateTerrainPainter() {
+      const painter = getTilePainter?.();
+      if (!painter) return;
+      const defaultTextureId = getTerrainDefaultTextureId();
+      deactivateOtherTools("tilePainter");
+      deactivateMeasurementTool();
+      if (defaultTextureId) {
+        painter.activate(defaultTextureId);
+      } else {
+        painter.activate(null);
+      }
+    }
+
+    function deactivateTerrainPainter() {
+      const painter = getTilePainter?.();
+      closeTerrainModal();
+      if (painter?.isActive()) {
+        painter.deactivate();
+      }
+      refreshTerrainPaletteUI();
+    }
+
+    function shouldShowTerrainContextualToolbar() {
+      const painter = getTilePainter?.();
+      return (
+        canEditEncounter() &&
+        state.activeMapLayer === "background" &&
+        !!painter?.isActive()
+      );
+    }
+
+    function renderTerrainContextualToolbar() {
+      const { bar, content } = getTerrainContextualElements();
+      if (!bar || !content) return;
+
+      if (!shouldShowTerrainContextualToolbar()) {
+        if (state.activeMapLayer !== "elements") {
+          content.innerHTML = "";
+          bar.style.display = "none";
+        }
+        return;
+      }
+
+      const painter = getTilePainter?.();
+      if (!painter) return;
+
+      const selectedTexture = painter.getTexture() || getTerrainDefaultTextureId();
+      const textureLabel = global.TileTextures?.TEXTURE_LABELS?.[selectedTexture] || "Textura";
+      const textureThumb = selectedTexture
+        ? global.TileTextures?.getThumbnailDataUrl?.(selectedTexture) || ""
+        : "";
+      const isEraserActive = painter.isEraseMode?.() || false;
+      const brushSize = painter.getBrushSize?.() || 1;
+      const brushSizes = painter.BRUSH_SIZES || [1, 2, 4];
+      const currentBrushIndex = Math.max(0, brushSizes.indexOf(brushSize));
+      const nextBrushSize = brushSizes[(currentBrushIndex + 1) % brushSizes.length];
+      const brushCycleTitle = "Tamaño de pincel: " + brushSize + ". Click para cambiar a " + nextBrushSize;
+
+      content.innerHTML =
+        '<div class="ae-elements-ctx-group">' +
+          '<span class="ae-elements-ctx-label">Textura</span>' +
+          '<div class="ae-elements-ctx-btns">' +
+            '<button id="btn-ae-terrain-current-swatch" class="ae-elements-ctx-btn ae-terrain-ctx-swatch-btn' +
+              (isEraserActive ? " is-muted" : " is-active") +
+              '" type="button" title="Elegir textura: ' + textureLabel + '">' +
+              '<span class="ae-terrain-ctx-swatch-thumb">' +
+                '<img src="' + textureThumb + '" alt="' + textureLabel + '" width="34" height="34">' +
+              '</span>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ae-elements-ctx-divider"></div>' +
+        '<div class="ae-elements-ctx-group">' +
+          '<span class="ae-elements-ctx-label">Pincel</span>' +
+          '<div class="ae-elements-ctx-btns ae-terrain-ctx-btns--brush">' +
+            '<button class="ae-elements-ctx-btn ae-terrain-ctx-brush-cycle" data-terrain-brush-cycle="true" type="button" title="' + brushCycleTitle + '">' + brushSize + '</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ae-elements-ctx-divider"></div>' +
+        '<div class="ae-elements-ctx-group">' +
+          '<span class="ae-elements-ctx-label">Acción</span>' +
+          '<div class="ae-elements-ctx-btns">' +
+            '<button class="ae-elements-ctx-btn ae-elements-ctx-btn--text' + (isEraserActive ? " is-active" : "") + '" data-terrain-erase="toggle" type="button" title="Borrador">Borrar</button>' +
+          '</div>' +
+        '</div>';
+
+      bar.style.display = "block";
+
+      content.querySelector("#btn-ae-terrain-current-swatch")?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        openTerrainModal();
+      });
+
+      content.querySelector("[data-terrain-brush-cycle='true']")?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        painter.setBrushSize(nextBrushSize);
+        refreshTerrainPaletteUI();
+      });
+
+      content.querySelector("[data-terrain-erase='toggle']")?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        painter.setMode?.(isEraserActive ? "paint" : "erase");
+        refreshTerrainPaletteUI();
+      });
+    }
+
+    function refreshTerrainToolbarUI() {
+      const paintBtn = document.getElementById("btn-ae-background-paint");
+      const painter = getTilePainter?.();
+      const showPaintBtn = canEditEncounter() && state.activeMapLayer === "background";
+
+      if (paintBtn) {
+        paintBtn.style.display = showPaintBtn ? "inline-flex" : "none";
+        paintBtn.classList.toggle("is-active", !!painter?.isActive());
+        paintBtn.setAttribute("aria-expanded", terrainModalOpen ? "true" : "false");
+      }
+
+      renderTerrainContextualToolbar();
+    }
+
     function bindEvents() {
       bindAddBtn("btn-ae-add-bg", () => {
         if (!requireAdminAction()) return;
@@ -154,6 +316,8 @@
 
       setDrawerTab("entities");
       refreshGridOpacityButtons();
+      refreshTerrainToolbarUI();
+      refreshTerrainPaletteUI();
     }
 
     function renderTerrainPalette() {
@@ -164,12 +328,41 @@
         const label = TT.TEXTURE_LABELS[id] || id;
         const thumb = TT.getThumbnailDataUrl(id);
         return '<button class="ae-terrain-swatch" data-texture="' + id + '" title="' + label + '">' +
+          '<span class="ae-terrain-swatch-media">' +
           '<img src="' + thumb + '" alt="' + label + '" width="36" height="36">' +
-          '<span>' + label + '</span></button>';
+          '</span>' +
+          '<span class="ae-terrain-swatch-label">' + label + '</span></button>';
       }).join("");
     }
 
     function bindTerrainEvents() {
+      document.getElementById("btn-ae-background-paint")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!requireAdminAction()) return;
+        const painter = getTilePainter?.();
+        if (!painter) return;
+        if (painter.isActive()) {
+          closeTerrainModal();
+          painter.deactivate();
+        } else {
+          activateTerrainPainter();
+        }
+        refreshTerrainPaletteUI();
+      });
+
+      document.getElementById("btn-ae-terrain-modal-close")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeTerrainModal();
+      });
+
+      document.getElementById("ae-terrain-modal")?.addEventListener("click", (event) => {
+        if (event.target === event.currentTarget) {
+          closeTerrainModal();
+        }
+      });
+
       const palette = document.getElementById("ae-terrain-palette");
       if (palette) {
         palette.addEventListener("click", (e) => {
@@ -178,73 +371,71 @@
           const painter = getTilePainter?.();
           if (!painter) return;
           const textureId = btn.dataset.texture;
-          const wasActive = painter.getTexture() === textureId && painter.isActive();
-          if (wasActive) {
-            painter.deactivate();
-          } else {
+          if (!painter.isActive()) {
             deactivateOtherTools("tilePainter");
-            painter.setTexture(textureId);
+            deactivateMeasurementTool();
           }
+          painter.setTexture(textureId);
+          closeTerrainModal();
           refreshTerrainPaletteUI();
         });
       }
 
-      const brushBtns = document.getElementById("ae-brush-sizes");
-      if (brushBtns) {
-        brushBtns.addEventListener("click", (e) => {
-          const btn = e.target.closest("[data-brush]");
-          if (!btn) return;
-          const painter = getTilePainter?.();
-          if (!painter) return;
-          painter.setBrushSize(parseInt(btn.dataset.brush, 10) || 1);
-          refreshBrushSizeUI();
-        });
-      }
-
-      document.getElementById("btn-ae-terrain-eraser")?.addEventListener("click", () => {
-        if (!requireAdminAction()) return;
-        const painter = getTilePainter?.();
-        if (!painter) return;
-        if (painter.isActive() && !painter.getTexture()) {
-          painter.deactivate();
-        } else {
-          deactivateOtherTools("tilePainter");
-          painter.setTexture(null);
-          painter.activate(null);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && terrainModalOpen) {
+          closeTerrainModal();
         }
-        refreshTerrainPaletteUI();
       });
 
-      document.getElementById("btn-ae-terrain-clear")?.addEventListener("click", () => {
-        if (!requireAdminAction()) return;
-        const painter = getTilePainter?.();
-        if (!painter) return;
-        if (confirm("¿Limpiar todo el terreno?")) {
-          painter.clearAll();
+      document.addEventListener("ae-layer-change", function (e) {
+        const isBackgroundLayer = e.detail?.layer === "background" && canEditEncounter();
+        if (!isBackgroundLayer) {
+          const painter = getTilePainter?.();
+          closeTerrainModal();
+          if (painter?.isActive()) {
+            painter.deactivate();
+          }
         }
+        refreshTerrainPaletteUI();
+        refreshTerrainToolbarUI();
+      });
+
+      document.addEventListener("ae-terrain-selection-change", function () {
+        refreshTerrainPaletteUI();
       });
     }
 
     function refreshTerrainPaletteUI() {
       const painter = getTilePainter?.();
-      const activeTexture = painter?.isActive() ? painter.getTexture() : null;
-      const isEraserActive = painter?.isActive() && !painter.getTexture();
+      const activeTexture = painter?.getTexture() || null;
       const swatches = document.querySelectorAll(".ae-terrain-swatch");
       swatches.forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.texture === activeTexture);
       });
-      const eraserBtn = document.getElementById("btn-ae-terrain-eraser");
-      if (eraserBtn) eraserBtn.classList.toggle("active", isEraserActive);
+      refreshTerrainToolbarUI();
       refreshBrushSizeUI();
     }
 
     function refreshBrushSizeUI() {
       const painter = getTilePainter?.();
       const currentSize = painter?.getBrushSize() || 1;
-      const btns = document.querySelectorAll("#ae-brush-sizes [data-brush]");
-      btns.forEach((btn) => {
-        btn.classList.toggle("active", parseInt(btn.dataset.brush, 10) === currentSize);
-      });
+      const brushSizes = painter?.BRUSH_SIZES || [1, 2, 4];
+      const currentBrushIndex = Math.max(0, brushSizes.indexOf(currentSize));
+      const nextBrushSize = brushSizes[(currentBrushIndex + 1) % brushSizes.length];
+      const brushBtn = document.querySelector("#ae-elements-contextual [data-terrain-brush-cycle='true']");
+      if (brushBtn) {
+        brushBtn.textContent = String(currentSize);
+        brushBtn.title = "Tamaño de pincel: " + currentSize + ". Click para cambiar a " + nextBrushSize;
+      }
+      const eraserBtn = document.querySelector("#ae-elements-contextual [data-terrain-erase='toggle']");
+      if (eraserBtn) {
+        eraserBtn.classList.toggle("is-active", painter?.isEraseMode?.() || false);
+      }
+      const swatchBtn = document.getElementById("btn-ae-terrain-current-swatch");
+      if (swatchBtn) {
+        swatchBtn.classList.toggle("is-muted", painter?.isEraseMode?.() || false);
+        swatchBtn.classList.toggle("is-active", !(painter?.isEraseMode?.() || false));
+      }
     }
 
     // ── Mutual exclusion helper ──
@@ -725,6 +916,8 @@
     function renderAssetLists() {
       if (!els.listBackground || !els.listDecor || !els.listEntitiesNpc || !els.listEntitiesPc) return;
       refreshGridOpacityButtons();
+      refreshTerrainPaletteUI();
+      refreshTerrainToolbarUI();
       refreshAmbientUI();
       refreshFogUI();
       renderLightList();
@@ -868,6 +1061,7 @@
         "btn-ae-add-entity-npc",
         "btn-ae-add-entity-pc",
         "btn-ae-map-remove-bg",
+        "btn-ae-background-paint",
       ];
 
       adminOnlyIds.forEach((id) => {
@@ -876,12 +1070,13 @@
         el.style.display = canEditEncounter() ? "" : "none";
       });
 
-      var narratorOnlySections = ["ae-terrain-section", "ae-walls-section", "ae-lights-section", "ae-fog-section"];
+      var narratorOnlySections = ["ae-walls-section", "ae-lights-section", "ae-fog-section"];
       narratorOnlySections.forEach(function (id) {
         var section = document.getElementById(id);
         if (section) section.style.display = canEditEncounter() ? "" : "none";
       });
       refreshGridOpacityButtons();
+      refreshTerrainToolbarUI();
 
       // freeMovement toggle removed — coordinates are always continuous
     }
@@ -891,6 +1086,7 @@
       renderAssetLists,
       setBusy,
       applyPermissions,
+      deactivateTerrainPainter,
       refreshTerrainPaletteUI,
       refreshWallUI,
       refreshFogUI,

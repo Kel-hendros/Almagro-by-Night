@@ -224,7 +224,7 @@ Toggle: el personaje se vuelve invisible para otros. El narrador ve al token con
 
 ### Manto de la Noche (Obtenebración 2+)
 
-Crea una zona de oscuridad sobrenatural centrada en el personaje. El narrador define el diámetro (0.5–120 metros). Visualmente se renderiza como un círculo negro animado con borde ondulante.
+Crea una zona circular de oscuridad sobrenatural. El narrador define el diámetro (0.5–120 metros). Mecánicamente el borde del círculo se resuelve como un anillo de segmentos tipo `curtain`: bloquea visión y luz, pero no movimiento. Visualmente se renderiza como un círculo negro animado con borde ondulante.
 
 ### Brazos del Abismo (Obtenebración 3+)
 

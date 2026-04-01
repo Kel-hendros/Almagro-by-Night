@@ -64,7 +64,7 @@
    * @param {number} [rayCount] - Number of rays (default 720)
    * @returns {Array<{x: number, y: number}>} Polygon points
    */
-  function computeLightPolygon(ox, oy, walls, radius, rayCount) {
+  function computeLightPolygon(ox, oy, walls, radius, rayCount, blocksFilter) {
     var segments = [];
     var points = [];
     var rays = Math.max(64, rayCount || DEFAULT_RAY_COUNT);
@@ -72,7 +72,11 @@
     // walls parameter can be pre-filtered by spatial index
     for (var i = 0; i < (walls || []).length; i++) {
       var wall = walls[i];
-      if (!blocksLight(wall)) continue;
+      if (blocksFilter) {
+        if (!blocksFilter(wall)) continue;
+      } else {
+        if (!blocksLight(wall)) continue;
+      }
       appendWallOccluderSegments(segments, wall);
     }
 

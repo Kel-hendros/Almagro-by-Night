@@ -164,14 +164,15 @@
             ? this.getMapEffectCenter(effect, now)
             : null;
         if (!center && !sourceToken) return;
+        const t = now / 1000;
+        const breath = 0.5 + 0.5 * Math.sin(t * 1.65);
+        const shimmer = 0.5 + 0.5 * Math.sin(t * 2.35 + 0.9);
+
         const cx = ((center?.x ?? 0) * this.gridSize);
         const cy = ((center?.y ?? 0) * this.gridSize);
         const radiusCells = Math.max(0, parseFloat(effect.radiusCells) || 0);
         if (radiusCells <= 0) return;
         const radiusPx = radiusCells * this.gridSize;
-        const t = now / 1000;
-        const breath = 0.5 + 0.5 * Math.sin(t * 1.65);
-        const shimmer = 0.5 + 0.5 * Math.sin(t * 2.35 + 0.9);
 
         if (perfMode) {
           this.ctx.save();
