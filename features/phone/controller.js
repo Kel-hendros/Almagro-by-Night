@@ -295,6 +295,37 @@
     loadCreateGroupData();
   }
 
+  async function navigateToGroupNarrator(group) {
+    state.screen = "group-conversation";
+
+    ns.view.showLoading();
+
+    var svc = ns.service;
+    var messages = await svc.fetchGroupMessages({ groupId: group.groupId });
+    var members = await svc.fetchGroupMembers(group.groupId);
+    var npcMembers = members.filter(function (m) { return m.entity_type === "npc"; });
+
+    state.messages = messages;
+    state.currentConversation = {
+      isGroup: true,
+      groupId: group.groupId,
+      groupName: group.groupName,
+      narratorNpcMembers: npcMembers,
+      narratorReplyAsType: npcMembers.length > 0 ? "npc" : null,
+      narratorReplyAsId: npcMembers.length > 0 ? npcMembers[0].entity_id : null,
+      narratorReplyAsLabel: npcMembers.length > 0 ? npcMembers[0].entity_label : null,
+    };
+
+    ns.view.renderConversation({
+      messages: messages,
+      counterpartyLabel: group.groupName,
+      myType: null,
+      myId: null,
+      canReply: npcMembers.length > 0,
+      narratorNpcMembers: npcMembers,
+    });
+  }
+
   async function navigateToGroup(group) {
     state.screen = "group-conversation";
     state.currentConversation = {
@@ -368,9 +399,15 @@
   async function loadConversationsNarrator() {
     var svc = ns.service;
     var convos = await svc.fetchConversationsNarrator(state.chronicleId);
+    var groupConvos = await svc.fetchAllGroupConversations(state.chronicleId);
     var unreadPairs = await svc.fetchNarratorUnreadPairs(state.chronicleId);
     state.conversations = convos;
-    ns.view.renderInboxNarrator({ conversations: convos, unreadPairs: unreadPairs });
+    state.groupConversations = groupConvos;
+    ns.view.renderInboxNarrator({
+      conversations: convos,
+      groupConversations: groupConvos,
+      unreadPairs: unreadPairs,
+    });
   }
 
   async function loadCreateGroupData() {
@@ -446,13 +483,18 @@
 
     // Group message
     if (cp.isGroup) {
+      var grpSenderType = cp.narratorReplyAsType || state.entityType;
+      var grpSenderId = cp.narratorReplyAsId || state.entityId;
+      var grpSenderLabel = cp.narratorReplyAsLabel || state.entityLabel;
+      if (!grpSenderType || !grpSenderId) return;
+
       await svc.sendGroupMessage({
         chronicleId: state.chronicleId,
         groupId: cp.groupId,
         groupName: cp.groupName,
-        senderType: state.entityType,
-        senderId: state.entityId,
-        senderLabel: state.entityLabel,
+        senderType: grpSenderType,
+        senderId: grpSenderId,
+        senderLabel: grpSenderLabel,
         body: body,
         createdByPlayerId: state.playerId,
       });
@@ -549,28 +591,63 @@
         senderLabel = identity ? identity.name : "NPC";
       }
 
-      // Build recipients with player_id resolution
-      var recipients = [];
-      for (var i = 0; i < data.recipients.length; i++) {
-        var r = data.recipients[i];
-        var playerId = await svc.getPlayerForSheet(r.sheetId);
-        recipients.push({
-          type: "pc",
-          id: r.sheetId,
+      if (data.recipients.length > 1) {
+        // Multiple recipients → create group and send first message
+        if (!data.groupName) {
+          ns.view.setComposeBusy(false);
+          return;
+        }
+
+        // Group members: all recipients + the sender
+        var members = data.recipients.map(function (r) {
+          return { type: r.type, id: r.id, label: r.name };
+        });
+        members.push({ type: senderType, id: senderId, label: senderLabel });
+
+        var groupRes = await svc.createGroup({
+          chronicleId: state.chronicleId,
+          name: data.groupName,
+          members: members,
+          createdByPlayerId: state.playerId,
+        });
+
+        if (groupRes.error || !groupRes.data) {
+          console.warn("Phone: error creating group", groupRes.error);
+          ns.view.setComposeBusy(false);
+          return;
+        }
+
+        await svc.sendGroupMessage({
+          chronicleId: state.chronicleId,
+          groupId: groupRes.data.id,
+          groupName: data.groupName,
+          senderType: senderType,
+          senderId: senderId,
+          senderLabel: senderLabel,
+          body: data.body,
+          createdByPlayerId: state.playerId,
+        });
+      } else {
+        // Single recipient → direct message
+        var r = data.recipients[0];
+        var playerId = r.type === "pc" ? await svc.getPlayerForSheet(r.id) : null;
+        var recipients = [{
+          type: r.type,
+          id: r.id,
           label: r.name,
           playerId: playerId,
+        }];
+
+        await svc.sendMessage({
+          chronicleId: state.chronicleId,
+          senderType: senderType,
+          senderId: senderId,
+          senderLabel: senderLabel,
+          recipients: recipients,
+          body: data.body,
+          createdByPlayerId: state.playerId,
         });
       }
-
-      await svc.sendMessage({
-        chronicleId: state.chronicleId,
-        senderType: senderType,
-        senderId: senderId,
-        senderLabel: senderLabel,
-        recipients: recipients,
-        body: data.body,
-        createdByPlayerId: state.playerId,
-      });
 
       // Go back to inbox
       navigateBackToInbox();
@@ -716,11 +793,13 @@
     showCompose: showCompose,
     showCreateGroup: showCreateGroup,
     navigateToGroup: navigateToGroup,
+    navigateToGroupNarrator: navigateToGroupNarrator,
     handleSend: handleSend,
     handleComposeSend: handleComposeSend,
     handleCreateGroup: handleCreateGroup,
     getUnreadCount: getUnreadCount,
     emitUnreadChanged: emitUnreadChanged,
     isOpen: function () { return state.isOpen; },
+    __currentConversation: function () { return state.currentConversation; },
   };
 })(window);

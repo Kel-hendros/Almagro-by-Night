@@ -21,8 +21,7 @@
 
   function updateBadge(count) {
     if (!badgeEl) return;
-    badgeEl.textContent = count > 99 ? "99+" : String(count);
-    badgeEl.classList.toggle("hidden", count === 0);
+    badgeEl.classList.toggle("hidden", !count);
   }
 
   function create() {
@@ -43,7 +42,7 @@
     btnEl.setAttribute("aria-label", "Telefono");
     btnEl.innerHTML =
       '<i data-lucide="smartphone"></i>' +
-      '<span class="sheet-phone-badge hidden">0</span>';
+      '<span class="sheet-phone-badge hidden"></span>';
 
     badgeEl = btnEl.querySelector(".sheet-phone-badge");
 

@@ -290,24 +290,27 @@ textarea::placeholder {
 
 .sheet-phone-badge {
 	position: absolute;
-	top: -4px;
-	right: -4px;
-	background: var(--danger);
-	color: #fff;
-	font-size: 0.55rem;
-	font-weight: 700;
-	min-width: 14px;
-	height: 14px;
-	border-radius: 7px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 0 3px;
-	line-height: 1;
+	top: -2px;
+	right: -2px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--theme-danger);
 }
 
 .sheet-phone-badge.hidden {
 	display: none;
+}
+
+.sheet-phone-btn:has(.sheet-phone-badge:not(.hidden)) {
+	animation: phone-pulse 4s ease-in-out infinite;
+}
+
+@keyframes phone-pulse {
+	0%, 50%, 100% { background: var(--bg-soft); color: var(--muted); border-color: var(--ui-border); }
+	55%, 60% { background: var(--muted); color: var(--bg-soft); border-color: var(--muted); }
+	65%, 70% { background: var(--bg-soft); color: var(--muted); border-color: var(--ui-border); }
+	75%, 80% { background: var(--muted); color: var(--bg-soft); border-color: var(--muted); }
 }
 
 .header-actions {

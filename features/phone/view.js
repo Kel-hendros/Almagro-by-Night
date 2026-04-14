@@ -106,6 +106,11 @@
     document.body.appendChild(backdropEl);
   }
 
+  function removeNpcSelector() {
+    var existing = modalEl?.querySelector(".phone-npc-selector");
+    if (existing) existing.remove();
+  }
+
   function handleSendClick() {
     var text = (inputField.value || "").trim();
     if (!text) return;
@@ -258,6 +263,7 @@
 
   function renderInbox(opts) {
     ensureDOM();
+    removeNpcSelector();
     var conversations = opts.conversations || [];
     var groupConversations = opts.groupConversations || [];
     var autoContacts = opts.autoContacts || [];
@@ -395,7 +401,9 @@
 
   function renderInboxNarrator(opts) {
     ensureDOM();
+    removeNpcSelector();
     var conversations = opts.conversations || [];
+    var groupConversations = opts.groupConversations || [];
     var unreadPairs = opts.unreadPairs || [];
 
     // Build a set of "senderId:recipientId" keys for quick lookup
@@ -421,10 +429,32 @@
           '<i data-lucide="pencil"></i></button>' +
       '</div>';
 
-    if (conversations.length === 0) {
+    var hasAny = conversations.length > 0 || groupConversations.length > 0;
+
+    if (!hasAny) {
       html += '<div class="phone-empty">Sin conversaciones</div>';
     } else {
       html += '<ul class="phone-contact-list">';
+
+      // Groups first
+      groupConversations.forEach(function (g) {
+        var preview = g.lastMessageBody
+          ? esc(g.lastMessageBody.length > 50 ? g.lastMessageBody.slice(0, 50) + "..." : g.lastMessageBody)
+          : "";
+        html +=
+          '<li class="phone-contact-row phone-contact-group"' +
+          ' data-group-id="' + esc(g.groupId) + '"' +
+          ' data-group-name="' + esc(g.groupName) + '"' +
+          ' data-search="' + esc(g.groupName.toLowerCase()) + '">' +
+            '<div class="phone-contact-avatar phone-contact-avatar--group"><i data-lucide="users"></i></div>' +
+            '<div class="phone-contact-info">' +
+              '<span class="phone-contact-name">' + esc(g.groupName) + '</span>' +
+              '<span class="phone-contact-preview">' + preview + '</span>' +
+            '</div>' +
+          '</li>';
+      });
+
+      // Individual conversations
       conversations.forEach(function (c) {
         var label = c.senderLabel + " \u2194 " + c.recipientLabel;
         var searchText = (c.senderLabel + " " + c.recipientLabel).toLowerCase();
@@ -432,7 +462,6 @@
           ? esc(c.lastMessageBody.length > 50 ? c.lastMessageBody.slice(0, 50) + "..." : c.lastMessageBody)
           : "";
 
-        // Check if this conversation has unread messages (PC→NPC direction)
         var hasUnread =
           unreadKeys.has(c.senderId + ":" + c.recipientId) ||
           unreadKeys.has(c.recipientId + ":" + c.senderId);
@@ -469,8 +498,20 @@
       });
     }
 
-    // Bind row clicks
-    screenEl.querySelectorAll(".phone-contact-row").forEach(function (row) {
+    // Bind group row clicks
+    screenEl.querySelectorAll(".phone-contact-group").forEach(function (row) {
+      row.addEventListener("click", function () {
+        if (ns.controller) {
+          ns.controller.navigateToGroupNarrator({
+            groupId: row.dataset.groupId,
+            groupName: row.dataset.groupName,
+          });
+        }
+      });
+    });
+
+    // Bind individual row clicks
+    screenEl.querySelectorAll(".phone-contact-row:not(.phone-contact-group)").forEach(function (row) {
       row.addEventListener("click", function () {
         if (ns.controller) {
           ns.controller.navigateToConversationNarrator({
@@ -539,6 +580,31 @@
 
     screenEl.innerHTML = html;
 
+    // NPC selector for narrator in group conversations
+    var narratorNpcs = opts.narratorNpcMembers || [];
+    removeNpcSelector();
+
+    if (narratorNpcs.length > 0) {
+      var selectorEl = document.createElement("select");
+      selectorEl.className = "phone-npc-selector";
+      selectorEl.innerHTML = narratorNpcs.map(function (npc) {
+        return '<option value="' + esc(npc.entity_id) + '" data-label="' + esc(npc.entity_label) + '">' +
+          'Enviar como: ' + esc(npc.entity_label) + '</option>';
+      }).join("");
+      selectorEl.addEventListener("change", function () {
+        var opt = selectorEl.options[selectorEl.selectedIndex];
+        if (ns.controller && ns.controller.isOpen()) {
+          var cp = ns.controller.__currentConversation?.();
+          if (cp) {
+            cp.narratorReplyAsId = selectorEl.value;
+            cp.narratorReplyAsLabel = opt.dataset.label || "";
+            cp.narratorReplyAsType = "npc";
+          }
+        }
+      });
+      modalEl.insertBefore(selectorEl, inputBarEl);
+    }
+
     // Input bar
     if (canReply) {
       inputBarEl.classList.remove("hidden");
@@ -565,7 +631,8 @@
     // Day separator if needed
     var msgDay = msg.in_game_date || "";
     if (msgDay) {
-      var lastSep = messagesDiv.querySelector(".phone-day-separator:last-of-type");
+      var allSeps = messagesDiv.querySelectorAll(".phone-day-separator");
+      var lastSep = allSeps.length ? allSeps[allSeps.length - 1] : null;
       var lastDay = lastSep ? lastSep.getAttribute("data-day") : "";
       if (msgDay !== lastDay) {
         var sep = document.createElement("div");
@@ -594,6 +661,7 @@
 
   function renderCompose(opts) {
     ensureDOM();
+    removeNpcSelector();
     var identities = opts.identities || [];
     var pcs = opts.pcs || [];
 
@@ -611,12 +679,31 @@
       return '<option value="' + esc(id.id) + '">' + esc(label) + '</option>';
     }).join("");
 
-    var pcCheckboxes = pcs.map(function (pc) {
-      return '<label class="phone-compose-pc">' +
-        '<input type="checkbox" value="' + esc(pc.sheetId) + '" data-name="' + esc(pc.name) + '" data-user-id="' + esc(pc.userId) + '">' +
-        '<span>' + esc(pc.name) + '</span>' +
-      '</label>';
-    }).join("");
+    var contactCheckboxes = "";
+
+    // PCs
+    if (pcs.length > 0) {
+      contactCheckboxes += '<div class="phone-compose-group-label">Personajes</div>';
+      pcs.forEach(function (pc) {
+        contactCheckboxes +=
+          '<label class="phone-compose-pc">' +
+            '<input type="checkbox" value="' + esc(pc.sheetId) + '" data-name="' + esc(pc.name) + '" data-type="pc">' +
+            '<span>' + esc(pc.name) + '</span>' +
+          '</label>';
+      });
+    }
+
+    // NPCs (phone identities, excluding the selected sender)
+    if (identities.length > 0) {
+      contactCheckboxes += '<div class="phone-compose-group-label">NPCs</div>';
+      identities.forEach(function (npc) {
+        contactCheckboxes +=
+          '<label class="phone-compose-pc phone-compose-npc" data-identity-id="' + esc(npc.id) + '">' +
+            '<input type="checkbox" value="' + esc(npc.id) + '" data-name="' + esc(npc.name) + '" data-type="npc">' +
+            '<span>' + esc(npc.name) + '</span>' +
+          '</label>';
+      });
+    }
 
     var html =
       '<div class="phone-compose">' +
@@ -645,7 +732,12 @@
 
         '<div class="phone-compose-field">' +
           '<label class="phone-compose-label">Para</label>' +
-          '<div class="phone-compose-recipients">' + pcCheckboxes + '</div>' +
+          '<div class="phone-compose-recipients">' + contactCheckboxes + '</div>' +
+        '</div>' +
+
+        '<div id="phone-compose-group-name-field" class="phone-compose-field hidden">' +
+          '<label class="phone-compose-label">Nombre del grupo</label>' +
+          '<input type="text" id="phone-compose-group-name" class="phone-compose-input" placeholder="Ej: Coterie Almagro" maxlength="120">' +
         '</div>' +
 
         '<div class="phone-compose-field">' +
@@ -690,6 +782,35 @@
       });
     }
 
+    // Show/hide group name field based on selected count + hide sender from recipients
+    var groupNameField = document.getElementById("phone-compose-group-name-field");
+    var recipientCheckboxes = screenEl.querySelectorAll('.phone-compose-recipients input[type="checkbox"]');
+
+    function updateGroupNameVisibility() {
+      var checked = screenEl.querySelectorAll('.phone-compose-recipients input[type="checkbox"]:checked');
+      if (groupNameField) {
+        groupNameField.classList.toggle("hidden", checked.length < 2);
+      }
+    }
+
+    function updateSenderInRecipients() {
+      var senderId = senderSelect ? senderSelect.value : "";
+      screenEl.querySelectorAll('.phone-compose-npc').forEach(function (label) {
+        var hide = label.dataset.identityId === senderId;
+        label.classList.toggle("hidden", hide);
+        if (hide) label.querySelector("input").checked = false;
+      });
+      updateGroupNameVisibility();
+    }
+
+    recipientCheckboxes.forEach(function (cb) {
+      cb.addEventListener("change", updateGroupNameVisibility);
+    });
+    if (senderSelect) {
+      senderSelect.addEventListener("change", updateSenderInRecipients);
+    }
+    updateSenderInRecipients();
+
     // Send button
     var sendBtnCompose = document.getElementById("phone-compose-send");
     if (sendBtnCompose) {
@@ -719,14 +840,17 @@
     var checkboxes = screenEl.querySelectorAll('.phone-compose-recipients input[type="checkbox"]:checked');
     checkboxes.forEach(function (cb) {
       recipients.push({
-        sheetId: cb.value,
+        id: cb.value,
         name: cb.dataset.name || "",
-        userId: cb.dataset.userId || "",
+        type: cb.dataset.type || "pc",
       });
     });
 
     var bodyEl = document.getElementById("phone-compose-body");
     var body = bodyEl ? bodyEl.value.trim() : "";
+
+    var groupNameEl = document.getElementById("phone-compose-group-name");
+    var groupName = groupNameEl ? groupNameEl.value.trim() : "";
 
     return {
       isNewSender: isNew,
@@ -734,6 +858,7 @@
       newSenderName: newName,
       newSenderPhone: newPhone,
       recipients: recipients,
+      groupName: groupName,
       body: body,
     };
   }
@@ -752,6 +877,7 @@
 
   function renderCreateGroup(opts) {
     ensureDOM();
+    removeNpcSelector();
     var pcs = opts.pcs || [];
     var mySheetId = opts.mySheetId || null;
 

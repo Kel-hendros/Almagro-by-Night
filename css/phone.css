@@ -427,6 +427,37 @@
   white-space: nowrap;
 }
 
+.phone-contact-avatar--group {
+  background: var(--color-accent-soft);
+  color: var(--color-text-secondary);
+}
+
+.phone-contact-avatar--group svg {
+  width: 18px;
+  height: 18px;
+}
+
+.phone-modal > .phone-npc-selector {
+  margin-left: 2px;
+  margin-right: 2px;
+  padding: 8px 16px;
+  border: none;
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.phone-modal > .phone-npc-selector + .phone-input-bar {
+  border-radius: 0 0 20px 20px;
+}
+
+.phone-modal > .phone-screen:has(~ .phone-npc-selector) {
+  border-radius: 0;
+}
+
 /* ---- Input Bar ---- */
 
 .phone-input-bar {
@@ -567,6 +598,19 @@
 
 .phone-compose-pc input[type="checkbox"] {
   accent-color: var(--color-accent);
+}
+
+.phone-compose-group-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+
+.phone-compose-group-label:first-child {
+  margin-top: 0;
 }
 
 .phone-compose-textarea {

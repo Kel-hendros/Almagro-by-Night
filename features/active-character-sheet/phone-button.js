@@ -34,8 +34,11 @@
   }
 
   async function refreshUnread() {
-    if (!global.ABNPhone?.controller?.getUnreadCount) return;
-    var count = await global.ABNPhone.controller.getUnreadCount();
+    var svc = global.ABNPhone?.service;
+    if (!svc?.fetchUnreadCount) return;
+    var sheetId = getSheetId();
+    if (!sheetId) return;
+    var count = await svc.fetchUnreadCount("pc", sheetId);
     // Send unread count to iframe for badge display
     var frame = document.getElementById("acs-frame");
     if (frame?.contentWindow) {
@@ -82,6 +85,12 @@
     window.addEventListener("abn-sms-toast-click", toastClickHandler);
 
     refreshUnread();
+
+    // Re-send unread count when iframe finishes loading
+    var frame = document.getElementById("acs-frame");
+    if (frame) {
+      frame.addEventListener("load", function () { refreshUnread(); });
+    }
   }
 
   function destroy() {

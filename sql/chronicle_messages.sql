@@ -305,6 +305,7 @@ as $$
       ) as rn
     from public.chronicle_messages
     where chronicle_id = p_chronicle_id
+      and recipient_type <> 'group'
   ),
   latest as (
     select * from pairs where rn = 1

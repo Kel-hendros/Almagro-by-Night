@@ -273,6 +273,45 @@
     return res.data || [];
   }
 
+  async function fetchAllGroupConversations(chronicleId) {
+    if (!sb()) return [];
+    var { data: groups } = await sb()
+      .from("phone_groups")
+      .select("id, name")
+      .eq("chronicle_id", chronicleId)
+      .order("created_at", { ascending: false });
+    if (!groups || groups.length === 0) return [];
+
+    var result = [];
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i];
+      var { data: lastMsg } = await sb()
+        .from("chronicle_messages")
+        .select("body, created_at")
+        .eq("recipient_type", "group")
+        .eq("recipient_id", g.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      result.push({
+        groupId: g.id,
+        groupName: g.name,
+        lastMessageBody: lastMsg?.body || null,
+        lastMessageAt: lastMsg?.created_at || null,
+      });
+    }
+    return result;
+  }
+
+  async function fetchGroupMembers(groupId) {
+    if (!sb()) return [];
+    var { data } = await sb()
+      .from("phone_group_members")
+      .select("entity_type, entity_id, entity_label")
+      .eq("group_id", groupId);
+    return data || [];
+  }
+
   async function createGroup(opts) {
     if (!sb()) return { data: null, error: "No supabase" };
     var res = await sb().rpc("create_phone_group", {
@@ -502,6 +541,8 @@
     sendMessage: sendMessage,
     markConversationRead: markConversationRead,
     fetchGroupConversations: fetchGroupConversations,
+    fetchAllGroupConversations: fetchAllGroupConversations,
+    fetchGroupMembers: fetchGroupMembers,
     createGroup: createGroup,
     sendGroupMessage: sendGroupMessage,
     fetchGroupMessages: fetchGroupMessages,
