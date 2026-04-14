@@ -127,7 +127,7 @@ body[data-font="phantomas"] {
 html,
 body {
 	height: 100%;
-	cursor: url("images/cursor1.png"), auto;
+	cursor: auto;
 }
 
 body {
@@ -278,9 +278,9 @@ textarea::placeholder {
 }
 
 .sheet-phone-btn:hover {
-	color: var(--text);
-	background: var(--accent);
-	border-color: var(--accent);
+	color: var(--bg-soft);
+	background: var(--muted);
+	border-color: var(--muted);
 }
 
 .sheet-phone-btn svg {
@@ -793,7 +793,7 @@ h3 {
 	height: 20px;
 	border: 1px solid var(--text);
 	margin-right: 5px;
-	cursor: var(--customPointer);
+	cursor: pointer;
 }
 
 .square.health-square {
@@ -1627,7 +1627,7 @@ h3 {
 	border-radius: 999px;
 	border: 1px solid var(--line);
 	margin: 0 0.5px;
-	cursor: var(--customPointer);
+	cursor: pointer;
 }
 
 .dot.filled {
@@ -1656,7 +1656,7 @@ h3 {
 
 .attributes .form-group.attribute label,
 .abilities .form-group.attribute label {
-	cursor: var(--customPointer);
+	cursor: pointer;
 }
 
 .form-group.attribute label {
@@ -2133,7 +2133,7 @@ ul li {
 	padding-inline: 0.7em;
 	padding-block: 0.2em;
 	margin: 0.2em;
-	cursor: var(--customPointer);
+	cursor: pointer;
 	border: 1px solid var(--text);
 	background-color: var(--muted);
 	border-radius: 5px;

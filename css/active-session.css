@@ -13,11 +13,17 @@
 
 .as-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
   padding: 20px 20px 0;
+}
+
+.as-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .as-header h1 {
@@ -27,6 +33,51 @@
 .as-subtitle {
   margin: 6px 0 0;
   color: var(--theme-text-secondary);
+}
+
+.as-in-game-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--theme-border-divider);
+  border-radius: 10px;
+  background: var(--theme-bg-elevated);
+  font-size: 0.85rem;
+  color: var(--theme-text-primary);
+  position: relative;
+}
+
+.as-in-game-date-icon {
+  display: flex;
+  color: var(--theme-text-secondary);
+}
+
+.as-in-game-date-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.as-in-game-date-text {
+  white-space: nowrap;
+}
+
+.as-in-game-date-edit {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.as-in-game-date-edit:hover {
+  color: var(--theme-text-primary);
+  background: var(--theme-accent-soft);
 }
 
 .as-actions {

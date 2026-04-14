@@ -31,6 +31,16 @@
     return (name || "?").charAt(0).toUpperCase();
   }
 
+  function formatInGameDay(dateStr) {
+    if (!dateStr) return "";
+    var d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d.getTime())) return "";
+    var dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    var monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
+      "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    return dayNames[d.getDay()] + " " + d.getDate() + " " + monthNames[d.getMonth()] + " " + d.getFullYear();
+  }
+
   // ================================================================
   // DOM scaffold (created once, appended to body)
   // ================================================================
@@ -48,6 +58,15 @@
 
     modalEl = document.createElement("div");
     modalEl.className = "phone-modal";
+
+    var statusBarEl = document.createElement("div");
+    statusBarEl.className = "phone-status-bar";
+    statusBarEl.innerHTML =
+      '<span class="phone-status-date" id="phone-status-date"></span>' +
+      '<span class="phone-status-icons">' +
+        '<i data-lucide="signal" class="phone-status-icon"></i>' +
+        '<i data-lucide="battery-full" class="phone-status-icon"></i>' +
+      '</span>';
 
     headerEl = document.createElement("header");
     headerEl.className = "phone-header";
@@ -79,6 +98,7 @@
     inputBarEl.appendChild(inputField);
     inputBarEl.appendChild(sendBtn);
 
+    modalEl.appendChild(statusBarEl);
     modalEl.appendChild(headerEl);
     modalEl.appendChild(screenEl);
     modalEl.appendChild(inputBarEl);
@@ -99,6 +119,22 @@
   // ================================================================
   // Open / Close
   // ================================================================
+
+  function setInGameDate(dateStr) {
+    ensureDOM();
+    var el = document.getElementById("phone-status-date");
+    if (!el) return;
+    if (!dateStr) {
+      el.textContent = "";
+      return;
+    }
+    var d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d.getTime())) { el.textContent = ""; return; }
+    var dayAbbr = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
+    var monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun",
+      "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    el.textContent = dayAbbr[d.getDay()] + " " + d.getDate() + " " + monthNames[d.getMonth()] + " " + d.getFullYear();
+  }
 
   function open() {
     ensureDOM();
@@ -480,7 +516,13 @@
     if (messages.length === 0) {
       html += '<div class="phone-empty phone-empty--chat">Sin mensajes</div>';
     } else {
+      var lastDay = null;
       messages.forEach(function (m) {
+        var day = m.in_game_date || "";
+        if (day && day !== lastDay) {
+          html += '<div class="phone-day-separator" data-day="' + esc(day) + '"><span>' + esc(formatInGameDay(day)) + '</span></div>';
+          lastDay = day;
+        }
         var isMine = m.sender_type === myType && m.sender_id === myId;
         var emojiClass = isEmojiOnly(m.body) ? " phone-bubble--emoji" : "";
         var nameHtml = !isMine && m.sender_label
@@ -507,10 +549,7 @@
     }
 
     // Scroll to bottom
-    var messagesDiv = screenEl.querySelector(".phone-messages");
-    if (messagesDiv) {
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    screenEl.scrollTop = screenEl.scrollHeight;
 
     refreshIcons();
   }
@@ -523,6 +562,20 @@
     var emptyEl = messagesDiv.querySelector(".phone-empty--chat");
     if (emptyEl) emptyEl.remove();
 
+    // Day separator if needed
+    var msgDay = msg.in_game_date || "";
+    if (msgDay) {
+      var lastSep = messagesDiv.querySelector(".phone-day-separator:last-of-type");
+      var lastDay = lastSep ? lastSep.getAttribute("data-day") : "";
+      if (msgDay !== lastDay) {
+        var sep = document.createElement("div");
+        sep.className = "phone-day-separator";
+        sep.setAttribute("data-day", msgDay);
+        sep.innerHTML = "<span>" + esc(formatInGameDay(msgDay)) + "</span>";
+        messagesDiv.appendChild(sep);
+      }
+    }
+
     var isMine = msg.sender_type === myType && msg.sender_id === myId;
     var nameHtml = !isMine && msg.sender_label
       ? '<span class="phone-bubble-sender">' + esc(msg.sender_label) + '</span>'
@@ -532,7 +585,7 @@
     bubble.className = "phone-bubble " + (isMine ? "phone-bubble--sent" : "phone-bubble--received") + emojiClass;
     bubble.innerHTML = nameHtml + '<p class="phone-bubble-text">' + esc(msg.body) + '</p>';
     messagesDiv.appendChild(bubble);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    screenEl.scrollTop = screenEl.scrollHeight;
   }
 
   // ================================================================
@@ -809,6 +862,7 @@
     setCreateGroupBusy: setCreateGroupBusy,
     setHealthLevel: setHealthLevel,
     setPhoneColor: setPhoneColor,
+    setInGameDate: setInGameDate,
     showError: showError,
     showLoading: showLoading,
   };

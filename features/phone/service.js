@@ -390,6 +390,16 @@
     return res.data?.data?.phoneColor || "black";
   }
 
+  async function fetchInGameDate(chronicleId) {
+    if (!sb() || !chronicleId) return null;
+    var res = await sb()
+      .from("chronicles")
+      .select("in_game_date")
+      .eq("id", chronicleId)
+      .maybeSingle();
+    return res.data?.in_game_date || null;
+  }
+
   // ---- Export ----
 
   async function exportAllMessages(chronicleId) {
@@ -506,6 +516,7 @@
     getParticipation: getParticipation,
     fetchSheetHealth: fetchSheetHealth,
     fetchPhoneColor: fetchPhoneColor,
+    fetchInGameDate: fetchInGameDate,
     exportAllMessages: exportAllMessages,
     PAGE_SIZE: PAGE_SIZE,
   };

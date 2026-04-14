@@ -19,6 +19,8 @@
     encounterListChangeHandler: null,
     smsReceivedHandler: null,
     narratorReadHandler: null,
+    inGameDate: null,
+    inGameDateHandler: null,
   };
 
   function mountEncounterOverlay() {
@@ -156,6 +158,55 @@
     }
   }
 
+  function formatInGameDate(dateStr) {
+    if (!dateStr) return null;
+    var d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d.getTime())) return null;
+    var dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    var monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    return dayNames[d.getDay()] + " " + d.getDate() + " de " + monthNames[d.getMonth()] + ", " + d.getFullYear();
+  }
+
+  function updateInGameDateDisplay() {
+    var el = document.getElementById("as-in-game-date-text");
+    if (!el) return;
+    var fmt = formatInGameDate(state.inGameDate);
+    el.textContent = fmt || "Sin fecha";
+  }
+
+  function bindInGameDateEditor() {
+    var editBtn = document.getElementById("as-in-game-date-edit");
+    var container = document.querySelector(".as-in-game-date");
+    if (!editBtn || !container) return;
+
+    var dateInput = document.createElement("input");
+    dateInput.type = "date";
+    dateInput.style.cssText = "position:absolute;opacity:0;pointer-events:none;";
+    container.appendChild(dateInput);
+
+    state.inGameDateHandler = function () {
+      if (state.inGameDate) {
+        dateInput.value = state.inGameDate;
+      }
+      dateInput.showPicker?.();
+    };
+    editBtn.addEventListener("click", state.inGameDateHandler);
+
+    dateInput.addEventListener("change", async function () {
+      var val = dateInput.value || null;
+      var { error } = await global.supabase
+        .from("chronicles")
+        .update({ in_game_date: val })
+        .eq("id", state.chronicleId);
+      if (error) {
+        console.warn("ActiveSession: error saving in_game_date", error);
+      }
+      state.inGameDate = val;
+      updateInGameDateDisplay();
+    });
+  }
+
   async function refreshPhoneBadge() {
     var badge = document.getElementById("as-phone-badge");
     if (!badge || !state.chronicleId) return;
@@ -277,6 +328,10 @@
       chronicleName: chronicle.name,
       systemId: chronicle.system_id || "v20",
     });
+
+    state.inGameDate = chronicle.in_game_date || null;
+    updateInGameDateDisplay();
+    bindInGameDateEditor();
 
     const roster = await service().getRosterSummary(state.chronicleId);
     view().renderRoster(roster);

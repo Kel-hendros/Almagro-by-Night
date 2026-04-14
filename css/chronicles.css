@@ -1227,6 +1227,16 @@ p.chronicle-description {
     gap: 24px;
 }
 
+.cd-dates-row {
+    display: flex;
+    gap: 16px;
+}
+
+.cd-dates-row .cd-section {
+    flex: 1;
+    min-width: 0;
+}
+
 .cd-summary-side {
     display: flex;
     flex-direction: column;

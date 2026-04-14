@@ -80,9 +80,12 @@
     // Subscribe realtime
     svc.subscribeMessages(state.chronicleId, onRealtimeMessage);
 
-    // Apply phone color from character preferences
+    // Apply phone color and in-game date
     svc.fetchPhoneColor(state.entityId).then(function (color) {
       ns.view.setPhoneColor(color);
+    });
+    svc.fetchInGameDate(state.chronicleId).then(function (dateStr) {
+      ns.view.setInGameDate(dateStr);
     });
 
     await loadConversations();
@@ -112,6 +115,11 @@
     // Load data for compose screen
     var pcs = await svc.fetchChroniclePCs(state.chronicleId);
     state.chroniclePCs = pcs;
+
+    // Apply in-game date
+    svc.fetchInGameDate(state.chronicleId).then(function (dateStr) {
+      ns.view.setInGameDate(dateStr);
+    });
 
     // Show inbox first (narrator sees all conversations)
     svc.subscribeMessages(state.chronicleId, onRealtimeMessage);

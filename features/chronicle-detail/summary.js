@@ -39,6 +39,9 @@
     const nextSessionText = document.getElementById("cd-next-session-text");
     const nextSessionCard = document.getElementById("cd-next-session-card");
     const nextSessionEditBtn = document.getElementById("cd-next-session-edit");
+    const inGameDateText = document.getElementById("cd-in-game-date-text");
+    const inGameDateCard = document.getElementById("cd-in-game-date-card");
+    const inGameDateEditBtn = document.getElementById("cd-in-game-date-edit");
     const lastCard = document.getElementById("cd-last-session-card");
     const charCard = document.getElementById("cd-character-card");
     const countPlayers = document.getElementById("cd-count-players");
@@ -79,6 +82,23 @@
       const fmt = formatNextSession(chronicle.next_session);
       nextSessionText.textContent = fmt || "Sin fecha programada";
       nextSessionText.classList.toggle("cd-card-muted", !fmt);
+    }
+
+    function formatInGameDate(dateStr) {
+      if (!dateStr) return null;
+      var d = new Date(dateStr + "T00:00:00");
+      if (isNaN(d.getTime())) return null;
+      var dayNames = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      var monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      return dayNames[d.getDay()] + " " + d.getDate() + " de " + monthNames[d.getMonth()] + ", " + d.getFullYear();
+    }
+
+    function updateInGameDateDisplay() {
+      if (!inGameDateText) return;
+      var fmt = formatInGameDate(chronicle.in_game_date);
+      inGameDateText.textContent = fmt || "Sin fecha";
+      inGameDateText.classList.toggle("cd-card-muted", !fmt);
     }
 
     function renderLastSessionCard(recap) {
@@ -196,6 +216,7 @@
     }
 
     updateNextSessionDisplay();
+    updateInGameDateDisplay();
     renderLastSessionCard(latestRecap || null);
     renderCurrentCharacterCard();
     if (countPlayers) countPlayers.textContent = String(participantsCount || 0);
@@ -326,6 +347,34 @@
         }
         chronicle.next_session = newDate;
         updateNextSessionDisplay();
+      });
+    }
+
+    if (isNarrator && inGameDateEditBtn && inGameDateCard) {
+      inGameDateEditBtn.classList.remove("hidden");
+      var igDateInput = document.createElement("input");
+      igDateInput.type = "date";
+      igDateInput.style.cssText = "position:absolute;opacity:0;pointer-events:none;";
+      inGameDateCard.appendChild(igDateInput);
+
+      inGameDateEditBtn.addEventListener("click", function () {
+        if (chronicle.in_game_date) {
+          igDateInput.value = chronicle.in_game_date;
+        }
+        igDateInput.showPicker?.();
+      });
+
+      igDateInput.addEventListener("change", async function () {
+        var val = igDateInput.value || null;
+        var { error } = await supabase
+          .from("chronicles")
+          .update({ in_game_date: val })
+          .eq("id", chronicleId);
+        if (error) {
+          console.error("Error saving in_game_date:", error);
+        }
+        chronicle.in_game_date = val;
+        updateInGameDateDisplay();
       });
     }
 

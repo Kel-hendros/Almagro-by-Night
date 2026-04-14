@@ -26,7 +26,7 @@
     const { data, error } = await supabase
       .from("chronicles")
       .select(
-        "id, name, description, status, invite_code, creator_id, created_at, banner_url, banner_config, next_session"
+        "id, name, description, status, invite_code, creator_id, created_at, banner_url, banner_config, next_session, in_game_date"
       )
       .eq("id", chronicleId)
       .maybeSingle();

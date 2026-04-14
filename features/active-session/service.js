@@ -154,7 +154,7 @@
     if (!chronicleId || !global.supabase) return { data: null, error: null };
     return await global.supabase
       .from("chronicles")
-      .select("id, name, creator_id")
+      .select("id, name, creator_id, in_game_date")
       .eq("id", chronicleId)
       .maybeSingle();
   }

@@ -50,17 +50,33 @@
         <div class="cd-tab-panel active" data-panel="resumen">
             <div class="cd-summary-grid">
                 <div class="cd-summary-main">
-                    <!-- Proxima Sesion -->
-                    <div class="cd-section" id="cd-next-session">
-                        <span class="cd-section-label">PROXIMA SESION</span>
-                        <div class="cd-card cd-card--row cd-card--spaced" id="cd-next-session-card">
-                            <div class="cd-card--row-left">
-                                <span class="cd-card-icon"><i data-lucide="calendar"></i></span>
-                                <span id="cd-next-session-text" class="cd-card-text cd-card-muted">Sin fecha programada</span>
+                    <div class="cd-dates-row">
+                        <!-- Proxima Sesion -->
+                        <div class="cd-section" id="cd-next-session">
+                            <span class="cd-section-label">PROXIMA SESION</span>
+                            <div class="cd-card cd-card--row cd-card--spaced" id="cd-next-session-card">
+                                <div class="cd-card--row-left">
+                                    <span class="cd-card-icon"><i data-lucide="calendar"></i></span>
+                                    <span id="cd-next-session-text" class="cd-card-text cd-card-muted">Sin fecha programada</span>
+                                </div>
+                                <button id="cd-next-session-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha">
+                                    <i data-lucide="pencil"></i>
+                                </button>
                             </div>
-                            <button id="cd-next-session-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha">
-                                <i data-lucide="pencil"></i>
-                            </button>
+                        </div>
+
+                        <!-- Fecha In-Game -->
+                        <div class="cd-section" id="cd-in-game-date">
+                            <span class="cd-section-label">FECHA IN-GAME</span>
+                            <div class="cd-card cd-card--row cd-card--spaced" id="cd-in-game-date-card">
+                                <div class="cd-card--row-left">
+                                    <span class="cd-card-icon"><i data-lucide="moon"></i></span>
+                                    <span id="cd-in-game-date-text" class="cd-card-text cd-card-muted">Sin fecha</span>
+                                </div>
+                                <button id="cd-in-game-date-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha in-game">
+                                    <i data-lucide="pencil"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
