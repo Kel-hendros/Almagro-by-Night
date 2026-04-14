@@ -114,7 +114,28 @@
         : null;
 
       state.encounter.status = normalizeEncounterStatus(updated.status);
+      // Preserve local design-layer data when we have unsaved draft changes
+      var preserveDraft = !!state._draftDirty;
+      var localDesignData = null;
+      if (preserveDraft) {
+        localDesignData = {
+          tileMap: state.encounter.data.tileMap,
+          designTokens: state.encounter.data.designTokens,
+          props: state.encounter.data.props,
+          map: state.encounter.data.map,
+          mapEffects: state.encounter.data.mapEffects,
+          ambientLight: state.encounter.data.ambientLight,
+        };
+      }
       state.encounter.data = updated.data || state.encounter.data;
+      if (preserveDraft && localDesignData) {
+        state.encounter.data.tileMap = localDesignData.tileMap;
+        state.encounter.data.designTokens = localDesignData.designTokens;
+        state.encounter.data.props = localDesignData.props;
+        state.encounter.data.map = localDesignData.map;
+        state.encounter.data.mapEffects = localDesignData.mapEffects;
+        state.encounter.data.ambientLight = localDesignData.ambientLight;
+      }
       state.encounter.data.wallPaths =
         wallPathsDomain?.normalizeWallPaths?.(state.encounter.data.wallPaths || []) || [];
       state.encounter.data.wallPaths =

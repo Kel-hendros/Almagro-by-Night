@@ -77,7 +77,7 @@ async function initAuthForms() {
     const pendingHash = typeof window.abnConsumePendingRoute === "function"
       ? window.abnConsumePendingRoute()
       : "";
-    return pendingHash || "chronicles";
+    return pendingHash || "welcome";
   };
 
   if (suForm && !suForm._init) {

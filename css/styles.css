@@ -131,6 +131,8 @@ button,
     padding: 12px 10px;
     text-align: center;
     justify-content: center;
+    text-decoration: none;
+    cursor: pointer;
 }
 
 /* Utilities */

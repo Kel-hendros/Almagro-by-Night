@@ -201,7 +201,7 @@
 
   function showChronicleStorageLimitReached() {
     return showAlert(
-      "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.",
+      "Has alcanzado tu límite de almacenamiento (20 MB).\nPuedes borrar elementos que ya no utilices para liberar espacio.",
       {
         title: "Almacenamiento",
         buttonLabel: "Entendido",
@@ -209,9 +209,67 @@
     );
   }
 
+  let promptOverlay = null;
+
+  function ensurePromptDOM() {
+    if (promptOverlay) return promptOverlay;
+
+    const overlay = document.createElement("div");
+    overlay.className = "app-modal-overlay app-prompt-overlay";
+    overlay.innerHTML = `
+      <div class="app-modal app-prompt-card" role="dialog" aria-modal="true">
+        <p class="app-prompt-message"></p>
+        <input type="text" class="app-prompt-input" autocomplete="off">
+        <div class="app-modal-actions">
+          <button type="button" class="btn btn--ghost app-prompt-cancel">Cancelar</button>
+          <button type="button" class="btn btn--primary app-prompt-ok">Aceptar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    promptOverlay = overlay;
+    return overlay;
+  }
+
+  function prompt(message, defaultValue) {
+    const overlay = ensurePromptDOM();
+    const msgEl = overlay.querySelector(".app-prompt-message");
+    const input = overlay.querySelector(".app-prompt-input");
+    const okBtn = overlay.querySelector(".app-prompt-ok");
+    const cancelBtn = overlay.querySelector(".app-prompt-cancel");
+
+    msgEl.textContent = message;
+    input.value = defaultValue || "";
+
+    overlay.classList.add("visible");
+    setTimeout(function () { input.focus(); input.select(); }, 50);
+
+    return new Promise(function (resolve) {
+      function cleanup() {
+        overlay.classList.remove("visible");
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        overlay.removeEventListener("click", onBackdrop);
+        input.removeEventListener("keydown", onInputKey);
+        document.removeEventListener("keydown", onKey);
+      }
+      function onOk() { cleanup(); resolve(input.value); }
+      function onCancel() { cleanup(); resolve(null); }
+      function onBackdrop(e) { if (e.target === overlay) onCancel(); }
+      function onKey(e) { if (e.key === "Escape") onCancel(); }
+      function onInputKey(e) { if (e.key === "Enter") { e.preventDefault(); onOk(); } }
+
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      overlay.addEventListener("click", onBackdrop);
+      input.addEventListener("keydown", onInputKey);
+      document.addEventListener("keydown", onKey);
+    });
+  }
+
   root.modal = {
     createController,
     confirm,
+    prompt,
     alert: showAlert,
     showChronicleStorageLimitReached,
   };

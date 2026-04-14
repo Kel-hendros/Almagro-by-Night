@@ -1158,6 +1158,20 @@
     };
 
     proto.handleMouseMove = function handleMouseMove(e) {
+      // Skip expensive coordinate math when mouse is over a modal/overlay and
+      // nothing is being dragged.  The listener lives on `window` so it fires
+      // even when the cursor is nowhere near the canvas — the getBoundingClientRect
+      // call below forces a synchronous layout reflow which, combined with CSS
+      // hover repaints on overlay elements, causes visible jank.
+      var isDragging = this.isPanning || this.isDraggingToken || this.isDraggingMapEffect
+        || this.isDraggingDesignToken || this.isResizingDesignToken
+        || this.isRotatingDesignToken || this.isDraggingProp
+        || this.isResizingProp || this.isRotatingProp
+        || this.isDraggingBackground || this.isResizingBackground
+        || this._isDraggingLight || this._isDraggingSwitch
+        || this._lightDragPending || this._switchDragPending;
+      if (!isDragging && this.canvas && !this.canvas.contains(e.target)) return;
+
       const rect = this.canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;

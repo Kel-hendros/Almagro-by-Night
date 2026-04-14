@@ -9,8 +9,8 @@
       canEditEncounter,
       onBusyChange,
     } = ctx;
-    const CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE =
-      "Has alcanzado el límite de almacenamiento de esta Crónica.\nPuedes borrar elementos que ya no utilices para liberar espacio o pasar a un plan superior para aumentar tu límite.";
+    const STORAGE_LIMIT_REACHED_MESSAGE =
+      "Has alcanzado tu límite de almacenamiento (20 MB).\nPuedes borrar elementos que ya no utilices para liberar espacio.";
 
     async function runWithBusy(message, task) {
       if (typeof onBusyChange === "function") onBusyChange(true, message);
@@ -21,13 +21,23 @@
       }
     }
 
+    var _assetCache = {};
+    var ASSET_CACHE_TTL_MS = 30000;
+
     async function loadDesignAssets(category) {
       if (typeof canEditEncounter === "function" && !canEditEncounter()) {
         state.designAssets = [];
         return [];
       }
 
-      const chronicleId = state.encounter?.chronicle_id || null;
+      // Return cached if fresh
+      var cacheKey = category || "_all";
+      var cached = _assetCache[cacheKey];
+      if (cached && (Date.now() - cached.at) < ASSET_CACHE_TTL_MS) {
+        state.designAssets = cached.data;
+        return state.designAssets;
+      }
+
       let data = [];
       let error = null;
 
@@ -35,57 +45,16 @@
         return category ? query.eq("category", category) : query;
       }
 
-      if (chronicleId) {
-        const scoped = await applyCategory(
-          supabase
-            .from("encounter_design_assets")
-            .select("*")
-            .eq("chronicle_id", chronicleId)
-        ).order("created_at", { ascending: false });
-        if (scoped.error) {
-          error = scoped.error;
-        } else {
-          data = scoped.data || [];
-        }
-
-        if (!error && state.user?.id) {
-          const legacy = await applyCategory(
-            supabase
-              .from("encounter_design_assets")
-              .select("*")
-              .is("chronicle_id", null)
-              .eq("owner_user_id", state.user.id)
-          ).order("created_at", { ascending: false });
-          if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length) {
-            data = [...data, ...legacy.data];
-          }
-        }
-
-        // System shared assets (no chronicle, shared flag)
-        if (!error) {
-          const system = await applyCategory(
-            supabase
-              .from("encounter_design_assets")
-              .select("*")
-              .is("chronicle_id", null)
-              .eq("is_shared", true)
-          ).order("created_at", { ascending: false });
-          if (!system.error && Array.isArray(system.data) && system.data.length) {
-            const existingIds = new Set(data.map((d) => d.id));
-            system.data.forEach((item) => {
-              if (!existingIds.has(item.id)) data.push(item);
-            });
-          }
-        }
-      } else {
-        const all = await applyCategory(
-          supabase
-            .from("encounter_design_assets")
-            .select("*")
-        ).order("created_at", { ascending: false });
-        data = all.data || [];
-        error = all.error || null;
+      // Assets belong to user — load mine + system shared
+      var orFilters = ["is_shared.eq.true"];
+      if (state.user?.id) {
+        orFilters.push("owner_user_id.eq." + state.user.id);
       }
+      var result = await applyCategory(
+        supabase.from("encounter_design_assets").select("*")
+      ).or(orFilters.join(",")).order("created_at", { ascending: false });
+      data = result.data || [];
+      error = result.error || null;
 
       if (error) {
         console.warn("No se pudieron cargar assets de diseno:", error.message);
@@ -94,7 +63,16 @@
       }
 
       state.designAssets = data || [];
+      _assetCache[cacheKey] = { data: state.designAssets, at: Date.now() };
       return state.designAssets;
+    }
+
+    function invalidateAssetCache(category) {
+      if (category) {
+        delete _assetCache[category];
+      } else {
+        _assetCache = {};
+      }
     }
 
     function getEncounterAssetPublicUrl(path) {
@@ -145,19 +123,11 @@
         await showModal();
         return;
       }
-      alert(CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE);
+      alert(STORAGE_LIMIT_REACHED_MESSAGE);
     }
 
-    async function ensureChronicleQuota(chronicleId, incomingBytes) {
-      if (!chronicleId) {
-        return {
-          ok: false,
-          reason: "missing_chronicle",
-          message: "No hay crónica asociada para este upload.",
-        };
-      }
-      const { data, error } = await supabase.rpc("check_chronicle_storage_quota", {
-        p_chronicle_id: chronicleId,
+    async function ensureUserQuota(incomingBytes) {
+      const { data, error } = await supabase.rpc("check_user_storage_quota", {
         p_incoming_bytes: Number(incomingBytes || 0),
       });
       if (error) {
@@ -168,13 +138,6 @@
         };
       }
       if (data?.error) {
-        if (data.error === "not_authorized") {
-          return {
-            ok: false,
-            reason: "not_authorized",
-            message: "No tenés permisos en esta crónica para subir archivos.",
-          };
-        }
         return {
           ok: false,
           reason: "quota_check_failed",
@@ -185,7 +148,7 @@
         return {
           ok: false,
           reason: "limit_reached",
-          message: CHRONICLE_STORAGE_LIMIT_REACHED_MESSAGE,
+          message: STORAGE_LIMIT_REACHED_MESSAGE,
         };
       }
       return { ok: true, reason: null, message: "" };
@@ -247,12 +210,7 @@
     async function uploadEncounterBackground(file) {
       if (!state.encounter || !file) return false;
       return runWithBusy("Subiendo fondo...", async () => {
-        const chronicleId = state.encounter.chronicle_id || null;
-        if (!chronicleId) {
-          alert("No hay crónica activa para guardar el fondo.");
-          return false;
-        }
-        const quota = await ensureChronicleQuota(chronicleId, file.size);
+        const quota = await ensureUserQuota(file.size);
         if (!quota.ok) {
           if (quota.reason === "limit_reached") {
             await showStorageLimitReachedModal();
@@ -261,6 +219,7 @@
           alert(quota.message);
           return false;
         }
+        const chronicleId = state.encounter.chronicle_id || "no-chronicle";
         const filePath = buildUploadKey(
           `chronicle/${chronicleId}/encounter-backgrounds/${state.encounterId}`,
           file.name,
@@ -330,12 +289,9 @@
 
     async function uploadDesignAsset(file, onAfterUpload, options) {
       if (!file || !state.user?.id) return false;
-      const chronicleId = state.encounter?.chronicle_id || null;
-      if (!chronicleId) {
-        alert("No hay crónica activa para guardar este asset.");
-        return false;
-      }
-      const rawName = prompt(
+      var ABNModal = global.ABNShared?.modal;
+      const promptFn = ABNModal?.prompt || window.prompt.bind(window);
+      const rawName = await promptFn(
         "Nombre del asset",
         file.name.replace(/\.[a-z0-9]+$/i, ""),
       );
@@ -344,23 +300,24 @@
 
       const assetCategory = options?.category || "decor";
       const defaultTags = assetCategory === "prop" ? "prop" : "decoracion, mapa";
-      const rawTags = prompt("Tags (separados por coma)", defaultTags);
+      const rawTags = await promptFn("Tags (separados por coma)", defaultTags);
       if (rawTags === null) return false;
       const tags = parseTagList(rawTags);
 
       return runWithBusy("Subiendo asset...", async () => {
-        const quota = await ensureChronicleQuota(chronicleId, file.size);
+        const quota = await ensureUserQuota(file.size);
         if (!quota.ok) {
           if (quota.reason === "limit_reached") {
             await showStorageLimitReachedModal();
             return false;
           }
-          alert(quota.message);
+          if (ABNModal?.alert) await ABNModal.alert(quota.message);
+          else alert(quota.message);
           return false;
         }
 
         const filePath = buildUploadKey(
-          `chronicle/${chronicleId}/encounter-assets`,
+          `user/${state.user.id}/assets`,
           file.name,
         );
         const { error: uploadError } = await supabase.storage
@@ -368,13 +325,13 @@
           .upload(filePath, file, { upsert: false });
 
         if (uploadError) {
-          alert(`Error subiendo asset: ${uploadError.message}`);
+          if (ABNModal?.alert) await ABNModal.alert(`Error subiendo asset: ${uploadError.message}`);
+          else alert(`Error subiendo asset: ${uploadError.message}`);
           return false;
         }
 
         const payload = {
           owner_user_id: state.user.id,
-          chronicle_id: chronicleId,
           name,
           image_path: filePath,
           tags,
@@ -386,11 +343,13 @@
           .insert(payload);
 
         if (insertError) {
-          alert(`Error guardando asset: ${insertError.message}`);
+          if (ABNModal?.alert) await ABNModal.alert(`Error guardando asset: ${insertError.message}`);
+          else alert(`Error guardando asset: ${insertError.message}`);
           return false;
         }
 
-        await loadDesignAssets();
+        invalidateAssetCache();
+        await loadDesignAssets(assetCategory);
         if (typeof onAfterUpload === "function") onAfterUpload();
         return true;
       });
@@ -493,6 +452,7 @@
 
     return {
       loadDesignAssets,
+      invalidateAssetCache,
       getEncounterAssetPublicUrl,
       getEncounterBackgroundPublicUrl,
       uploadEncounterBackground,

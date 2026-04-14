@@ -268,6 +268,41 @@
     justify-content: flex-end;
 }
 
+/* ── Prompt Dialog ── */
+
+.app-prompt-overlay {
+    z-index: 50000;
+}
+
+.app-prompt-card {
+    width: min(100%, 400px);
+}
+
+.app-prompt-message {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: var(--theme-text-secondary);
+    font-family: var(--app-font-body);
+}
+
+.app-prompt-input {
+    width: 100%;
+    padding: 6px 10px;
+    margin-bottom: 1rem;
+    font-size: 0.88rem;
+    font-family: var(--app-font-body);
+    border: 1px solid var(--theme-border-divider);
+    border-radius: 6px;
+    background: var(--theme-bg-primary, #1a1a1a);
+    color: var(--theme-text-primary);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.app-prompt-input:focus {
+    border-color: var(--theme-info, #5b9bd5);
+}
+
 /* ── Tab System ── */
 
 /* Default: pill tabs */

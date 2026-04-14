@@ -316,6 +316,10 @@
       const layer = event?.detail?.layer;
       if (!MAP_LAYER_LABELS[layer]) return;
       persistEncounterViewState({ activeLayer: layer });
+      // Flush draft when leaving design layers
+      if (layer === "entities" && persistenceController?.isDirty()) {
+        persistenceController.flushIfDirty();
+      }
     });
 
     const toolsDrawer = document.getElementById("ae-tools-drawer");
@@ -1155,13 +1159,24 @@
   }
 
   function registerGlobalLifecycleListeners() {
-    runtime.beforeUnloadHandler = () => stopEncounterSyncPolling();
+    runtime.beforeUnloadHandler = () => {
+      stopEncounterSyncPolling();
+      // Best-effort flush — draft stays in localStorage if async doesn't complete
+      persistenceController?.flushIfDirty();
+    };
+    runtime.visibilityHandler = () => {
+      if (document.visibilityState === "hidden" && persistenceController?.isDirty()) {
+        persistenceController.flushIfDirty();
+      }
+    };
     runtime.hashChangeHandler = () => {
       if (!window.location.hash.startsWith("#active-encounter")) {
         stopEncounterSyncPolling();
+        persistenceController?.flushIfDirty();
       }
     };
     window.addEventListener("beforeunload", runtime.beforeUnloadHandler);
+    document.addEventListener("visibilitychange", runtime.visibilityHandler);
     window.addEventListener("hashchange", runtime.hashChangeHandler);
   }
 
@@ -1169,6 +1184,10 @@
     if (runtime.beforeUnloadHandler) {
       window.removeEventListener("beforeunload", runtime.beforeUnloadHandler);
       runtime.beforeUnloadHandler = null;
+    }
+    if (runtime.visibilityHandler) {
+      document.removeEventListener("visibilitychange", runtime.visibilityHandler);
+      runtime.visibilityHandler = null;
     }
     if (runtime.hashChangeHandler) {
       window.removeEventListener("hashchange", runtime.hashChangeHandler);
@@ -1720,6 +1739,9 @@
       el.style.display = isAdmin ? "" : "none";
     });
 
+    const draftSaveBtn = document.getElementById("btn-ae-draft-save");
+    if (draftSaveBtn) draftSaveBtn.style.display = isAdmin ? "" : "none";
+
     const roundLabel = document.getElementById("ae-round-label");
     if (roundLabel) {
       roundLabel.style.display = isAdmin ? "none" : "";
@@ -1950,6 +1972,12 @@
     layersController?.bindLayerMenuEvents(requireAdminAction);
 
     drawerController?.bindEvents();
+
+    // Draft save button
+    document.getElementById("btn-ae-draft-save")?.addEventListener("click", async () => {
+      if (!requireAdminAction()) return;
+      await persistenceController?.flushIfDirty();
+    });
 
     // Browser Modal Listeners
     document
@@ -2312,6 +2340,21 @@
       return false;
     }
 
+    // Restore draft from localStorage if it's newer than DB data
+    if (canEditEncounter() && persistenceController) {
+      var draft = persistenceController.loadDraftFromLocalStorage();
+      if (draft && draft.data && draft.savedAt) {
+        var dbUpdatedAt = state.encounterUpdatedAt ? new Date(state.encounterUpdatedAt).getTime() : 0;
+        if (draft.savedAt > dbUpdatedAt) {
+          Object.assign(state.encounter.data, draft.data);
+          state._draftDirty = true;
+          console.info("Draft restored from localStorage (saved at " + new Date(draft.savedAt).toLocaleTimeString() + ")");
+        } else {
+          persistenceController.clearDraft();
+        }
+      }
+    }
+
     // Data migration & Health Init
     if (Array.isArray(state.encounter.data)) {
       state.encounter.data = {
@@ -2399,6 +2442,8 @@
 
   async function updateEncounterStatus(nextStatus, options = {}) {
     if (!state.encounter || !nextStatus) return;
+    // Flush any pending design changes before status transition
+    await persistenceController?.flushIfDirty();
     const prevStatus = normalizeEncounterStatus(state.encounter.status);
     if (prevStatus === nextStatus) return false;
 
@@ -2959,7 +3004,8 @@
     }
   }
 
-  function teardownEncounterView() {
+  async function teardownEncounterView() {
+    await persistenceController?.flushIfDirty();
     stopEncounterSyncPolling();
     teardownRealtimeSubscriptions();
     teardownGlobalDocumentListeners();

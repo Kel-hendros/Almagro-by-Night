@@ -116,6 +116,73 @@
     border-color: color-mix(in srgb, var(--theme-warning) 24%, transparent);
 }
 
+/* ── Draft Save Indicator ── */
+.ae-draft-save-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+    font-size: 10px;
+    line-height: 1;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+}
+.ae-draft-save-btn:hover {
+    opacity: 0.6;
+}
+.ae-draft-save-btn .ae-draft-icon {
+    font-size: 11px;
+    filter: grayscale(1);
+    transition: filter 0.3s;
+}
+.ae-draft-save-btn .ae-draft-label {
+    display: none;
+    color: var(--theme-text-secondary, #888);
+    letter-spacing: 0.3px;
+}
+.ae-draft-save-btn.is-dirty {
+    opacity: 1;
+}
+.ae-draft-save-btn.is-dirty .ae-draft-icon {
+    filter: none;
+}
+.ae-draft-save-btn.is-dirty .ae-draft-label {
+    display: inline;
+    color: var(--theme-text-secondary, #aaa);
+}
+.ae-draft-save-btn.is-saving {
+    opacity: 1;
+    pointer-events: none;
+}
+.ae-draft-save-btn.is-saving .ae-draft-icon {
+    filter: none;
+    animation: ae-draft-glow 1s ease-in-out infinite;
+}
+.ae-draft-save-btn.is-saving .ae-draft-label {
+    display: inline;
+    color: var(--theme-success, #62ef94);
+}
+.ae-draft-save-btn.is-saved {
+    opacity: 0.7;
+}
+.ae-draft-save-btn.is-saved .ae-draft-icon {
+    filter: none;
+    text-shadow: 0 0 6px rgba(98, 239, 148, 0.6);
+}
+.ae-draft-save-btn.is-saved .ae-draft-label {
+    display: inline;
+    color: var(--theme-success, #62ef94);
+}
+@keyframes ae-draft-glow {
+    0%, 100% { text-shadow: 0 0 4px rgba(98, 239, 148, 0.3); }
+    50% { text-shadow: 0 0 8px rgba(98, 239, 148, 0.8); }
+}
+
 /* ── Buttons ── */
 .ae-btn {
     padding: 4px 10px;
@@ -1328,6 +1395,7 @@
 
 .ae-browser-content.ae-browser-content--decor {
     width: min(1180px, 96vw);
+    height: 88vh;
     max-height: 88vh;
 }
 
@@ -1418,12 +1486,14 @@
     padding: 12px 14px;
     overflow-y: auto;
     flex-grow: 1;
+    min-height: 0;
     scrollbar-width: thin;
     scrollbar-color: #333 transparent;
 }
 
 .ae-browser-grid.ae-browser-grid--decor {
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    align-items: start;
     gap: 12px;
     padding: 14px 16px;
 }
@@ -1467,7 +1537,6 @@
 .ae-browser-card.ae-browser-card--decor {
     padding: 0;
     gap: 0;
-    overflow: hidden;
     border-radius: 10px;
 }
 
@@ -1506,18 +1575,19 @@
 
 .ae-browser-card-media {
     width: 100%;
-    aspect-ratio: 1 / 1;
+    height: 80px;
     background: rgba(255, 255, 255, 0.03);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    padding: 8px;
 }
 
 .ae-browser-card-media img {
-    width: 100%;
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
 }
 
