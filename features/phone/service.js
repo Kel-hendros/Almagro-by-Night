@@ -195,6 +195,30 @@
 
   // ---- Unread count ----
 
+  async function fetchNarratorHasUnread(chronicleId) {
+    if (!sb()) return false;
+    var res = await sb()
+      .from("chronicle_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("chronicle_id", chronicleId)
+      .eq("sender_type", "pc")
+      .eq("recipient_type", "npc")
+      .eq("is_read", false);
+    return (res.count || 0) > 0;
+  }
+
+  async function fetchNarratorUnreadPairs(chronicleId) {
+    if (!sb()) return [];
+    var res = await sb()
+      .from("chronicle_messages")
+      .select("sender_id, recipient_id")
+      .eq("chronicle_id", chronicleId)
+      .eq("sender_type", "pc")
+      .eq("recipient_type", "npc")
+      .eq("is_read", false);
+    return res.data || [];
+  }
+
   async function fetchUnreadCount(entityType, entityId) {
     if (!sb()) return 0;
     var res = await sb().rpc("get_phone_unread_count", {
@@ -472,6 +496,8 @@
     sendGroupMessage: sendGroupMessage,
     fetchGroupMessages: fetchGroupMessages,
     markGroupRead: markGroupRead,
+    fetchNarratorHasUnread: fetchNarratorHasUnread,
+    fetchNarratorUnreadPairs: fetchNarratorUnreadPairs,
     fetchUnreadCount: fetchUnreadCount,
     subscribeMessages: subscribeMessages,
     unsubscribeMessages: unsubscribeMessages,

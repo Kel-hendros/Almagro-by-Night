@@ -166,6 +166,10 @@ if (clanHeaderModule) {
   clanHeaderModule.init();
 }
 
+if (window.ABNSheetPhoneButton) {
+  window.ABNSheetPhoneButton.create();
+}
+
 function openClanModal() {
   clanHeaderModule?.openModal();
 }

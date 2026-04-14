@@ -342,9 +342,10 @@ returns jsonb
 language plpgsql security definer set search_path = public
 as $$
 declare
-  r        jsonb;
-  msg_id   uuid;
-  t_ids    uuid[];
+  r           jsonb;
+  msg_id      uuid;
+  t_ids       uuid[];
+  narrator_id uuid;
 begin
   for r in select * from jsonb_array_elements(p_recipients)
   loop
@@ -359,9 +360,24 @@ begin
       p_body, p_created_by_player_id
     ) returning id into msg_id;
 
-    -- Push targeted notification to recipient's player
+    -- Resolve target player for the notification
     if (r->>'playerId') is not null then
+      -- Recipient is a PC — notify their player directly
       t_ids := array[(r->>'playerId')::uuid];
+    else
+      -- Recipient is an NPC — notify the narrator (chronicle creator)
+      select creator_id into narrator_id
+        from public.chronicles
+        where id = p_chronicle_id;
+      if narrator_id is not null and narrator_id <> p_created_by_player_id then
+        t_ids := array[narrator_id];
+      else
+        t_ids := null;
+      end if;
+    end if;
+
+    -- Push targeted notification
+    if t_ids is not null then
       insert into public.chronicle_notifications (
         chronicle_id, type, title, body, icon, metadata,
         actor_player_id, visibility, target_player_ids

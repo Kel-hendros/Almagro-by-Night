@@ -360,6 +360,13 @@
   function renderInboxNarrator(opts) {
     ensureDOM();
     var conversations = opts.conversations || [];
+    var unreadPairs = opts.unreadPairs || [];
+
+    // Build a set of "senderId:recipientId" keys for quick lookup
+    var unreadKeys = new Set();
+    unreadPairs.forEach(function (p) {
+      unreadKeys.add(p.sender_id + ":" + p.recipient_id);
+    });
 
     headerEl.innerHTML =
       '<h3 class="phone-header-title">Mensajes</h3>' +
@@ -389,8 +396,14 @@
           ? esc(c.lastMessageBody.length > 50 ? c.lastMessageBody.slice(0, 50) + "..." : c.lastMessageBody)
           : "";
 
+        // Check if this conversation has unread messages (PC→NPC direction)
+        var hasUnread =
+          unreadKeys.has(c.senderId + ":" + c.recipientId) ||
+          unreadKeys.has(c.recipientId + ":" + c.senderId);
+        var unreadDot = hasUnread ? '<span class="phone-unread-dot"></span>' : '';
+
         html +=
-          '<li class="phone-contact-row"' +
+          '<li class="phone-contact-row' + (hasUnread ? ' phone-contact-unread' : '') + '"' +
           ' data-s-type="' + esc(c.senderType) + '"' +
           ' data-s-id="' + esc(c.senderId) + '"' +
           ' data-s-label="' + esc(c.senderLabel) + '"' +
@@ -403,6 +416,7 @@
               '<span class="phone-contact-name">' + esc(label) + '</span>' +
               '<span class="phone-contact-preview">' + preview + '</span>' +
             '</div>' +
+            unreadDot +
           '</li>';
       });
       html += "</ul>";

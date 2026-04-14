@@ -251,6 +251,18 @@
       myId: npcSide ? npcSide.id : null,
       canReply: !!npcSide,
     });
+
+    // Mark PC→NPC messages as read for narrator
+    if (npcSide && pcSide) {
+      await svc.markConversationRead({
+        chronicleId: state.chronicleId,
+        counterpartyType: pcSide.type,
+        counterpartyId: pcSide.id,
+        entityType: npcSide.type,
+        entityId: npcSide.id,
+      });
+      global.dispatchEvent(new CustomEvent("abn-narrator-sms-read"));
+    }
   }
 
   function navigateBackToInbox() {
@@ -348,8 +360,9 @@
   async function loadConversationsNarrator() {
     var svc = ns.service;
     var convos = await svc.fetchConversationsNarrator(state.chronicleId);
+    var unreadPairs = await svc.fetchNarratorUnreadPairs(state.chronicleId);
     state.conversations = convos;
-    ns.view.renderInboxNarrator({ conversations: convos });
+    ns.view.renderInboxNarrator({ conversations: convos, unreadPairs: unreadPairs });
   }
 
   async function loadCreateGroupData() {

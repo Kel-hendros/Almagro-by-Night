@@ -17,6 +17,8 @@
     sendSmsBtnHandler: null,
     exportSmsBtnHandler: null,
     encounterListChangeHandler: null,
+    smsReceivedHandler: null,
+    narratorReadHandler: null,
   };
 
   function mountEncounterOverlay() {
@@ -83,6 +85,12 @@
       sendSmsBtn.addEventListener("click", state.sendSmsBtnHandler);
     }
 
+    refreshPhoneBadge();
+    state.smsReceivedHandler = () => refreshPhoneBadge();
+    window.addEventListener("abn-sms-received", state.smsReceivedHandler);
+    state.narratorReadHandler = () => refreshPhoneBadge();
+    window.addEventListener("abn-narrator-sms-read", state.narratorReadHandler);
+
     const exportSmsBtn = document.getElementById("as-export-sms");
     if (exportSmsBtn) {
       state.exportSmsBtnHandler = async () => {
@@ -148,6 +156,13 @@
     }
   }
 
+  async function refreshPhoneBadge() {
+    var badge = document.getElementById("as-phone-badge");
+    if (!badge || !state.chronicleId) return;
+    var hasUnread = await global.ABNPhone?.service?.fetchNarratorHasUnread?.(state.chronicleId);
+    badge.classList.toggle("hidden", !hasUnread);
+  }
+
   function unbindUIActions() {
     const backBtn = document.getElementById("as-back-chronicle");
     if (backBtn && state.backBtnHandler) {
@@ -178,6 +193,16 @@
       exportSmsBtn.removeEventListener("click", state.exportSmsBtnHandler);
     }
     state.exportSmsBtnHandler = null;
+
+    if (state.smsReceivedHandler) {
+      window.removeEventListener("abn-sms-received", state.smsReceivedHandler);
+    }
+    state.smsReceivedHandler = null;
+
+    if (state.narratorReadHandler) {
+      window.removeEventListener("abn-narrator-sms-read", state.narratorReadHandler);
+    }
+    state.narratorReadHandler = null;
 
     const encountersList = document.getElementById("as-encounters-list");
     if (encountersList && state.encounterListChangeHandler) {
@@ -260,9 +285,6 @@
     mountEncounterOverlay();
     handleEncounterState(null);
     bindUIActions();
-
-    // Roll notifications are now handled globally by ABNNotifications.
-    // No need to mount per-view.
 
     await reconnectEncounterBridge();
     state.encountersChannel = service().subscribeSessionEncounters({
