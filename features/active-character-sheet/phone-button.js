@@ -39,12 +39,10 @@
     badgeEl = btnEl.querySelector(".acs-phone-badge");
 
     btnEl.addEventListener("click", function () {
-      var chronicleId = getChronicleId();
       var sheetId = getSheetId();
-      if (!chronicleId || !sheetId) return;
+      if (!sheetId) return;
       if (global.ABNPhone?.controller?.openInbox) {
         global.ABNPhone.controller.openInbox({
-          chronicleId: chronicleId,
           characterSheetId: sheetId,
         });
       }
