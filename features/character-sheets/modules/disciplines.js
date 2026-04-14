@@ -996,13 +996,17 @@
               flashBloodWarning();
               return;
             }
+            var bloodBefore = (document.querySelector("#blood-value")?.value || "").replace(/0/g, "").length;
             modifyBlood("consume", "");
+            var bloodAfter = (document.querySelector("#blood-value")?.value || "").replace(/0/g, "").length;
+            if (bloodAfter >= bloodBefore) return; // consume was blocked
             state.activatedDisciplines.add(discId);
             activateBtn.classList.add("active");
             row.classList.add("discipline-activated");
             activateBtn.title = `Desactivar ${PHYSICAL_DISCIPLINE_FULL[discId] || name}`;
           }
           refreshPool1ForPhysicalDiscipline(discId);
+          global.dispatchEvent(new CustomEvent("abn-turn-state-changed"));
         });
       }
 
@@ -1039,6 +1043,7 @@
 
           renderDisciplineList();
           refreshPool1ForPhysicalDiscipline(5);
+          global.dispatchEvent(new CustomEvent("abn-turn-state-changed"));
         });
       });
 
@@ -1655,6 +1660,15 @@
     loadPowersFromJSON,
     migrateCustomDisciplinesToPowers,
     getActivatedDisciplines,
+    getCeleridadActivatedPoints: () => state.celeridadActivatedPoints,
+    restoreTurnState: (turnState) => {
+      if (!turnState) return;
+      state.activatedDisciplines = new Set(turnState.activatedDisciplines || []);
+      state.celeridadActivatedPoints = turnState.celeridadPoints || 0;
+      renderDisciplineList();
+      refreshPool1ForPhysicalDiscipline(30);
+      refreshPool1ForPhysicalDiscipline(5);
+    },
     openDisciplineModal: (options) => {
       if (typeof state.openDisciplineModal === "function") {
         state.openDisciplineModal(options);
