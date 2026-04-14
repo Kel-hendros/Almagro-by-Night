@@ -113,6 +113,7 @@
   let tokenContextMenuController = null;
   let persistenceController = null;
   let designTokenMenuController = null;
+  let propMenuController = null;
   let mapContextMenuController = null;
   let markerContextMenuController = null;
   let wallContextMenuController = null;
@@ -433,6 +434,14 @@
       render: () => render(),
       saveEncounter: () => saveEncounter(),
     });
+    propMenuController = window.AEPropMenu?.createController?.({
+      getEncounterData: () => state.encounter?.data,
+      canEditEncounter,
+      render: () => render(),
+      saveEncounter: () => saveEncounter(),
+      invalidatePropCache: () => state.map?.invalidatePropCache?.(),
+      getMap: () => state.map,
+    });
     mapContextMenuController = window.AEMapContextMenu?.createController?.({
       state,
       supabase,
@@ -482,17 +491,18 @@
       els,
       canEditEncounter,
       setActiveMapLayer: (...args) => setActiveMapLayer(...args),
-      loadDesignAssets: () => loadDesignAssets(),
+      loadDesignAssets: (category) => loadDesignAssets(category),
       addNPC: (...args) => addNPC(...args),
       addPC: (...args) => addPC(...args),
       addDesignTokenFromAsset: (...args) => addDesignTokenFromAsset(...args),
+      addPropFromAsset: (...args) => addPropFromAsset(...args),
       getEncounterAssetPublicUrl: (path) =>
         assetsService?.getEncounterAssetPublicUrl(path) || "",
     });
     lightSwitchManager = window.AELightSwitchManager?.createManager?.({
       getEncounterData: () => state.encounter?.data,
       getMap: () => state.map,
-      saveEncounter: () => saveEncounter(),
+      saveEncounter: () => { if (!state._suppressManagerSave) saveEncounter(); },
     });
     drawerController = window.AEEncounterDrawer?.createController?.({
       state,
@@ -501,7 +511,7 @@
       requireAdminAction,
       setActiveMapLayer: (...args) => setActiveMapLayer(...args),
       openBrowser: (...args) => browserController?.openBrowser(...args),
-      loadDesignAssets: () => loadDesignAssets(),
+      loadDesignAssets: (category) => loadDesignAssets(category),
       openModal: (...args) => openModal(...args),
       requestBackgroundUpload: () => els.mapUploadBgInput?.click(),
       removeEncounterBackground: () => removeEncounterBackground(),
@@ -638,6 +648,7 @@
       {
         map: state.encounter?.data?.map || null,
         designTokens: state.encounter?.data?.designTokens || [],
+        props: state.encounter?.data?.props || [],
         mapEffects: state.encounter?.data?.mapEffects || [],
         tileMap: state.encounter.data.tileMap,
         walls: state.encounter.data.walls,
@@ -830,17 +841,16 @@
 
     state.map.onTokenMove = async (id, x, y, oldX, oldY) => {
       const t = state.encounter.data.tokens.find((tk) => tk.id === id);
-      if (t) {
-        if (canEditEncounter()) {
-          t.x = x;
-          t.y = y;
-          // Only invalidate fog when a PC moves (NPCs don't affect visibility)
-          var movedInst = (state.encounter.data.instances || []).find(function (i) { return i.id === t.instanceId; });
-          if (movedInst && movedInst.isPC) state.map.invalidateFog?.();
-          saveEncounter();
-          return;
-        }
+      if (!t) return;
 
+      t.x = x;
+      t.y = y;
+      // Only invalidate fog when a PC moves (NPCs don't affect visibility)
+      var movedInst = (state.encounter.data.instances || []).find(function (i) { return i.id === t.instanceId; });
+      if (movedInst && movedInst.isPC) state.map.invalidateFog?.();
+
+      // Entities layer: use granular RPC for all users (narrator included)
+      if (state.activeMapLayer === "entities") {
         try {
           state._playerInteractionUntil = Date.now() + 3000;
           await moveTokenViaRpc(id, x, y);
@@ -848,8 +858,19 @@
           t.x = oldX ?? t.x;
           t.y = oldY ?? t.y;
           if (state.map) state.map.draw();
-          alert(err?.message || "No tienes permisos para mover este token.");
+          if (!canEditEncounter()) {
+            alert(err?.message || "No tienes permisos para mover este token.");
+          } else {
+            console.error("Token move RPC failed, falling back to full save:", err);
+            saveEncounter();
+          }
         }
+        return;
+      }
+
+      // Other layers (design): full save (narrator only)
+      if (canEditEncounter()) {
+        saveEncounter();
       }
     };
     state.map.onTokenSelect = (instId) => {
@@ -907,19 +928,28 @@
       Object.assign(effect, patch || {});
       applyWallSync();
 
-      if (canEditEncounter()) {
-        scheduleBackgroundPersist();
+      // Entities layer: use granular RPC for all users (narrator included)
+      if (state.activeMapLayer === "entities" || !canEditEncounter()) {
+        try {
+          state._playerInteractionUntil = Date.now() + 3000;
+          await moveMapEffectViaRpc(id, effect.x, effect.y);
+        } catch (err) {
+          effect.x = prevX;
+          effect.y = prevY;
+          applyWallSync();
+          if (!canEditEncounter()) {
+            alert(err?.message || "No tienes permisos para mover este efecto.");
+          } else {
+            console.error("Map effect move RPC failed, falling back to full save:", err);
+            scheduleBackgroundPersist();
+          }
+        }
         return;
       }
 
-      try {
-        state._playerInteractionUntil = Date.now() + 3000;
-        await moveMapEffectViaRpc(id, effect.x, effect.y);
-      } catch (err) {
-        effect.x = prevX;
-        effect.y = prevY;
-        applyWallSync();
-        alert(err?.message || "No tienes permisos para mover este efecto.");
+      // Other layers (design): full save
+      if (canEditEncounter()) {
+        scheduleBackgroundPersist();
       }
     };
     state.map.canDragDesignToken = () => canEditEncounter();
@@ -942,6 +972,22 @@
     state.map.onDesignTokenContext = (tokenInfo) => {
       if (!tokenInfo?.tokenId || !canEditEncounter()) return;
       designTokenMenuController?.open(tokenInfo);
+    };
+    // Props callbacks
+    state.map.canDragProp = () => canEditEncounter();
+    state.map.onPropMove = () => {
+      // Sync all map props back to encounter data (normalizeProps creates copies)
+      syncMapPropsToEncounterData();
+      scheduleBackgroundPersist();
+    };
+    state.map.onPropChange = () => {
+      syncMapPropsToEncounterData();
+      scheduleBackgroundPersist();
+    };
+    state.map.onPropSelect = () => {};
+    state.map.onPropContext = (propInfo) => {
+      if (!propInfo?.propId || !canEditEncounter()) return;
+      propMenuController?.open(propInfo);
     };
     state.map.onEmptyContext = (info) => {
       if (!canEditEncounter()) return;
@@ -985,16 +1031,24 @@
         var sw = (state.encounter.data.switches || []).find(s => s.id === switchId);
         if (!sw || !isPlayerNearPosition(sw.x, sw.y, PLAYER_INTERACT_RANGE)) return;
       }
+      // Suppress manager's internal saveFn — we handle persistence here
+      state._suppressManagerSave = true;
       lightSwitchManager?.toggleSwitch(switchId);
-      // Player: persist via RPC (saveEncounter is a no-op for players)
-      if (!canEditEncounter()) {
+      state._suppressManagerSave = false;
+      // Entities layer: use granular RPC for all users (narrator included)
+      if (state.activeMapLayer === "entities" || !canEditEncounter()) {
         state._playerInteractionUntil = Date.now() + 3000;
         window.supabase.rpc('toggle_encounter_switch', {
           p_encounter_id: state.encounterId,
           p_switch_id: switchId,
         }).then(result => {
-          if (result.error) console.error('Switch toggle RPC failed:', result.error);
+          if (result.error) {
+            console.error('Switch toggle RPC failed:', result.error);
+            if (canEditEncounter()) saveEncounter();
+          }
         });
+      } else {
+        saveEncounter();
       }
     };
 
@@ -1068,17 +1122,21 @@
       } else {
         state.map.invalidateLighting?.();
       }
-      if (canEditEncounter()) {
-        saveEncounter();
-      } else {
+      // Entities layer: use granular RPC for all users (narrator included)
+      if (state.activeMapLayer === "entities" || !canEditEncounter()) {
         state._playerInteractionUntil = Date.now() + 3000;
         window.supabase.rpc('toggle_encounter_door', {
           p_encounter_id: state.encounterId,
           p_x1: door.x1, p_y1: door.y1,
           p_x2: door.x2, p_y2: door.y2,
         }).then(result => {
-          if (result.error) console.error('Door toggle RPC failed:', result.error);
+          if (result.error) {
+            console.error('Door toggle RPC failed:', result.error);
+            if (canEditEncounter()) saveEncounter();
+          }
         });
+      } else {
+        saveEncounter();
       }
     };
 
@@ -1944,6 +2002,12 @@
       ) {
         designTokenMenuController?.close();
       }
+      if (
+        propMenuController?.isOpen?.() &&
+        !propMenuController?.contains?.(e.target)
+      ) {
+        propMenuController?.close();
+      }
 
       if (
         mapContextMenuController?.isOpen?.() &&
@@ -2047,9 +2111,9 @@
     }
   }
 
-  async function loadDesignAssets() {
+  async function loadDesignAssets(category) {
     if (assetsService?.loadDesignAssets) {
-      await assetsService.loadDesignAssets();
+      await assetsService.loadDesignAssets(category);
       return;
     }
     state.designAssets = [];
@@ -2453,6 +2517,7 @@
       state.map.setData(mapTokens, mapInstances, {
         map: state.encounter.data.map || null,
         designTokens: mapDesignTokens,
+        props: state.encounter.data.props || [],
         mapEffects: state.encounter.data.mapEffects || [],
         tileMap: state.encounter.data.tileMap || {},
         walls: state.encounter.data.walls || [],
@@ -2822,15 +2887,36 @@
 
   async function uploadDesignAsset(file) {
     if (assetsService?.uploadDesignAsset) {
+      const category = state.browserMode === "props" ? "prop" : "decor";
       await assetsService.uploadDesignAsset(file, () => {
         browserController?.renderBrowserTags();
         browserController?.renderBrowserItems();
-      });
+      }, { category });
     }
   }
 
   function addDesignTokenFromAsset(assetId) {
     assetsService?.addDesignTokenFromAsset(assetId);
+  }
+
+  function syncMapPropsToEncounterData() {
+    if (!state.map || !state.encounter?.data) return;
+    const mapProps = state.map.props || [];
+    const dataProps = state.encounter.data.props || [];
+    for (const mp of mapProps) {
+      const dp = dataProps.find((p) => p.id === mp.id);
+      if (!dp) continue;
+      dp.x = mp.x;
+      dp.y = mp.y;
+      dp.widthCells = mp.widthCells;
+      dp.heightCells = mp.heightCells;
+      dp.rotationDeg = mp.rotationDeg;
+      dp.opacity = mp.opacity;
+    }
+  }
+
+  function addPropFromAsset(assetId) {
+    assetsService?.addPropFromAsset(assetId);
   }
 
   // --- MODAL — delegated to modal/instance-modal.js ---
@@ -2894,6 +2980,8 @@
     persistenceController = null;
     designTokenMenuController?.destroy?.();
     designTokenMenuController = null;
+    propMenuController?.destroy?.();
+    propMenuController = null;
     mapContextMenuController?.destroy?.();
     mapContextMenuController = null;
     markerContextMenuController?.destroy?.();

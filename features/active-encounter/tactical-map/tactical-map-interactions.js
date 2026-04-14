@@ -447,6 +447,61 @@
       };
     };
 
+    proto.getPropAt = function getPropAt(worldX, worldY) {
+      const all = Array.isArray(this.props) ? this.props : [];
+      return [...all].reverse().find((p) => {
+        const rect = this.getPropRect(p);
+        const cx = rect.x + rect.width / 2;
+        const cy = rect.y + rect.height / 2;
+        const angle = this.getPropRotationRad(p);
+        const local = this.rotatePointAround(worldX, worldY, cx, cy, -angle);
+        return (
+          local.x >= rect.x &&
+          local.x <= rect.x + rect.width &&
+          local.y >= rect.y &&
+          local.y <= rect.y + rect.height
+        );
+      });
+    };
+
+    proto.getPropGroupHandleAt = function getPropGroupHandleAt(worldX, worldY) {
+      if (this.activeLayer !== "background" || !this.selectedPropIds || this.selectedPropIds.size === 0) return null;
+      const bounds = this.getSelectedPropsBounds();
+      if (!bounds) return null;
+      const handleRadius = Math.max(10 / this.scale, 0.18 * this.gridSize);
+      const corners = [
+        { id: "top-left", x: bounds.x, y: bounds.y },
+        { id: "top-right", x: bounds.x + bounds.width, y: bounds.y },
+        { id: "bottom-right", x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+        { id: "bottom-left", x: bounds.x, y: bounds.y + bounds.height },
+      ];
+      const handle = corners.find((pt) => {
+        const dx = worldX - pt.x;
+        const dy = worldY - pt.y;
+        return dx * dx + dy * dy <= handleRadius * handleRadius;
+      });
+      if (!handle) return null;
+      return { handleId: handle.id };
+    };
+
+    proto.getPropGroupRotateHandleAt = function getPropGroupRotateHandleAt(worldX, worldY) {
+      if (this.activeLayer !== "background" || !this.selectedPropIds || this.selectedPropIds.size === 0) return null;
+      const bounds = this.getSelectedPropsBounds();
+      if (!bounds) return null;
+      const topCenterX = bounds.x + bounds.width / 2;
+      const topCenterY = bounds.y;
+      const offset = Math.max(22 / this.scale, 14);
+      const rhx = topCenterX;
+      const rhy = topCenterY - offset;
+      const radius = Math.max(10 / this.scale, 7);
+      const dx = worldX - rhx;
+      const dy = worldY - rhy;
+      if (dx * dx + dy * dy <= radius * radius) return { x: rhx, y: rhy };
+      return null;
+    };
+
+    // resizePropFromHandle removed — group resize uses scale factor instead
+
     proto.resizeDesignTokenFromHandle = function resizeDesignTokenFromHandle(
       token,
       handleId,
@@ -703,18 +758,131 @@
       }
 
       if (layer === "background") {
-        const bgHandle = this.getBackgroundHandleAt(worldX, worldY);
+        const canEdit =
+          typeof this.canEditBackground === "function"
+            ? !!this.canEditBackground()
+            : true;
 
-        if (e.button === 0 && bgHandle) {
-          const canEdit =
-            typeof this.canEditBackground === "function"
-              ? !!this.canEditBackground()
-              : true;
-          if (canEdit) {
-            this.isResizingBackground = true;
-            this.resizingBackgroundHandle = bgHandle.id;
+        // Prop interactions (higher priority than background image)
+        if (canEdit) {
+          // Group rotate handle
+          const groupRotate = this.getPropGroupRotateHandleAt(worldX, worldY);
+          if (e.button === 0 && groupRotate) {
+            const bounds = this.getSelectedPropsBounds();
+            if (bounds) {
+              const cx = bounds.x + bounds.width / 2;
+              const cy = bounds.y + bounds.height / 2;
+              const startAngle = Math.atan2(worldY - cy, worldX - cx);
+              const radius = Math.hypot(worldX - cx, worldY - cy);
+              this.isRotatingProp = true;
+              this.rotatingPropStartAngle = startAngle;
+              this._propGroupRotateCenter = { x: cx, y: cy };
+              this._propRotateRadius = radius;
+              this._propRotateCurrentAngle = startAngle;
+              this._propRotateTotalDeg = 0;
+              this._propGroupRotateStartPositions = this.getSelectedProps().map((p) => {
+                const w = parseFloat(p.widthCells) || 1;
+                const h = parseFloat(p.heightCells) || 1;
+                return {
+                  id: p.id,
+                  cx: ((parseFloat(p.x) || 0) + w / 2) * this.gridSize,
+                  cy: ((parseFloat(p.y) || 0) + h / 2) * this.gridSize,
+                  widthCells: w,
+                  heightCells: h,
+                  rotationDeg: parseFloat(p.rotationDeg) || 0,
+                };
+              });
+              return;
+            }
+          }
+
+          // Group resize handle
+          const groupHandle = this.getPropGroupHandleAt(worldX, worldY);
+          if (e.button === 0 && groupHandle) {
+            this.isResizingProp = true;
+            this.resizingPropHandle = groupHandle.handleId;
+            this._propGroupResizeStartBounds = this.getSelectedPropsBounds();
+            this._propGroupResizeStartProps = this.getSelectedProps().map((p) => ({
+              id: p.id,
+              x: parseFloat(p.x) || 0, y: parseFloat(p.y) || 0,
+              widthCells: parseFloat(p.widthCells) || 1,
+              heightCells: parseFloat(p.heightCells) || 1,
+            }));
+            this.draw();
             return;
           }
+        }
+
+        const clickedProp = canEdit ? this.getPropAt(worldX, worldY) : null;
+
+        if (e.button === 2 && clickedProp) {
+          e.preventDefault();
+          // Add to selection if not already selected
+          if (!this.selectedPropIds.has(clickedProp.id)) {
+            this.selectedPropIds = new Set([clickedProp.id]);
+          }
+          if (this.onPropContext) {
+            this.onPropContext({
+              propId: clickedProp.id,
+              clientX: e.clientX,
+              clientY: e.clientY,
+            });
+          }
+          this.draw();
+          this.selectedTokenId = null;
+          this.selectedDesignTokenId = null;
+          this.selectedBackground = false;
+          return;
+        }
+
+        if (e.button === 0 && clickedProp) {
+          const isShift = !!e.shiftKey;
+          if (isShift) {
+            // Toggle membership
+            if (this.selectedPropIds.has(clickedProp.id)) {
+              this.selectedPropIds.delete(clickedProp.id);
+            } else {
+              this.selectedPropIds.add(clickedProp.id);
+            }
+          } else {
+            // Replace selection unless clicking an already-selected prop (to allow drag)
+            if (!this.selectedPropIds.has(clickedProp.id)) {
+              this.selectedPropIds = new Set([clickedProp.id]);
+            }
+          }
+
+          // Start group drag
+          if (!isShift && this.selectedPropIds.size > 0) {
+            this.isDraggingProp = true;
+            this._propGroupDragStart = { worldX, worldY };
+            this._propGroupDragStartPositions = this.getSelectedProps().map((p) => ({
+              id: p.id,
+              x: parseFloat(p.x) || 0,
+              y: parseFloat(p.y) || 0,
+            }));
+          }
+
+          this.selectedBackground = false;
+          this.draw();
+          this.selectedTokenId = null;
+          this.selectedDesignTokenId = null;
+          if (this.onTokenSelect) this.onTokenSelect(null);
+          if (this.onDesignTokenSelect) this.onDesignTokenSelect(null);
+          return;
+        }
+
+        // No prop hit — deselect all props and fall through to background handling
+        if (e.button === 0 || e.button === 2) {
+          this.selectedPropIds = new Set();
+        }
+
+        // Background image handling
+        const bgHandle = this.getBackgroundHandleAt(worldX, worldY);
+
+        if (e.button === 0 && bgHandle && canEdit) {
+          this.isResizingBackground = true;
+          this.resizingBackgroundHandle = bgHandle.id;
+          return;
         }
 
         if (e.button === 2) {
@@ -722,10 +890,6 @@
           this.startPan(e.clientX, e.clientY);
         } else if (e.button === 0) {
           const clickedBackground = this.isPointInsideBackground(worldX, worldY);
-          const canEdit =
-            typeof this.canEditBackground === "function"
-              ? !!this.canEditBackground()
-              : true;
           this.selectedBackground = clickedBackground;
           if (clickedBackground && canEdit) {
             const rect = this.getBackgroundRect();
@@ -1201,6 +1365,92 @@
           this.draggedMapEffect.y = nextY;
         }
         this.requestDraw?.();
+      } else if (this.isDraggingProp && this._propGroupDragStart) {
+        // Group drag — move all selected props
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        const dx = (worldX - this._propGroupDragStart.worldX) / this.gridSize;
+        const dy = (worldY - this._propGroupDragStart.worldY) / this.gridSize;
+        const starts = this._propGroupDragStartPositions || [];
+        for (const start of starts) {
+          const prop = (this.props || []).find((p) => p.id === start.id);
+          if (prop) {
+            prop.x = start.x + dx;
+            prop.y = start.y + dy;
+          }
+        }
+        this.invalidatePropCache();
+        this.requestDraw?.();
+      } else if (this.isRotatingProp && this._propGroupRotateCenter) {
+        // Group rotate — rigid rotation around group center
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        const cx = this._propGroupRotateCenter.x;
+        const cy = this._propGroupRotateCenter.y;
+        const rawAngle = Math.atan2(worldY - cy, worldX - cx);
+        let deltaRad = rawAngle - this.rotatingPropStartAngle;
+        let deltaDeg = (deltaRad * 180) / Math.PI;
+        // Shift-snap to 45° increments
+        if (e.shiftKey) {
+          deltaDeg = Math.round(deltaDeg / 45) * 45;
+          deltaRad = (deltaDeg * Math.PI) / 180;
+        }
+        // Store for rendering
+        this._propRotateCurrentAngle = this.rotatingPropStartAngle + deltaRad;
+        this._propRotateTotalDeg = deltaDeg;
+        const starts = this._propGroupRotateStartPositions || [];
+        for (const start of starts) {
+          const prop = (this.props || []).find((p) => p.id === start.id);
+          if (!prop) continue;
+          const rotated = this.rotatePointAround(start.cx, start.cy, cx, cy, deltaRad);
+          prop.x = (rotated.x / this.gridSize) - start.widthCells / 2;
+          prop.y = (rotated.y / this.gridSize) - start.heightCells / 2;
+          prop.rotationDeg = (start.rotationDeg + deltaDeg + 3600) % 360;
+        }
+        this.invalidatePropCache();
+        this.requestDraw?.();
+      } else if (this.isResizingProp && this._propGroupResizeStartBounds) {
+        // Group scale from corner — uniform scale based on distance from anchor
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const worldX = (mouseX - this.offsetX) / this.scale;
+        const worldY = (mouseY - this.offsetY) / this.scale;
+        const sb = this._propGroupResizeStartBounds;
+        const sbx = sb.x / this.gridSize;
+        const sby = sb.y / this.gridSize;
+        const sbw = sb.width / this.gridSize;
+        const sbh = sb.height / this.gridSize;
+        const px = worldX / this.gridSize;
+        const py = worldY / this.gridSize;
+        // Anchor is the opposite corner
+        let anchorX, anchorY, origDragX, origDragY;
+        const h = this.resizingPropHandle;
+        if (h === "top-left")     { anchorX = sbx + sbw; anchorY = sby + sbh; origDragX = sbx;       origDragY = sby; }
+        else if (h === "top-right")    { anchorX = sbx;       anchorY = sby + sbh; origDragX = sbx + sbw; origDragY = sby; }
+        else if (h === "bottom-right") { anchorX = sbx;       anchorY = sby;       origDragX = sbx + sbw; origDragY = sby + sbh; }
+        else if (h === "bottom-left")  { anchorX = sbx + sbw; anchorY = sby;       origDragX = sbx;       origDragY = sby + sbh; }
+        else { anchorX = sbx; anchorY = sby; origDragX = sbx + sbw; origDragY = sby + sbh; }
+        const origDist = Math.hypot(origDragX - anchorX, origDragY - anchorY) || 1;
+        const curDist = Math.hypot(px - anchorX, py - anchorY);
+        const scale = Math.max(0.1, curDist / origDist);
+        const starts = this._propGroupResizeStartProps || [];
+        for (const start of starts) {
+          const prop = (this.props || []).find((p) => p.id === start.id);
+          if (!prop) continue;
+          prop.widthCells = Math.max(0.2, start.widthCells * scale);
+          prop.heightCells = Math.max(0.2, start.heightCells * scale);
+          prop.x = anchorX + (start.x - anchorX) * scale;
+          prop.y = anchorY + (start.y - anchorY) * scale;
+        }
+        this.invalidatePropCache();
+        this.requestDraw?.();
       } else if (this.isDraggingDesignToken && this.draggedDesignToken) {
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -1471,6 +1721,52 @@
             rotationDeg: parseFloat(token.rotationDeg) || 0,
           });
         }
+      }
+      if (this.isDraggingProp) {
+        this.isDraggingProp = false;
+        const starts = this._propGroupDragStartPositions || [];
+        let anyMoved = false;
+        for (const start of starts) {
+          const prop = (this.props || []).find((p) => p.id === start.id);
+          if (!prop) continue;
+          if (Math.abs(prop.x - start.x) > 0.0001 || Math.abs(prop.y - start.y) > 0.0001) {
+            anyMoved = true;
+            break;
+          }
+        }
+        if (anyMoved && this.onPropChange) {
+          // Notify with first selected prop to trigger save
+          const first = this.getSelectedProps()[0];
+          if (first) this.onPropChange(first.id, { x: first.x, y: first.y });
+        }
+        this._propGroupDragStart = null;
+        this._propGroupDragStartPositions = null;
+        this.invalidatePropCache();
+      }
+      if (this.isResizingProp) {
+        this.isResizingProp = false;
+        this.resizingPropHandle = null;
+        if (this.onPropChange) {
+          const first = this.getSelectedProps()[0];
+          if (first) this.onPropChange(first.id, { x: first.x, y: first.y, widthCells: first.widthCells, heightCells: first.heightCells });
+        }
+        this._propGroupResizeStartBounds = null;
+        this._propGroupResizeStartProps = null;
+        this.invalidatePropCache();
+      }
+      if (this.isRotatingProp) {
+        this.isRotatingProp = false;
+        this.rotatingPropStartAngle = null;
+        if (this.onPropChange) {
+          const first = this.getSelectedProps()[0];
+          if (first) this.onPropChange(first.id, { rotationDeg: first.rotationDeg });
+        }
+        this._propGroupRotateCenter = null;
+        this._propGroupRotateStartPositions = null;
+        this._propRotateRadius = null;
+        this._propRotateCurrentAngle = null;
+        this._propRotateTotalDeg = null;
+        this.invalidatePropCache();
       }
       if (this.isResizingBackground) {
         this.isResizingBackground = false;

@@ -32,6 +32,7 @@
     "persistence/encounter-persistence.js",
     // Context menus
     "context-menus/design-token-menu.js",
+    "context-menus/prop-context-menu.js",
     "context-menus/map-context-menu.js",
     "context-menus/marker-context-menu.js",
     "context-menus/wall-context-menu.js",

@@ -484,6 +484,226 @@
       this.ctx.restore();
     };
 
+    proto.drawPropCornerHandles = function drawPropCornerHandles(x, y, w, h) {
+      const handleRadius = Math.max(6 / this.scale, 0.12 * this.gridSize);
+      const corners = [
+        { x: x, y: y },
+        { x: x + w, y: y },
+        { x: x + w, y: y + h },
+        { x: x, y: y + h },
+      ];
+
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(255, 206, 117, 0.9)";
+      this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+      this.ctx.strokeRect(x, y, w, h);
+
+      corners.forEach((pt) => {
+        this.ctx.beginPath();
+        this.ctx.arc(pt.x, pt.y, handleRadius, 0, Math.PI * 2);
+        this.ctx.closePath();
+        this.ctx.fillStyle = "rgba(22, 22, 22, 0.95)";
+        this.ctx.fill();
+        this.ctx.strokeStyle = "rgba(255, 206, 117, 0.95)";
+        this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+        this.ctx.stroke();
+      });
+      this.ctx.restore();
+    };
+
+    proto.drawProps = function drawProps() {
+      const props = this.props;
+      if (!Array.isArray(props) || props.length === 0) return;
+
+      // Offscreen canvas cache: render all props once, blit per frame
+      const canvasW = this.canvas.width;
+      const canvasH = this.canvas.height;
+
+      if (!this._propsOffscreenCanvas) {
+        this._propsOffscreenCanvas = document.createElement("canvas");
+        this._propsOffscreenCtx = this._propsOffscreenCanvas.getContext("2d");
+        this._propsCacheDirty = true;
+      }
+
+      // Detect viewport/zoom changes that require re-render
+      const cacheKey = `${canvasW}:${canvasH}:${this.scale}:${this.offsetX}:${this.offsetY}`;
+      if (this._propsCacheKey !== cacheKey) {
+        this._propsCacheDirty = true;
+      }
+
+      if (this._propsCacheDirty) {
+        this._propsCacheKey = cacheKey;
+        this._propsOffscreenCanvas.width = canvasW;
+        this._propsOffscreenCanvas.height = canvasH;
+        const offCtx = this._propsOffscreenCtx;
+
+        offCtx.clearRect(0, 0, canvasW, canvasH);
+        offCtx.save();
+        offCtx.translate(this.offsetX, this.offsetY);
+        offCtx.scale(this.scale, this.scale);
+        offCtx.imageSmoothingEnabled = true;
+        offCtx.imageSmoothingQuality = this.isPerformanceConstrained?.() ? "medium" : "high";
+
+        const viewRect = this.getViewportWorldRect?.(this.gridSize * 2) || null;
+
+        for (let i = 0; i < props.length; i++) {
+          const prop = props[i];
+          const rect = this.getPropRect(prop);
+          // Viewport culling
+          if (
+            viewRect &&
+            (rect.x + rect.width < viewRect.x ||
+              rect.y + rect.height < viewRect.y ||
+              rect.x > viewRect.x + viewRect.width ||
+              rect.y > viewRect.y + viewRect.height)
+          ) {
+            continue;
+          }
+
+          const cx = rect.x + rect.width / 2;
+          const cy = rect.y + rect.height / 2;
+          const rotation = this.getPropRotationRad(prop);
+
+          offCtx.save();
+          offCtx.globalAlpha = Math.min(1, Math.max(0, parseFloat(prop.opacity) || 1));
+          offCtx.translate(cx, cy);
+          offCtx.rotate(rotation);
+
+          const img = prop._img;
+          if (img && img.complete && img.naturalWidth > 0) {
+            offCtx.drawImage(img, -rect.width / 2, -rect.height / 2, rect.width, rect.height);
+          } else {
+            offCtx.fillStyle = "#555";
+            offCtx.fillRect(-rect.width / 2, -rect.height / 2, rect.width, rect.height);
+          }
+
+          offCtx.restore();
+        }
+        offCtx.restore();
+        this._propsCacheDirty = false;
+      }
+
+      // Blit the offscreen canvas onto the main canvas (in screen space)
+      this.ctx.save();
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.ctx.drawImage(this._propsOffscreenCanvas, 0, 0);
+      this.ctx.restore();
+
+      // Draw selection controls on main ctx (always live, not cached)
+      if (this.activeLayer === "background" && this.selectedPropIds && this.selectedPropIds.size > 0) {
+        const isRotating = !!this.isRotatingProp;
+
+        // Highlight each selected prop
+        for (const selId of this.selectedPropIds) {
+          const sp = props.find((p) => p.id === selId);
+          if (!sp) continue;
+          const r = this.getPropRect(sp);
+          this.ctx.save();
+          this.ctx.strokeStyle = "#ff9800";
+          this.ctx.lineWidth = Math.max(2 / this.scale, 1.5);
+          this.ctx.strokeRect(r.x, r.y, r.width, r.height);
+          this.ctx.restore();
+        }
+
+        if (isRotating && this._propGroupRotateCenter) {
+          // During rotation: draw orbit circle + moving handle
+          const cx = this._propGroupRotateCenter.x;
+          const cy = this._propGroupRotateCenter.y;
+          const radius = this._propRotateRadius || 0;
+          const handleAngle = this._propRotateCurrentAngle || 0;
+
+          // Dashed orbit circle
+          this.ctx.save();
+          this.ctx.setLineDash([Math.max(8 / this.scale, 4), Math.max(5 / this.scale, 3)]);
+          this.ctx.strokeStyle = "rgba(98, 239, 148, 0.4)";
+          this.ctx.lineWidth = Math.max(1.2 / this.scale, 1);
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+
+          // Center dot
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, Math.max(3 / this.scale, 2), 0, Math.PI * 2);
+          this.ctx.fillStyle = "rgba(98, 239, 148, 0.8)";
+          this.ctx.fill();
+
+          // Handle on the circle at current angle
+          const hx = cx + Math.cos(handleAngle) * radius;
+          const hy = cy + Math.sin(handleAngle) * radius;
+
+          // Line from center to handle
+          this.ctx.strokeStyle = "rgba(255, 206, 117, 0.6)";
+          this.ctx.lineWidth = Math.max(1 / this.scale, 0.8);
+          this.ctx.beginPath();
+          this.ctx.moveTo(cx, cy);
+          this.ctx.lineTo(hx, hy);
+          this.ctx.stroke();
+
+          // Handle dot
+          this.ctx.beginPath();
+          this.ctx.arc(hx, hy, Math.max(6 / this.scale, 4), 0, Math.PI * 2);
+          this.ctx.closePath();
+          this.ctx.fillStyle = "rgba(22, 22, 22, 0.95)";
+          this.ctx.fill();
+          this.ctx.strokeStyle = "rgba(98, 239, 148, 0.95)";
+          this.ctx.lineWidth = Math.max(1.8 / this.scale, 1.2);
+          this.ctx.stroke();
+          this.ctx.restore();
+
+          // Angle label
+          const totalDeg = this._propRotateTotalDeg || 0;
+          const label = Math.round(totalDeg) + "°";
+          const fontSize = Math.max(11 / this.scale, 8);
+          this.ctx.save();
+          this.ctx.font = `700 ${fontSize}px Nunito Sans, sans-serif`;
+          this.ctx.fillStyle = "rgba(255, 240, 196, 0.9)";
+          this.ctx.textAlign = "center";
+          this.ctx.textBaseline = "bottom";
+          this.ctx.fillText(label, cx, cy - Math.max(8 / this.scale, 5));
+          this.ctx.restore();
+        } else {
+          // Not rotating: show bounding box + resize handles + rotation handle
+          const bounds = this.getSelectedPropsBounds();
+          if (bounds) {
+            if (this.selectedPropIds.size > 1) {
+              this.ctx.save();
+              this.ctx.setLineDash([Math.max(6 / this.scale, 3), Math.max(4 / this.scale, 2)]);
+              this.ctx.strokeStyle = "rgba(98, 239, 148, 0.7)";
+              this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
+              this.ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
+              this.ctx.setLineDash([]);
+              this.ctx.restore();
+            }
+            // Corner resize handles
+            this.drawPropCornerHandles(bounds.x, bounds.y, bounds.width, bounds.height);
+            // Rotation handle from top-center
+            const topCenterX = bounds.x + bounds.width / 2;
+            const topCenterY = bounds.y;
+            const rotateOffset = Math.max(22 / this.scale, 14);
+            const rhx = topCenterX;
+            const rhy = topCenterY - rotateOffset;
+            this.ctx.save();
+            this.ctx.strokeStyle = "rgba(255, 206, 117, 0.95)";
+            this.ctx.lineWidth = Math.max(1.2 / this.scale, 1);
+            this.ctx.beginPath();
+            this.ctx.moveTo(topCenterX, topCenterY);
+            this.ctx.lineTo(rhx, rhy);
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.arc(rhx, rhy, Math.max(6 / this.scale, 4), 0, Math.PI * 2);
+            this.ctx.closePath();
+            this.ctx.fillStyle = "rgba(22, 22, 22, 0.95)";
+            this.ctx.fill();
+            this.ctx.strokeStyle = "rgba(98, 239, 148, 0.95)";
+            this.ctx.lineWidth = Math.max(1.8 / this.scale, 1.2);
+            this.ctx.stroke();
+            this.ctx.restore();
+          }
+        }
+      }
+    };
+
     proto.drawGrid = function drawGrid() {
       const viewportWidth = this.canvas.width / this.scale;
       const viewportHeight = this.canvas.height / this.scale;

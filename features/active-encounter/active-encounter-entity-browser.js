@@ -9,6 +9,7 @@
       addNPC,
       addPC,
       addDesignTokenFromAsset,
+      addPropFromAsset,
       getEncounterAssetPublicUrl,
     } = ctx;
 
@@ -20,25 +21,29 @@
       const isNPC = mode === "npc";
       const isPC = mode === "pc";
       const isDecor = mode === "decor";
+      const isProps = mode === "props";
       const browserContent = els.browserModal?.querySelector(".ae-browser-content");
 
       if (isDecor) {
         setActiveMapLayer("decor", { openDrawer: false });
+      } else if (isProps) {
+        setActiveMapLayer("background", { openDrawer: false });
       } else if (isNPC || isPC) {
         setActiveMapLayer("entities", { openDrawer: false });
       }
 
       if (browserContent) {
-        browserContent.classList.toggle("ae-browser-content--decor", isDecor);
+        browserContent.classList.toggle("ae-browser-content--decor", isDecor || isProps);
       }
       if (els.browserGrid) {
-        els.browserGrid.classList.toggle("ae-browser-grid--decor", isDecor);
+        els.browserGrid.classList.toggle("ae-browser-grid--decor", isDecor || isProps);
       }
 
       if (isNPC) els.browserTitle.textContent = "Agregar PNJ";
       if (isPC) els.browserTitle.textContent = "Agregar PJ";
       if (isDecor) els.browserTitle.textContent = "Decoracion";
-      els.browserSearch.placeholder = isDecor
+      if (isProps) els.browserTitle.textContent = "Props";
+      els.browserSearch.placeholder = isDecor || isProps
         ? "Buscar por nombre o tag..."
         : "Buscar...";
 
@@ -46,7 +51,7 @@
         els.browserTokenOption.style.display = isNPC ? "flex" : "none";
       }
       if (els.browserUploadAssetBtn) {
-        els.browserUploadAssetBtn.style.display = isDecor ? "" : "none";
+        els.browserUploadAssetBtn.style.display = (isDecor || isProps) ? "" : "none";
       }
 
       renderBrowserTags();
@@ -79,15 +84,18 @@
     }
 
     function collectAllTags() {
-      if (state.browserMode === "decor") {
+      if (state.browserMode === "decor" || state.browserMode === "props") {
+        const filterCategory = state.browserMode === "props" ? "prop" : "decor";
         const tags = new Set();
-        state.designAssets.forEach((asset) => {
-          const assetTags = Array.isArray(asset.tags) ? asset.tags : [];
-          assetTags.forEach((tag) => {
-            const normalized = String(tag || "").trim();
-            if (normalized) tags.add(normalized);
+        (state.designAssets || [])
+          .filter((a) => state.browserMode === "props" ? a.category === "prop" : (a.category || "decor") === "decor")
+          .forEach((asset) => {
+            const assetTags = Array.isArray(asset.tags) ? asset.tags : [];
+            assetTags.forEach((tag) => {
+              const normalized = String(tag || "").trim();
+              if (normalized) tags.add(normalized);
+            });
           });
-        });
         return [...tags].sort((a, b) => a.localeCompare(b));
       }
 
@@ -100,7 +108,7 @@
     }
 
     function renderBrowserTags() {
-      if (state.browserMode !== "npc" && state.browserMode !== "decor") {
+      if (state.browserMode !== "npc" && state.browserMode !== "decor" && state.browserMode !== "props") {
         els.browserTags.innerHTML = "";
         return;
       }
@@ -138,10 +146,11 @@
       if (mode === "npc") renderNPCBrowser(search, activeTags);
       else if (mode === "pc") renderPCBrowser(search);
       else if (mode === "decor") renderDecorBrowser(search, activeTags);
+      else if (mode === "props") renderPropsBrowser(search, activeTags);
     }
 
     function renderDecorBrowser(search, activeTags) {
-      let items = state.designAssets || [];
+      let items = (state.designAssets || []).filter((a) => (a.category || "decor") === "decor");
 
       if (search) {
         items = items.filter((asset) => {
@@ -207,6 +216,78 @@
         btn.addEventListener("click", (event) => {
           event.stopPropagation();
           addDesignTokenFromAsset(btn.dataset.assetId);
+          closeBrowser();
+        });
+      });
+    }
+
+    function renderPropsBrowser(search, activeTags) {
+      let items = (state.designAssets || []).filter((a) => a.category === "prop");
+
+      if (search) {
+        items = items.filter((asset) => {
+          const byName = (asset.name || "").toLowerCase().includes(search);
+          const byTag = (asset.tags || []).some((tag) =>
+            String(tag || "").toLowerCase().includes(search),
+          );
+          return byName || byTag;
+        });
+      }
+
+      if (activeTags.length > 0) {
+        items = items.filter((asset) => {
+          const tags = Array.isArray(asset.tags) ? asset.tags : [];
+          return activeTags.every((tag) => tags.includes(tag));
+        });
+      }
+
+      if (items.length === 0) {
+        els.browserGrid.innerHTML =
+          '<div class="ae-browser-empty">No se encontraron assets de props</div>';
+        return;
+      }
+
+      els.browserGrid.innerHTML = items
+        .map((asset) => {
+          const tags = (asset.tags || [])
+            .map(
+              (tag) =>
+                `<span class="ae-browser-card-tag">${window.escapeHtml(tag)}</span>`,
+            )
+            .join("");
+          const previewUrl = getEncounterAssetPublicUrl(asset.image_path);
+          const title = window.escapeHtml(asset.name || "Sin nombre");
+
+          return `
+            <div class="ae-browser-card ae-browser-card--decor" data-asset-id="${asset.id}">
+              <div class="ae-browser-card-media">
+                ${
+                  previewUrl
+                    ? `<img src="${window.escapeHtml(previewUrl)}" alt="${title}" loading="lazy">`
+                    : `<span class="ae-browser-card-media-fallback">${title.charAt(0).toUpperCase()}</span>`
+                }
+              </div>
+              <div class="ae-browser-card-info ae-browser-card-info--decor">
+                <div>
+                  <div class="ae-browser-card-name">${title}</div>
+                  <div class="ae-browser-card-meta">
+                    <span>${asset.is_shared ? "Compartido" : "Privado"}</span>
+                  </div>
+                </div>
+                ${tags ? `<div class="ae-browser-card-tags">${tags}</div>` : ""}
+              </div>
+              <div class="ae-browser-card-actions">
+                <button class="ae-browser-add-btn" data-asset-id="${asset.id}">Agregar</button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      els.browserGrid.querySelectorAll(".ae-browser-add-btn").forEach((btn) => {
+        btn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          addPropFromAsset(btn.dataset.assetId);
           closeBrowser();
         });
       });
@@ -359,7 +440,7 @@
     }
 
     async function refreshAndOpenDecor() {
-      await loadDesignAssets();
+      await loadDesignAssets("decor");
       openBrowser("decor");
     }
 

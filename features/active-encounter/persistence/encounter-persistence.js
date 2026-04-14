@@ -77,6 +77,11 @@
             return token;
           }),
         ),
+        props: (state.encounter.data.props || []).map(function (_ref) {
+          var prop = Object.assign({}, _ref);
+          delete prop._img;
+          return prop;
+        }),
         mapEffects: normalizeMapEffectsData(state.encounter.data.mapEffects),
         tileMap: state.encounter.data.tileMap || {},
         wallPaths: wallPaths,

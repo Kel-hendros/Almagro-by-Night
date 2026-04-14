@@ -21,7 +21,7 @@
       }
     }
 
-    async function loadDesignAssets() {
+    async function loadDesignAssets(category) {
       if (typeof canEditEncounter === "function" && !canEditEncounter()) {
         state.designAssets = [];
         return [];
@@ -30,12 +30,18 @@
       const chronicleId = state.encounter?.chronicle_id || null;
       let data = [];
       let error = null;
+
+      function applyCategory(query) {
+        return category ? query.eq("category", category) : query;
+      }
+
       if (chronicleId) {
-        const scoped = await supabase
-          .from("encounter_design_assets")
-          .select("*")
-          .eq("chronicle_id", chronicleId)
-          .order("created_at", { ascending: false });
+        const scoped = await applyCategory(
+          supabase
+            .from("encounter_design_assets")
+            .select("*")
+            .eq("chronicle_id", chronicleId)
+        ).order("created_at", { ascending: false });
         if (scoped.error) {
           error = scoped.error;
         } else {
@@ -43,21 +49,40 @@
         }
 
         if (!error && state.user?.id) {
-          const legacy = await supabase
-            .from("encounter_design_assets")
-            .select("*")
-            .is("chronicle_id", null)
-            .eq("owner_user_id", state.user.id)
-            .order("created_at", { ascending: false });
+          const legacy = await applyCategory(
+            supabase
+              .from("encounter_design_assets")
+              .select("*")
+              .is("chronicle_id", null)
+              .eq("owner_user_id", state.user.id)
+          ).order("created_at", { ascending: false });
           if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length) {
             data = [...data, ...legacy.data];
           }
         }
+
+        // System shared assets (no chronicle, shared flag)
+        if (!error) {
+          const system = await applyCategory(
+            supabase
+              .from("encounter_design_assets")
+              .select("*")
+              .is("chronicle_id", null)
+              .eq("is_shared", true)
+          ).order("created_at", { ascending: false });
+          if (!system.error && Array.isArray(system.data) && system.data.length) {
+            const existingIds = new Set(data.map((d) => d.id));
+            system.data.forEach((item) => {
+              if (!existingIds.has(item.id)) data.push(item);
+            });
+          }
+        }
       } else {
-        const all = await supabase
-          .from("encounter_design_assets")
-          .select("*")
-          .order("created_at", { ascending: false });
+        const all = await applyCategory(
+          supabase
+            .from("encounter_design_assets")
+            .select("*")
+        ).order("created_at", { ascending: false });
         data = all.data || [];
         error = all.error || null;
       }
@@ -303,7 +328,7 @@
       return true;
     }
 
-    async function uploadDesignAsset(file, onAfterUpload) {
+    async function uploadDesignAsset(file, onAfterUpload, options) {
       if (!file || !state.user?.id) return false;
       const chronicleId = state.encounter?.chronicle_id || null;
       if (!chronicleId) {
@@ -317,7 +342,9 @@
       if (rawName === null) return false;
       const name = rawName.trim() || "Asset";
 
-      const rawTags = prompt("Tags (separados por coma)", "decoracion, mapa");
+      const assetCategory = options?.category || "decor";
+      const defaultTags = assetCategory === "prop" ? "prop" : "decoracion, mapa";
+      const rawTags = prompt("Tags (separados por coma)", defaultTags);
       if (rawTags === null) return false;
       const tags = parseTagList(rawTags);
 
@@ -352,6 +379,7 @@
           image_path: filePath,
           tags,
           is_shared: false,
+          category: assetCategory,
         };
         const { error: insertError } = await supabase
           .from("encounter_design_assets")
@@ -416,6 +444,53 @@
       return true;
     }
 
+    async function addPropFromAsset(assetId) {
+      if (!state.encounter?.data || !assetId) return false;
+      const asset = state.designAssets.find((item) => item.id === assetId);
+      if (!asset) return false;
+
+      const { x, y } = getMapCenterGridPosition();
+      const imgUrl = getEncounterAssetPublicUrl(asset.image_path);
+      // Default: 1 cell wide, maintain aspect ratio from image
+      const DEFAULT_WIDTH_CELLS = 1;
+      let widthCells = DEFAULT_WIDTH_CELLS;
+      let heightCells = DEFAULT_WIDTH_CELLS;
+
+      try {
+        const dims = await readImageDimensionsFromUrl(imgUrl);
+        if (dims.width > 0 && dims.height > 0) {
+          const aspect = dims.height / dims.width;
+          widthCells = DEFAULT_WIDTH_CELLS;
+          heightCells = Math.max(0.2, DEFAULT_WIDTH_CELLS * aspect);
+        }
+      } catch (error) {
+        console.warn("No se pudieron leer dimensiones del prop:", error);
+      }
+
+      const prop = {
+        id: `prop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        assetId: asset.id,
+        name: asset.name || "Prop",
+        x,
+        y,
+        widthCells,
+        heightCells,
+        rotationDeg: 0,
+        opacity: 1,
+        tags: Array.isArray(asset.tags) ? asset.tags : [],
+        imgUrl,
+      };
+
+      state.encounter.data.props = [
+        ...(state.encounter.data.props || []),
+        prop,
+      ];
+
+      if (typeof render === "function") render();
+      if (typeof saveEncounter === "function") saveEncounter();
+      return true;
+    }
+
     return {
       loadDesignAssets,
       getEncounterAssetPublicUrl,
@@ -424,6 +499,7 @@
       removeEncounterBackground,
       uploadDesignAsset,
       addDesignTokenFromAsset,
+      addPropFromAsset,
     };
   }
 

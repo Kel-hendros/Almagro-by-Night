@@ -30,6 +30,14 @@ const DESIGN_TOKEN_DEFAULTS = {
   zIndex: 0,
 };
 const DESIGN_TOKEN_LAYERS = new Set(["underlay", "overlay"]);
+const PROP_DEFAULTS = {
+  x: 0,
+  y: 0,
+  widthCells: 1,
+  heightCells: 1,
+  rotationDeg: 0,
+  opacity: 1,
+};
 // Map unit system: 1 coordinate unit = 1.5 meters.
 // All game measurements should use meters and convert via METERS_PER_UNIT.
 const METERS_PER_UNIT = 1.5;
@@ -61,6 +69,11 @@ window.TacticalMap = class TacticalMap {
 
     this.tokens = [];
     this.designTokens = [];
+    this.props = [];
+    this._propImageCache = new Map();
+    this._propsCacheDirty = true;
+    this._propsOffscreenCanvas = null;
+    this._propsOffscreenCtx = null;
     this.mapEffects = [];
     this._tileMapData = {};
     this._wallsData = [];
@@ -128,6 +141,12 @@ window.TacticalMap = class TacticalMap {
     this.onDesignTokenMove = null;
     this.onDesignTokenSelect = null;
     this.onDesignTokenContext = null;
+    this.onPropMove = null;
+    this.onPropSelect = null;
+    this.onPropContext = null;
+    this.onPropChange = null;
+    this.canDragProp = null;
+    this.selectedPropIds = new Set();
     this.onEmptyContext = null;
     this.onMarkerContext = null;
     this.onPing = null;
@@ -291,6 +310,31 @@ window.TacticalMap = class TacticalMap {
 
     this.tokens.forEach(preloadTokenImage);
     this.designTokens.forEach(preloadTokenImage);
+
+    // Props: shared image cache (same URL = same Image object)
+    if (Array.isArray(extras?.props)) {
+      this.props = this.normalizeProps(extras.props);
+      this.props.forEach((prop) => {
+        if (!prop.imgUrl) { prop._img = null; return; }
+        let cached = this._propImageCache.get(prop.imgUrl);
+        if (cached) {
+          prop._img = cached;
+        } else {
+          const img = new Image();
+          img.crossOrigin = "Anonymous";
+          img.src = prop.imgUrl;
+          img.onload = () => { this.invalidatePropCache(); this.draw(); };
+          this._propImageCache.set(prop.imgUrl, img);
+          prop._img = img;
+        }
+      });
+      this.invalidatePropCache();
+    }
+
+    const propIds = new Set((this.props || []).map((p) => p.id));
+    for (const id of this.selectedPropIds) {
+      if (!propIds.has(id)) this.selectedPropIds.delete(id);
+    }
 
     const designTokenIds = new Set(this.designTokens.map((t) => t.id));
     if (
@@ -463,6 +507,11 @@ window.TacticalMap = class TacticalMap {
 
   invalidateWallRenderCache() {
     this._wallRenderCache = null;
+  }
+
+  invalidatePropCache() {
+    this._propsCacheDirty = true;
+    this._drawDirty = true;
   }
 
   ensureTileRenderCache() {
@@ -749,6 +798,108 @@ window.TacticalMap = class TacticalMap {
     return normalized;
   }
 
+  normalizeProps(rawProps) {
+    if (!Array.isArray(rawProps)) return [];
+    return rawProps
+      .map((prop, index) => {
+        if (!prop || typeof prop !== "object") return null;
+        return {
+          ...PROP_DEFAULTS,
+          ...prop,
+          id: prop.id || `prop-${index}`,
+          x: parseFloat(prop.x) || 0,
+          y: parseFloat(prop.y) || 0,
+          widthCells: Math.max(0.2, parseFloat(prop.widthCells) || 1),
+          heightCells: Math.max(0.2, parseFloat(prop.heightCells) || 1),
+          rotationDeg: parseFloat(prop.rotationDeg) || 0,
+          opacity: Math.min(1, Math.max(0, parseFloat(prop.opacity) || 1)),
+        };
+      })
+      .filter(Boolean);
+  }
+
+  getPropRect(prop) {
+    if (!prop || typeof prop !== "object") {
+      return { x: 0, y: 0, width: this.gridSize, height: this.gridSize };
+    }
+    const x = (parseFloat(prop.x) || 0) * this.gridSize;
+    const y = (parseFloat(prop.y) || 0) * this.gridSize;
+    const widthCells = Math.max(0.2, parseFloat(prop.widthCells) || 1);
+    const heightCells = Math.max(0.2, parseFloat(prop.heightCells) || 1);
+    return {
+      x,
+      y,
+      width: widthCells * this.gridSize,
+      height: heightCells * this.gridSize,
+    };
+  }
+
+  getPropRectCells(prop) {
+    if (!prop || typeof prop !== "object") {
+      return { x: 0, y: 0, width: 1, height: 1 };
+    }
+    return {
+      x: parseFloat(prop.x) || 0,
+      y: parseFloat(prop.y) || 0,
+      width: Math.max(0.2, parseFloat(prop.widthCells) || 1),
+      height: Math.max(0.2, parseFloat(prop.heightCells) || 1),
+    };
+  }
+
+  getPropCenterPx(prop) {
+    const rect = this.getPropRect(prop);
+    return {
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2,
+      rect,
+    };
+  }
+
+  getPropRotationRad(prop) {
+    return ((parseFloat(prop?.rotationDeg) || 0) * Math.PI) / 180;
+  }
+
+  getPropRotateHandlePx(prop) {
+    if (!prop) return null;
+    const { x: cx, y: cy, rect } = this.getPropCenterPx(prop);
+    const topRight = this.rotatePointAround(
+      rect.x + rect.width,
+      rect.y,
+      cx,
+      cy,
+      this.getPropRotationRad(prop),
+    );
+    const vx = topRight.x - cx;
+    const vy = topRight.y - cy;
+    const len = Math.hypot(vx, vy) || 1;
+    const offset = Math.max(18 / this.scale, 12);
+    return {
+      x: topRight.x + (vx / len) * offset,
+      y: topRight.y + (vy / len) * offset,
+      anchorX: topRight.x,
+      anchorY: topRight.y,
+    };
+  }
+
+  getSelectedProps() {
+    if (!this.selectedPropIds || this.selectedPropIds.size === 0) return [];
+    return (this.props || []).filter((p) => this.selectedPropIds.has(p.id));
+  }
+
+  getSelectedPropsBounds() {
+    const selected = this.getSelectedProps();
+    if (selected.length === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const prop of selected) {
+      const r = this.getPropRect(prop);
+      if (r.x < minX) minX = r.x;
+      if (r.y < minY) minY = r.y;
+      if (r.x + r.width > maxX) maxX = r.x + r.width;
+      if (r.y + r.height > maxY) maxY = r.y + r.height;
+    }
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  }
+
   normalizeMapEffects(rawEffects) {
     if (!Array.isArray(rawEffects)) return [];
     return rawEffects
@@ -993,6 +1144,7 @@ window.TacticalMap = class TacticalMap {
     }
     if (next !== "background") {
       this.selectedBackground = false;
+      this.selectedPropIds = new Set();
       this.selectedLightId = null;
     }
     this.draw();
@@ -1228,8 +1380,9 @@ window.TacticalMap = class TacticalMap {
       var needsDraw = this._drawDirty
         || this.isPanning || this.isDraggingToken || this.isDraggingMapEffect
         || this.isDraggingDesignToken || this.isResizingDesignToken
-        || this.isRotatingDesignToken || this.isDraggingBackground
-        || this.isResizingBackground
+        || this.isRotatingDesignToken || this.isDraggingProp
+        || this.isResizingProp || this.isRotatingProp
+        || this.isDraggingBackground || this.isResizingBackground
         || this._isDraggingLight || this._isDraggingSwitch
         || (this._fog && this._fog.dirty)
         || !!this.activeTokenAnim;
@@ -1272,6 +1425,10 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.disposeInteractions === "function") {
       this.disposeInteractions();
     }
+    this._propImageCache = null;
+    this._propsOffscreenCanvas = null;
+    this._propsOffscreenCtx = null;
+    this.props = [];
     if (this.overlayCanvas) {
       this.overlayCanvas.remove();
       this.overlayCanvas = null;
@@ -1385,6 +1542,9 @@ window.TacticalMap = class TacticalMap {
     }
     if (typeof this.drawTileMap === "function") {
       this.drawTileMap();
+    }
+    if (typeof this.drawProps === "function") {
+      this.drawProps();
     }
     if (this.mapLayer.showGrid !== false) {
       this.drawGrid();
