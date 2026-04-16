@@ -12,6 +12,9 @@
       requestBackgroundUpload,
       removeEncounterBackground,
       getMap,
+      saveDesignDraft,
+      saveRuntimeState,
+      isEditMode,
       getTilePainter,
       getWallDrawer,
       addLight,
@@ -19,6 +22,14 @@
       removeLight,
     } = ctx;
     let terrainModalOpen = false;
+
+    function saveSceneState() {
+      if (typeof isEditMode === "function" && isEditMode()) {
+        saveDesignDraft?.();
+        return;
+      }
+      saveRuntimeState?.();
+    }
 
     function setDrawerTab(tab) {
       var tabs = ["entities", "terrain", "settings"];
@@ -718,7 +729,7 @@
         if (_ambientSaveTimer) clearTimeout(_ambientSaveTimer);
         _ambientSaveTimer = setTimeout(function () {
           _ambientSaveTimer = null;
-          ctx.saveEncounter?.();
+          saveSceneState();
         }, 500);
       }
 
@@ -852,7 +863,7 @@
             map.invalidateLighting?.(); // darkness level changes when fog is toggled
             map.draw();
           }
-          ctx.saveEncounter?.();
+          saveRuntimeState?.();
         });
       }
 
@@ -870,7 +881,7 @@
             map.draw();
           }
           refreshFogUI();
-          ctx.saveEncounter?.();
+          saveRuntimeState?.();
         });
       });
 
@@ -893,7 +904,7 @@
           map.invalidateLighting?.();
           map.draw();
         }
-        ctx.saveEncounter?.();
+        saveRuntimeState?.();
       });
     }
 

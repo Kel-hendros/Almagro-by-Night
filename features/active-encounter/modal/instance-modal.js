@@ -62,7 +62,17 @@
     var canEditEncounter = ctx.canEditEncounter;
     var ensureActiveInstance = ctx.ensureActiveInstance;
     var render = ctx.render;
-    var saveEncounter = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
+    var saveRuntimeState = ctx.saveRuntimeState;
+    var isEditMode = ctx.isEditMode || function () { return false; };
+
+    function saveRuntimeOrDraft() {
+      if (isEditMode()) {
+        saveDesignDraft();
+        return;
+      }
+      saveRuntimeState();
+    }
 
     function openModal(inst) {
       if (window.AE_Picker) window.AE_Picker.init();
@@ -121,7 +131,7 @@
             inst.name = newName;
             nameSpan.textContent = newName;
             render();
-            saveEncounter();
+            saveDesignDraft();
           }
           if (els.modalTitle.contains(input)) {
             els.modalTitle.replaceChild(nameSpan, input);
@@ -236,7 +246,7 @@
                     render();
                   }
 
-                  saveEncounter();
+                  saveDesignDraft();
                 });
               }
             });
@@ -543,7 +553,7 @@
           });
         }
 
-        saveEncounter();
+        saveDesignDraft();
         render();
 
         if (container.contains(section)) {
@@ -600,7 +610,7 @@
       ensureActiveInstance();
       render();
       if (state.selectedInstanceId === id) updateModalUI(inst);
-      saveEncounter();
+      saveRuntimeOrDraft();
     }
 
     return {

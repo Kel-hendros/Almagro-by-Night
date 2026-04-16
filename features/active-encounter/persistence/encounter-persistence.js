@@ -1,18 +1,18 @@
 (function initAEEncounterPersistence(global) {
-  var DESIGN_LAYERS = { background: true, elements: true, decor: true };
   var AUTO_FLUSH_INTERVAL_MS = 60000;
 
   function createController(ctx) {
     var state = ctx.state;
     var supabase = ctx.supabase;
     var canEditEncounter = ctx.canEditEncounter;
+    var isEditMode = ctx.isEditMode || function () { return false; };
     var pruneEncounterRoster = ctx.pruneEncounterRoster;
     var normalizeMapLayerData = ctx.normalizeMapLayerData;
     var normalizeDesignTokensData = ctx.normalizeDesignTokensData;
     var normalizeMapEffectsData = ctx.normalizeMapEffectsData;
     var loadEncounterData = ctx.loadEncounterData;
 
-    var backgroundPersistTimer = null;
+    var designDraftPersistTimer = null;
     var autoFlushTimer = null;
     var draftDirty = false;
     var saveIndicatorResetTimer = null;
@@ -21,10 +21,6 @@
 
     function getDraftKey() {
       return state.encounterId ? "abn_encounter_draft_" + state.encounterId : null;
-    }
-
-    function isDesignLayer() {
-      return !!(state.activeMapLayer && DESIGN_LAYERS[state.activeMapLayer]);
     }
 
     function updateSaveIndicator(nextState) {
@@ -106,7 +102,13 @@
 
     // ── Draft (localStorage) ──
 
-    function saveDraftToLocalStorage() {
+    function markRestoredDraftDirty() {
+      draftDirty = true;
+      state._draftDirty = true;
+      updateSaveIndicator("dirty");
+    }
+
+    function saveDesignDraft() {
       var key = getDraftKey();
       if (!key) return;
       try {
@@ -116,13 +118,11 @@
           data: cleanData,
           savedAt: Date.now(),
         }));
-        draftDirty = true;
-        state._draftDirty = true;
-        updateSaveIndicator("dirty");
+        markRestoredDraftDirty();
       } catch (err) {
         console.warn("Draft save to localStorage failed:", err);
         // Fallback: flush directly to Supabase
-        flushToSupabase();
+        saveRuntimeState();
       }
     }
 
@@ -209,12 +209,12 @@
 
     // ── Public API: flush if dirty ──
 
-    async function flushIfDirty() {
+    async function flushDesignDraft() {
       if (!draftDirty) return;
       await flushToSupabase();
     }
 
-    function isDirty() {
+    function hasPendingDesignDraft() {
       return draftDirty;
     }
 
@@ -244,29 +244,18 @@
       return { changed: changed, removedCount: removedCount };
     }
 
-    // ── Main save entry point (called by all 40+ callers) ──
-
-    async function saveEncounter() {
-      if (!state.encounter) return;
-      if (!canEditEncounter()) return;
-
-      if (isDesignLayer()) {
-        // Design layer: save to localStorage, defer Supabase write
-        saveDraftToLocalStorage();
-      } else {
-        // Entities layer or other: flush everything to Supabase immediately
-        await flushToSupabase();
-      }
+    async function saveRuntimeState() {
+      await flushToSupabase();
     }
 
-    function scheduleBackgroundPersist(delayMs) {
+    function scheduleDesignDraftPersist(delayMs) {
       if (delayMs === undefined) delayMs = 180;
-      if (backgroundPersistTimer) {
-        clearTimeout(backgroundPersistTimer);
+      if (designDraftPersistTimer) {
+        clearTimeout(designDraftPersistTimer);
       }
-      backgroundPersistTimer = setTimeout(function () {
-        backgroundPersistTimer = null;
-        saveEncounter();
+      designDraftPersistTimer = setTimeout(function () {
+        designDraftPersistTimer = null;
+        saveDesignDraft();
       }, delayMs);
     }
 
@@ -293,9 +282,9 @@
     // ── Cleanup ──
 
     function destroy() {
-      if (backgroundPersistTimer) {
-        clearTimeout(backgroundPersistTimer);
-        backgroundPersistTimer = null;
+      if (designDraftPersistTimer) {
+        clearTimeout(designDraftPersistTimer);
+        designDraftPersistTimer = null;
       }
       stopAutoFlush();
       if (saveIndicatorResetTimer) {
@@ -306,11 +295,13 @@
 
     return {
       sanitizeEncounterTokens: sanitizeEncounterTokens,
-      saveEncounter: saveEncounter,
-      scheduleBackgroundPersist: scheduleBackgroundPersist,
-      flushIfDirty: flushIfDirty,
-      isDirty: isDirty,
+      saveDesignDraft: saveDesignDraft,
+      flushDesignDraft: flushDesignDraft,
+      saveRuntimeState: saveRuntimeState,
+      scheduleDesignDraftPersist: scheduleDesignDraftPersist,
+      hasPendingDesignDraft: hasPendingDesignDraft,
       loadDraftFromLocalStorage: loadDraftFromLocalStorage,
+      markRestoredDraftDirty: markRestoredDraftDirty,
       clearDraft: clearDraft,
       destroy: destroy,
     };

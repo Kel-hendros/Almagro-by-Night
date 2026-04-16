@@ -16,6 +16,10 @@
     var getPaperEditor = ctx.getPaperEditor || function () { return null; };
     var getApplyBroadcastInitiative = ctx.getApplyBroadcastInitiative;
 
+    function isEditMode() {
+      return state.uiMode === "edit";
+    }
+
     function extractPCHealth(charData) {
       if (!charData) return [0, 0, 0, 0, 0, 0, 0];
       var healthKeys = [
@@ -114,27 +118,16 @@
         : null;
 
       state.encounter.status = normalizeEncounterStatus(updated.status);
-      // Preserve local design-layer data when we have unsaved draft changes
-      var preserveDraft = !!state._draftDirty;
-      var localDesignData = null;
+      // In edit mode, an unsaved draft is the source of truth until it flushes.
+      // Remote sync must not stomp local token/instance/layout changes.
+      var preserveDraft = !!state._draftDirty && state.uiMode === "edit";
+      var localDraftData = null;
       if (preserveDraft) {
-        localDesignData = {
-          tileMap: state.encounter.data.tileMap,
-          designTokens: state.encounter.data.designTokens,
-          props: state.encounter.data.props,
-          map: state.encounter.data.map,
-          mapEffects: state.encounter.data.mapEffects,
-          ambientLight: state.encounter.data.ambientLight,
-        };
+        localDraftData = cloneJson(state.encounter.data);
       }
       state.encounter.data = updated.data || state.encounter.data;
-      if (preserveDraft && localDesignData) {
-        state.encounter.data.tileMap = localDesignData.tileMap;
-        state.encounter.data.designTokens = localDesignData.designTokens;
-        state.encounter.data.props = localDesignData.props;
-        state.encounter.data.map = localDesignData.map;
-        state.encounter.data.mapEffects = localDesignData.mapEffects;
-        state.encounter.data.ambientLight = localDesignData.ambientLight;
+      if (preserveDraft && localDraftData) {
+        state.encounter.data = Object.assign({}, state.encounter.data, localDraftData);
       }
       state.encounter.data.wallPaths =
         wallPathsDomain?.normalizeWallPaths?.(state.encounter.data.wallPaths || []) || [];
@@ -224,19 +217,25 @@
           }).subscribe();
       }
 
-      var encounterChannel = supabase
-        .channel("encounter-" + state.encounterId + "-changes")
-        .on("postgres_changes", {
-          event: "UPDATE", schema: "public", table: "encounters",
-          filter: "id=eq." + state.encounterId,
-        }, function (payload) {
-          if (state.isApplyingRemoteUpdate) return;
-          var updated = payload.new;
-          if (!updated) return;
-          applyRemoteEncounterUpdate(updated);
-        }).subscribe();
+      var encounterChannel = null;
+      if (!isEditMode()) {
+        encounterChannel = supabase
+          .channel("encounter-" + state.encounterId + "-changes")
+          .on("postgres_changes", {
+            event: "UPDATE", schema: "public", table: "encounters",
+            filter: "id=eq." + state.encounterId,
+          }, function (payload) {
+            if (state.isApplyingRemoteUpdate || isEditMode()) return;
+            var updated = payload.new;
+            if (!updated) return;
+            applyRemoteEncounterUpdate(updated);
+          }).subscribe();
+      }
 
-      state.realtimeChannels.push(characterSheetsChannel, encounterChannel);
+      state.realtimeChannels.push(characterSheetsChannel);
+      if (encounterChannel) {
+        state.realtimeChannels.push(encounterChannel);
+      }
       if (chronicleCharactersChannel) {
         state.realtimeChannels.push(chronicleCharactersChannel);
       }
@@ -279,10 +278,11 @@
 
     function startEncounterSyncPolling() {
       stopEncounterSyncPolling();
+      if (isEditMode()) return;
       // Safety-net polling — realtime is the primary sync channel.
       // Runs every 10s to catch anything realtime may have missed.
       state.encounterSyncTimer = setInterval(async function () {
-        if (!state.encounterId || state.isApplyingRemoteUpdate) return;
+        if (!state.encounterId || state.isApplyingRemoteUpdate || isEditMode()) return;
         // Skip during player interaction cooldown (avoid overwriting optimistic local state)
         if (state._playerInteractionUntil && Date.now() < state._playerInteractionUntil) return;
         var result = await supabase

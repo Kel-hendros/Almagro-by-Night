@@ -23,7 +23,7 @@
     var getMap = ctx.getMap;
     var getLightSwitchManager = ctx.getLightSwitchManager;
     var updateEncounterWallSegment = ctx.updateEncounterWallSegment;
-    var saveEncounter = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
 
     var menuEl = null;
     var arrowEl = null;
@@ -146,7 +146,7 @@
           return segment;
         }, { invalidateFog: true, invalidateLightingWalls: true, draw: true }) || wall;
         var map = getMap?.();
-        saveEncounter?.();
+        saveDesignDraft();
         renderDoorWindow(wall);
         reposition();
       });
@@ -156,7 +156,7 @@
           segment.locked = !segment.locked;
           return segment;
         }, { draw: true }) || wall;
-        saveEncounter?.();
+        saveDesignDraft();
         renderDoorWindow(wall);
         reposition();
       });
@@ -171,14 +171,14 @@
           segment.name = "Pared";
           return segment;
         }, { invalidateFog: true, invalidateLightingWalls: true, draw: true }) || wall;
-        saveEncounter?.();
+        saveDesignDraft();
       });
       bindHeaderRename(function (val) {
         wall = updateEncounterWallSegment?.(wall.id, function (segment) {
           segment.name = val;
           return segment;
         }) || wall;
-        saveEncounter?.();
+        saveDesignDraft();
       });
     }
 
@@ -323,7 +323,7 @@
         hide();
         lsm?.removeSwitch(sw.id);
       });
-      bindHeaderRename(function (val) { sw.name = val; saveEncounter?.(); });
+      bindHeaderRename(function (val) { sw.name = val; saveDesignDraft(); });
     }
 
     // ── Positioning (same logic as token context menu) ──

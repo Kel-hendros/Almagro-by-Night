@@ -20,6 +20,9 @@
     browserMode: null, // 'npc' | 'pc'
     browserActiveTags: [],
     designAssets: [],
+    uiMode: "play",
+    requestedUiMode: null,
+    editPreviewViewerInstanceId: null,
     activeMapLayer: "entities",
     map: null,
     realtimeChannels: [],
@@ -29,6 +32,7 @@
   };
   const runtime = {
     isBooted: false,
+    skipDraftFlushOnce: false,
     beforeUnloadHandler: null,
     hashChangeHandler: null,
     documentClickHandler: null,
@@ -48,6 +52,10 @@
     [ENCOUNTER_STATUS.READY]: "Listo",
     [ENCOUNTER_STATUS.IN_GAME]: "En juego",
     [ENCOUNTER_STATUS.ARCHIVED]: "Archivado",
+  };
+  const ENCOUNTER_UI_MODES = {
+    PLAY: "play",
+    EDIT: "edit",
   };
   const MAP_LAYER_LABELS = window.AEEncounterLayers?.LAYER_LABELS || {
     background: "Fondo",
@@ -136,6 +144,58 @@
       return;
     }
     window.location.hash = hash;
+  }
+
+  function normalizeEncounterUiMode(mode) {
+    return mode === ENCOUNTER_UI_MODES.EDIT ? ENCOUNTER_UI_MODES.EDIT : ENCOUNTER_UI_MODES.PLAY;
+  }
+
+  function getDefaultEncounterUiMode(status) {
+    const normalizedStatus = normalizeEncounterStatus(status);
+    return normalizedStatus === ENCOUNTER_STATUS.READY || normalizedStatus === ENCOUNTER_STATUS.IN_GAME
+      ? ENCOUNTER_UI_MODES.PLAY
+      : ENCOUNTER_UI_MODES.EDIT;
+  }
+
+  function canUseEditMode() {
+    return !!state.canManageEncounter;
+  }
+
+  function resolveEncounterUiMode(status, requestedMode) {
+    if (!canUseEditMode()) return ENCOUNTER_UI_MODES.PLAY;
+    if (requestedMode === ENCOUNTER_UI_MODES.EDIT || requestedMode === ENCOUNTER_UI_MODES.PLAY) {
+      return requestedMode;
+    }
+    return getDefaultEncounterUiMode(status);
+  }
+
+  function isEditMode() {
+    return state.uiMode === ENCOUNTER_UI_MODES.EDIT;
+  }
+
+  function isPlayMode() {
+    return state.uiMode === ENCOUNTER_UI_MODES.PLAY;
+  }
+
+  function isEditPreviewActive() {
+    return isEditMode() && !!state.editPreviewViewerInstanceId;
+  }
+
+  function buildEncounterHash(mode) {
+    const params = new URLSearchParams();
+    if (state.encounterId) params.set("id", state.encounterId);
+    params.set("mode", normalizeEncounterUiMode(mode));
+    return "active-encounter?" + params.toString();
+  }
+
+  function navigateToEncounterMode(mode, options = {}) {
+    if (options.skipDraftFlush) {
+      runtime.skipDraftFlushOnce = true;
+    }
+    const nextHash = buildEncounterHash(mode);
+    if (window.location.hash !== "#" + nextHash) {
+      window.location.hash = nextHash;
+    }
   }
 
   function createDefaultEncounterViewState() {
@@ -317,8 +377,8 @@
       if (!MAP_LAYER_LABELS[layer]) return;
       persistEncounterViewState({ activeLayer: layer });
       // Flush draft when leaving design layers
-      if (layer === "entities" && persistenceController?.isDirty()) {
-        persistenceController.flushIfDirty();
+      if (isEditMode() && layer === "entities" && hasPendingDesignDraft()) {
+        flushDesignDraft();
       }
     });
 
@@ -360,6 +420,7 @@
     const rawHash = window.location.hash.split("?")[1];
     const params = new URLSearchParams(rawHash);
     state.encounterId = params.get("id");
+    state.requestedUiMode = params.get("mode");
 
     if (!state.encounterId) {
       alert("No se especificó un encuentro ID.");
@@ -380,6 +441,10 @@
     // DOM Elements
     els.name = document.getElementById("ae-encounter-name");
     els.status = document.getElementById("ae-encounter-status");
+    els.modeSwitch = document.getElementById("ae-mode-switch");
+    els.modePlayBtn = document.getElementById("btn-ae-mode-play");
+    els.modeEditBtn = document.getElementById("btn-ae-mode-edit");
+    els.previewExitBtn = document.getElementById("btn-ae-edit-preview-exit");
     els.timeline = document.getElementById("ae-timeline-container");
     els.roundCounter = document.getElementById("ae-round-counter");
 
@@ -412,6 +477,7 @@
     els.listDecor = document.getElementById("ae-list-decor");
     els.listEntitiesNpc = document.getElementById("ae-list-entities-npc");
     els.listEntitiesPc = document.getElementById("ae-list-entities-pc");
+    els.listEntitiesProps = document.getElementById("ae-list-entities-props");
 
     // Detail Modal Els
     els.modal = document.getElementById("ae-modal");
@@ -426,6 +492,7 @@
       state,
       supabase,
       canEditEncounter,
+      isEditMode: () => isEditMode(),
       pruneEncounterRoster: () => pruneEncounterRoster(),
       normalizeMapLayerData,
       normalizeDesignTokensData,
@@ -436,20 +503,20 @@
       getEncounterData: () => state.encounter?.data,
       canEditEncounter,
       render: () => render(),
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
     });
     propMenuController = window.AEPropMenu?.createController?.({
       getEncounterData: () => state.encounter?.data,
       canEditEncounter,
       render: () => render(),
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
       invalidatePropCache: () => state.map?.invalidatePropCache?.(),
       getMap: () => state.map,
     });
     mapContextMenuController = window.AEMapContextMenu?.createController?.({
       state,
       supabase,
-      saveEncounter: () => saveEncounter(),
+      saveRuntimeState: () => saveRuntimeState(),
       getMap: () => state.map,
     });
     markerContextMenuController = window.AEMarkerContextMenu?.createController?.({
@@ -459,7 +526,7 @@
       getLightSwitchManager: () => lightSwitchManager,
       updateEncounterWallSegment: (wallId, updater, options) =>
         updateEncounterWallSegment(wallId, updater, options),
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
     });
     wallContextMenuController = window.AEWallContextMenu?.createController?.({
       state,
@@ -467,14 +534,13 @@
       getMap: () => state.map,
       getWallDrawer: () => wallDrawer,
       getPaperEditor: () => paperWallEditor,
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
     });
     elementsToolbarController = window.AEElementsToolbar?.createController?.({
       getWallDrawer: () => wallDrawer,
       getPaperEditor: () => paperWallEditor,
       getMap: () => state.map,
       canEditEncounter,
-      saveEncounter: () => saveEncounter(),
     });
     layersController = window.AEEncounterLayers?.createController?.({
       state,
@@ -486,7 +552,7 @@
       supabase,
       normalizeMapLayerData,
       render,
-      saveEncounter,
+      saveDesignDraft,
       canEditEncounter,
       onBusyChange: setUploadBusy,
     });
@@ -506,12 +572,15 @@
     lightSwitchManager = window.AELightSwitchManager?.createManager?.({
       getEncounterData: () => state.encounter?.data,
       getMap: () => state.map,
-      saveEncounter: () => { if (!state._suppressManagerSave) saveEncounter(); },
+      saveDesignDraft: () => saveDesignDraft(),
+      saveRuntimeState: () => { if (!state._suppressManagerSave) saveRuntimeState(); },
     });
     drawerController = window.AEEncounterDrawer?.createController?.({
       state,
       els,
       canEditEncounter,
+      isEditMode: () => isEditMode(),
+      isPlayMode: () => isPlayMode(),
       requireAdminAction,
       setActiveMapLayer: (...args) => setActiveMapLayer(...args),
       openBrowser: (...args) => browserController?.openBrowser(...args),
@@ -520,7 +589,9 @@
       requestBackgroundUpload: () => els.mapUploadBgInput?.click(),
       removeEncounterBackground: () => removeEncounterBackground(),
       getMap: () => state.map,
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
+      saveRuntimeState: () => saveRuntimeState(),
+      isEditMode: () => isEditMode(),
       getTilePainter: () => tilePainter,
       getWallDrawer: () => wallDrawer,
       addLight: (x, y) => lightSwitchManager?.addLight(x, y),
@@ -535,7 +606,9 @@
       canEditEncounter,
       ensureActiveInstance: () => ensureActiveInstance(),
       render: () => render(),
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
+      saveRuntimeState: () => saveRuntimeState(),
+      isEditMode: () => isEditMode(),
     });
     tokenActionsController = window.AEEncounterTokenActions?.createController?.({
       state,
@@ -549,7 +622,9 @@
       persistPlayerInstanceState: async (instanceId, patch = {}) =>
         persistPlayerInstanceStateViaRpc(instanceId, patch),
       render,
-      saveEncounter,
+      saveDesignDraft,
+      saveRuntimeState,
+      isEditMode,
     });
     tokenContextMenuController =
       window.AEEncounterTokenContextMenu?.createController?.({
@@ -576,8 +651,13 @@
           var fog = state.map._fog;
           var currentId = fog?.impersonateInstanceId || null;
           var nextId = currentId === instance.id ? null : instance.id;
+          if (isEditMode() && nextId) {
+            setActiveMapLayer("entities", { persist: false, closeMenu: true });
+          }
+          state.editPreviewViewerInstanceId = nextId;
           state.map.setFogImpersonate(nextId);
           state.map.draw();
+          applyEncounterModeUI();
         },
       });
 
@@ -603,7 +683,7 @@
       canEditEncounter,
       removeInstanceLocal: (id) => removeInstanceLocal(id),
       render: () => render(),
-      saveEncounter: () => saveEncounter(),
+      saveDesignDraft: () => saveDesignDraft(),
       encounterTurns,
       extractPCHealth: (charData) => extractPCHealth(charData),
     });
@@ -612,19 +692,34 @@
 
     const ok = await loadEncounterData();
     if (!ok) return false;
-    if (MAP_LAYER_LABELS[state.encounterViewState?.activeLayer]) {
+    const resolvedUiMode = resolveEncounterUiMode(
+      state.encounter?.status,
+      state.requestedUiMode,
+    );
+    if (state.requestedUiMode !== resolvedUiMode) {
+      state.uiMode = resolvedUiMode;
+      navigateToEncounterMode(resolvedUiMode, { skipDraftFlush: true });
+      return false;
+    }
+    state.uiMode = resolvedUiMode;
+    if (isEditMode() && MAP_LAYER_LABELS[state.encounterViewState?.activeLayer]) {
       state.activeMapLayer = state.encounterViewState.activeLayer;
+    } else {
+      state.activeMapLayer = "entities";
     }
     restoreEncounterChromeState();
+    applyEncounterModeUI();
     await loadCharacterSheets();
     const rosterResult = pruneEncounterRoster();
     syncEncounterPCDataFromSheets();
     render();
     if (rosterResult.changed && canEditEncounter()) {
-      await saveEncounter();
+      await saveRuntimeState();
     }
-    await loadTemplates();
-    await loadDesignAssets();
+    if (isEditMode()) {
+      await loadTemplates();
+      await loadDesignAssets();
+    }
     setupRealtimeSubscription();
 
     // Init Map
@@ -664,7 +759,7 @@
     restoreEncounterMapTransform();
 
     // Init Tile Painter (narrator only)
-    if (window.TilePainter) {
+    if (isEditMode() && window.TilePainter) {
       tilePainter = window.TilePainter.createTilePainter({
         getMap: () => state.map,
         getTileMap: () => state.encounter?.data?.tileMap || {},
@@ -677,7 +772,7 @@
             }
           }
         },
-        onChanged: () => saveEncounter(),
+        onChanged: () => saveDesignDraft(),
         onSelectionChange: () => {
           document.dispatchEvent(new CustomEvent("ae-terrain-selection-change"));
         },
@@ -689,7 +784,7 @@
     state.map._wallDrawer = null;
 
     // Init Paper.js Wall Editor (for elements layer editing)
-    if (window.PaperWallEditor) {
+    if (isEditMode() && window.PaperWallEditor) {
       var mapContainer = document.getElementById("ae-map-container");
       paperWallEditor = window.PaperWallEditor.createEditor({
         container: mapContainer,
@@ -715,7 +810,7 @@
           state.map?.invalidateFog?.();
           state.map?.invalidateLightingWalls?.();
           state.map?.draw();
-          saveEncounter();
+          saveDesignDraft();
         },
         getTransform: () => ({
           scale: state.map?.scale || 1,
@@ -826,9 +921,9 @@
     state.map.setActiveInstance(
       state.encounter?.data?.activeInstanceId || null,
     );
-    state.map.setInteractionLayer(state.activeMapLayer);
+    state.map.setInteractionLayer(isEditMode() ? state.activeMapLayer : "entities");
     // Live drag broadcast — all participants see token movement in real-time
-    if (window.AETokenDragBroadcast && state.encounterId && state.user) {
+    if (window.AETokenDragBroadcast && state.encounterId && state.user && isPlayMode()) {
       dragBroadcast?.destroy?.();
       dragBroadcast = window.AETokenDragBroadcast.create(state.encounterId, {
         supabase: window.supabase,
@@ -841,6 +936,11 @@
       state.map.onTokenDragEnd = (tokenId, x, y) => {
         dragBroadcast?.broadcastDragEnd(tokenId, x, y);
       };
+    } else {
+      dragBroadcast?.destroy?.();
+      dragBroadcast = null;
+      state.map.onTokenDrag = null;
+      state.map.onTokenDragEnd = null;
     }
 
     state.map.onTokenMove = async (id, x, y, oldX, oldY) => {
@@ -853,8 +953,7 @@
       var movedInst = (state.encounter.data.instances || []).find(function (i) { return i.id === t.instanceId; });
       if (movedInst && movedInst.isPC) state.map.invalidateFog?.();
 
-      // Entities layer: use granular RPC for all users (narrator included)
-      if (state.activeMapLayer === "entities") {
+      if (isPlayMode() || !canEditEncounter()) {
         try {
           state._playerInteractionUntil = Date.now() + 3000;
           await moveTokenViaRpc(id, x, y);
@@ -866,15 +965,15 @@
             alert(err?.message || "No tienes permisos para mover este token.");
           } else {
             console.error("Token move RPC failed, falling back to full save:", err);
-            saveEncounter();
+            saveRuntimeState();
           }
         }
         return;
       }
 
-      // Other layers (design): full save (narrator only)
       if (canEditEncounter()) {
-        saveEncounter();
+        render();
+        saveDesignDraft();
       }
     };
     state.map.onTokenSelect = (instId) => {
@@ -932,8 +1031,7 @@
       Object.assign(effect, patch || {});
       applyWallSync();
 
-      // Entities layer: use granular RPC for all users (narrator included)
-      if (state.activeMapLayer === "entities" || !canEditEncounter()) {
+      if (isPlayMode() || !canEditEncounter()) {
         try {
           state._playerInteractionUntil = Date.now() + 3000;
           await moveMapEffectViaRpc(id, effect.x, effect.y);
@@ -945,15 +1043,15 @@
             alert(err?.message || "No tienes permisos para mover este efecto.");
           } else {
             console.error("Map effect move RPC failed, falling back to full save:", err);
-            scheduleBackgroundPersist();
+            scheduleDesignDraftPersist();
           }
         }
         return;
       }
 
-      // Other layers (design): full save
       if (canEditEncounter()) {
-        scheduleBackgroundPersist();
+        render();
+        scheduleDesignDraftPersist();
       }
     };
     state.map.canDragDesignToken = () => canEditEncounter();
@@ -963,14 +1061,14 @@
       if (!token) return;
       token.x = x;
       token.y = y;
-      scheduleBackgroundPersist();
+      scheduleDesignDraftPersist();
     };
     state.map.onDesignTokenChange = (id, patch = {}) => {
       const list = state.encounter?.data?.designTokens || [];
       const token = list.find((item) => item.id === id);
       if (!token) return;
       Object.assign(token, patch || {});
-      scheduleBackgroundPersist();
+      scheduleDesignDraftPersist();
     };
     state.map.onDesignTokenSelect = () => {};
     state.map.onDesignTokenContext = (tokenInfo) => {
@@ -982,11 +1080,11 @@
     state.map.onPropMove = () => {
       // Sync all map props back to encounter data (normalizeProps creates copies)
       syncMapPropsToEncounterData();
-      scheduleBackgroundPersist();
+      scheduleDesignDraftPersist();
     };
     state.map.onPropChange = () => {
       syncMapPropsToEncounterData();
-      scheduleBackgroundPersist();
+      scheduleDesignDraftPersist();
     };
     state.map.onPropSelect = () => {};
     state.map.onPropContext = (propInfo) => {
@@ -995,12 +1093,12 @@
     };
     state.map.onEmptyContext = (info) => {
       if (!canEditEncounter()) return;
-      // Only show context menu in entities layer
-      if (state.activeMapLayer !== "entities") return;
+      if (isEditMode() && state.activeMapLayer !== "entities") return;
       mapContextMenuController?.open(info);
     };
     state.map.onMarkerContext = (info) => {
       if (!canEditEncounter()) return;
+      if (isPlayMode()) return;
       const isElementsLayer = state.activeMapLayer === "elements";
       const isEntitiesLayer = state.activeMapLayer === "entities";
       const isLightMarker = info?.type === "light" || info?.type === "switch";
@@ -1013,7 +1111,7 @@
     };
     state.map.onWallContext = (info) => {
       if (!canEditEncounter()) return;
-      // Only show wall context menu in elements layer
+      if (isPlayMode()) return;
       if (state.activeMapLayer !== "elements") return;
       wallContextMenuController?.open(info);
     };
@@ -1025,11 +1123,15 @@
       if (!state.encounter?.data) return;
       state.encounter.data.map = normalizeMapLayerData(nextMap);
       render();
-      scheduleBackgroundPersist();
+      scheduleDesignDraftPersist();
     };
 
     state.map.onSwitchToggle = (switchId) => {
       if (!state.encounter?.data) return;
+      if (isEditMode()) {
+        state.map.draw?.();
+        return;
+      }
       // Player proximity check
       if (!canEditEncounter()) {
         var sw = (state.encounter.data.switches || []).find(s => s.id === switchId);
@@ -1039,26 +1141,21 @@
       state._suppressManagerSave = true;
       lightSwitchManager?.toggleSwitch(switchId);
       state._suppressManagerSave = false;
-      // Entities layer: use granular RPC for all users (narrator included)
-      if (state.activeMapLayer === "entities" || !canEditEncounter()) {
-        state._playerInteractionUntil = Date.now() + 3000;
-        window.supabase.rpc('toggle_encounter_switch', {
-          p_encounter_id: state.encounterId,
-          p_switch_id: switchId,
-        }).then(result => {
-          if (result.error) {
-            console.error('Switch toggle RPC failed:', result.error);
-            if (canEditEncounter()) saveEncounter();
-          }
-        });
-      } else {
-        saveEncounter();
-      }
+      state._playerInteractionUntil = Date.now() + 3000;
+      window.supabase.rpc('toggle_encounter_switch', {
+        p_encounter_id: state.encounterId,
+        p_switch_id: switchId,
+      }).then(result => {
+        if (result.error) {
+          console.error('Switch toggle RPC failed:', result.error);
+          if (canEditEncounter()) saveRuntimeState();
+        }
+      });
     };
 
     state.map.onSwitchMove = () => {
       if (!state.encounter?.data) return;
-      saveEncounter();
+      saveDesignDraft();
     };
 
     state.map.onLinkModeClick = (x, y) => {
@@ -1083,11 +1180,15 @@
       if (!state.encounter?.data || !canEditEncounter()) return;
       state._lightDragId = light?.id || null;
       state._lightLocalChangeUntil = Date.now() + 1800;
-      saveEncounter();
+      saveDesignDraft();
     };
 
     state.map.onWallDoorToggle = (door) => {
       if (!state.encounter?.data) return;
+      if (isEditMode()) {
+        state.map.draw?.();
+        return;
+      }
       updateEncounterWallSegment(door.id, function (segment) {
         segment.doorOpen = !!door.doorOpen;
         return segment;
@@ -1126,22 +1227,17 @@
       } else {
         state.map.invalidateLighting?.();
       }
-      // Entities layer: use granular RPC for all users (narrator included)
-      if (state.activeMapLayer === "entities" || !canEditEncounter()) {
-        state._playerInteractionUntil = Date.now() + 3000;
-        window.supabase.rpc('toggle_encounter_door', {
-          p_encounter_id: state.encounterId,
-          p_x1: door.x1, p_y1: door.y1,
-          p_x2: door.x2, p_y2: door.y2,
-        }).then(result => {
-          if (result.error) {
-            console.error('Door toggle RPC failed:', result.error);
-            if (canEditEncounter()) saveEncounter();
-          }
-        });
-      } else {
-        saveEncounter();
-      }
+      state._playerInteractionUntil = Date.now() + 3000;
+      window.supabase.rpc('toggle_encounter_door', {
+        p_encounter_id: state.encounterId,
+        p_x1: door.x1, p_y1: door.y1,
+        p_x2: door.x2, p_y2: door.y2,
+      }).then(result => {
+        if (result.error) {
+          console.error('Door toggle RPC failed:', result.error);
+          if (canEditEncounter()) saveRuntimeState();
+        }
+      });
     };
 
     // ── Light placement mode ──
@@ -1162,17 +1258,17 @@
     runtime.beforeUnloadHandler = () => {
       stopEncounterSyncPolling();
       // Best-effort flush — draft stays in localStorage if async doesn't complete
-      persistenceController?.flushIfDirty();
+      flushDesignDraft();
     };
     runtime.visibilityHandler = () => {
-      if (document.visibilityState === "hidden" && persistenceController?.isDirty()) {
-        persistenceController.flushIfDirty();
+      if (document.visibilityState === "hidden" && hasPendingDesignDraft()) {
+        flushDesignDraft();
       }
     };
     runtime.hashChangeHandler = () => {
       if (!window.location.hash.startsWith("#active-encounter")) {
         stopEncounterSyncPolling();
-        persistenceController?.flushIfDirty();
+        flushDesignDraft();
       }
     };
     window.addEventListener("beforeunload", runtime.beforeUnloadHandler);
@@ -1539,9 +1635,9 @@
     }
   }
 
-  // scheduleBackgroundPersist — delegated to persistence/encounter-persistence.js
-  function scheduleBackgroundPersist(delayMs) {
-    persistenceController?.scheduleBackgroundPersist(delayMs);
+  // scheduleDesignDraftPersist — delegated to persistence/encounter-persistence.js
+  function scheduleDesignDraftPersist(delayMs) {
+    persistenceController?.scheduleDesignDraftPersist?.(delayMs);
   }
 
   function canCurrentUserControlToken(token) {
@@ -1713,7 +1809,7 @@
       const removed = removeInstanceLocal(instance.id);
       if (!removed) return;
       render();
-      saveEncounter();
+      isPlayMode() ? saveRuntimeState() : saveDesignDraft();
       return;
     }
 
@@ -1723,6 +1819,60 @@
       if (removed) render();
     } catch (error) {
       alert(error?.message || "No se pudo eliminar esta invocación.");
+    }
+  }
+
+  function applyEncounterModeUI() {
+    const container = document.querySelector(".active-encounter-container");
+    if (container) {
+      container.dataset.uiMode = state.uiMode;
+      container.dataset.editPreview = isEditPreviewActive() ? "active" : "idle";
+    }
+
+    const canSwitchModes = canUseEditMode();
+    if (els.modeSwitch) {
+      els.modeSwitch.style.display = canSwitchModes ? "inline-flex" : "none";
+    }
+    if (els.modePlayBtn) {
+      els.modePlayBtn.classList.toggle("is-active", isPlayMode());
+      els.modePlayBtn.disabled = isPlayMode();
+    }
+    if (els.modeEditBtn) {
+      els.modeEditBtn.classList.toggle("is-active", isEditMode());
+      els.modeEditBtn.disabled = isEditMode();
+    }
+    if (els.previewExitBtn) {
+      els.previewExitBtn.style.display = isEditPreviewActive() ? "" : "none";
+    }
+
+    if (els.drawerTab_terrain) {
+      els.drawerTab_terrain.title = isPlayMode() ? "Escena" : "Terreno";
+    }
+
+    const layerSelectorEl = els.layerMenuToggle?.closest(".ae-layer-selector");
+    const separator1 = document.getElementById("ae-toolbar-separator-1");
+    const separator2 = document.getElementById("ae-toolbar-separator-2");
+    const layerTools = document.getElementById("ae-layer-tools");
+    const elementsGridBtn = document.getElementById("btn-ae-elements-grid");
+
+    if (layerSelectorEl) {
+      layerSelectorEl.style.display = canUseEditMode() && isEditMode() ? "flex" : "none";
+    }
+    if (separator1) {
+      separator1.style.display = canUseEditMode() && isEditMode() ? "block" : "none";
+    }
+    if (separator2) {
+      separator2.style.display = canUseEditMode() && isEditMode() ? "" : "none";
+    }
+    if (layerTools) {
+      layerTools.style.display = canUseEditMode() && isEditMode() ? "" : "none";
+    }
+    if (elementsGridBtn && (!canUseEditMode() || !isEditMode())) {
+      elementsGridBtn.style.display = "none";
+    }
+
+    if ((!canUseEditMode() || !isEditMode()) && state.activeMapLayer !== "entities") {
+      setActiveMapLayer("entities", { persist: false, closeMenu: true });
     }
   }
 
@@ -1740,7 +1890,7 @@
     });
 
     const draftSaveBtn = document.getElementById("btn-ae-draft-save");
-    if (draftSaveBtn) draftSaveBtn.style.display = isAdmin ? "" : "none";
+    if (draftSaveBtn) draftSaveBtn.style.display = isAdmin && isEditMode() ? "" : "none";
 
     const roundLabel = document.getElementById("ae-round-label");
     if (roundLabel) {
@@ -1767,21 +1917,21 @@
     if (els.layerToolbar) {
       els.layerToolbar.style.display = "flex";
     }
-    // Hide layer selector (dropdown) for non-admins
-    const layerSelectorEl = els.layerMenuToggle?.closest(".ae-layer-selector");
-    const separator1 = document.getElementById("ae-toolbar-separator-1");
-    if (layerSelectorEl) {
-      layerSelectorEl.style.display = canEditEncounter() ? "flex" : "none";
-    }
-    if (separator1) {
-      separator1.style.display = canEditEncounter() ? "block" : "none";
-    }
-    if (els.layerMenu && !canEditEncounter()) {
+    if (els.layerMenu && (!canEditEncounter() || !isEditMode())) {
       els.layerMenu.style.display = "none";
     }
-    if (!canEditEncounter() && state.activeMapLayer !== "entities") {
-      setActiveMapLayer("entities", { persist: false, closeMenu: true });
+    applyEncounterModeUI();
+  }
+
+  function clearEditPreview() {
+    state.editPreviewViewerInstanceId = null;
+    if (!state.map) {
+      applyEncounterModeUI();
+      return;
     }
+    state.map.setFogImpersonate(null);
+    state.map.draw?.();
+    applyEncounterModeUI();
   }
 
   function handleTokenSelection(selection) {
@@ -1958,6 +2108,19 @@
       if (ok) rerollAllInitiatives();
     });
 
+    els.modePlayBtn?.addEventListener("click", async () => {
+      if (!canUseEditMode() || isPlayMode()) return;
+      await flushDesignDraft();
+      navigateToEncounterMode(ENCOUNTER_UI_MODES.PLAY);
+    });
+    els.modeEditBtn?.addEventListener("click", () => {
+      if (!canUseEditMode() || isEditMode()) return;
+      navigateToEncounterMode(ENCOUNTER_UI_MODES.EDIT);
+    });
+    els.previewExitBtn?.addEventListener("click", () => {
+      clearEditPreview();
+    });
+
     document
       .getElementById("ae-encounter-status")
       ?.addEventListener("change", async (event) => {
@@ -1976,7 +2139,7 @@
     // Draft save button
     document.getElementById("btn-ae-draft-save")?.addEventListener("click", async () => {
       if (!requireAdminAction()) return;
-      await persistenceController?.flushIfDirty();
+      await flushDesignDraft();
     });
 
     // Browser Modal Listeners
@@ -2347,7 +2510,7 @@
         var dbUpdatedAt = state.encounterUpdatedAt ? new Date(state.encounterUpdatedAt).getTime() : 0;
         if (draft.savedAt > dbUpdatedAt) {
           Object.assign(state.encounter.data, draft.data);
-          state._draftDirty = true;
+          persistenceController.markRestoredDraftDirty?.();
           console.info("Draft restored from localStorage (saved at " + new Date(draft.savedAt).toLocaleTimeString() + ")");
         } else {
           persistenceController.clearDraft();
@@ -2401,7 +2564,7 @@
 
     render();
     if (changed) {
-      saveEncounter();
+      saveRuntimeState();
     }
     return true;
   }
@@ -2443,7 +2606,7 @@
   async function updateEncounterStatus(nextStatus, options = {}) {
     if (!state.encounter || !nextStatus) return;
     // Flush any pending design changes before status transition
-    await persistenceController?.flushIfDirty();
+    await flushDesignDraft();
     const prevStatus = normalizeEncounterStatus(state.encounter.status);
     if (prevStatus === nextStatus) return false;
 
@@ -2520,13 +2683,14 @@
     if (roundLabel && roundLabel.style.display !== "none") {
       roundLabel.textContent = `Ronda ${currentRound}`;
     }
-    setActiveMapLayer(state.activeMapLayer, { persist: false, closeMenu: true });
+    applyEncounterModeUI();
+    setActiveMapLayer(isEditMode() ? state.activeMapLayer : "entities", { persist: false, closeMenu: true });
     drawerController?.renderAssetLists();
 
     // Refresh Map Data
     if (state.map) {
       state.map.freeMovement = !!state.encounter.data.freeMovement;
-      state.map.setInteractionLayer(state.activeMapLayer);
+      state.map.setInteractionLayer(isEditMode() ? state.activeMapLayer : "entities");
       const isAdmin = canEditEncounter();
       const allTokens = state.encounter.data.tokens;
       const allInstances = state.encounter.data.instances;
@@ -2558,6 +2722,12 @@
       const mapDesignTokens = isAdmin
         ? allDesignTokens
         : allDesignTokens.filter((dt) => dt.visible !== false);
+      if (
+        state.editPreviewViewerInstanceId &&
+        !(allInstances || []).some((inst) => inst?.id === state.editPreviewViewerInstanceId)
+      ) {
+        state.editPreviewViewerInstanceId = null;
+      }
 
       state.map.setData(mapTokens, mapInstances, {
         map: state.encounter.data.map || null,
@@ -2571,6 +2741,7 @@
       });
       // Keep ambient light reference in sync (always point to the encounter data object)
       state.map._ambientLight = state.encounter.data.ambientLight;
+      state.map.setFogImpersonate(state.editPreviewViewerInstanceId || null);
       state.map.setActiveInstance(state.encounter.data.activeInstanceId);
 
       // Handle narrator's "Ver aquí" — pan players to target + show pin
@@ -2804,7 +2975,7 @@
     if (inst) {
       inst.initiative = parseInt(val) || 0;
       render();
-      saveEncounter();
+      isPlayMode() ? saveRuntimeState() : saveDesignDraft();
     }
   }
 
@@ -2830,7 +3001,7 @@
 
     inst.initiative = total;
     render();
-    saveEncounter();
+    isPlayMode() ? saveRuntimeState() : saveDesignDraft();
   }
 
   function rerollAllInitiatives() {
@@ -2840,7 +3011,7 @@
 
     ensureActiveInstance();
     render();
-    saveEncounter();
+    saveRuntimeState();
   }
 
   // --- TURN MANAGEMENT ---
@@ -2850,7 +3021,7 @@
     const changed = encounterTurns.nextTurn(state.encounter?.data);
     if (!changed) return;
     render();
-    saveEncounter();
+    saveRuntimeState();
   }
 
   // --- HEALTH & COMBAT — delegated to modal/instance-modal.js ---
@@ -2866,7 +3037,7 @@
     inst.visible = inst.visible === false ? true : false;
     ensureActiveInstance();
     render();
-    saveEncounter();
+    isPlayMode() ? saveRuntimeState() : saveDesignDraft();
   }
 
   // --- DESIGN TOKEN CONTEXT MENU — delegated to context-menus/design-token-menu.js ---
@@ -2879,11 +3050,24 @@
   }
 
   function setActiveMapLayer(layer, options = {}) {
+    if (!isEditMode()) {
+      state.activeMapLayer = "entities";
+      if (state.map) {
+        state.map.setInteractionLayer("entities");
+      }
+      return;
+    }
     if (layersController?.setActiveMapLayer) {
       layersController.setActiveMapLayer(layer, options);
+      if (layer !== "entities" && isEditPreviewActive()) {
+        clearEditPreview();
+      }
       return;
     }
     state.activeMapLayer = MAP_LAYER_LABELS[layer] ? layer : "entities";
+    if (state.activeMapLayer !== "entities" && isEditPreviewActive()) {
+      clearEditPreview();
+    }
   }
 
   function closeBrowser() {
@@ -2980,13 +3164,25 @@
 
   // --- SAVE ---
 
-  // sanitizeEncounterTokens & saveEncounter — delegated to persistence/encounter-persistence.js
+  // sanitizeEncounterTokens & persistence helpers — delegated to persistence/encounter-persistence.js
   function sanitizeEncounterTokens() {
     return persistenceController?.sanitizeEncounterTokens() || { changed: false, removedCount: 0 };
   }
 
-  async function saveEncounter() {
-    return persistenceController?.saveEncounter();
+  function saveDesignDraft() {
+    return persistenceController?.saveDesignDraft?.();
+  }
+
+  async function flushDesignDraft() {
+    return persistenceController?.flushDesignDraft?.();
+  }
+
+  async function saveRuntimeState() {
+    return persistenceController?.saveRuntimeState?.();
+  }
+
+  function hasPendingDesignDraft() {
+    return !!persistenceController?.hasPendingDesignDraft?.();
   }
 
   function teardownGlobalDocumentListeners() {
@@ -3005,7 +3201,11 @@
   }
 
   async function teardownEncounterView() {
-    await persistenceController?.flushIfDirty();
+    const shouldSkipDraftFlush = runtime.skipDraftFlushOnce;
+    runtime.skipDraftFlushOnce = false;
+    if (!shouldSkipDraftFlush) {
+      await flushDesignDraft();
+    }
     stopEncounterSyncPolling();
     teardownRealtimeSubscriptions();
     teardownGlobalDocumentListeners();
@@ -3079,8 +3279,8 @@
     }
   }
 
-  function destroy() {
-    teardownEncounterView();
+  async function destroy() {
+    await teardownEncounterView();
     runtime.isBooted = false;
   }
 

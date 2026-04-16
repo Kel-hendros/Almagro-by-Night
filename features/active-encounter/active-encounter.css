@@ -38,6 +38,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .ae-title {
@@ -76,6 +77,32 @@
     background-position: calc(100% - 12px) calc(50% - 1px), calc(100% - 7px) calc(50% - 1px);
     background-size: 5px 5px, 5px 5px;
     background-repeat: no-repeat;
+}
+
+.ae-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ae-mode-switch-btn {
+    border: none;
+    background: transparent;
+    color: #d7d7d7;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ae-mode-switch-btn.is-active {
+    background: rgba(173, 56, 56, 0.24);
+    color: #ffd8d8;
 }
 
 .ae-status-chip-select:focus {
@@ -976,6 +1003,11 @@
     letter-spacing: 0.7px;
     padding-bottom: 3px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.active-encounter-container[data-ui-mode="play"] #ae-drawer-tab-settings,
+.active-encounter-container[data-ui-mode="play"] #ae-drawer-tab-settings-content {
+    display: none;
 }
 
 .ae-setting-row {

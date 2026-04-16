@@ -3,7 +3,7 @@
     var getEncounterData = ctx.getEncounterData;
     var canEditEncounter = ctx.canEditEncounter;
     var render = ctx.render;
-    var saveEncounter = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
 
     var designTokenMenuEl = null;
 
@@ -14,7 +14,7 @@
       if (!dt) return;
       dt.visible = dt.visible === false ? true : false;
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     function removeDesignToken(tokenId) {
@@ -26,7 +26,7 @@
       if (idx === -1) return;
       list.splice(idx, 1);
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     function open(tokenInfo) {

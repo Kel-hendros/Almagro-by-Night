@@ -25,7 +25,6 @@
     var getPaperEditor = ctx.getPaperEditor;
     var getWallDrawer = ctx.getWallDrawer; // Keep for backwards compatibility
     var canEditEncounter = ctx.canEditEncounter;
-    var saveEncounter = ctx.saveEncounter;
     var getMap = ctx.getMap;
 
     var toolsEl = null;        // #ae-elements-tools (inside main toolbar)

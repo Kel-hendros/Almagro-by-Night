@@ -5,7 +5,7 @@
       supabase,
       normalizeMapLayerData,
       render,
-      saveEncounter,
+      saveDesignDraft,
       canEditEncounter,
       onBusyChange,
     } = ctx;
@@ -260,7 +260,7 @@
         state.encounter.data.map = nextMap;
 
         if (typeof render === "function") render();
-        if (typeof saveEncounter === "function") await saveEncounter();
+        if (typeof saveDesignDraft === "function") await saveDesignDraft();
         return true;
       });
     }
@@ -283,7 +283,7 @@
       state.encounter.data.map = nextMap;
 
       if (typeof render === "function") render();
-      if (typeof saveEncounter === "function") await saveEncounter();
+      if (typeof saveDesignDraft === "function") await saveDesignDraft();
       return true;
     }
 
@@ -399,7 +399,7 @@
       ];
 
       if (typeof render === "function") render();
-      if (typeof saveEncounter === "function") saveEncounter();
+      if (typeof saveDesignDraft === "function") saveDesignDraft();
       return true;
     }
 
@@ -446,7 +446,7 @@
       ];
 
       if (typeof render === "function") render();
-      if (typeof saveEncounter === "function") saveEncounter();
+      if (typeof saveDesignDraft === "function") saveDesignDraft();
       return true;
     }
 

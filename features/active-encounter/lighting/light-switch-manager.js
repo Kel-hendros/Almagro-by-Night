@@ -2,7 +2,8 @@
   function createManager(ctx) {
     var getEncounterData = ctx.getEncounterData;
     var getMap = ctx.getMap;
-    var saveFn = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
+    var saveRuntimeState = ctx.saveRuntimeState;
 
     var _lightPopover = null;
     var _switchPopover = null;
@@ -43,7 +44,7 @@
       data.lights = lights;
       var map = getMap();
       if (map) { map.lights = lights; map.invalidateLighting?.(); map.draw(); }
-      saveFn();
+      saveDesignDraft();
     }
 
     function updateLight(lightId, patch) {
@@ -54,7 +55,7 @@
       for (var key in patch) light[key] = patch[key];
       var map = getMap();
       if (map) { map.invalidateLighting?.(); map.draw(); }
-      saveFn();
+      saveDesignDraft();
     }
 
     function removeLight(lightId) {
@@ -64,7 +65,7 @@
       var map = getMap();
       if (map) { map.lights = data.lights; map.invalidateLighting?.(); map.draw(); }
       closeLightPopover();
-      saveFn();
+      saveDesignDraft();
     }
 
     function findLightAt(cellX, cellY) {
@@ -164,7 +165,7 @@
       data.switches.push(sw);
       var map = getMap();
       if (map) { map.switches = data.switches; map.invalidateLighting?.(); map.draw(); }
-      saveFn();
+      saveDesignDraft();
       return sw;
     }
 
@@ -175,7 +176,7 @@
       var map = getMap();
       if (map) { map.switches = data.switches; map.selectedSwitchId = null; map.draw(); }
       closeSwitchPopover();
-      saveFn();
+      saveDesignDraft();
     }
 
     function toggleSwitch(switchId) {
@@ -191,7 +192,7 @@
       });
       var map = getMap();
       if (map) { map.invalidateLighting?.(); map.draw(); }
-      saveFn();
+      saveRuntimeState();
     }
 
     function linkSwitchToLight(switchId, lightId) {
@@ -202,7 +203,7 @@
       if (sw.lightIds.indexOf(lightId) === -1) sw.lightIds.push(lightId);
       var map = getMap();
       if (map) { map.invalidateLighting?.(); map.draw(); }
-      saveFn();
+      saveDesignDraft();
     }
 
     function unlinkSwitchFromLight(switchId, lightId) {
@@ -212,7 +213,7 @@
       sw.lightIds = (sw.lightIds || []).filter(function (id) { return id !== lightId; });
       var map = getMap();
       if (map) map.draw();
-      saveFn();
+      saveDesignDraft();
     }
 
     function findSwitchAt(cellX, cellY) {

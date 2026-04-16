@@ -14,6 +14,11 @@
                 <option value="in_game">En juego</option>
                 <option value="archived">Archivado</option>
             </select>
+            <div id="ae-mode-switch" class="ae-mode-switch" style="display:none;">
+                <button id="btn-ae-mode-play" type="button" class="ae-mode-switch-btn">Play</button>
+                <button id="btn-ae-mode-edit" type="button" class="ae-mode-switch-btn">Edit</button>
+            </div>
+            <button id="btn-ae-edit-preview-exit" type="button" class="ae-btn ae-btn--secondary ae-btn--small" style="display:none;">Salir de vista</button>
             <button id="btn-ae-draft-save" class="ae-draft-save-btn" title="Sin cambios pendientes" style="display:none;"><span class="ae-draft-icon">💾</span><span class="ae-draft-label" id="ae-draft-label"></span></button>
         </div>
         <div class="ae-header-right">
@@ -59,11 +64,17 @@
                             </div>
                             <div id="ae-list-entities-pc" class="ae-drawer-list"></div>
                         </div>
+                        <div id="ae-entity-subsection-props" class="ae-entity-subsection" style="display:none;">
+                            <div class="ae-entity-subheader">
+                                <span>Objetos</span>
+                            </div>
+                            <div id="ae-list-entities-props" class="ae-drawer-list"></div>
+                        </div>
                     </div>
 
                     <!-- Tab 2: Terreno -->
                     <div id="ae-drawer-tab-terrain-content" class="ae-tab-pane">
-                        <details class="ae-collapse" open>
+                        <details id="ae-background-section" class="ae-collapse" open>
                             <summary>
                                 <span>Fondo</span>
                                 <button id="btn-ae-add-bg" class="ae-section-add-btn" type="button" title="Agregar fondo" aria-label="Agregar fondo">+</button>
@@ -183,7 +194,7 @@
                             </div>
                         </details>
 
-                        <details class="ae-collapse" open>
+                        <details id="ae-decor-section" class="ae-collapse" open>
                             <summary>
                                 <span>Decorado</span>
                                 <button id="btn-ae-add-decor" class="ae-section-add-btn" type="button" title="Agregar decoración" aria-label="Agregar decoración">+</button>

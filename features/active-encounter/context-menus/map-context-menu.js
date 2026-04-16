@@ -2,7 +2,7 @@
   function createController(ctx) {
     var state = ctx.state;
     var supabase = ctx.supabase;
-    var saveEncounter = ctx.saveEncounter;
+    var saveRuntimeState = ctx.saveRuntimeState;
     var getMap = ctx.getMap;
 
     var mapContextMenuEl = null;
@@ -14,7 +14,7 @@
       state.encounter.data.viewTarget = {
         x: cellX, y: cellY, ts: Date.now(), narrator: narratorName,
       };
-      saveEncounter();
+      saveRuntimeState();
       var map = getMap();
       if (map) {
         map.showViewPin(cellX, cellY, narratorName);

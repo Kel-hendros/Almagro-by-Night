@@ -3,7 +3,7 @@
     var getEncounterData = ctx.getEncounterData;
     var canEditEncounter = ctx.canEditEncounter;
     var render = ctx.render;
-    var saveEncounter = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
     var invalidatePropCache = ctx.invalidatePropCache;
     var getMap = ctx.getMap;
 
@@ -19,7 +19,7 @@
       list.splice(idx, 1);
       if (typeof invalidatePropCache === "function") invalidatePropCache();
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     function duplicateProp(propId) {
@@ -54,7 +54,7 @@
       list.push(copy);
       if (typeof invalidatePropCache === "function") invalidatePropCache();
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     function open(propInfo) {

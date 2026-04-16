@@ -6,7 +6,9 @@
       canControlTokenById,
       persistPlayerInstanceState,
       render,
-      saveEncounter,
+      saveDesignDraft,
+      saveRuntimeState,
+      isEditMode,
     } = ctx;
     const METERS_PER_UNIT = 1.5;
     const DISCIPLINE_ID_BY_ALIAS = (() => {
@@ -59,8 +61,16 @@
       }
 
       render();
-      saveEncounter();
+      saveDesignDraft();
       return true;
+    }
+
+    function saveNarratorRuntimeOrDraft() {
+      if (typeof isEditMode === "function" && isEditMode()) {
+        saveDesignDraft();
+        return;
+      }
+      saveRuntimeState();
     }
 
     function setTokenCondition(tokenId, conditionKey, forceValue) {
@@ -100,7 +110,7 @@
 
       render();
       if (canEditEncounter()) {
-        saveEncounter();
+        saveNarratorRuntimeOrDraft();
       } else if (typeof persistPlayerInstanceState === "function") {
         persistPlayerInstanceState(instance.id, { conditions }).catch((error) => {
           console.warn("No se pudo persistir condición de instancia:", error?.message || error);
@@ -247,7 +257,7 @@
       instance.effects = effects;
       render();
       if (canEditEncounter()) {
-        saveEncounter();
+        saveNarratorRuntimeOrDraft();
       } else if (typeof persistPlayerInstanceState === "function") {
         persistPlayerInstanceState(instance.id, { conditions, effects }).catch((error) => {
           console.warn("No se pudo persistir estado de Ofuscación:", error?.message || error);
@@ -343,7 +353,7 @@
       }
 
       render();
-      saveEncounter();
+      saveNarratorRuntimeOrDraft();
       return true;
     }
 
@@ -370,7 +380,7 @@
       if (state.encounter.data.mapEffects.length === prevLen) return false;
 
       render();
-      saveEncounter();
+      saveNarratorRuntimeOrDraft();
       return true;
     }
 
@@ -657,7 +667,7 @@
       }
 
       render();
-      saveEncounter();
+      saveNarratorRuntimeOrDraft();
       return true;
     }
 

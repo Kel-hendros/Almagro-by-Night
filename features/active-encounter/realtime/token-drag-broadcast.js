@@ -17,6 +17,7 @@
     var userId = opts.userId;
     var _lastBroadcastAt = 0;
     var _destroyed = false;
+    var _isSubscribed = false;
 
     var channel = supabase
       .channel("encounter-" + encounterId + "-drag")
@@ -26,7 +27,9 @@
         if (!data || data.userId === userId) return; // ignore own broadcasts
         handleRemoteDrag(data);
       })
-      .subscribe();
+      .subscribe(function (status) {
+        _isSubscribed = status === "SUBSCRIBED";
+      });
 
     function handleRemoteDrag(data) {
       var map = getMap();
@@ -54,13 +57,22 @@
       map._drawDirty = true;
     }
 
+    function sendBroadcast(payload) {
+      if (_destroyed) return;
+      if (_isSubscribed || typeof channel.httpSend !== "function") {
+        channel.send(payload);
+        return;
+      }
+      channel.httpSend(payload);
+    }
+
     /** Call from mousemove during token drag (throttled internally). */
     function broadcastDrag(tokenId, x, y) {
       if (_destroyed) return;
       var now = Date.now();
       if (now - _lastBroadcastAt < THROTTLE_MS) return;
       _lastBroadcastAt = now;
-      channel.send({
+      sendBroadcast({
         type: "broadcast",
         event: "token-drag",
         payload: { tokenId: tokenId, x: x, y: y, dragging: true, userId: userId },
@@ -70,7 +82,7 @@
     /** Call from mouseup when token drag ends. */
     function broadcastDragEnd(tokenId, x, y) {
       if (_destroyed) return;
-      channel.send({
+      sendBroadcast({
         type: "broadcast",
         event: "token-drag",
         payload: { tokenId: tokenId, x: x, y: y, dragging: false, userId: userId },

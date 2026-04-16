@@ -4,7 +4,7 @@
     var canEditEncounter = ctx.canEditEncounter;
     var removeInstanceLocal = ctx.removeInstanceLocal;
     var render = ctx.render;
-    var saveEncounter = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
     var encounterTurns = ctx.encounterTurns;
     var extractPCHealth = ctx.extractPCHealth;
 
@@ -118,7 +118,7 @@
       }
 
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     async function addPC(sheetId) {
@@ -187,7 +187,7 @@
       }
 
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     function removeInstance(id) {
@@ -195,7 +195,7 @@
       var removed = removeInstanceLocal(id);
       if (!removed) return;
       render();
-      saveEncounter();
+      saveDesignDraft();
     }
 
     return {

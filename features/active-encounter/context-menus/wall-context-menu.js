@@ -10,7 +10,7 @@
     var getMap = ctx.getMap;
     var getWallDrawer = ctx.getWallDrawer;
     var getPaperEditor = ctx.getPaperEditor;
-    var saveEncounter = ctx.saveEncounter;
+    var saveDesignDraft = ctx.saveDesignDraft;
 
     var menuEl = null;
     var arrowEl = null;
@@ -336,7 +336,7 @@
         map.invalidateLightingWalls?.();
         map.draw();
       }
-      saveEncounter?.();
+      saveDesignDraft();
       // Notify Paper.js editor to refresh
       document.dispatchEvent(new CustomEvent("ae-walls-changed"));
     }
