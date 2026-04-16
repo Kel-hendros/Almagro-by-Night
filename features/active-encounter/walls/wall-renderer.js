@@ -60,28 +60,15 @@
 
       var buckets = getFogVisibleWallBuckets(this, state);
       if (
-        buckets.explored.length ||
-        buckets.exploredWallChains.length ||
-        buckets.exploredCurtainChains.length
+        buckets.visible.length ||
+        buckets.visibleWallChains.length ||
+        buckets.visibleCurtainChains.length
       ) {
         drawWallsSubset(
           this,
-          buckets.explored,
-          buckets.exploredWallChains,
-          buckets.exploredCurtainChains,
-          0.42,
-        );
-      }
-      if (
-        buckets.current.length ||
-        buckets.currentWallChains.length ||
-        buckets.currentCurtainChains.length
-      ) {
-        drawWallsSubset(
-          this,
-          buckets.current,
-          buckets.currentWallChains,
-          buckets.currentCurtainChains,
+          buckets.visible,
+          buckets.visibleWallChains,
+          buckets.visibleCurtainChains,
           0.95,
         );
       }
@@ -545,7 +532,6 @@
     var walls = map.walls || [];
     var fog = map._fog || null;
     var currentAreas = [].concat(state.currentAreas || [], state.revealedAreas || []);
-    var exploredAreas = state.exploredAreas || [];
     var hiddenAreas = state.hiddenAreas || [];
     var grouped = createWallRenderGroups(walls, null);
     var wallChains = buildConnectedWallChains(grouped.vectorWallGroups.wall);
@@ -554,7 +540,6 @@
       fog ? fog._cacheGen || 0 : 0,
       walls.length,
       currentAreas.length,
-      exploredAreas.length,
       hiddenAreas.length,
     ].join(":");
     var cache = map._wallFogVisibilityCache;
@@ -563,42 +548,27 @@
     }
 
     var buckets = {
-      current: [],
-      explored: [],
-      currentWallChains: [],
-      exploredWallChains: [],
-      currentCurtainChains: [],
-      exploredCurtainChains: [],
+      visible: [],
+      visibleWallChains: [],
+      visibleCurtainChains: [],
     };
     for (var i = 0; i < grouped.specialWalls.length; i++) {
       var wall = grouped.specialWalls[i];
-      var visibility = classifyWallVisibility(map, wall, currentAreas, exploredAreas, hiddenAreas);
-      if (visibility === "current") buckets.current.push(wall);
-      else if (visibility === "explored") buckets.explored.push(wall);
+      if (isWallVisible(map, wall, currentAreas, hiddenAreas)) {
+        buckets.visible.push(wall);
+      }
     }
     for (var wi = 0; wi < wallChains.length; wi++) {
       var wallChain = wallChains[wi];
-      var wallChainVisibility = classifyChainVisibility(
-        map,
-        wallChain,
-        currentAreas,
-        exploredAreas,
-        hiddenAreas,
-      );
-      if (wallChainVisibility === "current") buckets.currentWallChains.push(wallChain);
-      else if (wallChainVisibility === "explored") buckets.exploredWallChains.push(wallChain);
+      if (isChainVisible(map, wallChain, currentAreas, hiddenAreas)) {
+        buckets.visibleWallChains.push(wallChain);
+      }
     }
     for (var ci = 0; ci < curtainChains.length; ci++) {
       var curtainChain = curtainChains[ci];
-      var curtainVisibility = classifyChainVisibility(
-        map,
-        curtainChain,
-        currentAreas,
-        exploredAreas,
-        hiddenAreas,
-      );
-      if (curtainVisibility === "current") buckets.currentCurtainChains.push(curtainChain);
-      else if (curtainVisibility === "explored") buckets.exploredCurtainChains.push(curtainChain);
+      if (isChainVisible(map, curtainChain, currentAreas, hiddenAreas)) {
+        buckets.visibleCurtainChains.push(curtainChain);
+      }
     }
 
     map._wallFogVisibilityCache = {
@@ -609,27 +579,16 @@
     return buckets;
   }
 
-  function classifyChainVisibility(map, chain, currentAreas, exploredAreas, hiddenAreas) {
+  function isChainVisible(map, chain, currentAreas, hiddenAreas) {
     var walls = chain && Array.isArray(chain.walls) ? chain.walls : [];
-    var hasExplored = false;
     for (var i = 0; i < walls.length; i++) {
-      var visibility = classifyWallVisibility(
-        map,
-        walls[i],
-        currentAreas,
-        exploredAreas,
-        hiddenAreas,
-      );
-      if (visibility === "current") return "current";
-      if (visibility === "explored") hasExplored = true;
+      if (isWallVisible(map, walls[i], currentAreas, hiddenAreas)) return true;
     }
-    return hasExplored ? "explored" : null;
+    return false;
   }
 
-  function classifyWallVisibility(map, wall, currentAreas, exploredAreas, hiddenAreas) {
+  function isWallVisible(map, wall, currentAreas, hiddenAreas) {
     var samplePoints = getWallVisibilitySamplePoints(wall);
-    var currentVisible = false;
-
     for (var i = 0; i < samplePoints.length; i++) {
       var sample = samplePoints[i];
       if (pointInAreaList(sample.x, sample.y, hiddenAreas)) continue;
@@ -637,25 +596,13 @@
         typeof map.isPointVisibleToFogViewer === "function" &&
         map.isPointVisibleToFogViewer(sample.x, sample.y)
       ) {
-        currentVisible = true;
-        break;
+        return true;
       }
       if (pointInAreaList(sample.x, sample.y, currentAreas)) {
-        currentVisible = true;
-        break;
+        return true;
       }
     }
-    if (currentVisible) return "current";
-
-    for (var j = 0; j < samplePoints.length; j++) {
-      var sampleExplored = samplePoints[j];
-      if (pointInAreaList(sampleExplored.x, sampleExplored.y, hiddenAreas)) continue;
-      if (pointInAreaList(sampleExplored.x, sampleExplored.y, exploredAreas)) {
-        return "explored";
-      }
-    }
-
-    return null;
+    return false;
   }
 
   function getWallVisibilitySamplePoints(wall) {

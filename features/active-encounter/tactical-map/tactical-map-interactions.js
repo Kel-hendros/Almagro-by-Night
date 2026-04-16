@@ -1088,16 +1088,6 @@
           this.isDraggingToken = canDrag;
           this.selectedTokenId = clickedToken.id;
           this.draggedToken = canDrag ? clickedToken : null;
-          if (
-            canDrag &&
-            clickedInstance?.isPC &&
-            typeof this.isFogPlayerViewActive === "function" &&
-            this.isFogPlayerViewActive()
-          ) {
-            this.beginFogDragPreview?.(clickedInstance.id);
-          } else {
-            this.clearFogDragPreview?.();
-          }
           if (canDrag) {
             this.dragStartTokenPos = { x: clickedToken.x, y: clickedToken.y };
           } else {
@@ -1611,15 +1601,8 @@
             typeof this.isFogPlayerViewActive === "function" &&
             this.isFogPlayerViewActive()
           ) {
-            // Persist what the viewer discovered during the drag so explored
-            // memory matches what was already visible while moving.
-            this.commitFogDragPreview?.();
             this.invalidateFog();
-          } else {
-            this.clearFogDragPreview?.();
           }
-        } else {
-          this.clearFogDragPreview?.();
         }
         if (this.onTokenMove && this.draggedToken) {
           const oldX = this.dragStartTokenPos ? this.dragStartTokenPos.x : null;
