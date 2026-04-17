@@ -37,7 +37,7 @@ Estos sistemas se componen: un token puede estar en una zona visible (sin niebla
 
 ### Propósito
 
-La niebla representa el **conocimiento geográfico** de los personajes. Las zonas que no han sido exploradas son completamente negras; las zonas exploradas pero fuera del campo de visión actual se muestran atenuadas (memoria); las zonas dentro del campo de visión actual se ven con claridad completa.
+La niebla representa el **campo de visión actual** de los personajes. Es binaria: cada celda está visible en este momento o no lo está. No hay capa de "memoria" — si un PJ ya no ve una zona, esa zona vuelve a ser desconocida hasta que la vuelva a ver.
 
 ### Modos
 
@@ -48,17 +48,12 @@ La niebla representa el **conocimiento geográfico** de los personajes. Las zona
 
 ### Estados de cada celda
 
-Cada celda del mapa tiene tres estados posibles desde la perspectiva de un jugador:
+Cada celda del mapa tiene dos estados posibles desde la perspectiva de un jugador:
 
 | Estado | Aspecto visual | Significado |
 |--------|---------------|-------------|
-| **No explorada** | Negro total | El personaje nunca ha estado cerca de esta zona. No sabe qué hay ahí. |
-| **Explorada** | Atenuada (dimmed) | El personaje visitó esta zona anteriormente. Recuerda el layout pero no puede ver lo que ocurre ahí ahora. |
 | **Visible** | Sin filtro | El personaje puede ver esta zona en este momento. |
-
-### Exploración por personaje
-
-El historial de exploración se guarda **por instancia de personaje**. Si un jugador controla múltiples PJs, la niebla muestra la unión de todo lo que han explorado individualmente. Si un PJ muere, su exploración histórica persiste para esa sesión.
+| **No visible** | Negro total | El personaje no ve esta zona ahora (nunca la vio o se alejó). |
 
 ### Overrides manuales
 
@@ -292,7 +287,7 @@ Los design tokens son elementos gráficos decorativos que el narrador coloca sob
 
 | Aspecto | Narrador | Jugador |
 |---------|----------|--------|
-| **Niebla de guerra** | Siempre ve todo con al menos 10% de visibilidad | Solo ve zonas en polígono de visión de sus PJs. Áreas no exploradas son negro total. |
+| **Niebla de guerra** | Siempre ve todo con al menos 10% de visibilidad | Solo ve el polígono de visión actual de sus PJs. Lo que está fuera del cono es negro total. |
 | **Iluminación** | Ve zonas oscuras atenuadas, nunca negro total | Zonas sin luz aparecen completamente oscuras |
 | **Tokens en oscuridad** | Visibles con opacidad 35% | Invisibles (salvo proximidad de 1 celda) |
 | **Tokens ocultos** | Visibles con borde discontinuo y opacidad 45% | Completamente invisibles |
