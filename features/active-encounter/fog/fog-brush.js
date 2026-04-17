@@ -174,27 +174,6 @@
       }
     }
 
-    function resetExploration() {
-      if (!confirm("¿Reiniciar toda la exploración? Los jugadores perderán el mapa descubierto.")) return;
-      var fog = getFog();
-      if (!fog) return;
-      fog.exploredAreas = [];
-      fog.exploredBy = {};
-      fog.revealedAreas = [];
-      fog.hiddenAreas = [];
-      fog.resetVersion = (parseInt(fog.resetVersion, 10) || 0) + 1;
-      setFog(fog);
-      var map = getMap?.();
-      if (map) {
-        map.clearFogDragPreview?.();
-        map.setFogConfig?.(fog);
-        map.invalidateFog?.();
-        map.invalidateLighting?.();
-        map.requestDraw?.();
-      }
-      onChanged?.();
-    }
-
     return {
       isActive: isActive,
       getBrushType: getBrushType,
@@ -206,7 +185,6 @@
       handleMouseDown: handleMouseDown,
       handleMouseMove: handleMouseMove,
       handleMouseUp: handleMouseUp,
-      resetExploration: resetExploration,
     };
 
     function paintAt(x, y, isErase) {
