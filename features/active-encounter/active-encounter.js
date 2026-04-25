@@ -721,6 +721,9 @@
       await loadDesignAssets();
     }
     setupRealtimeSubscription();
+    if (isPlayMode()) {
+      await stabilizeInitialPlayState();
+    }
 
     // Init Map
     state.map = new TacticalMap("ae-map-canvas", "ae-map-container");
@@ -1126,7 +1129,12 @@
     state.map.onSwitchToggle = (switchId) => {
       if (!state.encounter?.data) return;
       if (isEditMode()) {
-        state.map.draw?.();
+        // Mutate switches/lights state without flushing to Supabase; draft
+        // persists on next autoflush / manual save.
+        state._suppressManagerSave = true;
+        lightSwitchManager?.toggleSwitch(switchId);
+        state._suppressManagerSave = false;
+        saveDesignDraft();
         return;
       }
       // Player proximity check
@@ -1183,7 +1191,24 @@
     state.map.onWallDoorToggle = (door) => {
       if (!state.encounter?.data) return;
       if (isEditMode()) {
+        // Sync the raw-wall mutation into wallPaths (source of truth) and
+        // mark the local draft dirty; autoflush / manual save push to DB.
+        updateEncounterWallSegment(door.id, function (segment) {
+          segment.doorOpen = !!door.doorOpen;
+          return segment;
+        }, { draw: false });
+        if (typeof state.map.invalidateFogWalls === "function") {
+          state.map.invalidateFogWalls();
+        } else {
+          state.map.invalidateFog?.();
+        }
+        if (typeof state.map.invalidateLightingWalls === "function") {
+          state.map.invalidateLightingWalls();
+        } else {
+          state.map.invalidateLighting?.();
+        }
         state.map.draw?.();
+        saveDesignDraft();
         return;
       }
       updateEncounterWallSegment(door.id, function (segment) {
@@ -1481,11 +1506,18 @@
     if (!data || typeof data !== "object") return;
     var wallPathsDomain = window.AEWallPaths;
     var sourcePaths = Array.isArray(data.wallPaths) ? data.wallPaths : null;
-    if (!sourcePaths && Array.isArray(data.walls) && data.walls.length) {
-      var persistedWalls = data.walls.filter(function (wall) {
-        return !!wall && wall.runtimeSource !== "mapEffect" && !wall.sourceMapEffectId;
-      });
+    var persistedWalls = Array.isArray(data.walls)
+      ? data.walls.filter(function (wall) {
+          return !!wall && wall.runtimeSource !== "mapEffect" && !wall.sourceMapEffectId;
+        })
+      : [];
+    if (!sourcePaths && persistedWalls.length) {
       sourcePaths = wallPathsDomain?.createWallPathsFromWalls?.(persistedWalls) || [];
+    } else if (sourcePaths && persistedWalls.length && wallPathsDomain?.reconcileWallPathsFromWalls) {
+      // Server RPCs (e.g. toggle_encounter_door) mutate data.walls but not
+      // data.wallPaths. Reconcile doorOpen/locked/etc from walls back into
+      // wallPaths so compileWalls below doesn't revert the fresh state.
+      sourcePaths = wallPathsDomain.reconcileWallPathsFromWalls(sourcePaths, persistedWalls);
     }
     data.wallPaths = wallPathsDomain?.normalizeWallPaths?.(sourcePaths || []) || [];
     var structuralWalls = wallPathsDomain?.compileWalls?.(data.wallPaths) || [];
@@ -1629,6 +1661,25 @@
       els.browserUploadAssetBtn.disabled = !!isBusy;
       els.browserUploadAssetBtn.style.opacity = isBusy ? "0.65" : "";
       els.browserUploadAssetBtn.style.pointerEvents = isBusy ? "none" : "";
+    }
+  }
+
+  async function stabilizeInitialPlayState() {
+    if (!state.encounterId || !syncController) return;
+    const selectClause = state.encounterHasUpdatedAt
+      ? "id, status, data, updated_at"
+      : "id, status, data";
+    const result = await supabase
+      .from("encounters")
+      .select(selectClause)
+      .eq("id", state.encounterId)
+      .maybeSingle();
+    if (result.error || !result.data) return;
+
+    const incomingKey = syncController.buildSyncKey?.(result.data)
+      || buildEncounterSyncKey(result.data);
+    if (incomingKey !== state.lastEncounterSyncKey) {
+      syncController.applyRemoteUpdate?.(result.data);
     }
   }
 

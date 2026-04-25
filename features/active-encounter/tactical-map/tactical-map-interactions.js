@@ -697,14 +697,20 @@
         }
       }
 
-      // Door toggle intercept (works in any layer, narrator only, left-click)
+      // Door toggle intercept (works in any layer, left-click)
       // BUT: if there's a token at this position, the token takes priority (player needs to move it)
       if (e.button === 0 && this.walls && this.walls.length &&
           typeof window.WallDrawer?.tryToggleDoor === "function" &&
           !(this._wallDrawer && this._wallDrawer.isActive())) {
         var tokenAtClick = typeof this.getTokenAt === "function" ? this.getTokenAt(worldX, worldY) : null;
         if (!tokenAtClick && (!markerHit || markerHit.type === "door" || markerHit.type === "window")) {
-          var toggledDoor = window.WallDrawer.tryToggleDoor(worldCellX, worldCellY, this.walls);
+          var toggledDoor = null;
+          if (markerHit && (markerHit.type === "door" || markerHit.type === "window") && markerHit.wall) {
+            markerHit.wall.doorOpen = !markerHit.wall.doorOpen;
+            toggledDoor = markerHit.wall;
+          } else {
+            toggledDoor = window.WallDrawer.tryToggleDoor(worldCellX, worldCellY, this.walls);
+          }
           if (toggledDoor && typeof this.onWallDoorToggle === "function") {
             this.onWallDoorToggle(toggledDoor);
             this.draw();

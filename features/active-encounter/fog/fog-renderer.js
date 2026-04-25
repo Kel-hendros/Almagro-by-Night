@@ -3,7 +3,7 @@
 (function applyFogRenderer(global) {
   "use strict";
 
-  var BLUR_RADIUS = 6;
+  var BLUR_RADIUS = 10;
   var BLUR_PAD = 2;
 
   function apply(TacticalMap) {

@@ -260,6 +260,7 @@
       teardown: teardownRealtimeSubscriptions,
       startPolling: startEncounterSyncPolling,
       stopPolling: stopEncounterSyncPolling,
+      applyRemoteUpdate: applyRemoteEncounterUpdate,
       extractPCHealth: extractPCHealth,
       buildSyncKey: buildEncounterSyncKey,
     };

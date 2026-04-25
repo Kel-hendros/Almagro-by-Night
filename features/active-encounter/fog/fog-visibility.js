@@ -6,6 +6,7 @@
 
   var DEFAULT_VISION_RADIUS = 30;
   var RAY_EPSILON = 0.00015;
+  var PARALLEL_EPSILON = 1e-10;
   var WALL_OCCLUSION_THICKNESS = 0.22;
 
   /**
@@ -27,7 +28,7 @@
     var sx = bx - ax;
     var sy = by - ay;
     var denom = dx * sy - dy * sx;
-    if (denom === 0) return null; // parallel
+    if (Math.abs(denom) < PARALLEL_EPSILON) return null; // parallel / near-parallel
 
     var t = ((ax - ox) * sy - (ay - oy) * sx) / denom;
     var u = ((ax - ox) * dy - (ay - oy) * dx) / denom;
@@ -107,7 +108,9 @@
 
     // 3. Add evenly-spaced angles around the full circle to fill gaps
     //    where no wall endpoints exist (produces smooth circular edge).
-    var CIRCLE_STEPS = 72; // every 5 degrees
+    // Keep a dense fallback ray fan so player vision does not leave diagonal
+    // gaps between endpoint rays when grazing long walls or doorway caps.
+    var CIRCLE_STEPS = Math.max(96, Math.ceil(radius * 12));
     for (var ci = 0; ci < CIRCLE_STEPS; ci++) {
       var cAngle = (ci / CIRCLE_STEPS) * Math.PI * 2 - Math.PI;
       var cKey = cAngle.toFixed(6);

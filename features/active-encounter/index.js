@@ -8,6 +8,7 @@
     // Walls
     "walls/wall-paths.js",
     "walls/wall-renderer.js",
+    "walls/wall-drawer.js",
     // Lighting
     "lighting/light-renderer.js",
     "lighting/light-switch-manager.js",
@@ -43,7 +44,6 @@
     "walls/wall-snapping.js",
     "walls/wall-guides.js",
     "walls/wall-editor.js",
-    "walls/wall-drawer.js",
     "walls/paper-wall-editor.js",
     "fog/fog-brush.js",
     "context-menus/design-token-menu.js",

@@ -19,7 +19,8 @@
     closed: createMarkerImage("images/svgs/door-closed.svg"),
   };
   var LUMINOSITY_THRESHOLD = 0.30;
-  var LIGHT_MASK_BLUR_RADIUS = 3; // Reduced for performance
+  var LIGHT_MASK_BLUR_RADIUS = 8;
+  var LIGHT_EDGE_FEATHER_BLUR = 6;
   var DEFAULT_VIEWER_VISION_PROFILE = {
     visibilityThreshold: LUMINOSITY_THRESHOLD,
     luminosityMultiplier: 1,
@@ -248,6 +249,8 @@
         overlayBoundsKey: "",
         overlayProfileKey: "",
         overlayViewKey: "",
+        featherCanvas: null,
+        featherCtx: null,
         // Per-light polygon cache: Map<lightId, {poly, x, y, radius, intensity, wallsHash}>
         perLightCache: new Map(),
         // Hash of walls for invalidation detection
@@ -1478,7 +1481,6 @@
       try { maskCtx.filter = "blur(" + LIGHT_MASK_BLUR_RADIUS + "px)"; } catch (_e) {}
       appendAreasPath(maskCtx, visibleState.currentAreas, gs, offX, offY);
       maskCtx.restore();
-      appendAreasPath(maskCtx, visibleState.currentAreas, gs, offX, offY);
     }
     appendAreasPath(maskCtx, visibleState.revealedAreas, gs, offX, offY);
     if (visibleState.hiddenAreas && visibleState.hiddenAreas.length > 0) {
@@ -1490,6 +1492,28 @@
     ctx.globalCompositeOperation = "destination-in";
     ctx.drawImage(maskCanvas, 0, 0);
     ctx.restore();
+
+    if (LIGHT_EDGE_FEATHER_BLUR > 0) {
+      var featherCanvas = lighting.featherCanvas;
+      if (!featherCanvas) {
+        featherCanvas = document.createElement("canvas");
+        lighting.featherCanvas = featherCanvas;
+        lighting.featherCtx = featherCanvas.getContext("2d");
+      }
+      if (featherCanvas.width !== pxW || featherCanvas.height !== pxH) {
+        featherCanvas.width = pxW;
+        featherCanvas.height = pxH;
+      }
+      var featherCtx = lighting.featherCtx;
+      featherCtx.clearRect(0, 0, pxW, pxH);
+      featherCtx.save();
+      try { featherCtx.filter = "blur(" + LIGHT_EDGE_FEATHER_BLUR + "px)"; } catch (_e) {}
+      featherCtx.drawImage(overlay, 0, 0);
+      featherCtx.restore();
+
+      ctx.clearRect(0, 0, pxW, pxH);
+      ctx.drawImage(featherCanvas, 0, 0);
+    }
   }
 
   global.__applyTacticalMapLightRenderer = apply;

@@ -73,7 +73,13 @@ DECLARE
   v_data jsonb;
   v_walls jsonb;
   v_wall jsonb;
+  v_wall_paths jsonb;
+  v_path jsonb;
+  v_segments jsonb;
+  v_segment_id text;
   v_i int;
+  v_p int;
+  v_s int;
   v_open boolean;
 BEGIN
   IF auth.uid() IS NULL THEN RETURN false; END IF;
@@ -92,8 +98,31 @@ BEGIN
        AND (v_wall->>'y2')::numeric = p_y2
     THEN
       v_open := NOT COALESCE((v_wall->>'doorOpen')::boolean, false);
+      v_segment_id := v_wall->>'id';
       v_walls := jsonb_set(v_walls, ARRAY[v_i::text, 'doorOpen'], to_jsonb(v_open));
       v_data := jsonb_set(v_data, '{walls}', v_walls);
+
+      -- Also update wallPaths (source of truth) so the client's compileWalls
+      -- on next load doesn't revert the toggle.
+      IF v_segment_id IS NOT NULL THEN
+        v_wall_paths := COALESCE(v_data->'wallPaths', '[]'::jsonb);
+        FOR v_p IN 0..jsonb_array_length(v_wall_paths) - 1 LOOP
+          v_path := v_wall_paths->v_p;
+          v_segments := COALESCE(v_path->'segments', '[]'::jsonb);
+          FOR v_s IN 0..jsonb_array_length(v_segments) - 1 LOOP
+            IF v_segments->v_s->>'id' = v_segment_id THEN
+              v_wall_paths := jsonb_set(
+                v_wall_paths,
+                ARRAY[v_p::text, 'segments', v_s::text, 'doorOpen'],
+                to_jsonb(v_open)
+              );
+              v_data := jsonb_set(v_data, '{wallPaths}', v_wall_paths);
+              EXIT;
+            END IF;
+          END LOOP;
+        END LOOP;
+      END IF;
+
       UPDATE encounters SET data = v_data WHERE id = p_encounter_id;
       RETURN true;
     END IF;
