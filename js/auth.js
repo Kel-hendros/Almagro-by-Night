@@ -24,17 +24,7 @@ function initAuthTabs() {
   };
 }
 
-async function initAuthForms() {
-  const suForm = document.getElementById("signup-form");
-  const liForm = document.getElementById("login-form");
-
-  if (!suForm || !liForm) return;
-
-  // Use the already-resolved session from supabase.auth (synchronous read)
-  // to avoid async delay that causes the login form to flash.
-  const { data: { session: fastSession } } = await supabase.auth.getSession();
-  const session = fastSession;
-
+function syncAuthLayout(session) {
   const homeContainer = document.getElementById("home-container");
   const authContainer = document.getElementById("auth-container");
   const welcomeLayout = document.getElementById("welcome-layout");
@@ -64,6 +54,20 @@ async function initAuthForms() {
       welcomeLayout.classList.remove("auth-layout--home");
     }
   }
+}
+
+async function initAuthForms() {
+  const suForm = document.getElementById("signup-form");
+  const liForm = document.getElementById("login-form");
+
+  if (!suForm || !liForm) return;
+
+  // Use the already-resolved session from supabase.auth (synchronous read)
+  // to avoid async delay that causes the login form to flash.
+  const { data: { session: fastSession } } = await supabase.auth.getSession();
+  const session = fastSession;
+
+  syncAuthLayout(session);
 
   const showMsg = (id, text, type = "error") => {
     const msgElement = document.getElementById(id);
@@ -78,6 +82,20 @@ async function initAuthForms() {
       ? window.abnConsumePendingRoute()
       : "";
     return pendingHash || "welcome";
+  };
+
+  const completePostAuthNavigation = (session) => {
+    const targetHash = resolvePostAuthHash();
+    const currentHash = window.location.hash.slice(1);
+    const normalizedCurrentHash = currentHash || "welcome";
+    if (normalizedCurrentHash === targetHash) {
+      syncAuthLayout(session);
+      if (currentHash !== targetHash) {
+        window.location.hash = targetHash;
+      }
+      return;
+    }
+    window.location.hash = targetHash;
   };
 
   if (suForm && !suForm._init) {
@@ -106,7 +124,7 @@ async function initAuthForms() {
 
       await ensurePlayer({ displayName: name });
       showMsg("su-msg", "Registro completado. Redirigiendo...", "success");
-      window.location.hash = resolvePostAuthHash();
+      completePostAuthNavigation(data?.session);
     });
     suForm._init = true;
   }
@@ -129,7 +147,7 @@ async function initAuthForms() {
 
       await ensurePlayer();
       showMsg("li-msg", "Ingreso exitoso. Redirigiendo...", "success");
-      window.location.hash = resolvePostAuthHash();
+      completePostAuthNavigation(data?.session);
     });
     liForm._init = true;
   }
