@@ -10,9 +10,10 @@
 
 (function () {
   let _cachedPlayerId = null;
+  let _cachedIsAdmin = null;
   let _pendingFetch = null;
 
-  async function fetchPlayerId() {
+  async function fetchPlayerRow() {
     const {
       data: { session },
     } = await window.abnGetSession();
@@ -20,15 +21,26 @@
 
     const { data, error } = await window.supabase
       .from("players")
-      .select("id")
+      .select("id, is_admin")
       .eq("user_id", session.user.id)
       .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
-      console.error("ABNPlayer: error fetching player ID:", error);
+      console.error("ABNPlayer: error fetching player row:", error);
       return null;
     }
-    return data?.id || null;
+    return data || null;
+  }
+
+  function ensureFetch() {
+    if (_pendingFetch) return _pendingFetch;
+    _pendingFetch = fetchPlayerRow().then((row) => {
+      _cachedPlayerId = row?.id || null;
+      _cachedIsAdmin = !!row?.is_admin;
+      _pendingFetch = null;
+      return row;
+    });
+    return _pendingFetch;
   }
 
   window.ABNPlayer = {
@@ -38,20 +50,21 @@
      */
     async getId() {
       if (_cachedPlayerId) return _cachedPlayerId;
-      if (_pendingFetch) return _pendingFetch;
+      const row = await ensureFetch();
+      return row?.id || null;
+    },
 
-      _pendingFetch = fetchPlayerId().then((id) => {
-        _cachedPlayerId = id;
-        _pendingFetch = null;
-        return id;
-      });
-
-      return _pendingFetch;
+    /** Returns whether the current user is an admin (cached). */
+    async isAdmin() {
+      if (_cachedIsAdmin !== null) return _cachedIsAdmin;
+      await ensureFetch();
+      return !!_cachedIsAdmin;
     },
 
     /** Clear cache (call on logout). */
     clear() {
       _cachedPlayerId = null;
+      _cachedIsAdmin = null;
       _pendingFetch = null;
     },
 

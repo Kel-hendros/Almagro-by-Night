@@ -1,0 +1,69 @@
+<link rel="stylesheet" href="css/dashboard.css">
+
+<div class="main-container games dashboard-root">
+    <div class="chronicles-header">
+        <div class="chronicles-title-wrap">
+            <h1>Dashboard</h1>
+            <p class="chronicles-subtitle">Métricas de uso del producto. Datos cacheados — refrescar para recalcular.</p>
+        </div>
+        <div class="chronicles-actions btn-row dash-header-actions">
+            <span id="dash-refreshed-at" class="dash-refreshed-at"></span>
+            <button id="dash-refresh-btn" type="button" class="btn btn--primary">
+                <i data-lucide="refresh-cw"></i>
+                <span>Refrescar</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="dash-error" class="dash-error hidden"></div>
+
+    <div id="dash-kpi-grid" class="dash-kpi-grid">
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+        <div class="skeleton skeleton--kpi"></div>
+    </div>
+
+    <section id="dash-tab-panel" class="dash-tab-panel">
+        <p class="dash-empty">Cargando…</p>
+    </section>
+</div>
+
+<!-- Rolls detail modal — opened on click of a bar in the rolls pulse chart -->
+<div id="dash-rolls-modal" class="dash-modal-overlay hidden" aria-hidden="true">
+    <div class="dash-modal">
+        <header class="dash-modal-header">
+            <h2 id="dash-rolls-modal-title"></h2>
+            <button id="dash-rolls-modal-close" type="button" class="dash-modal-close" aria-label="Cerrar">
+                <i data-lucide="x"></i>
+            </button>
+        </header>
+        <div id="dash-rolls-modal-body" class="dash-modal-body"></div>
+    </div>
+</div>
+
+<!-- Conversation modal — opened on click of a bar in the messages pulse chart -->
+<div id="dash-conv-modal" class="dash-modal-overlay hidden" aria-hidden="true">
+    <div class="dash-modal dash-modal--wide">
+        <header class="dash-modal-header">
+            <div class="dash-conv-title-wrap">
+                <h2 id="dash-conv-modal-title"></h2>
+                <p id="dash-conv-modal-subtitle" class="dash-conv-subtitle"></p>
+            </div>
+            <button id="dash-conv-modal-close" type="button" class="dash-modal-close" aria-label="Cerrar">
+                <i data-lucide="x"></i>
+            </button>
+        </header>
+        <div id="dash-conv-modal-body" class="dash-modal-body dash-conv-body"></div>
+    </div>
+</div>
+
+<script src="js/dashboard.js"></script>
+<script>
+    if (window.lucide) window.lucide.createIcons();
+    if (window.initDashboard) window.initDashboard();
+</script>

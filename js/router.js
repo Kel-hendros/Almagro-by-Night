@@ -136,6 +136,7 @@ function setActiveSidebarItem(baseHash) {
     "card-creator-local": "menu-tools",
     "active-encounter": "menu-tools",
     "temporal-codex": "menu-tools",
+    dashboard: "menu-dashboard",
   };
 
   document.querySelectorAll(".nav li.active").forEach((li) => {
@@ -290,8 +291,9 @@ function updateSidebarResponsiveState() {
   updateSidebarToggleIcon(sidebar);
 }
 
-// 1) Update the sidebar based on session state (synchronous — uses currentSession)
-function updateSidebar() {
+// 1) Update the sidebar based on session state. Mostly synchronous; admin-flag
+// lookup is async and updates the dashboard item once resolved.
+async function updateSidebar() {
   const liLogout = document.getElementById("menu-logout");
   const liWelcome = document.getElementById("menu-welcome");
   const liUser = document.getElementById("menu-user");
@@ -336,6 +338,16 @@ function updateSidebar() {
         window.ABNNotifications.controller.connect();
       }
     }
+    // Admin-only dashboard
+    const liDashboard = document.getElementById("menu-dashboard");
+    if (liDashboard) {
+      try {
+        const isAdmin = await window.ABNPlayer?.isAdmin?.();
+        liDashboard.classList.toggle("hidden", !isAdmin);
+      } catch (_e) {
+        liDashboard.classList.add("hidden");
+      }
+    }
   } else {
     liWelcome?.classList.remove("hidden");
     liUser?.classList.add("hidden");
@@ -348,6 +360,7 @@ function updateSidebar() {
     document.getElementById("menu-chars")?.classList.add("hidden");
     document.getElementById("menu-chronicles")?.classList.add("hidden");
     document.getElementById("menu-notifications")?.classList.add("hidden");
+    document.getElementById("menu-dashboard")?.classList.add("hidden");
     if (window.ABNNotifications?.controller) {
       window.ABNNotifications.controller.disconnect();
     }
@@ -376,6 +389,7 @@ const routes = {
   "resource-manager": "fragments/resource-manager.html",
   "active-encounter": "fragments/active-encounter.html",
   "temporal-codex": "fragments/temporal-codex.html",
+  dashboard: "fragments/dashboard.html",
 };
 
 async function executeFragmentScriptsSequentially(contentEl) {
@@ -461,12 +475,24 @@ async function loadRoute(force = false) {
       baseHash === "document-archive" ||
       baseHash === "revelations-archive" ||
       baseHash === "settings" ||
-      baseHash === "active-character-sheet")
+      baseHash === "active-character-sheet" ||
+      baseHash === "dashboard")
   ) {
     if (typeof window.abnSetPendingRoute === "function" && targetHash !== "welcome") {
       window.abnSetPendingRoute(targetHash);
     }
     targetHash = "welcome";
+  }
+
+  // Admin-only gate for the dashboard.
+  if (baseHash === "dashboard" && session) {
+    let isAdmin = false;
+    try {
+      isAdmin = await window.ABNPlayer?.isAdmin?.();
+    } catch (_e) {}
+    if (!isAdmin) {
+      targetHash = "welcome";
+    }
   }
 
   // If the hash should change due to redirect, change it (only if different) and bail; hashchange will re-enter
