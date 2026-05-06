@@ -1526,6 +1526,31 @@ p.chronicle-description {
     width: 38%;
 }
 
+.cd-header h2 .cd-skeleton-line {
+    width: min(280px, 44vw);
+    height: 18px;
+}
+
+.cd-narrator .cd-skeleton-line {
+    width: 150px;
+    height: 10px;
+}
+
+.cd-description .cd-skeleton-line {
+    width: min(520px, 62vw);
+    height: 12px;
+}
+
+.cd-card-text .cd-skeleton-line {
+    width: 140px;
+    height: 12px;
+}
+
+.cd-count-value .cd-skeleton-line {
+    width: 34px;
+    height: 16px;
+}
+
 @keyframes cd-skeleton-shimmer {
     100% {
         transform: translateX(100%);

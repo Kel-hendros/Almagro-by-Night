@@ -1,5 +1,6 @@
 (function initChronicleDetailParticipants(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
+  const service = () => ns.service;
 
   async function init(config) {
     const {
@@ -24,6 +25,7 @@
         alert("Error: " + error.message);
         return;
       }
+      service()?.invalidateChronicleCaches?.(chronicleId);
       reload();
     }
 
@@ -67,6 +69,7 @@
         return;
       }
 
+      service()?.invalidateChronicleCaches?.(chronicleId);
       if (isSelf) {
         localStorage.removeItem("currentChronicleId");
         window.location.hash = "chronicles";
@@ -148,6 +151,7 @@
               alert("Error: " + addErr.message);
               return;
             }
+            service()?.invalidateChronicleCaches?.(chronicleId);
             closeCharPicker();
             reload();
           });

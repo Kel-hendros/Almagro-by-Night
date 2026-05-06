@@ -105,6 +105,40 @@ function renderMarkdownImageHtml(src, alt, width) {
   return `<img class="doc-inline-image" src="${window.escapeHtml(imageSrc)}" alt="${window.escapeHtml(safeAlt)}"${widthAttr}>`;
 }
 
+function isSafeLinkUrl(url) {
+  const raw = String(url || "").trim();
+  return /^https?:\/\//i.test(raw);
+}
+
+function renderLinkedImageHtml(href, imageSrc, width) {
+  const imageHtml = renderMarkdownImageHtml(imageSrc, "", width);
+  if (!imageHtml) return "";
+  const safeHref = String(href || "").trim();
+  if (!isSafeLinkUrl(safeHref)) return imageHtml;
+  return `<a class="doc-inline-image-link" href="${window.escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${imageHtml}</a>`;
+}
+
+function extractBbImageWidth(rawAttrs) {
+  const attrs = String(rawAttrs || "").trim();
+  if (!attrs) return null;
+  const directWidth = attrs.match(/^=\s*(\d{1,4})(?:x\d{1,4})?$/i);
+  if (directWidth) return directWidth[1];
+  const namedWidth = attrs.match(/\bwidth\s*=\s*["']?(\d{1,4})["']?/i);
+  return namedWidth ? namedWidth[1] : null;
+}
+
+function renderBbCodeImages(rawText) {
+  return String(rawText || "")
+    .replace(
+      /\[url=([^\]\n]+)\]\s*\[img([^\]\n]*)\]([\s\S]*?)\[\/img\]\s*\[\/url\]/gi,
+      (_match, href, attrs, imageSrc) =>
+        renderLinkedImageHtml(href, imageSrc, extractBbImageWidth(attrs)),
+    )
+    .replace(/\[img([^\]\n]*)\]([\s\S]*?)\[\/img\]/gi, (_match, attrs, imageSrc) =>
+      renderMarkdownImageHtml(imageSrc, "", extractBbImageWidth(attrs)),
+    );
+}
+
 function renderSizedMarkdownImages(rawText) {
   return String(rawText || "")
     .replace(/!\[\[([^|\]\n]+?)(?:\|(\d{1,4}))?\]\]/g, (_match, src, width) =>
@@ -160,7 +194,7 @@ window.validatePassword = function validatePassword(pw) {
 };
 
 window.renderMarkdown = function renderMarkdown(raw, opts) {
-  const text = renderWikilinks(renderSizedMarkdownImages(raw || ""));
+  const text = renderWikilinks(renderSizedMarkdownImages(renderBbCodeImages(raw || "")));
   if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
     const html = DOMPurify.sanitize(marked.parse(text, { breaks: true, ...opts }));
     return applyInlineImageWidths(html);

@@ -347,6 +347,9 @@
         if (error) {
           console.error("Error saving next_session:", error);
         }
+        if (!error) {
+          service()?.invalidateChronicleCaches?.(chronicleId);
+        }
         chronicle.next_session = newDate;
         updateNextSessionDisplay();
       });
@@ -374,6 +377,9 @@
           .eq("id", chronicleId);
         if (error) {
           console.error("Error saving in_game_date:", error);
+        }
+        if (!error) {
+          service()?.invalidateChronicleCaches?.(chronicleId);
         }
         chronicle.in_game_date = val;
         updateInGameDateDisplay();

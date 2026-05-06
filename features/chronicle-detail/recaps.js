@@ -207,6 +207,7 @@
           void openRecapReader(nextId);
         },
         onSaved: async () => {
+          ns.service?.invalidateChronicleCaches?.(chronicleId);
           await loadRecaps();
           await refreshLastSessionCard();
         },
@@ -225,6 +226,7 @@
         existingRecaps: allLoadedRecaps,
         onSaved: async () => {
           editingRecapId = null;
+          ns.service?.invalidateChronicleCaches?.(chronicleId);
           await loadRecaps();
           await refreshLastSessionCard();
         },

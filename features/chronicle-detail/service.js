@@ -1,5 +1,25 @@
 (function initChronicleDetailService(global) {
   const ns = (global.ABNChronicleDetail = global.ABNChronicleDetail || {});
+  const CHRONICLE_CACHE_TTL = 60 * 1000;
+  const DASHBOARD_CACHE_TTL = 20 * 1000;
+
+  function cacheGet(key, fetcher, opts) {
+    if (global.ABNCache?.get) {
+      return global.ABNCache.get(key, fetcher, opts);
+    }
+    return fetcher();
+  }
+
+  function cacheInvalidate(key) {
+    global.ABNCache?.invalidate?.(key);
+  }
+
+  function invalidateChronicleCaches(chronicleId) {
+    if (!chronicleId) return;
+    cacheInvalidate(`chronicle-detail:chronicle:${chronicleId}`);
+    cacheInvalidate(`chronicle-detail:dashboard:${chronicleId}`);
+    cacheInvalidate(`chronicle-detail:storage:${chronicleId}`);
+  }
 
   async function getSession() {
     const {
@@ -9,49 +29,76 @@
   }
 
   async function getCurrentPlayerByUserId(userId) {
-    const { data, error } = await supabase
-      .from("players")
-      .select("id, name, is_admin")
-      .eq("user_id", userId)
-      .maybeSingle();
+    if (!userId) return null;
+    return cacheGet(
+      `chronicle-detail:player:user:${userId}`,
+      async () => {
+        const { data, error } = await supabase
+          .from("players")
+          .select("id, name, is_admin")
+          .eq("user_id", userId)
+          .maybeSingle();
 
-    if (error) {
-      console.error("chronicle-detail.service.getCurrentPlayerByUserId:", error);
-      return null;
-    }
-    return data || null;
+        if (error) {
+          console.error("chronicle-detail.service.getCurrentPlayerByUserId:", error);
+          return null;
+        }
+        return data || null;
+      },
+      { ttl: "session" },
+    );
   }
 
   async function getChronicleById(chronicleId) {
-    const { data, error } = await supabase
-      .from("chronicles")
-      .select(
-        "id, name, description, status, invite_code, creator_id, created_at, banner_url, banner_config, next_session, in_game_date"
-      )
-      .eq("id", chronicleId)
-      .maybeSingle();
-    return { data: data || null, error: error || null };
+    return cacheGet(
+      `chronicle-detail:chronicle:${chronicleId}`,
+      async () => {
+        const { data, error } = await supabase
+          .from("chronicles")
+          .select(
+            "id, name, description, status, invite_code, creator_id, created_at, banner_url, banner_config, next_session, in_game_date"
+          )
+          .eq("id", chronicleId)
+          .maybeSingle();
+        return { data: data || null, error: error || null };
+      },
+      { ttl: CHRONICLE_CACHE_TTL },
+    );
   }
 
   async function getParticipation(chronicleId, playerId) {
-    const { data, error } = await supabase
-      .from("chronicle_participants")
-      .select("role")
-      .eq("chronicle_id", chronicleId)
-      .eq("player_id", playerId)
-      .maybeSingle();
-    if (error) return null;
-    return data || null;
+    if (!chronicleId || !playerId) return null;
+    return cacheGet(
+      `chronicle-detail:participation:${chronicleId}:${playerId}`,
+      async () => {
+        const { data, error } = await supabase
+          .from("chronicle_participants")
+          .select("role")
+          .eq("chronicle_id", chronicleId)
+          .eq("player_id", playerId)
+          .maybeSingle();
+        if (error) return null;
+        return data || null;
+      },
+      { ttl: CHRONICLE_CACHE_TTL },
+    );
   }
 
   async function getPlayerNameById(playerId) {
-    const { data, error } = await supabase
-      .from("players")
-      .select("name")
-      .eq("id", playerId)
-      .maybeSingle();
-    if (error) return null;
-    return data?.name || null;
+    if (!playerId) return null;
+    return cacheGet(
+      `chronicle-detail:player-name:${playerId}`,
+      async () => {
+        const { data, error } = await supabase
+          .from("players")
+          .select("name")
+          .eq("id", playerId)
+          .maybeSingle();
+        if (error) return null;
+        return data?.name || null;
+      },
+      { ttl: "session" },
+    );
   }
 
   async function updateChronicle(chronicleId, patch) {
@@ -59,6 +106,7 @@
       .from("chronicles")
       .update(patch)
       .eq("id", chronicleId);
+    if (!error) invalidateChronicleCaches(chronicleId);
     return { error: error || null };
   }
 
@@ -81,6 +129,7 @@
       return { inviteCode: null, error: updateError };
     }
 
+    invalidateChronicleCaches(chronicleId);
     return { inviteCode: updated?.invite_code || newCode, error: null };
   }
 
@@ -107,55 +156,61 @@
   }
 
   async function fetchDashboardData(chronicleId) {
-    const [
-      participantsResult,
-      charsResult,
-      encountersResult,
-      gameResult,
-      recapResult,
-      recapCountResult,
-    ] =
-      await Promise.all([
-        supabase
-          .from("chronicle_participants")
-          .select("player_id, role, player:players(id, name, user_id)")
-          .eq("chronicle_id", chronicleId),
-        supabase
-          .from("chronicle_characters")
-          .select(
-            "character_sheet_id, character_sheet:character_sheets(id, name, data, avatar_url, user_id)"
-          )
-          .eq("chronicle_id", chronicleId),
-        supabase
-          .from("encounters")
-          .select("id", { count: "exact", head: true })
-          .eq("chronicle_id", chronicleId),
-        supabase
-          .from("games")
-          .select("id, name, territory_id, territory:territories(id, name, maptiler_dataset_url)")
-          .eq("chronicle_id", chronicleId)
-          .limit(1),
-        supabase
-          .from("session_recaps")
-          .select("id, session_number, title, body, session_date, created_at")
-          .eq("chronicle_id", chronicleId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("session_recaps")
-          .select("id", { count: "exact", head: true })
-          .eq("chronicle_id", chronicleId),
-      ]);
+    return cacheGet(
+      `chronicle-detail:dashboard:${chronicleId}`,
+      async () => {
+        const [
+          participantsResult,
+          charsResult,
+          encountersResult,
+          gameResult,
+          recapResult,
+          recapCountResult,
+        ] =
+          await Promise.all([
+            supabase
+              .from("chronicle_participants")
+              .select("player_id, role, player:players(id, name, user_id)")
+              .eq("chronicle_id", chronicleId),
+            supabase
+              .from("chronicle_characters")
+              .select(
+                "character_sheet_id, character_sheet:character_sheets(id, name, data, avatar_url, user_id)"
+              )
+              .eq("chronicle_id", chronicleId),
+            supabase
+              .from("encounters")
+              .select("id", { count: "exact", head: true })
+              .eq("chronicle_id", chronicleId),
+            supabase
+              .from("games")
+              .select("id, name, territory_id, territory:territories(id, name, maptiler_dataset_url)")
+              .eq("chronicle_id", chronicleId)
+              .limit(1),
+            supabase
+              .from("session_recaps")
+              .select("id, session_number, title, body, session_date, created_at")
+              .eq("chronicle_id", chronicleId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            supabase
+              .from("session_recaps")
+              .select("id", { count: "exact", head: true })
+              .eq("chronicle_id", chronicleId),
+          ]);
 
-    return {
-      participants: participantsResult.data || [],
-      characters: charsResult.data || [],
-      encountersCount: encountersResult.count || 0,
-      sessionsCount: recapCountResult.count || 0,
-      game: gameResult.data?.[0] || null,
-      latestRecap: recapResult.data || null,
-    };
+        return {
+          participants: participantsResult.data || [],
+          characters: charsResult.data || [],
+          encountersCount: encountersResult.count || 0,
+          sessionsCount: recapCountResult.count || 0,
+          game: gameResult.data?.[0] || null,
+          latestRecap: recapResult.data || null,
+        };
+      },
+      { ttl: DASHBOARD_CACHE_TTL },
+    );
   }
 
   async function fetchChronicleTerritory(chronicleId) {
@@ -500,6 +555,9 @@
       .select("id, name, status, created_at, data")
       .maybeSingle();
 
+    if (!error) {
+      cacheInvalidate(`chronicle-detail:dashboard:${chronicleId}`);
+    }
     return {
       data: data || null,
       error: error || null,
@@ -521,14 +579,20 @@
   }
 
   async function getChronicleStorageQuota(chronicleId) {
-    const { data, error } = await supabase.rpc("check_chronicle_storage_quota", {
-      p_chronicle_id: chronicleId,
-      p_incoming_bytes: 0,
-    });
-    return {
-      data: data || null,
-      error: error || null,
-    };
+    return cacheGet(
+      `chronicle-detail:storage:${chronicleId}`,
+      async () => {
+        const { data, error } = await supabase.rpc("check_chronicle_storage_quota", {
+          p_chronicle_id: chronicleId,
+          p_incoming_bytes: 0,
+        });
+        return {
+          data: data || null,
+          error: error || null,
+        };
+      },
+      { ttl: DASHBOARD_CACHE_TTL },
+    );
   }
 
   ns.service = {
@@ -537,6 +601,7 @@
     getChronicleById,
     getParticipation,
     getPlayerNameById,
+    invalidateChronicleCaches,
     updateChronicle,
     regenerateInviteCode,
     removeBannerFileByUrl,

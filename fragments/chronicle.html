@@ -19,15 +19,15 @@
             <div class="cd-title-row">
                 <div class="cd-title-group">
                     <a href="#chronicles" class="cd-back-btn" title="Volver a Crónicas">&lsaquo;</a>
-                    <h2 id="chronicle-name">Cargando...</h2>
+                    <h2 id="chronicle-name"><span class="cd-skeleton-line cd-skeleton-line--title"></span></h2>
                 </div>
                 <span id="chronicle-status-badge" class="cd-badge cd-badge--active">Activa</span>
             </div>
             <div class="cd-meta-row">
-                <span id="chronicle-narrator" class="cd-narrator">Narrador: —</span>
+                <span id="chronicle-narrator" class="cd-narrator"><span class="cd-skeleton-line cd-skeleton-line--short"></span></span>
             </div>
             <div class="cd-desc-row">
-                <p id="chronicle-description" class="cd-description">Sin descripción</p>
+                <p id="chronicle-description" class="cd-description"><span class="cd-skeleton-line"></span></p>
                 <button id="cd-open-active-session" class="btn btn--primary cd-active-session-btn hidden" type="button">
                     Partida Actual
                 </button>
@@ -57,7 +57,7 @@
                             <div class="cd-card cd-card--row cd-card--spaced" id="cd-next-session-card">
                                 <div class="cd-card--row-left">
                                     <span class="cd-card-icon"><i data-lucide="calendar"></i></span>
-                                    <span id="cd-next-session-text" class="cd-card-text cd-card-muted">Sin fecha programada</span>
+                                    <span id="cd-next-session-text" class="cd-card-text cd-card-muted"><span class="cd-skeleton-line cd-skeleton-line--short"></span></span>
                                 </div>
                                 <button id="cd-next-session-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha">
                                     <i data-lucide="pencil"></i>
@@ -71,7 +71,7 @@
                             <div class="cd-card cd-card--row cd-card--spaced" id="cd-in-game-date-card">
                                 <div class="cd-card--row-left">
                                     <span class="cd-card-icon"><i data-lucide="moon"></i></span>
-                                    <span id="cd-in-game-date-text" class="cd-card-text cd-card-muted">Sin fecha</span>
+                                    <span id="cd-in-game-date-text" class="cd-card-text cd-card-muted"><span class="cd-skeleton-line cd-skeleton-line--short"></span></span>
                                 </div>
                                 <button id="cd-in-game-date-edit" class="btn-icon cd-banner-btn hidden" type="button" title="Editar fecha in-game">
                                     <i data-lucide="pencil"></i>
@@ -84,7 +84,11 @@
                     <div class="cd-section" id="cd-last-session">
                         <span class="cd-section-label">ULTIMA SESION</span>
                         <div class="cd-card cd-card--col" id="cd-last-session-card">
-                            <span class="cd-card-muted">Sin sesiones registradas</span>
+                            <div class="cd-skeleton-card" aria-hidden="true">
+                                <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                                <span class="cd-skeleton-line"></span>
+                                <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                            </div>
                         </div>
                     </div>
 
@@ -92,7 +96,10 @@
                     <div class="cd-section" id="cd-character">
                         <span class="cd-section-label">PERSONAJE</span>
                         <div class="cd-card cd-card--row" id="cd-character-card">
-                            <span class="cd-card-muted">Sin personaje asignado</span>
+                            <div class="cd-skeleton-card" aria-hidden="true">
+                                <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                                <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -103,15 +110,15 @@
                         <div class="cd-card cd-count-list">
                             <div class="cd-count-item">
                                 <span class="cd-count-label">Jugadores</span>
-                                <span class="cd-count-value" id="cd-count-players">0</span>
+                                <span class="cd-count-value" id="cd-count-players"><span class="cd-skeleton-line cd-skeleton-line--short"></span></span>
                             </div>
                             <div class="cd-count-item">
                                 <span class="cd-count-label">Personajes</span>
-                                <span class="cd-count-value" id="cd-count-characters">0</span>
+                                <span class="cd-count-value" id="cd-count-characters"><span class="cd-skeleton-line cd-skeleton-line--short"></span></span>
                             </div>
                             <div class="cd-count-item">
                                 <span class="cd-count-label">Partidas</span>
-                                <span class="cd-count-value" id="cd-count-sessions">0</span>
+                                <span class="cd-count-value" id="cd-count-sessions"><span class="cd-skeleton-line cd-skeleton-line--short"></span></span>
                             </div>
                         </div>
                     </div>
@@ -147,7 +154,16 @@
         </div>
         <div class="cd-tab-panel" data-panel="jugadores">
             <div id="cd-players-grid" class="cd-players-grid">
-                <span class="cd-card-muted">Cargando...</span>
+                <div class="cd-skeleton-card" aria-hidden="true">
+                    <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                    <span class="cd-skeleton-line"></span>
+                    <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                </div>
+                <div class="cd-skeleton-card" aria-hidden="true">
+                    <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                    <span class="cd-skeleton-line"></span>
+                    <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                </div>
             </div>
         </div>
         <div class="cd-tab-panel" data-panel="diario">
@@ -166,7 +182,21 @@
                         <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact hidden" id="cd-add-recap" type="button">+ Nuevo Recuento</button>
                     </div>
                     <div id="cd-sesiones-list" class="cd-diario-list">
-                        <span class="cd-card-muted">Cargando...</span>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
                     </div>
                     <button class="btn btn--ghost cd-load-more-btn hidden" id="cd-sesiones-more">Ver mas</button>
                 </div>
@@ -179,7 +209,21 @@
                         <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact" id="cd-add-note" type="button">+ Nueva Nota</button>
                     </div>
                     <div id="cd-notas-list" class="cd-diario-list">
-                        <span class="cd-card-muted">Cargando...</span>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
                     </div>
                     <button class="btn btn--ghost cd-load-more-btn hidden" id="cd-notas-more">Ver mas</button>
                 </div>
@@ -192,7 +236,21 @@
                         <button class="btn btn--secondary cd-add-list-btn cd-add-list-btn--compact hidden" id="cd-add-revelacion" type="button">+ Nueva Revelación</button>
                     </div>
                     <div id="cd-revelaciones-list" class="cd-diario-list">
-                        <span class="cd-card-muted">Cargando...</span>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
+                        <div class="cd-skeleton-card" aria-hidden="true">
+                            <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                            <span class="cd-skeleton-line"></span>
+                            <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -209,7 +267,16 @@
                 </button>
             </div>
             <div id="cd-mesa-encounters-list" class="cd-mesa-grid">
-                <span class="cd-card-muted">Cargando encuentros...</span>
+                <div class="cd-skeleton-card" aria-hidden="true">
+                    <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                    <span class="cd-skeleton-line"></span>
+                    <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                </div>
+                <div class="cd-skeleton-card" aria-hidden="true">
+                    <span class="cd-skeleton-line cd-skeleton-line--title"></span>
+                    <span class="cd-skeleton-line"></span>
+                    <span class="cd-skeleton-line cd-skeleton-line--short"></span>
+                </div>
             </div>
         </div>
         <div class="cd-tab-panel" data-panel="territorio">

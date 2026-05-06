@@ -23,9 +23,13 @@
       statusBadge.className = "cd-badge cd-badge--archived";
     }
 
-    const narratorName = await service().getPlayerNameById(chronicle.creator_id);
     const narratorEl = document.getElementById("chronicle-narrator");
-    if (narratorEl) narratorEl.textContent = `Narrador: ${narratorName || "—"}`;
+    if (narratorEl) {
+      narratorEl.textContent = "Narrador: —";
+      void service().getPlayerNameById(chronicle.creator_id).then((narratorName) => {
+        narratorEl.textContent = `Narrador: ${narratorName || "—"}`;
+      });
+    }
 
     if (!isNarrator) return;
 

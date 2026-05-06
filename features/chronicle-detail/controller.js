@@ -431,20 +431,20 @@
         return;
     }
 
-    // Get current player
-    const currentPlayer = await service().getCurrentPlayerByUserId(session.user.id);
-
-    if (!currentPlayer) {
-        window.location.hash = "chronicles";
-        return;
-    }
-
-    // Fetch chronicle (include banner_config and next_session)
-    const { data: chronicle, error: cErr } = await service().getChronicleById(chronicleId);
+    const [currentPlayer, chronicleResult] = await Promise.all([
+        service().getCurrentPlayerByUserId(session.user.id),
+        service().getChronicleById(chronicleId),
+    ]);
+    const { data: chronicle, error: cErr } = chronicleResult || {};
 
     if (cErr || !chronicle) {
         console.error("Error loading chronicle:", cErr);
         document.getElementById("chronicle-name").textContent = "Crónica no encontrada";
+        return;
+    }
+
+    if (!currentPlayer) {
+        window.location.hash = "chronicles";
         return;
     }
 
