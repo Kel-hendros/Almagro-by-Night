@@ -29,6 +29,19 @@
     return lines.length > maxLines ? `${preview}…` : preview;
   }
 
+  function previewHtml(text, maxLines = 5) {
+    const markdownPreview = root.documentList?.buildPreviewMarkdown
+      ? root.documentList.buildPreviewMarkdown(text, { maxLines })
+      : String(text || "").trim();
+    return root.documentList?.renderMarkdownPreview?.(markdownPreview) || "";
+  }
+
+  function previewMarkdown(text, maxLines = 5) {
+    return root.documentList?.buildPreviewMarkdown
+      ? root.documentList.buildPreviewMarkdown(text, { maxLines })
+      : String(text || "").trim();
+  }
+
   function recapScreen() {
     return root.recapScreen || null;
   }
@@ -38,6 +51,8 @@
       title: row?.title || "Recuento",
       meta: recapScreen()?.formatMeta?.(row) || `Sesión ${row?.session_number || "—"}`,
       preview: previewLines(row?.body || "", 5),
+      previewMarkdown: previewMarkdown(row?.body || "", 5),
+      previewHtml: previewHtml(row?.body || "", 5),
     };
   }
 

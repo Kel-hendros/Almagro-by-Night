@@ -43,10 +43,15 @@
   }
 
   function buildDetailedListItemOptions(row) {
-    const plain = toPlainText(row?.body_markdown || "");
+    const markdown = row?.body_markdown || "";
+    const plain = toPlainText(markdown);
     const preview = root.documentList?.buildPreviewText
       ? root.documentList.buildPreviewText(plain, { maxLines: 5 })
       : plain;
+    const markdownPreview = root.documentList?.buildPreviewMarkdown
+      ? root.documentList.buildPreviewMarkdown(markdown, { maxLines: 5 })
+      : String(markdown || "").trim();
+    const previewHtml = root.documentList?.renderMarkdownPreview?.(markdownPreview) || "";
     const metaParts = [formatRelativeDate(row?.updated_at || row?.created_at)];
     if (row?.player_name) metaParts.push(String(row.player_name).trim());
 
@@ -55,6 +60,8 @@
       meta: metaParts.filter(Boolean).join(" · "),
       tagsHtml: renderTagsMarkup(row?.tags),
       preview,
+      previewMarkdown: markdownPreview,
+      previewHtml,
     };
   }
 

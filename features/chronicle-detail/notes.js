@@ -70,6 +70,8 @@
             meta: itemOptions.meta,
             tagsHtml: itemOptions.tagsHtml,
             preview: itemOptions.preview,
+            previewMarkdown: itemOptions.previewMarkdown,
+            previewHtml: itemOptions.previewHtml,
             image: itemOptions.image,
             dataAttrs: { "document-id": note.id },
           }),

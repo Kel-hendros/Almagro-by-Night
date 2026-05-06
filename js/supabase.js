@@ -90,6 +90,50 @@ function renderWikilinks(rawText) {
   );
 }
 
+function normalizeMarkdownImageWidth(rawWidth) {
+  const numeric = Number.parseInt(String(rawWidth || "").trim(), 10);
+  if (!Number.isFinite(numeric)) return null;
+  return Math.min(1200, Math.max(40, numeric));
+}
+
+function renderMarkdownImageHtml(src, alt, width) {
+  const imageSrc = String(src || "").trim();
+  if (!imageSrc) return "";
+  const safeAlt = String(alt || "").trim();
+  const normalizedWidth = normalizeMarkdownImageWidth(width);
+  const widthAttr = normalizedWidth ? ` width="${normalizedWidth}"` : "";
+  return `<img class="doc-inline-image" src="${window.escapeHtml(imageSrc)}" alt="${window.escapeHtml(safeAlt)}"${widthAttr}>`;
+}
+
+function renderSizedMarkdownImages(rawText) {
+  return String(rawText || "")
+    .replace(/!\[\[([^|\]\n]+?)(?:\|(\d{1,4}))?\]\]/g, (_match, src, width) =>
+      renderMarkdownImageHtml(src, "", width),
+    )
+    .replace(/!\[([^\]\n|]*?)\|(\d{1,4})\]\(([^)\n]+?)\)/g, (_match, alt, width, src) =>
+      renderMarkdownImageHtml(src, alt, width),
+    )
+    .replace(/!\[([^\]\n]*?)\]\(([^)\n]+?)\|(\d{1,4})\)/g, (_match, alt, src, width) =>
+      renderMarkdownImageHtml(src, alt, width),
+    );
+}
+
+function applyInlineImageWidths(html) {
+  const source = String(html || "");
+  if (!source || typeof document === "undefined") return source;
+
+  const template = document.createElement("template");
+  template.innerHTML = source;
+  template.content.querySelectorAll("img.doc-inline-image[width]").forEach((image) => {
+    const normalizedWidth = normalizeMarkdownImageWidth(image.getAttribute("width"));
+    if (!normalizedWidth) return;
+    image.style.width = `${normalizedWidth}px`;
+    image.style.maxWidth = "100%";
+    image.style.height = "auto";
+  });
+  return template.innerHTML;
+}
+
 /**
  * Render markdown to safe HTML using marked + DOMPurify.
  * Falls back to escaped HTML if libraries aren't loaded.
@@ -116,13 +160,14 @@ window.validatePassword = function validatePassword(pw) {
 };
 
 window.renderMarkdown = function renderMarkdown(raw, opts) {
-  const text = renderWikilinks(raw || "");
+  const text = renderWikilinks(renderSizedMarkdownImages(raw || ""));
   if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
-    return DOMPurify.sanitize(marked.parse(text, { breaks: true, ...opts }));
+    const html = DOMPurify.sanitize(marked.parse(text, { breaks: true, ...opts }));
+    return applyInlineImageWidths(html);
   }
   if (typeof marked !== "undefined") {
     // marked available but no DOMPurify — escape the result as fallback
-    return escapeHtml(marked.parse(text, { breaks: true, ...opts }));
+    return applyInlineImageWidths(escapeHtml(marked.parse(text, { breaks: true, ...opts })));
   }
   return escapeHtml(text).replace(/\n/g, "<br>");
 };

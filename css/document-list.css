@@ -80,6 +80,44 @@
   overflow: hidden;
 }
 
+.dl-item-preview--markdown {
+  white-space: normal;
+}
+
+.dl-item-preview--markdown.doc-markdown {
+  color: var(--color-text-secondary, var(--theme-text-secondary));
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.dl-item-preview--markdown.doc-markdown :is(h1, h2, h3, h4, p, ul, ol, pre) {
+  margin-bottom: 6px;
+}
+
+.dl-item-preview--markdown.doc-markdown :is(h1, h2, h3, h4) {
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.dl-item-preview--markdown.doc-markdown :is(ul, ol) {
+  padding-left: 18px;
+}
+
+.dl-item-preview--markdown.doc-markdown code {
+  font-size: 0.78em;
+}
+
+.dl-item-preview--markdown.doc-markdown img {
+  max-height: 120px;
+  margin: 6px auto;
+  object-fit: contain;
+}
+
+.dl-item-preview--markdown.doc-markdown blockquote {
+  margin: 6px 0;
+  padding: 6px 10px;
+}
+
 .dl-item-tags .abn-tag-list {
   gap: 0.45rem;
 }

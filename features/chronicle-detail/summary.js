@@ -155,6 +155,8 @@
           title: itemOptions.title,
           meta: itemOptions.meta,
           preview: itemOptions.preview,
+          previewMarkdown: itemOptions.previewMarkdown,
+          previewHtml: itemOptions.previewHtml,
           tagsHtml: itemOptions.tagsHtml,
           image: itemOptions.image,
           dataAttrs: { "recap-id": visibleRecap.id },

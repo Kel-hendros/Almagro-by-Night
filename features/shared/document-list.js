@@ -65,6 +65,54 @@
     return visible.join("\n");
   }
 
+  function buildPreviewMarkdown(text, options = {}) {
+    const maxLines = normalizeLimit(options.maxLines);
+    const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+
+    while (lines.length && !String(lines[0] || "").trim()) lines.shift();
+    while (lines.length && !String(lines[lines.length - 1] || "").trim()) lines.pop();
+
+    if (!lines.length) return "";
+    if (lines.length <= maxLines) return lines.join("\n");
+
+    const visible = lines.slice(0, maxLines);
+    let targetIndex = visible.length - 1;
+    while (targetIndex > 0 && !String(visible[targetIndex] || "").trim()) targetIndex -= 1;
+    visible[targetIndex] = `${String(visible[targetIndex] || "").trimEnd()}…`;
+    return visible.join("\n");
+  }
+
+  function renderMarkdownPreview(markdown) {
+    const source = String(markdown || "").trim();
+    if (!source) return "";
+    if (typeof global.renderMarkdown === "function") {
+      return global.renderMarkdown(source);
+    }
+    return escapeHtml(source).replace(/\n/g, "<br>");
+  }
+
+  function renderPlainPreview(preview) {
+    const source = String(preview || "").trim();
+    if (!source) return "";
+    const wikilinkPattern = /\[\[([^|\]]+?)(?:\|([^\]]+?))?\]\]/g;
+    let output = "";
+    let lastIndex = 0;
+    source.replace(
+      wikilinkPattern,
+      (match, target, alias, offset) => {
+        output += escapeHtml(source.slice(lastIndex, offset));
+        const label = String(alias || target || "").trim();
+        if (label) {
+          output += `<strong class="doc-wikilink">${escapeHtml(label)}</strong>`;
+        }
+        lastIndex = offset + match.length;
+        return match;
+      },
+    );
+    output += escapeHtml(source.slice(lastIndex));
+    return output.replace(/\n/g, "<br>");
+  }
+
   function resolveCreatedAt(row, getCreatedAt) {
     if (typeof getCreatedAt === "function") {
       return getCreatedAt(row);
@@ -109,6 +157,9 @@
     const title = String(options.title || "Sin título").trim() || "Sin título";
     const meta = String(options.meta || "").trim();
     const preview = String(options.preview || "").trim();
+    const previewHtml = String(options.previewHtml || "").trim();
+    const previewMarkdown = String(options.previewMarkdown || "").trim();
+    const renderedPreviewHtml = previewHtml || (previewMarkdown ? renderMarkdownPreview(previewMarkdown) : "");
     const tagsHtml = String(options.tagsHtml || "").trim();
     const image = options.image && typeof options.image === "object" ? options.image : null;
     const imageSrc = String(image?.src || "").trim();
@@ -146,7 +197,9 @@
         </div>
         ${meta ? `<p class="dl-item-meta">${escapeHtml(meta)}</p>` : ""}
         ${tagsHtml ? `<div class="dl-item-tags">${tagsHtml}</div>` : ""}
-        ${preview ? `<p class="dl-item-preview">${escapeHtml(preview)}</p>` : ""}
+        ${renderedPreviewHtml
+          ? `<div class="dl-item-preview dl-item-preview--markdown doc-markdown">${renderedPreviewHtml}</div>`
+          : preview ? `<p class="dl-item-preview">${renderPlainPreview(preview)}</p>` : ""}
       </div>
       ${imageSrc
         ? `<div class="dl-item-media" aria-hidden="true">
@@ -195,12 +248,14 @@
   root.documentList = {
     DEFAULT_LIMIT,
     applyPreset,
+    buildPreviewMarkdown,
     buildPreviewText,
     createItem,
     createSkeletonItemMarkup,
     getRecentRows,
     getSkeletonMarkup,
     normalizeLimit,
+    renderMarkdownPreview,
     renderSkeleton,
     stripMarkdownPreservingBreaks,
   };
