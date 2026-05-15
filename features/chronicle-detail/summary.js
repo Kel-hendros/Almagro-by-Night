@@ -85,7 +85,7 @@
         <div class="app-modal-header">
           <div>
             <h3 id="cd-storage-manager-title" class="app-modal-title">Almacenamiento</h3>
-            <p class="cd-storage-manager-subtitle">Elementos subidos por narración</p>
+            <p class="cd-storage-manager-subtitle">Elementos de la Crónica</p>
           </div>
           <button id="cd-storage-manager-close" class="btn-modal-close" type="button" aria-label="Cerrar">
             <i data-lucide="x"></i>
@@ -106,6 +106,13 @@
                 </tr>
               </thead>
               <tbody id="cd-storage-manager-list"></tbody>
+              <tfoot id="cd-storage-manager-total" class="cd-storage-manager-total hidden">
+                <tr>
+                  <td colspan="3">Total</td>
+                  <td id="cd-storage-manager-total-bytes">0 KB</td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -368,6 +375,8 @@
         empty: overlay.querySelector("#cd-storage-manager-empty"),
         tableWrap: overlay.querySelector("#cd-storage-manager-table-wrap"),
         list: overlay.querySelector("#cd-storage-manager-list"),
+        totalRow: overlay.querySelector("#cd-storage-manager-total"),
+        totalBytes: overlay.querySelector("#cd-storage-manager-total-bytes"),
       };
       return storageModalRefs;
     }
@@ -384,9 +393,17 @@
       const rows = (items || []).filter((item) => item?.item_type !== "error");
       if (!rows.length) {
         if (refs.list) refs.list.innerHTML = "";
+        refs.totalRow?.classList.add("hidden");
         setStorageModalState("empty");
         return;
       }
+
+      const totalBytes = rows.reduce(
+        (sum, item) => sum + Number(item.size_bytes || 0),
+        0,
+      );
+      if (refs.totalBytes) refs.totalBytes.textContent = formatBytes(totalBytes);
+      refs.totalRow?.classList.remove("hidden");
 
       setStorageModalState("list");
       refs.list.innerHTML = rows

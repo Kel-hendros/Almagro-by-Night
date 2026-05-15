@@ -1557,8 +1557,23 @@ p.chronicle-description {
     text-transform: uppercase;
 }
 
-.cd-storage-manager-table tr:last-child td {
+.cd-storage-manager-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+.cd-storage-manager-total.hidden {
+    display: none;
+}
+
+.cd-storage-manager-total td {
+    border-top: 1px solid var(--cd-border-divider);
+    border-bottom: 0;
+    background: var(--cd-bg-surface);
+    color: var(--cd-text-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 12px;
 }
 
 .cd-storage-item-type {
