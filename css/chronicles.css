@@ -1505,9 +1505,9 @@ p.chronicle-description {
 
 .cd-storage-manager-subtitle {
     margin: 4px 0 0;
-    font-family: var(--cd-font-primary);
+    font-family: var(--app-font-body);
     font-size: 12px;
-    color: var(--cd-text-secondary);
+    color: var(--theme-text-secondary);
 }
 
 .cd-storage-manager-body {
@@ -1517,31 +1517,31 @@ p.chronicle-description {
 
 .cd-storage-manager-state {
     padding: 18px 0;
-    font-family: var(--cd-font-primary);
+    font-family: var(--app-font-body);
     font-size: 13px;
-    color: var(--cd-text-secondary);
+    color: var(--theme-text-secondary);
 }
 
 .cd-storage-manager-table-wrap {
     overflow: auto;
     max-height: min(58vh, 520px);
-    border: 1px solid var(--cd-border-divider);
+    border: 1px solid var(--theme-border-divider);
     border-radius: 10px;
 }
 
 .cd-storage-manager-table {
     width: 100%;
     border-collapse: collapse;
-    font-family: var(--cd-font-primary);
+    font-family: var(--app-font-body);
     font-size: 13px;
-    color: var(--cd-text-primary);
+    color: var(--theme-text-primary);
 }
 
 .cd-storage-manager-table th,
 .cd-storage-manager-table td {
     padding: 10px 12px;
     text-align: left;
-    border-bottom: 1px solid var(--cd-border-divider);
+    border-bottom: 1px solid var(--theme-border-divider);
     vertical-align: middle;
 }
 
@@ -1549,8 +1549,8 @@ p.chronicle-description {
     position: sticky;
     top: 0;
     z-index: 1;
-    background: var(--cd-bg-surface);
-    color: var(--cd-text-tertiary);
+    background: var(--theme-bg-surface);
+    color: var(--theme-text-tertiary);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -1566,10 +1566,10 @@ p.chronicle-description {
 }
 
 .cd-storage-manager-total td {
-    border-top: 1px solid var(--cd-border-divider);
+    border-top: 1px solid var(--theme-border-divider);
     border-bottom: 0;
-    background: var(--cd-bg-surface);
-    color: var(--cd-text-primary);
+    background: var(--theme-bg-surface);
+    color: var(--theme-text-primary);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1582,8 +1582,8 @@ p.chronicle-description {
     min-height: 22px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: var(--cd-bg-elevated);
-    color: var(--cd-text-secondary);
+    background: var(--theme-bg-elevated);
+    color: var(--theme-text-secondary);
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
@@ -1595,11 +1595,12 @@ p.chronicle-description {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--theme-text-primary);
 }
 
 .cd-storage-item-blocked {
     display: inline-flex;
-    color: var(--cd-text-tertiary);
+    color: var(--theme-text-tertiary);
     font-size: 12px;
     white-space: nowrap;
 }
