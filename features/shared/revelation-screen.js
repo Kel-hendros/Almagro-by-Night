@@ -1,8 +1,6 @@
 (function initSharedRevelationScreen(global) {
   const root = (global.ABNShared = global.ABNShared || {});
   const CHRONICLE_STORAGE_LIMIT_REACHED_CODE = "chronicle_storage_limit_reached";
-  const DEFAULT_IMAGE_IMPORT_ERROR =
-    "No se pudo cargar la imagen. Verifica que la URL sea directa o que la imagen esté disponible.";
 
   let currentScreen = null;
   let currentFormHost = null;
@@ -474,16 +472,6 @@
     return "bin";
   }
 
-  function inferMimeTypeFromUrl(url) {
-    const lower = String(url || "").trim().toLowerCase();
-    if (lower.endsWith(".png")) return "image/png";
-    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-    if (lower.endsWith(".webp")) return "image/webp";
-    if (lower.endsWith(".gif")) return "image/gif";
-    if (lower.endsWith(".avif")) return "image/avif";
-    return "";
-  }
-
   function buildFileName(baseName, mimeType) {
     const safeBase = String(baseName || "revelation-image")
       .replace(/[^a-z0-9-_]+/gi, "-")
@@ -502,11 +490,68 @@
     const api = handouts();
     const ref = String(imageRef || "").trim();
     if (!api?.deleteHandoutImage || !ref) return;
+    if (global.ABNExternalImageRef?.isExternal?.(ref)) return;
     try {
       await api.deleteHandoutImage(ref);
     } catch (error) {
       console.warn("Revelaciones: no se pudo limpiar imagen temporal:", error);
     }
+  }
+
+  async function importExternalImageUrl(input) {
+    if (formState.imageBusy) {
+      setFormMsg("Espera a que termine la carga de imagen actual.", "error");
+      return;
+    }
+    const parser = global.ABNExternalImageRef;
+    if (!parser) {
+      setFormMsg("Parser de URL no disponible.", "error");
+      return;
+    }
+    const parsed = parser.parse(input);
+    if (parsed.error) {
+      setFormMsg(parsed.error, "error");
+      return;
+    }
+
+    const sessionToken = formState.sessionToken;
+    const previousDraftRef = formState.draftImageRef;
+
+    formState.imageBusy = true;
+    syncImageControls();
+    setFormMsg("");
+    setImageStatus("Validando URL...");
+    showUploadPreview(parsed.url);
+
+    try {
+      await parser.preflight(parsed.url);
+    } catch (error) {
+      if (sessionToken !== formState.sessionToken) return;
+      formState.imageBusy = false;
+      syncImageControls();
+      resetUploadPreview();
+      const message = error?.message || "No se pudo cargar la imagen externa.";
+      setImageStatus(message, "error");
+      setFormMsg(message, "error");
+      return;
+    }
+
+    if (sessionToken !== formState.sessionToken) return;
+
+    formState.imageBusy = false;
+    syncImageControls();
+
+    if (previousDraftRef && previousDraftRef !== parsed.url) {
+      await deleteImageRefSafe(previousDraftRef);
+    }
+
+    formState.draftImageRef = parsed.url;
+    setCurrentImageRef(parsed.url);
+    const fileInput = getFormEl("#rs-image-file");
+    const urlInput = getFormEl("#rs-image-url");
+    if (fileInput) fileInput.value = "";
+    if (urlInput) urlInput.value = parsed.url;
+    setImageStatus("Imagen externa cargada (no se hostea).", "ok");
   }
 
   async function restorePreviewFromCurrentImageRef() {
@@ -599,45 +644,6 @@
     setImageStatus(successMessage || "Imagen cargada y lista para guardar.", "ok");
   }
 
-  async function fetchImageFileFromUrl(url) {
-    const cleanUrl = String(url || "").trim();
-    if (!cleanUrl) {
-      throw new Error("Pega una URL de imagen.");
-    }
-
-    let response;
-    try {
-      response = await global.fetch(cleanUrl);
-    } catch (_error) {
-      throw new Error(DEFAULT_IMAGE_IMPORT_ERROR);
-    }
-
-    if (!response.ok) {
-      throw new Error(`No se pudo descargar la imagen (${response.status}).`);
-    }
-
-    const blob = await response.blob();
-    const mimeType = String(blob.type || inferMimeTypeFromUrl(cleanUrl) || "").toLowerCase();
-    if (!mimeType.startsWith("image/")) {
-      throw new Error("La URL no devolvió una imagen válida.");
-    }
-
-    const parsed = (() => {
-      try {
-        return new global.URL(cleanUrl);
-      } catch (_error) {
-        return null;
-      }
-    })();
-    const rawName = parsed?.pathname?.split("/").pop() || "remote-image";
-    const baseName = rawName.replace(/\.[a-z0-9]+$/i, "") || "remote-image";
-
-    return {
-      file: buildFileFromBlob(blob, { nameHint: baseName, mimeType }),
-      previewBlob: blob,
-    };
-  }
-
   async function readClipboardImage() {
     if (!global.navigator?.clipboard?.read) {
       throw new Error("Tu navegador no permite leer imágenes del portapapeles desde este botón.");
@@ -721,21 +727,8 @@
     });
 
     getFormEl("#rs-image-url-import")?.addEventListener("click", async () => {
-      if (formState.imageBusy) {
-        setFormMsg("Espera a que termine la carga de imagen actual.", "error");
-        return;
-      }
-
       const url = getFormEl("#rs-image-url")?.value || "";
-      try {
-        const { file, previewBlob } = await fetchImageFileFromUrl(url);
-        await importImageFile(file, {
-          previewBlob,
-          successMessage: "Imagen cargada desde URL.",
-        });
-      } catch (error) {
-        setFormMsg(error.message || DEFAULT_IMAGE_IMPORT_ERROR, "error");
-      }
+      await importExternalImageUrl(url);
     });
 
     getFormEl("#rs-image-paste")?.addEventListener("click", async () => {

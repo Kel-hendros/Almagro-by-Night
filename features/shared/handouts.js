@@ -180,6 +180,11 @@
     const ref = String(imageRef || "").trim();
     if (!ref) return "";
 
+    // External URLs are used as-is — they don't go through Supabase signing.
+    if (global.ABNExternalImageRef?.isExternal?.(ref)) {
+      return ref;
+    }
+
     const persisted = getPersistedUrl(ref);
     if (persisted) return persisted;
 
