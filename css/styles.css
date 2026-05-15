@@ -80,8 +80,6 @@ body {
     background-color: var(--color-dark);
     color: var(--color-cream);
     font-family: var(--app-font-body);
-    color: #333;
-    background-color: #f5f5f5;
 }
 
 html {
