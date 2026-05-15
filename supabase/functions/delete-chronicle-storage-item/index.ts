@@ -40,6 +40,13 @@ type RevelationRow = {
   created_by_player_id: string | null;
 };
 
+type NotificationRow = {
+  id: string;
+  chronicle_id: string | null;
+  type: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -352,6 +359,45 @@ Deno.serve(async (req: Request) => {
       itemId,
       removedObjects: parsed?.objectPath ? 1 : 0,
     });
+  }
+
+  if (itemType === "muestra") {
+    const { data: notification, error: notifError } = await supabase
+      .from("chronicle_notifications")
+      .select("id, chronicle_id, type, metadata")
+      .eq("id", itemId)
+      .eq("chronicle_id", chronicleId)
+      .maybeSingle<NotificationRow>();
+    if (notifError) return jsonResponse({ error: notifError.message }, 500);
+    if (!notification) return jsonResponse({ error: "not_found" }, 404);
+    if (notification.type !== "muestra") {
+      return jsonResponse({ error: "not_muestra" }, 400);
+    }
+
+    const metadata = (notification.metadata || {}) as Record<string, unknown>;
+    const imageRef = String(metadata.imageRef || "").trim();
+    const parsed = parsePrivateImageRef(imageRef);
+    if (parsed?.bucketId && parsed.bucketId !== "revelations-private") {
+      return jsonResponse({ error: "unsupported_storage_ref" }, 400);
+    }
+
+    let removedObjects = 0;
+    if (parsed?.bucketId && parsed?.objectPath) {
+      const { error: removeError } = await supabase.storage
+        .from(parsed.bucketId)
+        .remove([parsed.objectPath]);
+      if (removeError) return jsonResponse({ error: removeError.message }, 500);
+      removedObjects = 1;
+    }
+
+    const nextMetadata = { ...metadata, deleted: true, signedUrl: null };
+    const { error: updateError } = await supabase
+      .from("chronicle_notifications")
+      .update({ metadata: nextMetadata })
+      .eq("id", notification.id);
+    if (updateError) return jsonResponse({ error: updateError.message }, 500);
+
+    return jsonResponse({ deleted: true, itemType, itemId, removedObjects });
   }
 
   return jsonResponse({ error: "unsupported_item_type" }, 400);

@@ -464,6 +464,9 @@
     formState.draftImageRef = null;
     isSending = false;
 
+    // Auto-prune muestras beyond the cap (fire-and-forget)
+    void enforceMuestraCap(formState.chronicleId);
+
     if (currentScreen) {
       currentScreen.close();
     }
@@ -586,20 +589,26 @@
 
   // ── Public: showMuestra ──
 
-  function showMuestra({ imageRef, signedUrl, description }) {
+  function showMuestra({ imageRef, signedUrl, description, deleted }) {
     const ds = documentScreen();
     if (!ds) return;
 
     const resolveAndShow = async () => {
       let url = "";
-      // Always resolve a fresh signed URL — the one in metadata may be expired
-      if (imageRef) {
-        const api = handouts();
-        if (api?.resolveImageSignedUrl) {
-          url = await api.resolveImageSignedUrl(imageRef);
+      if (!deleted) {
+        // Always resolve a fresh signed URL — the one in metadata may be expired
+        if (imageRef) {
+          const api = handouts();
+          if (api?.resolveImageSignedUrl) {
+            url = await api.resolveImageSignedUrl(imageRef);
+          }
         }
+        if (!url) url = signedUrl || "";
       }
-      if (!url) url = signedUrl || "";
+
+      const fallback = deleted
+        ? '<p class="muted">No encontrada.</p>'
+        : '<p class="muted">Imagen no disponible.</p>';
 
       ds.open({
         docType: "muestra",
@@ -607,7 +616,7 @@
         renderBody: (body) => {
           body.innerHTML = `
             <div class="mu-view-wrap">
-              ${url ? `<img src="${escapeHtml(url)}" class="mu-view-image mu-view-image--interactive" alt="Muestra" role="button" tabindex="0" title="Ampliar imagen">` : '<p class="muted">Imagen no disponible.</p>'}
+              ${url ? `<img src="${escapeHtml(url)}" class="mu-view-image mu-view-image--interactive" alt="Muestra" role="button" tabindex="0" title="Ampliar imagen">` : fallback}
               ${description ? `<p class="mu-view-desc">${escapeHtml(description)}</p>` : ""}
             </div>
           `;
@@ -617,6 +626,29 @@
     };
 
     resolveAndShow();
+  }
+
+  async function enforceMuestraCap(chronicleId) {
+    const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
+    if (!baseUrl || !chronicleId || typeof global.abnGetSession !== "function") return;
+
+    try {
+      const {
+        data: { session },
+      } = await global.abnGetSession();
+      if (!session?.access_token) return;
+
+      await fetch(new URL("/functions/v1/enforce-muestra-cap", `${baseUrl}/`).toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ chronicleId }),
+      });
+    } catch (error) {
+      console.warn("Muestra: enforceMuestraCap error", error);
+    }
   }
 
   // ── Exports ──

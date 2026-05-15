@@ -306,16 +306,19 @@
     card.className = "notif-card notif-card--muestra notif-card--clickable";
     if (isUnread) card.classList.add("notif-card--unread");
 
-    var thumbUrl = meta.signedUrl || "";
+    var isDeleted = meta.deleted === true;
+    var thumbUrl = isDeleted ? "" : (meta.signedUrl || "");
 
     // Build thumbnail — try stored URL first, resolve fresh on error
     var thumbEl;
-    var imageRef = meta.imageRef || "";
+    var imageRef = isDeleted ? "" : (meta.imageRef || "");
 
     function buildPlaceholder() {
       var ph = document.createElement("div");
       ph.className = "notif-muestra-thumb-placeholder";
-      ph.innerHTML = '<i data-lucide="eye"></i>';
+      ph.innerHTML = isDeleted
+        ? '<i data-lucide="image-off"></i>'
+        : '<i data-lucide="eye"></i>';
       if (global.lucide) global.lucide.createIcons({ nodes: [ph] });
       return ph;
     }
@@ -363,8 +366,11 @@
 
     var bodyWrap = document.createElement("div");
     bodyWrap.className = "notif-card-body";
+    var titleText = isDeleted
+      ? "Muestra del Narrador — No encontrada"
+      : "Muestra del Narrador";
     bodyWrap.innerHTML =
-      '<span class="notif-card-title">Muestra del Narrador</span>' +
+      '<span class="notif-card-title">' + escapeHtml(titleText) + "</span>" +
       (notif.body
         ? '<span class="notif-card-text">' + escapeHtml(notif.body) + "</span>"
         : "");
@@ -381,6 +387,7 @@
           imageRef: meta.imageRef || "",
           signedUrl: meta.signedUrl || "",
           description: notif.body || "",
+          deleted: isDeleted,
         });
       }
     });
@@ -428,6 +435,7 @@
           imageRef: meta.imageRef || "",
           signedUrl: meta.signedUrl || "",
           description: notif.body || "",
+          deleted: meta.deleted === true,
         });
       }
       dismissToast(toast);

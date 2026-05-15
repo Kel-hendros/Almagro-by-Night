@@ -42,7 +42,8 @@
     if (type === "encounter") return "Encuentro";
     if (type === "asset") return metadata.category === "prop" ? "Prop" : "Asset";
     if (type === "banner") return "Banner";
-    if (type === "revelation") return "Muestra";
+    if (type === "revelation") return "Revelación";
+    if (type === "muestra") return "Muestra";
     return "Elemento";
   }
 
@@ -50,7 +51,8 @@
     if (type === "encounter") return "Eliminar encuentro";
     if (type === "asset") return "Eliminar asset";
     if (type === "banner") return "Quitar banner";
-    if (type === "revelation") return "Eliminar muestra";
+    if (type === "revelation") return "Eliminar revelación";
+    if (type === "muestra") return "Eliminar muestra";
     return "Eliminar";
   }
 
@@ -63,7 +65,10 @@
       return "¿Quitar el banner de la crónica? Esta acción no se puede deshacer.";
     }
     if (item?.item_type === "revelation") {
-      return `¿Eliminar la muestra "${label}"? Esta acción no se puede deshacer.`;
+      return `¿Eliminar la revelación "${label}"? Esta acción no se puede deshacer.`;
+    }
+    if (item?.item_type === "muestra") {
+      return `¿Eliminar la muestra "${label}"? La imagen se borrará y la notificación quedará marcada como "No encontrada".`;
     }
     return `¿Eliminar "${label}"? Esta acción no se puede deshacer.`;
   }

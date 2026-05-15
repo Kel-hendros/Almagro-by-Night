@@ -198,7 +198,7 @@ begin
     select
       r.id::text as item_id,
       'revelation'::text as item_type,
-      coalesce(nullif(r.title, ''), 'Muestra')::text as label,
+      coalesce(nullif(r.title, ''), 'Revelación')::text as label,
       coalesce(o.created_at, r.created_at) as uploaded_at,
       coalesce(public.storage_object_size_bytes(o.metadata), 0)::bigint as size_bytes,
       true as can_delete,
@@ -215,6 +215,30 @@ begin
      where r.chronicle_id = p_chronicle_id
        and r.image_url like 'abn-private://revelations-private/chronicle/%'
        and coalesce(public.storage_object_size_bytes(o.metadata), 0) > 0
+  ),
+  muestra_items as (
+    select
+      n.id::text as item_id,
+      'muestra'::text as item_type,
+      coalesce(nullif(n.body, ''), 'Muestra')::text as label,
+      coalesce(o.created_at, n.created_at) as uploaded_at,
+      coalesce(public.storage_object_size_bytes(o.metadata), 0)::bigint as size_bytes,
+      true as can_delete,
+      null::text as block_reason,
+      jsonb_build_object(
+        'bucket', 'revelations-private',
+        'path', replace(n.metadata->>'imageRef', 'abn-private://revelations-private/', ''),
+        'created_at', n.created_at
+      ) as metadata
+      from public.chronicle_notifications n
+      left join storage.objects o
+        on o.bucket_id = 'revelations-private'
+       and o.name = replace(n.metadata->>'imageRef', 'abn-private://revelations-private/', '')
+     where n.chronicle_id = p_chronicle_id
+       and n.type = 'muestra'
+       and coalesce((n.metadata->>'deleted')::boolean, false) is not true
+       and (n.metadata->>'imageRef') like 'abn-private://revelations-private/chronicle/%'
+       and coalesce(public.storage_object_size_bytes(o.metadata), 0) > 0
   )
   select * from banner_items
   union all
@@ -223,6 +247,8 @@ begin
   select * from asset_items
   union all
   select * from revelation_items
+  union all
+  select * from muestra_items
   order by uploaded_at desc nulls last, label asc;
 end;
 $$;
