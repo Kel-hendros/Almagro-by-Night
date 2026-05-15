@@ -1447,6 +1447,18 @@ p.chronicle-description {
     gap: 8px;
 }
 
+.cd-storage-card--clickable {
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.cd-storage-card--clickable:hover,
+.cd-storage-card--clickable:focus-visible {
+    background: color-mix(in srgb, var(--cd-bg-surface) 86%, var(--cd-accent) 14%);
+    outline: none;
+    transform: translateY(-1px);
+}
+
 .cd-storage-metric {
     font-family: var(--cd-font-display);
     font-size: 20px;
@@ -1481,6 +1493,100 @@ p.chronicle-description {
     font-family: var(--cd-font-primary);
     font-size: 12px;
     color: var(--cd-text-secondary);
+}
+
+.cd-storage-manager-modal {
+    width: min(100%, 860px);
+    max-height: min(82vh, 760px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cd-storage-manager-subtitle {
+    margin: 4px 0 0;
+    font-family: var(--cd-font-primary);
+    font-size: 12px;
+    color: var(--cd-text-secondary);
+}
+
+.cd-storage-manager-body {
+    min-height: 180px;
+    overflow: hidden;
+}
+
+.cd-storage-manager-state {
+    padding: 18px 0;
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-secondary);
+}
+
+.cd-storage-manager-table-wrap {
+    overflow: auto;
+    max-height: min(58vh, 520px);
+    border: 1px solid var(--cd-border-divider);
+    border-radius: 10px;
+}
+
+.cd-storage-manager-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--cd-font-primary);
+    font-size: 13px;
+    color: var(--cd-text-primary);
+}
+
+.cd-storage-manager-table th,
+.cd-storage-manager-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--cd-border-divider);
+    vertical-align: middle;
+}
+
+.cd-storage-manager-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--cd-bg-surface);
+    color: var(--cd-text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.cd-storage-manager-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.cd-storage-item-type {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--cd-bg-elevated);
+    color: var(--cd-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cd-storage-item-label {
+    display: block;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cd-storage-item-blocked {
+    display: inline-flex;
+    color: var(--cd-text-tertiary);
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .cd-skeleton-card {
@@ -1913,6 +2019,14 @@ p.chronicle-description {
     line-height: 1.35;
 }
 
+.cd-mesa-card-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+}
+
 .cd-mesa-status,
 .cd-mesa-status-select {
     font-family: var(--cd-font-primary);
@@ -1931,8 +2045,7 @@ p.chronicle-description {
     align-items: center;
     justify-content: center;
     min-height: 30px;
-    max-width: min(45%, 170px);
-    margin-left: auto;
+    max-width: 170px;
     padding: 4px 28px 4px 12px;
     cursor: pointer;
     appearance: none;

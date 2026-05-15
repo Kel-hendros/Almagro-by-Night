@@ -8,6 +8,7 @@
     user: null,
     currentPlayer: null,
     canManageEncounter: false,
+    canDeleteEncounter: false,
     canViewEncounter: false,
     encounterHasUpdatedAt: false,
     encounterUpdatedAt: null,
@@ -441,6 +442,7 @@
     // DOM Elements
     els.name = document.getElementById("ae-encounter-name");
     els.status = document.getElementById("ae-encounter-status");
+    els.deleteEncounterBtn = document.getElementById("btn-ae-delete-encounter");
     els.modeSwitch = document.getElementById("ae-mode-switch");
     els.modePlayBtn = document.getElementById("btn-ae-mode-play");
     els.modeEditBtn = document.getElementById("btn-ae-mode-edit");
@@ -1615,6 +1617,50 @@
     return state.canManageEncounter;
   }
 
+  function canDeleteEncounter() {
+    return state.canDeleteEncounter;
+  }
+
+  async function requestDeleteArchivedEncounter(encounterId) {
+    const baseUrl = String(window.ABN_SUPABASE_URL || window.supabase?.supabaseUrl || "").trim();
+    if (!baseUrl || !encounterId || typeof window.abnGetSession !== "function") {
+      return {
+        data: null,
+        error: new Error("No se pudo preparar el borrado del encuentro."),
+      };
+    }
+
+    const {
+      data: { session },
+    } = await window.abnGetSession();
+    if (!session?.access_token) {
+      return {
+        data: null,
+        error: new Error("La sesión no está activa."),
+      };
+    }
+
+    let response = null;
+    try {
+      response = await fetch(new URL("/functions/v1/delete-archived-encounter", `${baseUrl}/`).toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ encounterId }),
+      });
+    } catch (error) {
+      return { data: null, error };
+    }
+    const data = await response.json().catch(() => null);
+
+    return {
+      data: data || null,
+      error: response.ok || data?.error ? null : new Error("No se pudo eliminar el encuentro."),
+    };
+  }
+
   const PLAYER_INTERACT_RANGE_METERS = 3;
   const PLAYER_INTERACT_RANGE = PLAYER_INTERACT_RANGE_METERS / 1.5; // convert meters to coordinate units
 
@@ -2180,6 +2226,10 @@
         }
       });
 
+    els.deleteEncounterBtn?.addEventListener("click", async () => {
+      await deleteArchivedEncounter();
+    });
+
     layersController?.bindLayerMenuEvents(requireAdminAction);
 
     drawerController?.bindEvents();
@@ -2534,6 +2584,7 @@
 
     const access = await resolveEncounterAccess(state.encounter);
     state.canManageEncounter = access.canManage;
+    state.canDeleteEncounter = access.canDelete;
     state.canViewEncounter = access.canView;
     if (!state.canViewEncounter) {
       alert("No tienes acceso a este encuentro.");
@@ -2618,7 +2669,7 @@
   }
 
   async function resolveEncounterAccess(encounter) {
-    const none = { canManage: false, canView: false };
+    const none = { canManage: false, canDelete: false, canView: false };
     if (!encounter || !state.currentPlayer) return none;
 
     const playerId = state.currentPlayer.id;
@@ -2626,7 +2677,7 @@
 
     if (!encounter.chronicle_id) {
       const canLegacy = encounterOwnerId === state.user?.id;
-      return { canManage: canLegacy, canView: canLegacy };
+      return { canManage: canLegacy, canDelete: canLegacy, canView: canLegacy };
     }
 
     const [chronicleRes, participationRes] = await Promise.all([
@@ -2645,10 +2696,16 @@
 
     const creatorId = chronicleRes.data?.creator_id || null;
     const role = participationRes.data?.role || null;
-    const isNarrator = role === "narrator" || creatorId === playerId;
-    const isParticipant = Boolean(role) || creatorId === playerId;
+    const isChronicleOwner = creatorId === playerId;
+    const isEncounterCreator = encounterOwnerId === state.user?.id;
+    const isNarrator = role === "narrator" || isChronicleOwner;
+    const isParticipant = Boolean(role) || isChronicleOwner;
 
-    return { canManage: isNarrator, canView: isParticipant };
+    return {
+      canManage: isNarrator,
+      canDelete: isChronicleOwner || isEncounterCreator,
+      canView: isParticipant,
+    };
   }
 
   async function updateEncounterStatus(nextStatus, options = {}) {
@@ -2696,13 +2753,56 @@
 
     // Notification is generated automatically by DB trigger on encounters status change.
 
-    if (nextStatus === ENCOUNTER_STATUS.ARCHIVED) {
-      navigateAway("chronicle");
-      return true;
-    }
     setTimeout(() => {
       state.isApplyingRemoteUpdate = false;
     }, 200);
+    return true;
+  }
+
+  async function deleteArchivedEncounter() {
+    if (!state.encounter || !state.encounterId) return false;
+    if (!canDeleteEncounter()) {
+      await ABNShared.modal.alert(
+        "Solo el dueño de la crónica o el creador del encuentro puede eliminarlo.",
+        { title: "Sin permisos" },
+      );
+      return false;
+    }
+
+    const status = normalizeEncounterStatus(state.encounter.status);
+    if (status !== ENCOUNTER_STATUS.ARCHIVED) {
+      await ABNShared.modal.alert(
+        "Solo se pueden eliminar encuentros archivados.",
+        { title: "Encuentro activo" },
+      );
+      return false;
+    }
+
+    const ok = await ABNShared.modal.confirm(
+      `¿Eliminar "${state.encounter.name || "este encuentro"}"? Esta acción no se puede deshacer. Se borrará el encuentro y los datos asociados.`,
+      { confirmLabel: "Eliminar", danger: true },
+    );
+    if (!ok) return false;
+
+    if (els.deleteEncounterBtn) els.deleteEncounterBtn.disabled = true;
+    const { data, error } = await requestDeleteArchivedEncounter(state.encounterId);
+    if (error || data?.error || data?.deleted === false) {
+      const message =
+        error?.message ||
+        {
+          unauthenticated: "La sesión no está activa.",
+          not_found: "El encuentro ya no existe.",
+          not_archived: "El encuentro debe estar archivado antes de eliminarse.",
+          not_authorized: "No tienes permisos para eliminar este encuentro.",
+        }[data?.error] ||
+        "No se pudo eliminar el encuentro.";
+      if (els.deleteEncounterBtn) els.deleteEncounterBtn.disabled = false;
+      await ABNShared.modal.alert(message, { title: "No se pudo eliminar" });
+      return false;
+    }
+
+    persistenceController?.clearDraft?.();
+    navigateAway("chronicle");
     return true;
   }
 
@@ -2724,6 +2824,11 @@
       els.status.value = status;
       els.status.className = `ae-status-chip-select ${status}`;
       els.status.disabled = !canEditEncounter();
+    }
+    if (els.deleteEncounterBtn) {
+      const canDelete = canDeleteEncounter() && status === ENCOUNTER_STATUS.ARCHIVED;
+      els.deleteEncounterBtn.classList.toggle("hidden", !canDelete);
+      els.deleteEncounterBtn.disabled = !canDelete;
     }
     const currentRound = state.encounter.data.round || 1;
     els.roundCounter.textContent = currentRound;

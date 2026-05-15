@@ -19,8 +19,18 @@
   let currentFormHost = null;
   let isSending = false;
   let formSessionSeq = 0;
+  let lightboxState = createLightboxState();
 
   let formState = createEmptyFormState();
+
+  function createLightboxState() {
+    return {
+      overlay: null,
+      image: null,
+      keyHandler: null,
+      isOpen: false,
+    };
+  }
 
   function createEmptyFormState() {
     return {
@@ -506,6 +516,74 @@
     });
   }
 
+  // ── View lightbox ──
+
+  function ensureLightboxDom() {
+    if (lightboxState.overlay) return;
+
+    const overlay = document.createElement("div");
+    overlay.className = "mu-lightbox-overlay hidden";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-label", "Muestra ampliada");
+    overlay.innerHTML = '<img class="mu-lightbox-image" alt="Muestra ampliada">';
+    document.body.appendChild(overlay);
+
+    lightboxState.overlay = overlay;
+    lightboxState.image = overlay.querySelector(".mu-lightbox-image");
+
+    overlay.addEventListener("click", () => closeImageLightbox());
+  }
+
+  function closeImageLightbox() {
+    if (!lightboxState.isOpen) return;
+
+    lightboxState.isOpen = false;
+    lightboxState.overlay?.classList.add("hidden");
+    lightboxState.overlay?.classList.remove("active");
+    if (lightboxState.image) lightboxState.image.src = "";
+
+    if (lightboxState.keyHandler) {
+      document.removeEventListener("keydown", lightboxState.keyHandler, true);
+      lightboxState.keyHandler = null;
+    }
+  }
+
+  function openImageLightbox(src) {
+    const imageUrl = String(src || "").trim();
+    if (!imageUrl) return;
+
+    ensureLightboxDom();
+    if (!lightboxState.overlay || !lightboxState.image) return;
+
+    closeImageLightbox();
+    lightboxState.isOpen = true;
+    lightboxState.image.src = imageUrl;
+    lightboxState.overlay.classList.remove("hidden");
+    lightboxState.overlay.classList.add("active");
+
+    lightboxState.keyHandler = (event) => {
+      if (!lightboxState.isOpen || event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeImageLightbox();
+    };
+    document.addEventListener("keydown", lightboxState.keyHandler, true);
+  }
+
+  function bindViewImageInteraction(body) {
+    const image = body?.querySelector(".mu-view-image--interactive");
+    if (!image) return;
+
+    const open = () => openImageLightbox(image.getAttribute("src"));
+    image.addEventListener("click", open);
+    image.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
+    });
+  }
+
   // ── Public: showMuestra ──
 
   function showMuestra({ imageRef, signedUrl, description }) {
@@ -529,10 +607,11 @@
         renderBody: (body) => {
           body.innerHTML = `
             <div class="mu-view-wrap">
-              ${url ? `<img src="${escapeHtml(url)}" class="mu-view-image" alt="Muestra">` : '<p class="muted">Imagen no disponible.</p>'}
+              ${url ? `<img src="${escapeHtml(url)}" class="mu-view-image mu-view-image--interactive" alt="Muestra" role="button" tabindex="0" title="Ampliar imagen">` : '<p class="muted">Imagen no disponible.</p>'}
               ${description ? `<p class="mu-view-desc">${escapeHtml(description)}</p>` : ""}
             </div>
           `;
+          bindViewImageInteraction(body);
         },
       });
     };

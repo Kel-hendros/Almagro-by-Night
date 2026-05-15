@@ -520,7 +520,7 @@
   async function fetchEncountersForChronicle({ chronicleId, isNarrator }) {
     let query = supabase
       .from("encounters")
-      .select("id, name, status, created_at, data")
+      .select("id, user_id, name, status, created_at, data")
       .eq("chronicle_id", chronicleId)
       .order("created_at", { ascending: false });
 
@@ -578,6 +578,90 @@
     };
   }
 
+  async function deleteArchivedEncounter({ encounterId }) {
+    const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
+    if (!baseUrl || !encounterId || typeof global.abnGetSession !== "function") {
+      return { data: null, error: new Error("No se pudo preparar el borrado del encuentro.") };
+    }
+
+    const {
+      data: { session },
+    } = await global.abnGetSession();
+    if (!session?.access_token) {
+      return { data: null, error: new Error("La sesión no está activa.") };
+    }
+
+    let response = null;
+    try {
+      response = await fetch(new URL("/functions/v1/delete-archived-encounter", `${baseUrl}/`).toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ encounterId }),
+      });
+    } catch (error) {
+      return { data: null, error };
+    }
+    const data = await response.json().catch(() => null);
+
+    return {
+      data: data || null,
+      error: response.ok || data?.error ? null : new Error("No se pudo eliminar el encuentro."),
+    };
+  }
+
+  async function listChronicleStorageItems(chronicleId) {
+    const { data, error } = await supabase.rpc("list_chronicle_storage_items", {
+      p_chronicle_id: chronicleId,
+    });
+    return {
+      data: data || [],
+      error: error || null,
+    };
+  }
+
+  async function deleteChronicleStorageItem({ chronicleId, itemType, itemId }) {
+    const baseUrl = String(global.ABN_SUPABASE_URL || global.supabase?.supabaseUrl || "").trim();
+    if (
+      !baseUrl ||
+      !chronicleId ||
+      !itemType ||
+      !itemId ||
+      typeof global.abnGetSession !== "function"
+    ) {
+      return { data: null, error: new Error("No se pudo preparar el borrado.") };
+    }
+
+    const {
+      data: { session },
+    } = await global.abnGetSession();
+    if (!session?.access_token) {
+      return { data: null, error: new Error("La sesión no está activa.") };
+    }
+
+    let response = null;
+    try {
+      response = await fetch(new URL("/functions/v1/delete-chronicle-storage-item", `${baseUrl}/`).toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ chronicleId, itemType, itemId }),
+      });
+    } catch (error) {
+      return { data: null, error };
+    }
+    const data = await response.json().catch(() => null);
+
+    return {
+      data: data || null,
+      error: response.ok || data?.error ? null : new Error("No se pudo borrar el elemento."),
+    };
+  }
+
   async function getChronicleStorageQuota(chronicleId) {
     return cacheGet(
       `chronicle-detail:storage:${chronicleId}`,
@@ -620,6 +704,9 @@
     fetchEncountersForChronicle,
     createEncounter,
     updateEncounterStatus,
+    deleteArchivedEncounter,
+    listChronicleStorageItems,
+    deleteChronicleStorageItem,
     getChronicleStorageQuota,
   };
 })(window);

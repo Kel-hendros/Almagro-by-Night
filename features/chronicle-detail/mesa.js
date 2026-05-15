@@ -52,7 +52,7 @@
   }
 
   async function init(config) {
-    const { chronicleId, isNarrator, currentUserId } = config;
+    const { chronicleId, isNarrator, currentUserId, isChronicleOwner } = config;
 
     const listEl = document.getElementById("cd-mesa-encounters-list");
     const createBtn = document.getElementById("cd-mesa-create-encounter");
@@ -113,6 +113,8 @@
       listEl.innerHTML = "";
       encounters.forEach((encounter) => {
         const status = normalizeEncounterStatus(encounter.status);
+        const canDeleteEncounter =
+          isChronicleOwner || encounter.user_id === currentUserId;
         const card = document.createElement("article");
         card.className = "cd-mesa-card";
         card.tabIndex = 0;
@@ -128,12 +130,28 @@
           : `<span class="cd-mesa-status ${status}">${encounterStatusLabel(
               status,
             )}</span>`;
+        const deleteControl = isNarrator && canDeleteEncounter && status === "archived"
+          ? `
+            <button
+              type="button"
+              class="btn-icon btn-icon--danger cd-mesa-delete-encounter"
+              data-encounter-id="${escapeHtml(encounter.id)}"
+              title="Eliminar encuentro"
+              aria-label="Eliminar ${escapeHtml(encounter.name || TEXT.defaultEncounterName)}"
+            >
+              <i data-lucide="trash-2"></i>
+            </button>
+          `
+          : "";
         card.innerHTML = `
           <div class="cd-mesa-card-head">
             <h4 class="cd-mesa-card-title">${escapeHtml(
               encounter.name || TEXT.defaultEncounterName
             )}</h4>
-            ${statusControl}
+            <div class="cd-mesa-card-actions">
+              ${statusControl}
+              ${deleteControl}
+            </div>
           </div>
         `;
 
@@ -183,8 +201,45 @@
             renderEncounters();
           });
 
+        card
+          .querySelector(".cd-mesa-delete-encounter")
+          ?.addEventListener("click", async (event) => {
+            event.stopPropagation();
+            const button = event.currentTarget;
+            const ok = await global.ABNShared.modal.confirm(
+              `¿Eliminar "${encounter.name || TEXT.defaultEncounterName}"? Esta acción no se puede deshacer. Se borrará el encuentro y los datos asociados.`,
+              { confirmLabel: "Eliminar", danger: true },
+            );
+            if (!ok) return;
+
+            button.disabled = true;
+            const { data, error } = await service().deleteArchivedEncounter({
+              encounterId: encounter.id,
+            });
+            if (error || data?.error || data?.deleted === false) {
+              const message =
+                error?.message ||
+                {
+                  unauthenticated: "La sesión no está activa.",
+                  not_found: "El encuentro ya no existe.",
+                  not_archived: "El encuentro debe estar archivado antes de eliminarse.",
+                  not_authorized: "No tienes permisos para eliminar este encuentro.",
+                }[data?.error] ||
+                "No se pudo eliminar el encuentro.";
+              button.disabled = false;
+              await global.ABNShared.modal.alert(message, { title: "No se pudo eliminar" });
+              return;
+            }
+
+            allEncounters = allEncounters.filter((item) => item.id !== encounter.id);
+            renderEncounters();
+          });
+
         listEl.appendChild(card);
       });
+      if (global.lucide?.createIcons) {
+        global.lucide.createIcons({ nodes: [listEl] });
+      }
     }
 
     async function loadEncounters() {

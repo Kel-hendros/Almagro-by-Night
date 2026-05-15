@@ -143,6 +143,10 @@
     border-color: color-mix(in srgb, var(--theme-warning) 24%, transparent);
 }
 
+.ae-delete-encounter-btn.hidden {
+    display: none;
+}
+
 /* ── Draft Save Indicator ── */
 .ae-draft-save-btn {
     background: none;

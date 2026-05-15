@@ -23,6 +23,96 @@
     return Math.floor(numeric / (1024 * 1024));
   }
 
+  function formatBytes(bytes) {
+    const numeric = Number(bytes || 0);
+    if (!Number.isFinite(numeric) || numeric <= 0) return "0 KB";
+    if (numeric >= 1024 * 1024) {
+      return `${(numeric / (1024 * 1024)).toFixed(numeric >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+    }
+    return `${Math.max(1, Math.round(numeric / 1024))} KB`;
+  }
+
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = String(value || "");
+    return div.innerHTML;
+  }
+
+  function storageItemTypeLabel(type, metadata = {}) {
+    if (type === "encounter") return "Encuentro";
+    if (type === "asset") return metadata.category === "prop" ? "Prop" : "Asset";
+    if (type === "banner") return "Banner";
+    if (type === "revelation") return "Muestra";
+    return "Elemento";
+  }
+
+  function storageDeleteLabel(type) {
+    if (type === "encounter") return "Eliminar encuentro";
+    if (type === "asset") return "Eliminar asset";
+    if (type === "banner") return "Quitar banner";
+    if (type === "revelation") return "Eliminar muestra";
+    return "Eliminar";
+  }
+
+  function storageDeleteMessage(item) {
+    const label = item?.label || "este elemento";
+    if (item?.item_type === "encounter") {
+      return `¿Eliminar el encuentro "${label}"? Esta acción no se puede deshacer. Se borrarán sus archivos asociados.`;
+    }
+    if (item?.item_type === "banner") {
+      return "¿Quitar el banner de la crónica? Esta acción no se puede deshacer.";
+    }
+    if (item?.item_type === "revelation") {
+      return `¿Eliminar la muestra "${label}"? Esta acción no se puede deshacer.`;
+    }
+    return `¿Eliminar "${label}"? Esta acción no se puede deshacer.`;
+  }
+
+  function ensureStorageModalDOM() {
+    let overlay = document.getElementById("cd-storage-manager-modal");
+    if (overlay) return overlay;
+
+    overlay = document.createElement("div");
+    overlay.id = "cd-storage-manager-modal";
+    overlay.className = "app-modal-overlay cd-storage-manager-overlay";
+    overlay.innerHTML = `
+      <div class="app-modal cd-storage-manager-modal" role="dialog" aria-modal="true" aria-labelledby="cd-storage-manager-title">
+        <div class="app-modal-header">
+          <div>
+            <h3 id="cd-storage-manager-title" class="app-modal-title">Almacenamiento</h3>
+            <p class="cd-storage-manager-subtitle">Elementos subidos por narración</p>
+          </div>
+          <button id="cd-storage-manager-close" class="btn-modal-close" type="button" aria-label="Cerrar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div id="cd-storage-manager-body" class="cd-storage-manager-body">
+          <div id="cd-storage-manager-loading" class="cd-storage-manager-state">Cargando...</div>
+          <div id="cd-storage-manager-empty" class="cd-storage-manager-state hidden">No hay elementos de narración ocupando almacenamiento.</div>
+          <div id="cd-storage-manager-table-wrap" class="cd-storage-manager-table-wrap hidden">
+            <table class="cd-storage-manager-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Elemento</th>
+                  <th>Peso</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="cd-storage-manager-list"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="app-modal-actions">
+          <button id="cd-storage-manager-refresh" type="button" class="btn btn--ghost">Actualizar</button>
+          <button id="cd-storage-manager-done" type="button" class="btn btn--primary">Cerrar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
   async function init(config) {
     const {
       chronicleId,
@@ -60,8 +150,11 @@
     const storageProgressWrap = document.getElementById("cd-storage-progress-wrap");
     const storageProgressFill = document.getElementById("cd-storage-progress-fill");
     const storageNote = document.getElementById("cd-storage-note");
+    const storageCard = storageSection?.querySelector(".cd-storage-card");
 
     let currentInviteCode = chronicle?.invite_code || "";
+    let storageModalController = null;
+    let storageModalRefs = null;
 
     function formatNextSession(dateStr) {
       if (!dateStr) return null;
@@ -217,15 +310,8 @@
       renderLastSessionCard(latest || null);
     }
 
-    updateNextSessionDisplay();
-    updateInGameDateDisplay();
-    renderLastSessionCard(latestRecap || null);
-    renderCurrentCharacterCard();
-    if (countPlayers) countPlayers.textContent = String(participantsCount || 0);
-    if (countCharacters) countCharacters.textContent = String(charactersCount || 0);
-    if (countSessions) countSessions.textContent = String(sessionsCount || 0);
-
-    if (storageSection && isNarrator) {
+    async function refreshStorageSummary() {
+      if (!storageSection || !isNarrator) return;
       storageSection.classList.remove("hidden");
       if (storageMetric) storageMetric.textContent = "Cargando...";
       if (storageProgressWrap) storageProgressWrap.classList.add("hidden");
@@ -241,26 +327,189 @@
           storageNote.textContent =
             storageError?.message || "No se pudo obtener el uso de almacenamiento.";
         }
-      } else {
-        const usageBytes = Number(storageData.usage_bytes || 0);
-        const usageMegas = bytesToMegas(usageBytes);
-        const hasLimit = storageData.limit_bytes !== null && storageData.limit_bytes !== undefined;
-
-        if (!hasLimit) {
-          if (storageMetric) storageMetric.textContent = `${usageMegas}megas usados`;
-          if (storageProgressWrap) storageProgressWrap.classList.add("hidden");
-          if (storageNote) storageNote.textContent = "Narrador admin: almacenamiento sin límite.";
-        } else {
-          const limitBytes = Number(storageData.limit_bytes || 0);
-          const limitMegas = Math.max(bytesToMegas(limitBytes), 1);
-          const percent = limitBytes > 0 ? Math.max(0, Math.min((usageBytes / limitBytes) * 100, 100)) : 0;
-
-          if (storageMetric) storageMetric.textContent = `${usageMegas}/${limitMegas}megas`;
-          if (storageProgressWrap) storageProgressWrap.classList.remove("hidden");
-          if (storageProgressFill) storageProgressFill.style.width = `${percent}%`;
-          if (storageNote) storageNote.textContent = "Límite para narrador normal.";
-        }
+        return;
       }
+
+      const usageBytes = Number(storageData.usage_bytes || 0);
+      const usageMegas = bytesToMegas(usageBytes);
+      const hasLimit = storageData.limit_bytes !== null && storageData.limit_bytes !== undefined;
+
+      if (!hasLimit) {
+        if (storageMetric) storageMetric.textContent = `${usageMegas}megas usados`;
+        if (storageProgressWrap) storageProgressWrap.classList.add("hidden");
+        if (storageNote) storageNote.textContent = "Narrador admin: almacenamiento sin límite.";
+        return;
+      }
+
+      const limitBytes = Number(storageData.limit_bytes || 0);
+      const limitMegas = Math.max(bytesToMegas(limitBytes), 1);
+      const percent = limitBytes > 0 ? Math.max(0, Math.min((usageBytes / limitBytes) * 100, 100)) : 0;
+
+      if (storageMetric) storageMetric.textContent = `${usageMegas}/${limitMegas}megas`;
+      if (storageProgressWrap) storageProgressWrap.classList.remove("hidden");
+      if (storageProgressFill) storageProgressFill.style.width = `${percent}%`;
+      if (storageNote) storageNote.textContent = "Límite para narrador normal.";
+    }
+
+    function getStorageModalRefs() {
+      if (storageModalRefs) return storageModalRefs;
+      const overlay = ensureStorageModalDOM();
+      storageModalRefs = {
+        overlay,
+        close: overlay.querySelector("#cd-storage-manager-close"),
+        done: overlay.querySelector("#cd-storage-manager-done"),
+        refresh: overlay.querySelector("#cd-storage-manager-refresh"),
+        loading: overlay.querySelector("#cd-storage-manager-loading"),
+        empty: overlay.querySelector("#cd-storage-manager-empty"),
+        tableWrap: overlay.querySelector("#cd-storage-manager-table-wrap"),
+        list: overlay.querySelector("#cd-storage-manager-list"),
+      };
+      return storageModalRefs;
+    }
+
+    function setStorageModalState(stateName) {
+      const refs = getStorageModalRefs();
+      refs.loading?.classList.toggle("hidden", stateName !== "loading");
+      refs.empty?.classList.toggle("hidden", stateName !== "empty");
+      refs.tableWrap?.classList.toggle("hidden", stateName !== "list");
+    }
+
+    function renderStorageItems(items) {
+      const refs = getStorageModalRefs();
+      const rows = (items || []).filter((item) => item?.item_type !== "error");
+      if (!rows.length) {
+        if (refs.list) refs.list.innerHTML = "";
+        setStorageModalState("empty");
+        return;
+      }
+
+      setStorageModalState("list");
+      refs.list.innerHTML = rows
+        .map((item) => {
+          const metadata = item.metadata || {};
+          const date = item.uploaded_at
+            ? new Date(item.uploaded_at).toLocaleDateString("es-AR")
+            : "Sin fecha";
+          const typeLabel = storageItemTypeLabel(item.item_type, metadata);
+          const action = item.can_delete
+            ? `<button type="button" class="btn-icon btn-icon--danger cd-storage-item-delete" data-item-id="${escapeHtml(item.item_id)}" data-item-type="${escapeHtml(item.item_type)}" title="${escapeHtml(storageDeleteLabel(item.item_type))}" aria-label="${escapeHtml(storageDeleteLabel(item.item_type))}"><i data-lucide="trash-2"></i></button>`
+            : `<span class="cd-storage-item-blocked">${escapeHtml(item.block_reason || "No disponible")}</span>`;
+          return `
+            <tr>
+              <td>${escapeHtml(date)}</td>
+              <td><span class="cd-storage-item-type">${escapeHtml(typeLabel)}</span></td>
+              <td>
+                <span class="cd-storage-item-label">${escapeHtml(item.label)}</span>
+              </td>
+              <td>${escapeHtml(formatBytes(item.size_bytes))}</td>
+              <td>${action}</td>
+            </tr>`;
+        })
+        .join("");
+      if (global.lucide?.createIcons) global.lucide.createIcons({ nodes: [refs.list] });
+    }
+
+    async function loadStorageItems() {
+      const refs = getStorageModalRefs();
+      setStorageModalState("loading");
+      if (refs.refresh) refs.refresh.disabled = true;
+      const { data, error } = await service().listChronicleStorageItems(chronicleId);
+      if (refs.refresh) refs.refresh.disabled = false;
+      if (error || data?.[0]?.item_type === "error") {
+        const message =
+          error?.message ||
+          {
+            not_authorized: "No tienes permisos para ver este almacenamiento.",
+            chronicle_id_required: "No se pudo resolver la crónica.",
+          }[data?.[0]?.block_reason] ||
+          "No se pudo cargar el almacenamiento.";
+        setStorageModalState("empty");
+        await global.ABNShared?.modal?.alert?.(message, { title: "Almacenamiento" });
+        return;
+      }
+      renderStorageItems(data || []);
+    }
+
+    async function openStorageModal() {
+      const refs = getStorageModalRefs();
+      if (!storageModalController) {
+        storageModalController = global.ABNShared?.modal?.createController?.({
+          overlay: refs.overlay,
+          closeButtons: [refs.close, refs.done],
+        });
+        refs.refresh?.addEventListener("click", () => {
+          void loadStorageItems();
+        });
+        refs.list?.addEventListener("click", async (event) => {
+          const button = event.target?.closest?.(".cd-storage-item-delete");
+          if (!button) return;
+          const itemType = button.dataset.itemType;
+          const itemId = button.dataset.itemId;
+          const { data: items } = await service().listChronicleStorageItems(chronicleId);
+          const item = (items || []).find(
+            (entry) => entry.item_type === itemType && entry.item_id === itemId,
+          );
+          if (!item?.can_delete) return;
+          const ok = await global.ABNShared.modal.confirm(storageDeleteMessage(item), {
+            confirmLabel: storageDeleteLabel(itemType),
+            danger: true,
+          });
+          if (!ok) return;
+
+          button.disabled = true;
+          const { data, error } = await service().deleteChronicleStorageItem({
+            chronicleId,
+            itemType,
+            itemId,
+          });
+          if (error || data?.error || data?.deleted === false) {
+            const message =
+              error?.message ||
+              {
+                asset_in_use: "El asset está en uso en uno o más encuentros.",
+                not_archived: "El encuentro debe estar archivado antes de eliminarse.",
+                not_authorized: "No tienes permisos para eliminar este elemento.",
+                not_narration_upload: "Solo se pueden borrar elementos subidos por narración.",
+                not_found: "El elemento ya no existe.",
+              }[data?.error] ||
+              "No se pudo borrar el elemento.";
+            button.disabled = false;
+            await global.ABNShared.modal.alert(message, { title: "No se pudo borrar" });
+            return;
+          }
+
+          await refreshStorageSummary();
+          await loadStorageItems();
+        });
+      }
+      storageModalController?.open?.();
+      await loadStorageItems();
+    }
+
+    updateNextSessionDisplay();
+    updateInGameDateDisplay();
+    renderLastSessionCard(latestRecap || null);
+    renderCurrentCharacterCard();
+    if (countPlayers) countPlayers.textContent = String(participantsCount || 0);
+    if (countCharacters) countCharacters.textContent = String(charactersCount || 0);
+    if (countSessions) countSessions.textContent = String(sessionsCount || 0);
+
+    if (storageSection && isNarrator) {
+      if (storageCard) {
+        storageCard.classList.add("cd-storage-card--clickable");
+        storageCard.setAttribute("role", "button");
+        storageCard.setAttribute("tabindex", "0");
+        storageCard.setAttribute("aria-label", "Abrir almacenamiento de la crónica");
+        storageCard.addEventListener("click", () => {
+          void openStorageModal();
+        });
+        storageCard.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          void openStorageModal();
+        });
+      }
+      await refreshStorageSummary();
     }
 
     if (inviteSection && inviteCopyBtn && inviteCodeValue && isNarrator && currentInviteCode) {

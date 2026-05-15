@@ -588,6 +588,7 @@
         chronicleId,
         isNarrator,
         currentUserId: session.user.id,
+        isChronicleOwner: chronicle.creator_id === currentPlayer.id,
     });
 
     await ns.territory?.init({
