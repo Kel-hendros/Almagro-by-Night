@@ -6,8 +6,15 @@
 /* ── Bell Icon — unread highlight ── */
 
 .notif-bell-link.has-unread .lucide {
-  color: var(--theme-accent, #c62828);
-  filter: drop-shadow(0 0 6px var(--theme-accent, #c62828));
+  color: var(--color-danger, #c62828);
+  fill: var(--color-danger, #c62828);
+  stroke: var(--color-danger, #c62828);
+  filter: drop-shadow(0 0 8px var(--color-danger, #c62828));
+}
+
+.notif-bell-link.has-unread .lucide * {
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 /* ── Drawer Backdrop ── */
@@ -31,7 +38,23 @@
 /* ── Drawer Panel ── */
 
 .notif-drawer {
-  width: min(380px, 100%);
+  /* Font-size scale — tweak these to resize all drawer text together */
+  --notif-fs-sm: 13px;  /* metadata + texto secundario: chip, card text, markdown, empty, timestamp, pool, group header */
+  --notif-fs-md: 15px;  /* contenido principal: card title, roll name */
+  --notif-fs-lg: 18px;  /* énfasis: drawer header, roll resultado */
+
+  /* Numeric scale — dedicated, theme-agnostic font for dados */
+  --notif-font-numeric: ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace;
+  --notif-fs-num-die: 13px;   /* número en cada dado */
+
+  /* Compensa la x-height baja en theme Clásico (Cormorant). Valor más bajo que el global (0.52)
+     porque el drawer se compara contra otros themes sin ajuste — calibrado para emparejar visualmente. */
+  --notif-font-size-adjust: 0.46;
+
+  /* Line-height fijo para que el alto de cada card no varíe según la métrica intrínseca de cada fuente */
+  line-height: 1.3;
+
+  width: min(50vw, 100%);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -40,6 +63,13 @@
   box-shadow: -8px 0 30px rgba(0, 0, 0, 0.4);
   animation: notif-slide-in 0.25s ease-out;
   overflow: hidden;
+}
+
+:root[data-app-font="clasico"] .notif-drawer,
+:root[data-font="clasico"] .notif-drawer,
+body[data-app-font="clasico"] .notif-drawer,
+body[data-font="clasico"] .notif-drawer {
+  font-size-adjust: var(--notif-font-size-adjust);
 }
 
 @keyframes notif-slide-in {
@@ -66,7 +96,7 @@
 
 .notif-drawer-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--notif-fs-lg);
   font-family: var(--app-font-heading, var(--app-font-body));
   color: var(--theme-text-primary, #f2f2f2);
 }
@@ -88,7 +118,7 @@
   background: transparent;
   color: var(--theme-text-secondary, #a0a0a2);
   font-family: var(--app-font-body);
-  font-size: 12px;
+  font-size: var(--notif-fs-sm);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -126,7 +156,7 @@
   padding: 32px 18px;
   color: var(--theme-text-tertiary, #6e6e70);
   font-family: var(--app-font-body);
-  font-size: 13px;
+  font-size: var(--notif-fs-sm);
 }
 
 .notif-drawer-empty.hidden {
@@ -220,8 +250,8 @@
 
 .notif-card-markdown {
   margin-top: 2px;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--notif-fs-sm);
+  line-height: 1.3;
   color: var(--theme-text-secondary, #b0b0b0);
 }
 
@@ -250,7 +280,7 @@
 /* ── Chronicle Group Header ── */
 
 .notif-group-header {
-  font-size: 11px;
+  font-size: var(--notif-fs-sm);
   font-family: var(--app-font-heading, var(--app-font-body));
   color: var(--theme-accent, #c62828);
   text-transform: uppercase;
@@ -326,9 +356,8 @@
 }
 
 .notif-roll-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--theme-text-secondary, #ccc);
+  font-size: var(--notif-fs-md);
+  color: var(--theme-text-primary, #f2f2f2);
   font-family: var(--app-font-body);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -336,13 +365,13 @@
 }
 
 .notif-roll-pool {
-  font-size: 11px;
+  font-size: var(--notif-fs-sm);
   color: var(--theme-text-tertiary, #888);
   font-family: var(--app-font-body);
 }
 
 .notif-roll-result {
-  font-size: 14px;
+  font-size: var(--notif-fs-lg);
   font-weight: 700;
   font-family: var(--app-font-body);
   padding: 1px 0;
@@ -363,34 +392,50 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  font-size: 11px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  font-size: var(--notif-fs-num-die);
   font-weight: 700;
-  font-family: var(--app-font-body);
+  font-family: var(--notif-font-numeric);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   background: rgba(255, 255, 255, 0.06);
   color: #555;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .notif-roll-die.success {
-  background: rgba(76, 175, 80, 0.18);
-  color: #4caf50;
+  color: color-mix(in srgb, var(--theme-success, #6e9e6e) 18%, #000000);
+  border-color: color-mix(in srgb, var(--theme-success, #6e9e6e) 72%, #000000);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--theme-success, #6e9e6e) 68%, #ffffff),
+    color-mix(in srgb, var(--theme-success, #6e9e6e) 78%, #000000));
 }
 
 .notif-roll-die.botch {
-  background: rgba(198, 40, 40, 0.18);
-  color: #e53935;
+  color: color-mix(in srgb, var(--theme-danger, #c62828) 18%, #000000);
+  border-color: color-mix(in srgb, var(--theme-danger, #c62828) 72%, #000000);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--theme-danger, #c62828) 68%, #ffffff),
+    color-mix(in srgb, var(--theme-danger, #c62828) 78%, #000000));
 }
 
 .notif-roll-die.fail {
-  background: rgba(255, 255, 255, 0.04);
-  color: #555;
+  color: color-mix(in srgb, var(--theme-info, #4a90c4) 18%, #000000);
+  border-color: color-mix(in srgb, var(--theme-info, #4a90c4) 72%, #000000);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--theme-info, #4a90c4) 68%, #ffffff),
+    color-mix(in srgb, var(--theme-info, #4a90c4) 78%, #000000));
 }
 
 .notif-roll-die.potencia {
-  background: rgba(255, 193, 7, 0.18);
-  color: #ffc107;
+  color: color-mix(in srgb, #ffc107 18%, #000000);
+  border-color: color-mix(in srgb, #ffc107 72%, #000000);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, #ffc107 68%, #ffffff),
+    color-mix(in srgb, #ffc107 78%, #000000));
 }
 
 /* ── Card Body ── */
@@ -404,7 +449,7 @@
 }
 
 .notif-card-title {
-  font-size: 13px;
+  font-size: var(--notif-fs-md);
   font-family: var(--app-font-body);
   color: var(--theme-text-primary, #f2f2f2);
   line-height: 1.3;
@@ -414,7 +459,7 @@
 }
 
 .notif-card-text {
-  font-size: 11px;
+  font-size: var(--notif-fs-sm);
   font-family: var(--app-font-body);
   color: var(--theme-text-tertiary, #6e6e70);
   line-height: 1.3;
@@ -427,7 +472,7 @@
 
 .notif-card-time {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--notif-fs-sm);
   font-family: var(--app-font-body);
   color: var(--theme-text-tertiary, #6e6e70);
   white-space: nowrap;
