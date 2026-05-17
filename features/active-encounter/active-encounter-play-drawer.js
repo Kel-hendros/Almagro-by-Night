@@ -252,11 +252,19 @@
           propsListEl.innerHTML = '<button class="ae-drawer-item empty" disabled>Sin objetos</button>';
           propsListEl.onmouseleave = function () { map?.clearHoverFocus?.(); };
         } else {
+          var nameCounts = new Map();
+          for (var pi = 0; pi < props.length; pi++) {
+            var nm = props[pi].name || props[pi].id || "Objeto";
+            nameCounts.set(nm, (nameCounts.get(nm) || 0) + 1);
+          }
+          var nameIndex = new Map();
           propsListEl.innerHTML = props.map(function (prop) {
-            var label = global.escapeHtml(prop.name || prop.id || "Objeto");
-            var x = Math.round((parseFloat(prop.x) || 0) * 10) / 10;
-            var y = Math.round((parseFloat(prop.y) || 0) * 10) / 10;
-            return '<button class="ae-drawer-item" data-role="prop" data-id="' + prop.id + '">' + label + ' · (' + x + ', ' + y + ')</button>';
+            var rawName = prop.name || prop.id || "Objeto";
+            var total = nameCounts.get(rawName) || 1;
+            var idx = (nameIndex.get(rawName) || 0) + 1;
+            nameIndex.set(rawName, idx);
+            var label = global.escapeHtml(total > 1 ? rawName + " " + idx : rawName);
+            return '<button class="ae-drawer-item" data-role="prop" data-id="' + prop.id + '">' + label + '</button>';
           }).join("");
           propsListEl.querySelectorAll('[data-role="prop"]').forEach(function (btn) {
             btn.addEventListener("click", function () {
