@@ -1,5 +1,11 @@
 // Tactical map core. Rendering and interactions are attached by
 // tactical-map-render.js and tactical-map-interactions.js.
+//
+// Wrapped in an IIFE so re-evaluation (e.g. on mode switch where the script
+// chain is reloaded) does not redeclare top-level consts/class.
+(function initTacticalMapModule() {
+  if (window.TacticalMap) return;
+
 const DEFAULT_TACTICAL_MAP_CONFIG = {
   zoomLevels: [0.5, 1, 1.5, 3.5],
   wheelStepThreshold: 80,
@@ -1601,6 +1607,9 @@ window.TacticalMap = class TacticalMap {
     if (typeof this.drawTokenHoverOverlay === "function") {
       this.drawTokenHoverOverlay(timestamp);
     }
+    if (typeof this.drawPropHoverOverlay === "function") {
+      this.drawPropHoverOverlay();
+    }
     if (typeof this.drawTilePainterHover === "function") {
       this.drawTilePainterHover();
     }
@@ -1646,3 +1655,5 @@ if (typeof window.__applyTacticalMapRender === "function") {
 if (typeof window.__applyTacticalMapInteractions === "function") {
   window.__applyTacticalMapInteractions(window.TacticalMap);
 }
+
+})();

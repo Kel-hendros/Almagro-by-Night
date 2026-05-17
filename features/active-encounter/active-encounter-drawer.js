@@ -279,6 +279,13 @@
         openBrowser("decor");
       });
 
+      bindAddBtn("btn-ae-add-bg-prop", async () => {
+        if (!requireAdminAction()) return;
+        setActiveMapLayer("background", { openDrawer: false });
+        await loadDesignAssets("prop");
+        openBrowser("props");
+      });
+
       bindAddBtn("btn-ae-add-entity-npc", () => {
         if (!requireAdminAction()) return;
         openBrowser("npc");
@@ -1041,6 +1048,77 @@
 
       bindEntityList(els.listEntitiesNpc, npcInstances);
       bindEntityList(els.listEntitiesPc, pcInstances, " ae-drawer-item--pc");
+
+      renderBackgroundPropsList();
+    }
+
+    function renderBackgroundPropsList() {
+      const listEl = els.listBackgroundProps;
+      if (!listEl) return;
+      const map = getMap();
+      const mapProps = Array.isArray(map?.props) ? map.props : [];
+      const dataProps = Array.isArray(state.encounter?.data?.props)
+        ? state.encounter.data.props
+        : [];
+      const byId = new Map();
+      for (const p of dataProps) {
+        if (p && p.id) byId.set(p.id, p);
+      }
+      for (const p of mapProps) {
+        if (p && p.id) byId.set(p.id, { ...byId.get(p.id), ...p });
+      }
+      const allProps = Array.from(byId.values());
+      const props = canEditEncounter()
+        ? allProps
+        : allProps.filter((p) => p.visible !== false);
+
+      if (!props.length) {
+        listEl.innerHTML =
+          '<button class="ae-drawer-item empty" disabled>Sin props</button>';
+        listEl.onmouseleave = () => map?.clearHoverFocus?.();
+        return;
+      }
+
+      const nameCounts = new Map();
+      for (const p of props) {
+        const key = p.name || "Prop";
+        nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+      }
+      const nameIndex = new Map();
+      listEl.innerHTML = props
+        .map((prop) => {
+          const rawName = prop.name || "Prop";
+          const total = nameCounts.get(rawName) || 1;
+          const idx = (nameIndex.get(rawName) || 0) + 1;
+          nameIndex.set(rawName, idx);
+          const label = total > 1 ? `${rawName} ${idx}` : rawName;
+          return `<button class="ae-drawer-item" data-role="bg-prop" data-id="${prop.id}">${global.escapeHtml(label)}</button>`;
+        })
+        .join("");
+
+      listEl.querySelectorAll('[data-role="bg-prop"]').forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          setActiveMapLayer("background", { openDrawer: false });
+          if (!map) return;
+          map.selectedPropIds = new Set([id]);
+          const target = (map.props || []).find((p) => p && p.id === id) ||
+            (state.encounter?.data?.props || []).find((p) => p && p.id === id);
+          if (target && typeof map.panToCell === "function") {
+            const cx = (parseFloat(target.x) || 0) +
+              (parseFloat(target.widthCells) || 0) / 2;
+            const cy = (parseFloat(target.y) || 0) +
+              (parseFloat(target.heightCells) || 0) / 2;
+            map.panToCell(cx, cy, true);
+          } else {
+            map.draw?.();
+          }
+        });
+        btn.addEventListener("mouseenter", () => {
+          map?.setHoverFocus?.({ type: "prop", propId: btn.dataset.id });
+        });
+      });
+      listEl.onmouseleave = () => map?.clearHoverFocus?.();
     }
 
     function setBusy(isBusy) {
@@ -1059,6 +1137,7 @@
     function applyPermissions() {
       const adminOnlyIds = [
         "btn-ae-add-bg",
+        "btn-ae-add-bg-prop",
         "btn-ae-add-decor",
         "btn-ae-add-entity-npc",
         "btn-ae-add-entity-pc",

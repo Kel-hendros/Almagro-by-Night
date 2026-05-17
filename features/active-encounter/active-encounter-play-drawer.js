@@ -289,6 +289,7 @@
 
       [
         "btn-ae-add-bg",
+        "btn-ae-add-bg-prop",
         "btn-ae-add-decor",
         "btn-ae-add-entity-npc",
         "btn-ae-add-entity-pc",

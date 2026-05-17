@@ -26,6 +26,12 @@
       return hover.tokenId === token.id;
     };
 
+    proto.isPropHoverFocused = function isPropHoverFocused(prop) {
+      const hover = this.hoverFocus;
+      if (!hover || hover.type !== "prop" || !prop) return false;
+      return hover.propId === prop.id;
+    };
+
     /**
      * Draw hover halo for the focused token ABOVE the fog/lighting overlay.
      * Called after drawFogOfWar in the pipeline so it's never dimmed.
@@ -55,6 +61,20 @@
       var cx = pos.x * this.gridSize + size / 2;
       var cy = pos.y * this.gridSize + size / 2;
       this.drawHoverHalo(cx, cy, radius + 2);
+    };
+
+    /**
+     * Draw hover halo for the focused prop ABOVE the fog/lighting overlay.
+     * Called after drawLightingOverlay in the pipeline so it's never dimmed.
+     */
+    proto.drawPropHoverOverlay = function drawPropHoverOverlay() {
+      if (!this.hoverFocus || this.hoverFocus.type !== "prop") return;
+      const propId = this.hoverFocus.propId;
+      if (!propId) return;
+      const prop = (this.props || []).find((p) => p && p.id === propId);
+      if (!prop) return;
+      const rect = this.getPropRect(prop);
+      this.drawHoverRectHalo(rect.x, rect.y, rect.width, rect.height);
     };
 
     proto.drawHoverHalo = function drawHoverHalo(cx, cy, radius) {
@@ -525,8 +545,12 @@
         this._propsCacheDirty = true;
       }
 
-      // Detect viewport/zoom changes that require re-render
-      const cacheKey = `${canvasW}:${canvasH}:${this.scale}:${this.offsetX}:${this.offsetY}`;
+      const hoverType = this.getHoverFocusType();
+      const hoverPropId = hoverType === "prop" ? this.hoverFocus?.propId : null;
+      const dimOthers = !!hoverType;
+
+      // Detect viewport/zoom/hover changes that require re-render
+      const cacheKey = `${canvasW}:${canvasH}:${this.scale}:${this.offsetX}:${this.offsetY}:${hoverType || ""}:${hoverPropId || ""}`;
       if (this._propsCacheKey !== cacheKey) {
         this._propsCacheDirty = true;
       }
@@ -564,8 +588,13 @@
           const cy = rect.y + rect.height / 2;
           const rotation = this.getPropRotationRad(prop);
 
+          const isFocused = this.isPropHoverFocused(prop);
+          const isDimmed = dimOthers && !isFocused;
+
           offCtx.save();
-          offCtx.globalAlpha = Math.min(1, Math.max(0, parseFloat(prop.opacity) || 1));
+          offCtx.globalAlpha =
+            Math.min(1, Math.max(0, parseFloat(prop.opacity) || 1)) *
+            (isDimmed ? 0.2 : 1);
           offCtx.translate(cx, cy);
           offCtx.rotate(rotation);
 

@@ -476,6 +476,7 @@
     els.drawerTabPane_settings = document.getElementById("ae-drawer-tab-settings-content");
     els.gridOpacityLevels = document.getElementById("ae-grid-opacity-levels");
     els.listBackground = document.getElementById("ae-list-background");
+    els.listBackgroundProps = document.getElementById("ae-list-background-props");
     els.listDecor = document.getElementById("ae-list-decor");
     els.listEntitiesNpc = document.getElementById("ae-list-entities-npc");
     els.listEntitiesPc = document.getElementById("ae-list-entities-pc");
@@ -1921,6 +1922,14 @@
     if (container) {
       container.dataset.uiMode = state.uiMode;
       container.dataset.editPreview = isEditPreviewActive() ? "active" : "idle";
+    }
+    if (state.map) {
+      const wasPlayMode = !!state.map.playMode;
+      state.map.playMode = isPlayMode();
+      if (wasPlayMode !== state.map.playMode) {
+        state.map._hoveredLightId = null;
+        state.map.draw?.();
+      }
     }
 
     const canSwitchModes = canUseEditMode();
