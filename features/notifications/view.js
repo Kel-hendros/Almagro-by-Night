@@ -46,6 +46,7 @@
     { key: "dice_roll", label: "Tiradas" },
     { key: "revelation", label: "Revelaciones" },
     { key: "muestra", label: "Muestras" },
+    { key: "system", label: "Sistema" },
   ];
 
   /**
@@ -173,15 +174,19 @@
     card.className = "notif-card " + meta.cssClass;
     if (isUnread) card.classList.add("notif-card--unread");
 
-    var iconName = notif.icon || meta.icon;
+    var iconName = normalizeIconName(notif.icon || meta.icon);
+    var bodyHtml = "";
+    if (notif.body) {
+      bodyHtml = notif.type === "system"
+        ? '<div class="notif-card-markdown doc-markdown">' + renderMarkdownSafe(notif.body) + "</div>"
+        : '<span class="notif-card-text">' + escapeHtml(notif.body) + "</span>";
+    }
 
     card.innerHTML =
       '<div class="notif-card-icon"><i data-lucide="' + iconName + '"></i></div>' +
       '<div class="notif-card-body">' +
       '<span class="notif-card-title">' + escapeHtml(notif.title) + "</span>" +
-      (notif.body
-        ? '<span class="notif-card-text">' + escapeHtml(notif.body) + "</span>"
-        : "") +
+      bodyHtml +
       "</div>" +
       '<span class="notif-card-time">' + timeAgo(notif.created_at) + "</span>";
 
@@ -292,6 +297,24 @@
     var div = document.createElement("div");
     div.textContent = str || "";
     return div.innerHTML;
+  }
+
+  function renderMarkdownSafe(markdown) {
+    if (typeof global.renderMarkdown === "function") {
+      return global.renderMarkdown(markdown || "");
+    }
+    if (global.marked?.parse) {
+      var html = global.marked.parse(String(markdown || ""));
+      if (global.DOMPurify?.sanitize) return global.DOMPurify.sanitize(html);
+      return escapeHtml(html);
+    }
+    return escapeHtml(markdown || "").replace(/\n/g, "<br>");
+  }
+
+  function normalizeIconName(icon) {
+    var raw = String(icon || "info").trim();
+    if (raw === "triangle-alert") return "alert-triangle";
+    return raw || "info";
   }
 
   /**
@@ -548,8 +571,14 @@
     ensureToastContainer();
 
     var meta = TYPE_META[notif.type] || TYPE_META.system;
-    var iconName = notif.icon || meta.icon;
+    var iconName = normalizeIconName(notif.icon || meta.icon);
     var chronicleName = notif.chronicles?.name || "";
+    var bodyHtml = "";
+    if (notif.body) {
+      bodyHtml = notif.type === "system"
+        ? '<div class="notif-toast-markdown doc-markdown">' + renderMarkdownSafe(notif.body) + "</div>"
+        : '<span class="notif-toast-text">' + escapeHtml(notif.body) + "</span>";
+    }
 
     var toast = document.createElement("div");
     toast.className = "notif-toast notif-toast--" + (notif.type || "system");
@@ -561,9 +590,7 @@
         ? '<span class="notif-toast-chronicle">' + escapeHtml(chronicleName) + "</span>"
         : "") +
       '<span class="notif-toast-title">' + escapeHtml(notif.title || "") + "</span>" +
-      (notif.body
-        ? '<span class="notif-toast-text">' + escapeHtml(notif.body) + "</span>"
-        : "") +
+      bodyHtml +
       "</div>" +
       '<button class="notif-toast-close" aria-label="Cerrar">&times;</button>';
 

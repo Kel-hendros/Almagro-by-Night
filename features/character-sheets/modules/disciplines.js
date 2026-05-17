@@ -75,6 +75,11 @@
     if (deps.save) deps.save();
   }
 
+  function replaceArrayContents(target, nextItems) {
+    target.length = 0;
+    nextItems.forEach((item) => target.push(item));
+  }
+
   function capitalizeFirstLetter(string) {
     if (deps.capitalizeFirstLetter) return deps.capitalizeFirstLetter(string);
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -1269,7 +1274,7 @@
         existingMap[d.id] = d.level;
       });
 
-      state.selectedDisciplines = [];
+      state.selectedDisciplines.length = 0;
       disciplineRepo.forEach((d) => {
         if (modalSelection.has(d.id)) {
           state.selectedDisciplines.push({ id: d.id, level: existingMap[d.id] || 1 });
@@ -1361,8 +1366,9 @@
           existingMap[s.sendaId] = s.level;
         });
 
-      state.selectedSendas = state.selectedSendas.filter(
-        (s) => s.disciplineId !== currentDisciplineId
+      replaceArrayContents(
+        state.selectedSendas,
+        state.selectedSendas.filter((s) => s.disciplineId !== currentDisciplineId)
       );
 
       const available = getSendasForDiscipline(currentDisciplineId);
@@ -1536,7 +1542,7 @@
   }
 
   function loadDisciplinesFromJSON(characterData) {
-    state.selectedDisciplines = [];
+    state.selectedDisciplines.length = 0;
 
     if (characterData.disciplines && Array.isArray(characterData.disciplines)) {
       characterData.disciplines.forEach((d) => {
@@ -1575,7 +1581,7 @@
   }
 
   function loadSendasFromJSON(characterData) {
-    state.selectedSendas = [];
+    state.selectedSendas.length = 0;
     if (characterData.sendas && Array.isArray(characterData.sendas)) {
       characterData.sendas.forEach((s) => {
         const repoEntry = sendasRepo.find((r) => r.id === s.sendaId);
@@ -1596,7 +1602,7 @@
   }
 
   function loadPowersFromJSON(characterData) {
-    state.disciplinePowers = [];
+    state.disciplinePowers.length = 0;
     if (characterData.disciplinePowers && Array.isArray(characterData.disciplinePowers)) {
       characterData.disciplinePowers.forEach((p) => {
         if (p.name && p.name.trim() !== "") {
@@ -1623,7 +1629,10 @@
       }
     });
 
-    state.selectedDisciplines = state.selectedDisciplines.filter((d) => d.id !== 0);
+    replaceArrayContents(
+      state.selectedDisciplines,
+      state.selectedDisciplines.filter((d) => d.id !== 0)
+    );
   }
 
   function getActivatedDisciplines() {

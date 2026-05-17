@@ -225,7 +225,7 @@
   }
 
   function loadFromCharacterData(characterData) {
-    state.items = [];
+    state.items.length = 0;
 
     if (characterData?.backgrounds && Array.isArray(characterData.backgrounds)) {
       characterData.backgrounds.forEach((bg) => {

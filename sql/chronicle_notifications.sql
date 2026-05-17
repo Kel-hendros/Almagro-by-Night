@@ -1,6 +1,7 @@
 -- Sistema de notificaciones cross-crónicas
--- Cada notificación pertenece a una crónica, pero el centro de notificaciones
--- del usuario muestra TODAS las notificaciones de TODAS sus crónicas.
+-- Las notificaciones pueden pertenecer a una crónica o ser globales de sistema.
+-- El centro de notificaciones del usuario muestra TODAS las notificaciones
+-- visibles de TODAS sus crónicas más las globales.
 -- El cursor de lectura es global por jugador (no por crónica).
 
 -- ============================================================
@@ -9,10 +10,10 @@
 
 create table if not exists public.chronicle_notifications (
   id              uuid primary key default gen_random_uuid(),
-  chronicle_id    uuid not null references public.chronicles(id) on delete cascade,
+  chronicle_id    uuid null references public.chronicles(id) on delete cascade,
   type            text not null check (type in (
     'dice_roll', 'revelation', 'session_start',
-    'session_end', 'player_joined', 'system'
+    'session_end', 'player_joined', 'system', 'muestra', 'sms'
   )),
   title           text not null check (char_length(title) <= 200),
   body            text not null default '',
@@ -21,7 +22,12 @@ create table if not exists public.chronicle_notifications (
   actor_player_id uuid null references public.players(id) on delete set null,
   visibility      text not null default 'all' check (visibility in ('all', 'targeted')),
   target_player_ids uuid[] not null default '{}',
-  created_at      timestamptz not null default now()
+  created_at      timestamptz not null default now(),
+  constraint chronicle_notifications_system_global_check check (
+    (type = 'system' and chronicle_id is null and visibility = 'all')
+    or
+    (type <> 'system' and chronicle_id is not null)
+  )
 );
 
 -- ============================================================
@@ -51,6 +57,10 @@ create index if not exists idx_cn_type
 create index if not exists idx_cn_created
   on public.chronicle_notifications (created_at desc);
 
+create index if not exists idx_cn_system_created
+  on public.chronicle_notifications (created_at desc)
+  where type = 'system' and chronicle_id is null;
+
 -- ============================================================
 -- 4. RLS — chronicle_notifications
 -- ============================================================
@@ -64,26 +74,33 @@ on public.chronicle_notifications
 for select
 to authenticated
 using (
-  chronicle_id in (select public.get_my_chronicle_ids())
-  and (
-    visibility = 'all'
-    or exists (
-      select 1 from public.players p
-      where p.user_id = auth.uid()
-        and (
-          p.id = any(chronicle_notifications.target_player_ids)
-          or exists (
-            select 1 from public.chronicle_participants cp
-            where cp.chronicle_id = chronicle_notifications.chronicle_id
-              and cp.player_id = p.id
-              and cp.role = 'narrator'
+  (
+    type = 'system'
+    and chronicle_id is null
+    and visibility = 'all'
+  )
+  or (
+    chronicle_id in (select public.get_my_chronicle_ids())
+    and (
+      visibility = 'all'
+      or exists (
+        select 1 from public.players p
+        where p.user_id = auth.uid()
+          and (
+            p.id = any(chronicle_notifications.target_player_ids)
+            or exists (
+              select 1 from public.chronicle_participants cp
+              where cp.chronicle_id = chronicle_notifications.chronicle_id
+                and cp.player_id = p.id
+                and cp.role = 'narrator'
+            )
+            or exists (
+              select 1 from public.chronicles c
+              where c.id = chronicle_notifications.chronicle_id
+                and c.creator_id = p.id
+            )
           )
-          or exists (
-            select 1 from public.chronicles c
-            where c.id = chronicle_notifications.chronicle_id
-              and c.creator_id = p.id
-          )
-        )
+      )
     )
   )
 );
@@ -95,7 +112,20 @@ on public.chronicle_notifications
 for insert
 to authenticated
 with check (
-  chronicle_id in (select public.get_my_chronicle_ids())
+  (
+    type = 'system'
+    and chronicle_id is null
+    and visibility = 'all'
+    and exists (
+      select 1 from public.players p
+      where p.user_id = auth.uid()
+        and coalesce(p.is_admin, false) = true
+    )
+  )
+  or (
+    type <> 'system'
+    and chronicle_id in (select public.get_my_chronicle_ids())
+  )
 );
 
 -- DELETE: solo narradores (para cleanup)
@@ -105,7 +135,16 @@ on public.chronicle_notifications
 for delete
 to authenticated
 using (
-  exists (
+  (
+    type = 'system'
+    and chronicle_id is null
+    and exists (
+      select 1 from public.players p
+      where p.user_id = auth.uid()
+        and coalesce(p.is_admin, false) = true
+    )
+  )
+  or exists (
     select 1 from public.chronicle_participants cp
     join public.players p on p.id = cp.player_id
     where cp.chronicle_id = chronicle_notifications.chronicle_id
@@ -169,39 +208,107 @@ set search_path = public
 as $$
   select count(*)::int
   from public.chronicle_notifications cn
-  where cn.chronicle_id in (
-    select cp.chronicle_id
-    from public.chronicle_participants cp
-    where cp.player_id = p_player_id
-    union
-    select c.id
-    from public.chronicles c
-    where c.creator_id = p_player_id
-  )
-  and cn.created_at > coalesce(
+  where cn.created_at > coalesce(
     (select nrc.last_seen_at
      from public.notification_read_cursors nrc
      where nrc.player_id = p_player_id),
     '1970-01-01'::timestamptz
   )
   and (
-    cn.visibility = 'all'
-    or p_player_id = any(cn.target_player_ids)
-    or exists (
-      select 1 from public.chronicle_participants cp
-      where cp.chronicle_id = cn.chronicle_id
-        and cp.player_id = p_player_id
-        and cp.role = 'narrator'
+    (
+      cn.type = 'system'
+      and cn.chronicle_id is null
+      and cn.visibility = 'all'
     )
-    or exists (
-      select 1 from public.chronicles c
-      where c.id = cn.chronicle_id
-        and c.creator_id = p_player_id
+    or (
+      cn.chronicle_id in (
+        select cp.chronicle_id
+        from public.chronicle_participants cp
+        where cp.player_id = p_player_id
+        union
+        select c.id
+        from public.chronicles c
+        where c.creator_id = p_player_id
+      )
+      and (
+        cn.visibility = 'all'
+        or p_player_id = any(cn.target_player_ids)
+        or exists (
+          select 1 from public.chronicle_participants cp
+          where cp.chronicle_id = cn.chronicle_id
+            and cp.player_id = p_player_id
+            and cp.role = 'narrator'
+        )
+        or exists (
+          select 1 from public.chronicles c
+          where c.id = cn.chronicle_id
+            and c.creator_id = p_player_id
+        )
+      )
     )
   );
 $$;
 
 grant execute on function public.get_unread_notification_count(uuid) to authenticated;
+
+-- Admin helper: publish a global system notification.
+create or replace function public.create_system_notification(
+  p_title text,
+  p_body text,
+  p_icon text default 'info'
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_notification_id uuid;
+begin
+  if not exists (
+    select 1
+    from public.players p
+    where p.user_id = auth.uid()
+      and coalesce(p.is_admin, false) = true
+  ) then
+    raise exception 'Only admins can create system notifications';
+  end if;
+
+  insert into public.chronicle_notifications (
+    chronicle_id,
+    type,
+    title,
+    body,
+    icon,
+    metadata,
+    actor_player_id,
+    visibility,
+    target_player_ids
+  )
+  values (
+    null,
+    'system',
+    left(trim(coalesce(p_title, '')), 200),
+    coalesce(p_body, ''),
+    nullif(trim(coalesce(p_icon, 'info')), ''),
+    jsonb_build_object('scope', 'global'),
+    (
+      select p.id
+      from public.players p
+      where p.user_id = auth.uid()
+      limit 1
+    ),
+    'all',
+    '{}'::uuid[]
+  )
+  returning id into v_notification_id;
+
+  return v_notification_id;
+end;
+$$;
+
+revoke all on function public.create_system_notification(text, text, text) from public, anon;
+grant execute on function public.create_system_notification(text, text, text) to authenticated;
 
 -- Cleanup de notificaciones viejas (per chronicle, narrator only)
 create or replace function public.cleanup_old_notifications(

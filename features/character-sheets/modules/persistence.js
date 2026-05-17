@@ -35,6 +35,29 @@
     };
   }
 
+  async function updateSheetRow(sheetId, name, characterData) {
+    const { data, error } = await deps.supabaseClient
+      .from("character_sheets")
+      .update({
+        name,
+        data: characterData,
+        updated_at: new Date(),
+      })
+      .eq("id", sheetId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) return { ok: false, error };
+    if (!data?.id) {
+      return {
+        ok: false,
+        error: new Error("No se actualizó la hoja. Verificá permisos de edición para este personaje."),
+      };
+    }
+
+    return { ok: true, data };
+  }
+
   async function persistNow() {
     const sheetId = deps.getCurrentSheetId ? deps.getCurrentSheetId() : null;
     if (!sheetId || !deps.getCharacterData || !deps.supabaseClient) return;
@@ -47,20 +70,16 @@
     const characterName = deps.getCharacterName ? deps.getCharacterName() : "";
     const name = characterName || "Sin Nombre";
 
-    const { error } = await deps.supabaseClient
-      .from("character_sheets")
-      .update({
-        name,
-        data: characterData,
-        updated_at: new Date(),
-      })
-      .eq("id", sheetId);
+    const result = await updateSheetRow(sheetId, name, characterData);
 
-    if (error) {
+    if (!result.ok) {
+      const error = result.error;
       console.error("Error saving:", error);
       if (saveIcon) saveIcon.style.color = "red";
-      return;
+      return result;
     }
+
+    snapshotToSessionCache();
 
     if (saveIcon) {
       saveIcon.style.color = "lightgreen";
@@ -68,17 +87,25 @@
         saveIcon.style.color = "";
       }, 1000);
     }
+
+    return result;
   }
 
   const debouncedPersist = debounce(persistNow, 1000);
 
-  function saveCharacterData() {
+  function saveCharacterData(options = {}) {
     if (!deps.getCharacterData) return;
     const characterJSON = deps.getCharacterData();
     localStorage.setItem(deps.localStorageKey, characterJSON);
 
     const sheetId = deps.getCurrentSheetId ? deps.getCurrentSheetId() : null;
-    if (sheetId) debouncedPersist();
+    if (!sheetId) return;
+
+    if (options?.immediate) {
+      return persistNow();
+    }
+
+    debouncedPersist();
   }
 
   function flushPendingSave() {
@@ -92,10 +119,7 @@
     const characterName = deps.getCharacterName ? deps.getCharacterName() : "";
     const name = characterName || "Sin Nombre";
 
-    deps.supabaseClient
-      .from("character_sheets")
-      .update({ name, data: characterData, updated_at: new Date() })
-      .eq("id", sheetId);
+    return updateSheetRow(sheetId, name, characterData);
   }
 
   function snapshotToSessionCache() {

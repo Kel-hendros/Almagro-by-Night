@@ -303,12 +303,12 @@ function updateRatingDots(rating) {
 
 const persistenceModule = window.ABNSheetPersistence;
 
-function saveCharacterData() {
-  persistenceModule?.saveCharacterData();
+function saveCharacterData(options) {
+  return persistenceModule?.saveCharacterData(options);
 }
 
 function flushPendingSave() {
-  persistenceModule?.flushPendingSave();
+  return persistenceModule?.flushPendingSave();
 }
 
 if (persistenceModule) {
@@ -501,16 +501,25 @@ inputs.forEach((input) => {
 //GUARDAR INFORMACION DEL PERSONAJE EN JSON
 function getCharacterData() {
   let characterData = {};
+  const transientInputPrefixes = [
+    "background-",
+    "merit-",
+    "defect-",
+    "ritual-",
+    "attack-",
+    "damage-",
+  ];
 
   // Loop through all input or select elements
   const inputs = document.querySelectorAll("input" + ", select");
   inputs.forEach((input) => {
     const id = input.id;
     const value = input.value;
+    const isTransientInput = transientInputPrefixes.some((prefix) => id.startsWith(prefix));
 
     // Check if the input has an ID and a value and is not a file input
-    // Skip ritual form inputs to prevent stale data leaking into save
-    if (id && value && input.type !== "file" && !id.startsWith("ritual-") && !id.startsWith("attack-") && !id.startsWith("damage-")) {
+    // Skip transient form inputs to prevent stale draft data leaking into save
+    if (id && value && input.type !== "file" && !isTransientInput) {
       // Add the input ID and value to the characterData object
       characterData[id] = value;
 

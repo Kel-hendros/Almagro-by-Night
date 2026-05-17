@@ -583,7 +583,7 @@ async function loadRoute(force = false) {
   loadingBar.style.width = "70%";
 
   try {
-    const res = await fetch(path);
+    const res = await fetch(path, { cache: "no-store" });
     const html = await res.text();
     contentEl.innerHTML = html;
 

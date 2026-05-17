@@ -40,6 +40,16 @@
     }
     ns.view.updateBadge(state.unreadCount);
 
+    // Show unread global system announcements when the user arrives.
+    try {
+      var systemRes = await ns.service.fetchUnreadSystem(playerId, { limit: 3 });
+      (systemRes.data || []).forEach(function (notif) {
+        ns.view.showToast(notif);
+      });
+    } catch (e) {
+      console.warn("ABNNotifications: fetchUnreadSystem error", e);
+    }
+
     // Subscribe to realtime (all chronicles, RLS filters)
     ns.service.subscribeRealtime(onRealtimeInsert);
   }
@@ -283,6 +293,19 @@
     }
   }
 
+  /**
+   * Publish a global system notification. Admin-only via DB RPC.
+   */
+  async function pushSystemNotification(notification) {
+    notification = notification || {};
+    try {
+      return await ns.service.insertSystemNotification(notification);
+    } catch (e) {
+      console.warn("ABNNotifications: pushSystemNotification error", e);
+      return { data: null, error: e };
+    }
+  }
+
   ns.controller = {
     connect: connect,
     disconnect: disconnect,
@@ -292,5 +315,6 @@
     loadMore: loadMore,
     reload: reload,
     pushNotification: pushNotification,
+    pushSystemNotification: pushSystemNotification,
   };
 })(window);

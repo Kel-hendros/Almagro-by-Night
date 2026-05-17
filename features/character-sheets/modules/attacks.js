@@ -47,7 +47,7 @@
   }
 
   function loadFromCharacterData(characterData) {
-    state.attacks = [];
+    state.attacks.length = 0;
     if (characterData?.attacks && Array.isArray(characterData.attacks)) {
       characterData.attacks.forEach((a) => {
         state.attacks.push({ ...a, pendingExtra: 0 });

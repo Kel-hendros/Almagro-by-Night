@@ -45,6 +45,32 @@
   }
 
   /**
+   * Fetch unread global system notifications for login-time toasts.
+   * If the player has no cursor yet, return only the latest few announcements.
+   */
+  async function fetchUnreadSystem(playerId, opts) {
+    opts = opts || {};
+    var limit = opts.limit || 3;
+    var cursor = await fetchReadCursor(playerId);
+    var query = sb()
+      .from("chronicle_notifications")
+      .select("*, chronicles(name)")
+      .eq("type", "system")
+      .is("chronicle_id", null)
+      .order("created_at", { ascending: cursor ? true : false })
+      .limit(limit);
+
+    if (cursor) {
+      query = query.gt("created_at", cursor);
+    }
+
+    var res = await query;
+    var rows = res.data || [];
+    if (!cursor) rows.reverse();
+    return { data: rows, error: res.error };
+  }
+
+  /**
    * Get global unread count via RPC (across all chronicles).
    */
   async function fetchUnreadCount(playerId) {
@@ -92,6 +118,18 @@
     // by DB trigger trg_prune_dice_roll_notifications.
 
     return res;
+  }
+
+  /**
+   * Publish a global system notification. Admin-only via RPC.
+   */
+  async function insertSystemNotification(notification) {
+    notification = notification || {};
+    return sb().rpc("create_system_notification", {
+      p_title: notification.title || "",
+      p_body: notification.body || "",
+      p_icon: notification.icon || "info",
+    });
   }
 
   /**
@@ -146,10 +184,12 @@
 
   ns.service = {
     fetchRecent: fetchRecent,
+    fetchUnreadSystem: fetchUnreadSystem,
     fetchUnreadCount: fetchUnreadCount,
     fetchReadCursor: fetchReadCursor,
     markSeen: markSeen,
     insertNotification: insertNotification,
+    insertSystemNotification: insertSystemNotification,
     subscribeRealtime: subscribeRealtime,
     unsubscribeRealtime: unsubscribeRealtime,
     PAGE_SIZE: PAGE_SIZE,

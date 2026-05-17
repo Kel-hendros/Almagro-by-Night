@@ -421,7 +421,7 @@
   }
 
   function loadFromCharacterData(characterData) {
-    state.rolls = [];
+    state.rolls.length = 0;
     state.nextId = 1;
 
     if (characterData?.savedRolls && Array.isArray(characterData.savedRolls)) {

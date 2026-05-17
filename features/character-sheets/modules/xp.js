@@ -257,7 +257,7 @@
   }
 
   function loadFromCharacterData(characterData) {
-    state.arcs = [];
+    state.arcs.length = 0;
     state.currentArcIndex = 0;
     if (characterData?.xpArcs && Array.isArray(characterData.xpArcs)) {
       characterData.xpArcs.forEach((arc) => {

@@ -213,6 +213,39 @@
   color: var(--color-info, #4a7c8e);
 }
 
+.notif-card--system .notif-card-icon {
+  background: color-mix(in srgb, var(--color-info, #4a7c8e) 18%, transparent);
+  color: var(--color-info, #4a7c8e);
+}
+
+.notif-card-markdown {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--theme-text-secondary, #b0b0b0);
+}
+
+.notif-card-markdown :is(p, ul, ol, blockquote) {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+.notif-card-markdown :is(p, ul, ol, blockquote):last-child {
+  margin-bottom: 0;
+}
+
+.notif-card-markdown :is(ul, ol) {
+  padding-left: 18px;
+}
+
+.notif-card-markdown a {
+  color: var(--theme-accent, #c62828);
+}
+
+.notif-card-markdown img {
+  display: none;
+}
+
 
 /* ── Chronicle Group Header ── */
 
@@ -518,6 +551,11 @@
   color: var(--color-info, #4a7c8e);
 }
 
+.notif-toast--system .notif-toast-icon {
+  background: color-mix(in srgb, var(--color-info, #4a7c8e) 18%, transparent);
+  color: var(--color-info, #4a7c8e);
+}
+
 
 .notif-toast-body {
   flex: 1;
@@ -549,6 +587,34 @@
   font-size: 11px;
   font-family: var(--app-font-body);
   color: #999;
+}
+
+.notif-toast-markdown {
+  font-size: 12px;
+  font-family: var(--app-font-body);
+  color: #bbb;
+  line-height: 1.4;
+}
+
+.notif-toast-markdown :is(p, ul, ol, blockquote) {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.notif-toast-markdown :is(p, ul, ol, blockquote):last-child {
+  margin-bottom: 0;
+}
+
+.notif-toast-markdown :is(ul, ol) {
+  padding-left: 18px;
+}
+
+.notif-toast-markdown a {
+  color: var(--theme-accent, #c62828);
+}
+
+.notif-toast-markdown img {
+  display: none;
 }
 
 .notif-toast-close {

@@ -1577,13 +1577,13 @@ h3 {
 
 .rating {
 	display: inline-flex;
-	gap: 5px;
+	gap: 1px;
 }
 
 .rating-wrap {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 2px;
 }
 
 .specialty-dot {

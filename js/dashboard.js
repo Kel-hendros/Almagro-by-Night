@@ -13,6 +13,8 @@
     overview: null,
     activeTab: "general",
     chartsBySession: {},
+    systemNotifications: [],
+    systemNotificationsLoading: false,
   };
 
   // Order matters — first entry is the default tab.
@@ -182,12 +184,216 @@
   // ---------- Tab panels ----------
 
   function renderGeneralPanel() {
-    var div = document.createElement("div");
-    div.className = "dash-tab-empty";
-    div.innerHTML =
-      '<i data-lucide="bar-chart-3"></i>' +
-      '<p>Seleccioná un indicador para ver detalles.</p>';
-    return div;
+    var section = document.createElement("div");
+    section.className = "dash-tab-content dash-general-panel";
+    section.innerHTML =
+      '<div class="dash-system-admin">' +
+        '<div class="dash-system-head">' +
+          '<div>' +
+            '<h3 class="dash-section-title">Notificaciones de sistema</h3>' +
+            '<p class="dash-section-hint">Mensajes globales para todos los usuarios.</p>' +
+          '</div>' +
+          '<button id="dash-system-reload" type="button" class="btn btn--ghost">' +
+            '<i data-lucide="refresh-cw"></i><span>Actualizar</span>' +
+          '</button>' +
+        '</div>' +
+        '<form id="dash-system-form" class="dash-system-form">' +
+          '<div class="dash-system-form-grid">' +
+            '<label class="dash-field">' +
+              '<span>Título</span>' +
+              '<input id="dash-system-title" type="text" maxlength="120" required placeholder="Actualización de plataforma">' +
+            '</label>' +
+            '<label class="dash-field dash-field--icon">' +
+              '<span>Icono</span>' +
+              '<div class="dash-system-icon-select">' +
+                '<select id="dash-system-icon">' +
+                  '<option value="info">Info</option>' +
+                  '<option value="refresh-cw">Update</option>' +
+                  '<option value="alert-triangle">Warning</option>' +
+                '</select>' +
+                '<span id="dash-system-icon-preview" class="dash-system-icon-preview" aria-hidden="true">' +
+                  '<i data-lucide="info"></i>' +
+                '</span>' +
+              '</div>' +
+            '</label>' +
+          '</div>' +
+          '<label class="dash-field">' +
+            '<span>Contenido Markdown</span>' +
+            '<textarea id="dash-system-body" rows="5" required placeholder="Escribí el mensaje para los usuarios..."></textarea>' +
+          '</label>' +
+          '<div class="dash-system-form-footer">' +
+            '<div id="dash-system-status" class="dash-system-status" role="status" aria-live="polite"></div>' +
+            '<button id="dash-system-submit" type="submit" class="btn btn--primary">' +
+              '<i data-lucide="send"></i><span>Crear notificación</span>' +
+            '</button>' +
+          '</div>' +
+        '</form>' +
+        '<div id="dash-system-notifications-list" class="dash-system-list">' +
+          '<p class="dash-empty">Cargando notificaciones...</p>' +
+        '</div>' +
+      '</div>';
+
+    section.querySelector("#dash-system-form").addEventListener("submit", onCreateSystemNotification);
+    section.querySelector("#dash-system-reload").addEventListener("click", loadSystemNotifications);
+    section.querySelector("#dash-system-icon").addEventListener("change", updateSystemIconPreview);
+    section.querySelector("#dash-system-notifications-list").addEventListener("click", onSystemNotificationListClick);
+    setTimeout(loadSystemNotifications, 0);
+    return section;
+  }
+
+  async function loadSystemNotifications() {
+    var list = document.getElementById("dash-system-notifications-list");
+    if (!list) return;
+
+    state.systemNotificationsLoading = true;
+    list.innerHTML = '<p class="dash-empty">Cargando notificaciones...</p>';
+
+    try {
+      var sb = window.supabase;
+      var { data, error } = await sb
+        .from("chronicle_notifications")
+        .select("id,title,body,icon,created_at")
+        .eq("type", "system")
+        .is("chronicle_id", null)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      state.systemNotifications = data || [];
+      renderSystemNotificationsList();
+    } catch (e) {
+      list.innerHTML = '<p class="dash-empty">No se pudieron cargar las notificaciones: ' + escapeHtml(e.message || e) + '</p>';
+    } finally {
+      state.systemNotificationsLoading = false;
+    }
+  }
+
+  function renderSystemNotificationsList() {
+    var list = document.getElementById("dash-system-notifications-list");
+    if (!list) return;
+
+    if (!state.systemNotifications.length) {
+      list.innerHTML = '<p class="dash-empty">Todavía no hay notificaciones de sistema.</p>';
+      return;
+    }
+
+    list.innerHTML = state.systemNotifications.map(function (notif) {
+      var icon = normalizeSystemIcon(notif.icon);
+      return '' +
+        '<article class="dash-system-card">' +
+          '<header class="dash-system-card-head">' +
+            '<div class="dash-system-title-wrap">' +
+              '<span class="dash-system-icon"><i data-lucide="' + escapeHtml(icon) + '"></i></span>' +
+              '<div>' +
+                '<h4 class="dash-system-title">' + escapeHtml(notif.title || "Notificación de sistema") + '</h4>' +
+                '<p class="dash-system-meta">' + escapeHtml(formatSystemDate(notif.created_at)) + '</p>' +
+              '</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn--ghost dash-system-delete" data-system-delete="' + escapeHtml(notif.id) + '" data-system-title="' + escapeHtml(notif.title || "") + '">' +
+              '<i data-lucide="trash-2"></i><span>Borrar</span>' +
+            '</button>' +
+          '</header>' +
+          '<div class="dash-system-body doc-markdown">' + renderMarkdownSafe(notif.body || "") + '</div>' +
+        '</article>';
+    }).join("");
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  async function onCreateSystemNotification(ev) {
+    ev.preventDefault();
+
+    var form = ev.currentTarget;
+    var submit = document.getElementById("dash-system-submit");
+    var title = document.getElementById("dash-system-title").value.trim();
+    var body = document.getElementById("dash-system-body").value.trim();
+    var icon = document.getElementById("dash-system-icon").value || "info";
+
+    if (!title || !body) {
+      setSystemStatus("Completá título y contenido.", true);
+      return;
+    }
+
+    if (submit) submit.disabled = true;
+    setSystemStatus("Creando notificación...", false);
+
+    try {
+      var result;
+      if (window.ABNNotifications?.controller?.pushSystemNotification) {
+        result = await window.ABNNotifications.controller.pushSystemNotification({ title: title, body: body, icon: icon });
+      } else {
+        result = await window.supabase.rpc("create_system_notification", {
+          p_title: title,
+          p_body: body,
+          p_icon: icon,
+        });
+      }
+      if (result?.error) throw result.error;
+
+      form.reset();
+      document.getElementById("dash-system-icon").value = "info";
+      updateSystemIconPreview();
+      setSystemStatus("Notificación creada.", false);
+      await loadSystemNotifications();
+    } catch (e) {
+      setSystemStatus("No se pudo crear: " + (e.message || e), true);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  }
+
+  async function onSystemNotificationListClick(ev) {
+    var btn = ev.target.closest("[data-system-delete]");
+    if (!btn) return;
+
+    var id = btn.dataset.systemDelete;
+    var title = btn.dataset.systemTitle || "esta notificación";
+    if (!id) return;
+    if (!window.confirm("¿Borrar " + title + "?")) return;
+
+    btn.disabled = true;
+    setSystemStatus("Borrando notificación...", false);
+
+    try {
+      var { error } = await window.supabase
+        .from("chronicle_notifications")
+        .delete()
+        .eq("id", id)
+        .eq("type", "system")
+        .is("chronicle_id", null);
+      if (error) throw error;
+
+      state.systemNotifications = state.systemNotifications.filter(function (notif) {
+        return notif.id !== id;
+      });
+      renderSystemNotificationsList();
+      setSystemStatus("Notificación borrada.", false);
+    } catch (e) {
+      setSystemStatus("No se pudo borrar: " + (e.message || e), true);
+      btn.disabled = false;
+    }
+  }
+
+  function setSystemStatus(message, isError) {
+    var el = document.getElementById("dash-system-status");
+    if (!el) return;
+    el.textContent = message || "";
+    el.classList.toggle("dash-system-status--error", !!isError);
+  }
+
+  function updateSystemIconPreview() {
+    var select = document.getElementById("dash-system-icon");
+    var preview = document.getElementById("dash-system-icon-preview");
+    if (!select || !preview) return;
+
+    preview.innerHTML = '<i data-lucide="' + escapeHtml(normalizeSystemIcon(select.value)) + '"></i>';
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  function normalizeSystemIcon(icon) {
+    var raw = String(icon || "info").trim();
+    if (raw === "triangle-alert") return "alert-triangle";
+    return raw || "info";
   }
 
   function renderPlayersPanel(players, topUsers) {
@@ -1203,9 +1409,34 @@
       : s.toLocaleString() + " → " + e.toLocaleString();
   }
 
+  function formatSystemDate(iso) {
+    if (!iso) return "Sin fecha";
+    var d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "Fecha inválida";
+    return d.toLocaleString([], {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
   function formatBucketLabel(iso) {
     var d = new Date(iso);
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderMarkdownSafe(markdown) {
+    if (typeof window.renderMarkdown === "function") {
+      return window.renderMarkdown(markdown || "");
+    }
+    if (window.marked?.parse) {
+      var html = window.marked.parse(String(markdown || ""));
+      if (window.DOMPurify?.sanitize) return window.DOMPurify.sanitize(html);
+      return escapeHtml(html);
+    }
+    return escapeHtml(markdown || "").replace(/\n/g, "<br>");
   }
 
   function escapeHtml(s) {

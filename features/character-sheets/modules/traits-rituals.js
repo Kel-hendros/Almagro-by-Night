@@ -23,8 +23,8 @@
         : null;
   }
 
-  function persist() {
-    if (deps.save) deps.save();
+  function persist(options) {
+    if (deps.save) deps.save(options);
   }
 
   function disciplineName(id) {
@@ -137,7 +137,7 @@
           entry.name = newName;
           entry.value = Math.max(1, Number(valueInput.value) || 1);
           entry.description = descInput.value.trim();
-          persist();
+          persist({ immediate: true });
           renderMeritDefectList(items, listId, prefix);
         });
 
@@ -160,7 +160,7 @@
         event.stopPropagation();
         items.splice(idx, 1);
         renderMeritDefectList(items, listId, prefix);
-        persist();
+        persist({ immediate: true });
       });
 
       const actions = document.createElement("div");
@@ -321,7 +321,7 @@
             state.rituals[r._index].disciplineId = editDisciplineId;
             state.rituals[r._index].description = descInput.value.trim();
             renderRitualList();
-            persist();
+            persist({ immediate: true });
           });
 
           descEl.appendChild(editForm);
@@ -337,7 +337,7 @@
           event.stopPropagation();
           state.rituals.splice(r._index, 1);
           renderRitualList();
-          persist();
+          persist({ immediate: true });
         });
 
         const descEl = document.createElement("div");
@@ -404,7 +404,7 @@
         const description = descInput ? descInput.value.trim() : "";
         items.push({ name, description, value });
         renderMeritDefectList(items, listId, prefix);
-        persist();
+        persist({ immediate: true });
         if (nameInput) nameInput.value = "";
         if (costInput) costInput.value = "1";
         if (descInput) descInput.value = "";
@@ -487,7 +487,7 @@
 
       state.rituals.push({ name, level, disciplineId, description });
       renderRitualList();
-      persist();
+      persist({ immediate: true });
 
       if (nameInput) nameInput.value = "";
       if (levelInput) levelInput.value = "1";
@@ -518,7 +518,7 @@
   }
 
   function loadMeritsFromCharacterData(characterData) {
-    state.merits = [];
+    state.merits.length = 0;
     if (characterData?.merits && Array.isArray(characterData.merits)) {
       characterData.merits.forEach((m) => {
         state.merits.push({
@@ -532,7 +532,7 @@
   }
 
   function loadDefectsFromCharacterData(characterData) {
-    state.defects = [];
+    state.defects.length = 0;
     if (characterData?.defects && Array.isArray(characterData.defects)) {
       characterData.defects.forEach((d) => {
         state.defects.push({
@@ -555,7 +555,7 @@
   }
 
   function loadRitualsFromCharacterData(characterData) {
-    state.rituals = [];
+    state.rituals.length = 0;
     if (characterData?.rituals && Array.isArray(characterData.rituals)) {
       characterData.rituals.forEach((r) => {
         state.rituals.push({
