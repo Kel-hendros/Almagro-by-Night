@@ -888,9 +888,12 @@
       }
 
       // Light dots
+      var hideLightsInPlayMode = !!this.playMode && isNarratorNormal;
+      var hoveredLightId = this._hoveredLightId || null;
       for (var i = 0; i < lights.length; i++) {
         var light = lights[i];
         if (!this.isLightVisibleToViewer(light)) continue;
+        if (hideLightsInPlayMode && light.id !== hoveredLightId) continue;
         var sx = light.x * gs;
         var sy = light.y * gs;
         if (
@@ -1117,9 +1120,14 @@
       }
 
       // Lights
+      var fogMarker = this._fog;
+      var isNarratorNormalMarker = !fogMarker || (fogMarker.isNarrator && !fogMarker.impersonateInstanceId);
+      var hideLightsInPlayMode = !!this.playMode && isNarratorNormalMarker;
+      var hoveredLightId = this._hoveredLightId || null;
       for (var li = 0; li < lights.length; li++) {
         var light = lights[li];
         if (!this.isLightVisibleToViewer(light)) continue;
+        if (hideLightsInPlayMode && light.id !== hoveredLightId) continue;
         var lightX = light.x * gs;
         var lightY = light.y * gs;
         if (

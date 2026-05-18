@@ -1166,7 +1166,13 @@
         || this.isDraggingBackground || this.isResizingBackground
         || this._isDraggingLight || this._isDraggingSwitch
         || this._lightDragPending || this._switchDragPending;
-      if (!isDragging && this.canvas && !this.canvas.contains(e.target)) return;
+      if (!isDragging && this.canvas && !this.canvas.contains(e.target)) {
+        if (this._hoveredLightId) {
+          this._hoveredLightId = null;
+          this.draw();
+        }
+        return;
+      }
 
       const rect = this.canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
@@ -1175,6 +1181,29 @@
       const worldY = (mouseY - this.offsetY) / this.scale;
       const cellX = worldX / this.gridSize;
       const cellY = worldY / this.gridSize;
+
+      // Track hovered light dot in play mode (narrator only) so we can reveal it on demand.
+      const isNarratorNormalView = !this._fog || (this._fog.isNarrator && !this._fog.impersonateInstanceId);
+      if (this.playMode && isNarratorNormalView) {
+        const lights = this.lights || [];
+        let nearest = null;
+        let nearestDist = 0.55;
+        for (let li = 0; li < lights.length; li++) {
+          const lg = lights[li];
+          const ddx = cellX - lg.x;
+          const ddy = cellY - lg.y;
+          const dd = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dd < nearestDist) { nearestDist = dd; nearest = lg; }
+        }
+        const nextHoveredLightId = nearest ? nearest.id : null;
+        if (this._hoveredLightId !== nextHoveredLightId) {
+          this._hoveredLightId = nextHoveredLightId;
+          this.draw();
+        }
+      } else if (this._hoveredLightId) {
+        this._hoveredLightId = null;
+        this.draw();
+      }
 
       if (this._lightDragPending && this._draggedLight && !this._isDraggingLight) {
         const start = this._dragLightStartPointer || null;
