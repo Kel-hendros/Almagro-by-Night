@@ -196,6 +196,17 @@
       const currentBrushIndex = Math.max(0, brushSizes.indexOf(brushSize));
       const nextBrushSize = brushSizes[(currentBrushIndex + 1) % brushSizes.length];
       const brushCycleTitle = "Tamaño de pincel: " + brushSize + ". Click para cambiar a " + nextBrushSize;
+      const currentHeight = painter.getHeight?.() ?? 0;
+      const heightEditOn = painter.isHeightEditMode?.() || false;
+
+      // Build the -10..10 popover grid (3 rows × 7 cols).
+      let heightPopoverHtml = '<div class="ae-altura-popover" id="ae-altura-popover" hidden>';
+      for (let h = -10; h <= 10; h++) {
+        heightPopoverHtml +=
+          '<button class="ae-altura-cell' + (h === currentHeight ? " is-active" : "") +
+          '" type="button" data-altura-value="' + h + '">' + h + '</button>';
+      }
+      heightPopoverHtml += "</div>";
 
       content.innerHTML =
         '<div class="ae-elements-ctx-group">' +
@@ -209,6 +220,17 @@
               '</span>' +
             '</button>' +
           '</div>' +
+        '</div>' +
+        '<div class="ae-elements-ctx-divider"></div>' +
+        '<div class="ae-elements-ctx-group ae-elements-ctx-group--altura">' +
+          '<span class="ae-elements-ctx-label">Altura</span>' +
+          '<div class="ae-elements-ctx-btns ae-altura-anchor">' +
+            '<button class="ae-elements-ctx-btn ae-altura-current" data-altura-toggle="true" type="button" title="Altura aplicada al pintar (-10 a 10)">' + currentHeight + '</button>' +
+            heightPopoverHtml +
+          '</div>' +
+        '</div>' +
+        '<div class="ae-elements-ctx-group ae-elements-ctx-group--altura-edit">' +
+          '<button class="ae-elements-ctx-btn ae-elements-ctx-btn--text ae-altura-edit-toggle' + (heightEditOn ? " is-active" : "") + '" data-altura-edit-toggle="true" type="button" title="Editar solo altura sobre celdas pintadas">Editar altura</button>' +
         '</div>' +
         '<div class="ae-elements-ctx-divider"></div>' +
         '<div class="ae-elements-ctx-group">' +
@@ -244,6 +266,30 @@
         event.preventDefault();
         event.stopPropagation();
         painter.setMode?.(isEraserActive ? "paint" : "erase");
+        refreshTerrainPaletteUI();
+      });
+
+      // Altura popover toggle.
+      const popover = content.querySelector("#ae-altura-popover");
+      content.querySelector("[data-altura-toggle='true']")?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!popover) return;
+        popover.hidden = !popover.hidden;
+      });
+      content.querySelectorAll("[data-altura-value]").forEach(function (btn) {
+        btn.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          painter.setHeight?.(parseInt(btn.dataset.alturaValue, 10));
+          if (popover) popover.hidden = true;
+          refreshTerrainPaletteUI();
+        });
+      });
+      content.querySelector("[data-altura-edit-toggle='true']")?.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        painter.setHeightEditMode?.(!heightEditOn);
         refreshTerrainPaletteUI();
       });
     }

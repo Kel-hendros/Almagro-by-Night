@@ -283,6 +283,9 @@ window.TacticalMap = class TacticalMap {
     if (extras?.tileMap && typeof extras.tileMap === "object") {
       this.tileMap = extras.tileMap;
     }
+    if (extras?.tileHeights && typeof extras.tileHeights === "object") {
+      this.tileHeights = extras.tileHeights;
+    }
     if (Array.isArray(extras?.walls)) {
       this.walls = extras.walls;
     }

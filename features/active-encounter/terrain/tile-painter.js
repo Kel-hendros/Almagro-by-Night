@@ -14,7 +14,11 @@
   }
 
   function createTilePainter(opts) {
-    const { getMap, getTileMap, setTileMap, onChanged, onSelectionChange } = opts;
+    const {
+      getMap, getTileMap, setTileMap,
+      getTileHeights, setTileHeights,
+      onChanged, onSelectionChange,
+    } = opts;
 
     let active = false;
     let selectedTexture = null;
@@ -22,9 +26,16 @@
     let mode = "paint";
     let isPainting = false;
     let isErasing = false;
+    let selectedHeight = 0;
+    let heightEditMode = false;
     let _dirty = false;
     let _saveTimer = null;
     const SAVE_DELAY = 800; // ms after last stroke before persisting
+
+    function clampHeight(h) {
+      const n = Math.round(Number(h) || 0);
+      return Math.max(-10, Math.min(10, n));
+    }
 
     function resolveTextureId(textureId) {
       return global.TileTextures?.resolveTextureId?.(textureId) || textureId || null;
@@ -37,6 +48,8 @@
           textureId: selectedTexture,
           brushSize,
           mode,
+          height: selectedHeight,
+          heightEditMode,
         });
       }
     }
@@ -96,13 +109,45 @@
     function setTexture(textureId) {
       const resolvedTexture = resolveTextureId(textureId);
       if (!resolvedTexture) return;
+      // Per spec: switching texture resets the height-being-painted to 0.
       selectedTexture = resolvedTexture;
+      selectedHeight = 0;
       mode = "paint";
       if (!active) {
         activate(resolvedTexture);
         return;
       }
       notifySelectionChange();
+    }
+
+    function setHeight(h) {
+      selectedHeight = clampHeight(h);
+      notifySelectionChange();
+      // Update the live hover preview so the height label refreshes
+      // without needing a mouse move.
+      const map = getMap();
+      if (map && map._tilePainterHover) {
+        map._tilePainterHover.height = selectedHeight;
+        map.requestDraw?.();
+      }
+    }
+
+    function getHeight() {
+      return selectedHeight;
+    }
+
+    function setHeightEditMode(on) {
+      heightEditMode = !!on;
+      notifySelectionChange();
+      const map = getMap();
+      if (map) {
+        map._heightEditMode = heightEditMode;
+        map.requestDraw?.();
+      }
+    }
+
+    function isHeightEditMode() {
+      return heightEditMode;
     }
 
     function getTexture() {
@@ -142,6 +187,11 @@
       const sampledTexture = resolveTextureId(tileMap[key]);
       if (!sampledTexture) return false;
       selectedTexture = sampledTexture;
+      // Sampling copies both texture AND height so the narrator can extend
+      // an area without manually reading and re-entering the height.
+      const tileHeights = typeof getTileHeights === "function" ? getTileHeights() : null;
+      const sampledHeight = tileHeights && typeof tileHeights[key] === "number" ? tileHeights[key] : 0;
+      selectedHeight = clampHeight(sampledHeight);
       mode = "paint";
       isPainting = false;
       isErasing = false;
@@ -164,8 +214,10 @@
     function applyBrush(cellX, cellY, erase) {
       const tileMap = getTileMap();
       if (!tileMap) return;
+      const tileHeights = typeof getTileHeights === "function" ? getTileHeights() : null;
       const half = Math.floor(brushSize / 2);
-      let changed = false;
+      let textureChanged = false;
+      let heightChanged = false;
       for (let dy = 0; dy < brushSize; dy++) {
         for (let dx = 0; dx < brushSize; dx++) {
           const cx = Math.floor(cellX) - half + dx;
@@ -174,25 +226,51 @@
           if (erase) {
             if (tileMap[key] !== undefined) {
               delete tileMap[key];
-              changed = true;
+              textureChanged = true;
+            }
+            if (tileHeights && tileHeights[key] !== undefined) {
+              delete tileHeights[key];
+              heightChanged = true;
+            }
+          } else if (heightEditMode) {
+            // Height edit mode: only adjust height on cells that already
+            // have a texture. Untextured cells are ignored.
+            if (tileMap[key] !== undefined && tileHeights) {
+              if (tileHeights[key] !== selectedHeight) {
+                if (selectedHeight === 0) delete tileHeights[key];
+                else tileHeights[key] = selectedHeight;
+                heightChanged = true;
+              }
             }
           } else if (selectedTexture) {
             if (tileMap[key] !== selectedTexture) {
               tileMap[key] = selectedTexture;
-              changed = true;
+              textureChanged = true;
+            }
+            if (tileHeights) {
+              if (selectedHeight === 0) {
+                if (tileHeights[key] !== undefined) {
+                  delete tileHeights[key];
+                  heightChanged = true;
+                }
+              } else if (tileHeights[key] !== selectedHeight) {
+                tileHeights[key] = selectedHeight;
+                heightChanged = true;
+              }
             }
           }
         }
       }
-      if (changed) {
-        setTileMap(tileMap);
+      if (textureChanged) setTileMap(tileMap);
+      if (heightChanged && typeof setTileHeights === "function") setTileHeights(tileHeights);
+      if (textureChanged || heightChanged) {
         const map = getMap();
         if (map) {
           map.invalidateTileRenderCache?.();
           map.requestDraw?.();
         }
       }
-      return changed;
+      return textureChanged || heightChanged;
     }
 
     function clearAll() {
@@ -226,15 +304,8 @@
     }
 
     function handleMouseMove(cellX, cellY) {
-      if (isPainting) {
-        applyBrush(cellX, cellY, false);
-        return true;
-      }
-      if (isErasing) {
-        applyBrush(cellX, cellY, true);
-        return true;
-      }
-      // Draw hover preview
+      // Always keep the hover preview tracking the cursor, even while
+      // dragging a paint or erase stroke.
       const map = getMap();
       if (map) {
         map._tilePainterHover = {
@@ -243,8 +314,18 @@
           brushSize,
           textureId: mode === "erase" ? null : selectedTexture,
           mode,
+          height: selectedHeight,
+          heightEditMode,
         };
         map.requestDraw?.();
+      }
+      if (isPainting) {
+        applyBrush(cellX, cellY, false);
+        return true;
+      }
+      if (isErasing) {
+        applyBrush(cellX, cellY, true);
+        return true;
       }
       return false;
     }
@@ -267,6 +348,10 @@
       isEraseMode,
       setBrushSize,
       getBrushSize,
+      setHeight,
+      getHeight,
+      setHeightEditMode,
+      isHeightEditMode,
       clearAll,
       handleMouseDown,
       handleMouseMove,

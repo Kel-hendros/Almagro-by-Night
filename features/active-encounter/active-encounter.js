@@ -735,6 +735,9 @@
     if (!state.encounter.data.tileMap || typeof state.encounter.data.tileMap !== "object") {
       state.encounter.data.tileMap = {};
     }
+    if (!state.encounter.data.tileHeights || typeof state.encounter.data.tileHeights !== "object") {
+      state.encounter.data.tileHeights = {};
+    }
     ensureEncounterWallData(state.encounter.data);
     if (!Array.isArray(state.encounter.data.lights)) {
       state.encounter.data.lights = [];
@@ -756,6 +759,7 @@
         props: state.encounter?.data?.props || [],
         mapEffects: state.encounter?.data?.mapEffects || [],
         tileMap: state.encounter.data.tileMap,
+        tileHeights: state.encounter.data.tileHeights,
         walls: state.encounter.data.walls,
         lights: state.encounter.data.lights,
         switches: state.encounter.data.switches,
@@ -774,6 +778,16 @@
             state.encounter.data.tileMap = newMap;
             if (state.map) {
               state.map.tileMap = newMap;
+              state.map.invalidateTileRenderCache?.();
+            }
+          }
+        },
+        getTileHeights: () => state.encounter?.data?.tileHeights || {},
+        setTileHeights: (newHeights) => {
+          if (state.encounter?.data) {
+            state.encounter.data.tileHeights = newHeights;
+            if (state.map) {
+              state.map.tileHeights = newHeights;
               state.map.invalidateTileRenderCache?.();
             }
           }
@@ -2338,7 +2352,6 @@
         lightSwitchManager?.exitLinkMode?.();
       }
 
-      if (!canEditEncounter()) return;
       if (!state.map) return;
 
       const target = e.target;
@@ -2348,6 +2361,37 @@
           target.tagName === "TEXTAREA" ||
           target.isContentEditable);
       if (isTypingTarget) return;
+
+      // WASD pans the camera. Step shrinks as zoom grows so the move stays
+      // roughly the same on-screen distance regardless of zoom level.
+      const key = (e.key || "").toLowerCase();
+      let panDx = 0, panDy = 0;
+      if (key === "w") panDy = -1;
+      else if (key === "s") panDy = 1;
+      else if (key === "a") panDx = -1;
+      else if (key === "d") panDx = 1;
+      if (panDx !== 0 || panDy !== 0) {
+        const gs = state.map.gridSize;
+        const sc = state.map.scale;
+        const stepCells = Math.max(1, Math.round(5 / sc));
+        state.map.offsetX -= panDx * stepCells * gs * sc;
+        state.map.offsetY -= panDy * stepCells * gs * sc;
+        state.map.dispatchTransformEvent?.();
+        state.map.draw();
+        e.preventDefault();
+        return;
+      }
+
+      // Q/E adjust the painter's selected height while paint tool is active.
+      if ((key === "q" || key === "e") && tilePainter?.isActive?.()) {
+        const delta = key === "q" ? -1 : 1;
+        const next = (tilePainter.getHeight?.() || 0) + delta;
+        tilePainter.setHeight?.(next);
+        e.preventDefault();
+        return;
+      }
+
+      if (!canEditEncounter()) return;
 
       const isBackgroundEdit =
         state.activeMapLayer === "background" && state.map.selectedBackground;
@@ -2904,6 +2948,7 @@
         props: state.encounter.data.props || [],
         mapEffects: state.encounter.data.mapEffects || [],
         tileMap: state.encounter.data.tileMap || {},
+        tileHeights: state.encounter.data.tileHeights || {},
         walls: state.encounter.data.walls || [],
         lights: state.encounter.data.lights || [],
         switches: state.encounter.data.switches || [],

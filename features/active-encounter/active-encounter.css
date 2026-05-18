@@ -1971,6 +1971,7 @@
 
 .ae-token-context-action {
     width: 100%;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -2022,6 +2023,13 @@
 
 .ae-token-context-action--danger::before {
     content: "🗑";
+    font-size: 0.82rem;
+    line-height: 1;
+    opacity: 0.9;
+}
+
+.ae-token-context-action--weld::before {
+    content: "🔗";
     font-size: 0.82rem;
     line-height: 1;
     opacity: 0.9;
@@ -3367,6 +3375,67 @@ canvas.wall-vertex-hover {
     font-weight: 700;
 }
 
+.ae-altura-anchor {
+    position: relative;
+}
+
+.ae-altura-current {
+    width: 38px;
+    height: 30px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.ae-altura-popover {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: repeat(7, 28px);
+    gap: 3px;
+    padding: 6px;
+    background: rgba(20, 20, 20, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    z-index: 50;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+}
+
+.ae-altura-popover[hidden] {
+    display: none;
+}
+
+.ae-altura-cell {
+    width: 28px;
+    height: 26px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: rgba(255, 240, 196, 0.92);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.ae-altura-cell:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 206, 117, 0.5);
+}
+
+.ae-altura-cell.is-active {
+    background: rgba(255, 206, 117, 0.25);
+    border-color: rgba(255, 206, 117, 0.85);
+    color: #fff;
+}
+
+.ae-elements-ctx-group--altura-edit {
+    margin-left: -4px;
+}
+
 .ae-elements-ctx-divider {
     width: 1px;
     height: 20px;
@@ -3429,6 +3498,12 @@ canvas.wall-vertex-hover {
     font-size: 0.78rem;
     font-weight: 600;
     color: var(--color-cream, #e4d7c5);
+}
+
+.ae-wall-context-menu .ae-token-context-primary {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
 }
 
 .ae-wall-context-menu .ae-token-context-action {

@@ -356,6 +356,10 @@
       const minChunkY = Math.floor(minCellY / chunkSize);
       const maxChunkY = Math.floor(maxCellY / chunkSize);
 
+      // Height-aware bleed: each tile is overlapped by 0.5 toward a neighbour
+      // only when that neighbour exists and shares its texture (same height).
+      // This keeps grid-line gaps hidden between same-height cells without
+      // letting a higher tile spill onto a lower one.
       this.ctx.save();
       for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
         for (let chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
@@ -368,17 +372,209 @@
             if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
             const pattern = TT.getOrCreatePattern(this.ctx, entry.textureId);
             if (!pattern) continue;
-            // Align pattern origin to cell so every cell looks identical
             if (typeof pattern.setTransform === "function") {
               pattern.setTransform(new DOMMatrix().translateSelf(cx * gs, cy * gs));
             }
             this.ctx.fillStyle = pattern;
-            // Overlap by 0.5px to eliminate grid-line gaps between tiles
-            this.ctx.fillRect(cx * gs - 0.5, cy * gs - 0.5, gs + 1, gs + 1);
+            const myTex = entry.textureId;
+            const bleedN = tileMap[cx + "," + (cy - 1)] === myTex ? 0.5 : 0;
+            const bleedS = tileMap[cx + "," + (cy + 1)] === myTex ? 0.5 : 0;
+            const bleedW = tileMap[(cx - 1) + "," + cy] === myTex ? 0.5 : 0;
+            const bleedE = tileMap[(cx + 1) + "," + cy] === myTex ? 0.5 : 0;
+            this.ctx.fillRect(
+              cx * gs - bleedW,
+              cy * gs - bleedN,
+              gs + bleedW + bleedE,
+              gs + bleedN + bleedS,
+            );
           }
         }
       }
       this.ctx.restore();
+
+      // Contact shadows from height differences. Heights read from
+      // this.tileHeights (default 0 for painted cells without an entry).
+      this.drawTileHeightShadows(
+        tileMap,
+        cache,
+        TT,
+        gs,
+        minCellX, maxCellX, minCellY, maxCellY,
+        minChunkX, maxChunkX, minChunkY, maxChunkY,
+      );
+
+      // Height-edit mode overlay: number on every painted cell so the narrator
+      // sees which heights are set before brushing new values.
+      if (this._heightEditMode) {
+        this.drawTileHeightOverlay(
+          tileMap, cache, gs,
+          minCellX, maxCellX, minCellY, maxCellY,
+          minChunkX, maxChunkX, minChunkY, maxChunkY,
+        );
+      }
+    };
+
+    proto.drawTileHeightOverlay = function drawTileHeightOverlay(
+      tileMap, cache, gs,
+      minCellX, maxCellX, minCellY, maxCellY,
+      minChunkX, maxChunkX, minChunkY, maxChunkY,
+    ) {
+      const ctx = this.ctx;
+      const tileHeights = this.tileHeights || {};
+      const fontPx = Math.max(gs * 0.38, 10);
+      ctx.save();
+      ctx.font = "700 " + fontPx + "px 'Nunito Sans', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = Math.max(3 / this.scale, 1.5);
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+      ctx.fillStyle = "rgba(255, 240, 196, 0.98)";
+      for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+        for (let chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+          const chunk = cache.chunks.get(chunkX + "," + chunkY);
+          if (!chunk || chunk.length === 0) continue;
+          for (let i = 0; i < chunk.length; i++) {
+            const entry = chunk[i];
+            const cx = entry.cx;
+            const cy = entry.cy;
+            if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
+            const key = cx + "," + cy;
+            if (!tileMap[key]) continue;
+            const h = typeof tileHeights[key] === "number" ? tileHeights[key] : 0;
+            const tx = cx * gs + gs / 2;
+            const ty = cy * gs + gs / 2;
+            const label = String(h);
+            ctx.strokeText(label, tx, ty);
+            ctx.fillText(label, tx, ty);
+          }
+        }
+      }
+      ctx.restore();
+    };
+
+    proto.drawTileHeightShadows = function drawTileHeightShadows(
+      tileMap, cache, TT, gs,
+      minCellX, maxCellX, minCellY, maxCellY,
+      minChunkX, maxChunkX, minChunkY, maxChunkY,
+    ) {
+      const tileHeights = this.tileHeights || {};
+      const heightOf = (cellX, cellY) => {
+        const key = cellX + "," + cellY;
+        if (!tileMap[key]) return null;
+        const h = tileHeights[key];
+        return typeof h === "number" ? h : 0;
+      };
+
+      const d = gs * 0.18;
+      const maxAlpha = 0.55;
+      const alphaFor = (delta) =>
+        Math.min(maxAlpha, 0.15 + delta * 0.06);
+      const ctx = this.ctx;
+      const black = (a) => `rgba(0,0,0,${a})`;
+
+      ctx.save();
+      for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+        for (let chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+          const chunk = cache.chunks.get(chunkX + "," + chunkY);
+          if (!chunk || chunk.length === 0) continue;
+          for (let i = 0; i < chunk.length; i++) {
+            const entry = chunk[i];
+            const cx = entry.cx;
+            const cy = entry.cy;
+            if (cx < minCellX || cx > maxCellX || cy < minCellY || cy > maxCellY) continue;
+
+            const myH = heightOf(cx, cy);
+            if (myH == null) continue;
+            const x = cx * gs;
+            const y = cy * gs;
+
+            // Cardinal neighbours
+            const hN = heightOf(cx, cy - 1);
+            const hE = heightOf(cx + 1, cy);
+            const hS = heightOf(cx, cy + 1);
+            const hW = heightOf(cx - 1, cy);
+            const aN = hN != null && hN > myH ? alphaFor(hN - myH) : 0;
+            const aE = hE != null && hE > myH ? alphaFor(hE - myH) : 0;
+            const aS = hS != null && hS > myH ? alphaFor(hS - myH) : 0;
+            const aW = hW != null && hW > myH ? alphaFor(hW - myH) : 0;
+
+            // Diagonal neighbours — only matter when neither cardinal of that
+            // corner is already casting shadow (otherwise the strip covers it).
+            const hNW = heightOf(cx - 1, cy - 1);
+            const hNE = heightOf(cx + 1, cy - 1);
+            const hSE = heightOf(cx + 1, cy + 1);
+            const hSW = heightOf(cx - 1, cy + 1);
+            const aNW = !aN && !aW && hNW != null && hNW > myH ? alphaFor(hNW - myH) : 0;
+            const aNE = !aN && !aE && hNE != null && hNE > myH ? alphaFor(hNE - myH) : 0;
+            const aSE = !aS && !aE && hSE != null && hSE > myH ? alphaFor(hSE - myH) : 0;
+            const aSW = !aS && !aW && hSW != null && hSW > myH ? alphaFor(hSW - myH) : 0;
+
+            if (!aN && !aE && !aS && !aW && !aNW && !aNE && !aSE && !aSW) continue;
+
+            // Cardinal strips — straight rectangles, full cell width/height.
+            if (aN > 0) {
+              const g = ctx.createLinearGradient(0, y, 0, y + d);
+              g.addColorStop(0, black(aN));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x, y, gs, d);
+            }
+            if (aS > 0) {
+              const g = ctx.createLinearGradient(0, y + gs, 0, y + gs - d);
+              g.addColorStop(0, black(aS));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x, y + gs - d, gs, d);
+            }
+            if (aW > 0) {
+              const g = ctx.createLinearGradient(x, 0, x + d, 0);
+              g.addColorStop(0, black(aW));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x, y, d, gs);
+            }
+            if (aE > 0) {
+              const g = ctx.createLinearGradient(x + gs, 0, x + gs - d, 0);
+              g.addColorStop(0, black(aE));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x + gs - d, y, d, gs);
+            }
+
+            // Diagonal-only corners — radial quarter-disc anchored at the cell
+            // corner.
+            if (aNW > 0) {
+              const g = ctx.createRadialGradient(x, y, 0, x, y, d);
+              g.addColorStop(0, black(aNW));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x, y, d, d);
+            }
+            if (aNE > 0) {
+              const g = ctx.createRadialGradient(x + gs, y, 0, x + gs, y, d);
+              g.addColorStop(0, black(aNE));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x + gs - d, y, d, d);
+            }
+            if (aSE > 0) {
+              const g = ctx.createRadialGradient(x + gs, y + gs, 0, x + gs, y + gs, d);
+              g.addColorStop(0, black(aSE));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x + gs - d, y + gs - d, d, d);
+            }
+            if (aSW > 0) {
+              const g = ctx.createRadialGradient(x, y + gs, 0, x, y + gs, d);
+              g.addColorStop(0, black(aSW));
+              g.addColorStop(1, black(0));
+              ctx.fillStyle = g;
+              ctx.fillRect(x, y + gs - d, d, d);
+            }
+          }
+        }
+      }
+      ctx.restore();
     };
 
     proto.drawTilePainterHover = function drawTilePainterHover() {
@@ -386,8 +582,50 @@
       if (!hover) return;
       const gs = this.gridSize;
       const half = Math.floor(hover.brushSize / 2);
+      const isErase = hover.mode === "erase";
+      const isHeightEdit = !!hover.heightEditMode;
+      const TT = global.TileTextures;
+
+      // Origin of the brush area (top-left cell, in world coords).
+      const baseX = (hover.cellX - half) * gs;
+      const baseY = (hover.cellY - half) * gs;
+      const brushW = hover.brushSize * gs;
+      const brushH = hover.brushSize * gs;
+
       this.ctx.save();
-      this.ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+
+      if (isErase) {
+        // Dark overlay for erase.
+        this.ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+        this.ctx.fillRect(baseX, baseY, brushW, brushH);
+      } else if (isHeightEdit) {
+        // Height-edit cursor: subtle highlight, no texture.
+        this.ctx.fillStyle = "rgba(255, 206, 117, 0.18)";
+        this.ctx.fillRect(baseX, baseY, brushW, brushH);
+      } else if (hover.textureId && TT) {
+        // Paint cursor: preview the selected texture per cell.
+        for (let dy = 0; dy < hover.brushSize; dy++) {
+          for (let dx = 0; dx < hover.brushSize; dx++) {
+            const cellX = (hover.cellX - half + dx) * gs;
+            const cellY = (hover.cellY - half + dy) * gs;
+            const pattern = TT.getOrCreatePattern(this.ctx, hover.textureId);
+            if (pattern) {
+              if (typeof pattern.setTransform === "function") {
+                pattern.setTransform(new DOMMatrix().translateSelf(cellX, cellY));
+              }
+              this.ctx.fillStyle = pattern;
+              this.ctx.globalAlpha = 0.75;
+              this.ctx.fillRect(cellX, cellY, gs, gs);
+              this.ctx.globalAlpha = 1;
+            }
+          }
+        }
+      }
+
+      // Dashed outline per cell so the brush shape is always legible.
+      this.ctx.strokeStyle = isErase
+        ? "rgba(255, 180, 180, 0.9)"
+        : "rgba(255, 255, 255, 0.85)";
       this.ctx.lineWidth = Math.max(1.5 / this.scale, 1);
       this.ctx.setLineDash([Math.max(4 / this.scale, 2), Math.max(3 / this.scale, 2)]);
       for (let dy = 0; dy < hover.brushSize; dy++) {
@@ -398,6 +636,23 @@
         }
       }
       this.ctx.setLineDash([]);
+
+      // Height label at the centre of the brush area (skip for erase).
+      if (!isErase && typeof hover.height === "number") {
+        const cxLabel = baseX + brushW / 2;
+        const cyLabel = baseY + brushH / 2;
+        const fontPx = Math.max(gs * 0.42, 11);
+        this.ctx.font = "700 " + fontPx + "px 'Nunito Sans', sans-serif";
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
+        this.ctx.lineWidth = Math.max(3.5 / this.scale, 1.8);
+        this.ctx.strokeStyle = "rgba(0, 0, 0, 0.9)";
+        this.ctx.fillStyle = "rgba(255, 240, 196, 0.98)";
+        const label = String(hover.height);
+        this.ctx.strokeText(label, cxLabel, cyLabel);
+        this.ctx.fillText(label, cxLabel, cyLabel);
+      }
+
       this.ctx.restore();
     };
 

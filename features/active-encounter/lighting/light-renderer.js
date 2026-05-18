@@ -312,7 +312,12 @@
       this._lastEnclosedPolygonCompute = now;
 
       try {
-        var walls = this.walls || [];
+        // Grates let light and vision through, so they must not enclose
+        // space. Walls, doors and windows still count (closed or open)
+        // — a room with a door is enclosed regardless of door state.
+        var walls = (this.walls || []).filter(function (w) {
+          return w && w.type !== "grate";
+        });
         if (walls.length < 3) {
           this._enclosedPolygons = null;
           this._enclosedPolygonCache = null;

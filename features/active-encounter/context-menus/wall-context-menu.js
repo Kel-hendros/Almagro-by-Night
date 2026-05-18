@@ -48,19 +48,152 @@
 
     // ── Content renderers ──
 
+    function findPathEndpointsAtVertex(vx, vy) {
+      // Only the first/last point of a path counts as a weldable endpoint.
+      // Interior path vertices are already "one vertex" — welding does
+      // nothing for those.
+      var EPSILON = 0.15;
+      var wallPaths = state.encounter?.data?.wallPaths || [];
+      var matches = [];
+      for (var i = 0; i < wallPaths.length; i++) {
+        var path = wallPaths[i];
+        var pts = path?.points || [];
+        if (pts.length < 2) continue;
+        var first = pts[0];
+        var last = pts[pts.length - 1];
+        var atStart = Math.abs(first.x - vx) < EPSILON && Math.abs(first.y - vy) < EPSILON;
+        var atEnd = Math.abs(last.x - vx) < EPSILON && Math.abs(last.y - vy) < EPSILON;
+        if (atStart || atEnd) matches.push({ path: path, atStart: atStart, atEnd: atEnd });
+      }
+      return matches;
+    }
+
     function renderVertexMenu(info) {
-      bodyEl.innerHTML =
+      var pathMatches = findPathEndpointsAtVertex(info.vertex.x, info.vertex.y);
+      // Weld is possible when there are 2+ path-endpoint incidences here,
+      // either across different paths (join them) or both endpoints of the
+      // same open path (close the loop).
+      var endpointIncidences = 0;
+      for (var ki = 0; ki < pathMatches.length; ki++) {
+        if (pathMatches[ki].atStart) endpointIncidences++;
+        if (pathMatches[ki].atEnd) endpointIncidences++;
+      }
+      var canWeld = endpointIncidences >= 2;
+
+      var html =
         '<div class="ae-wall-context-header">' +
           '<span class="ae-wall-context-icon">\u25C9</span>' +
           '<span>V\u00e9rtice</span>' +
-        '</div>' +
-        '<button class="ae-token-context-action ae-token-context-action--danger" data-action="delete-vertex">Borrar</button>';
+        '</div>';
+      if (canWeld) {
+        html += '<button class="ae-token-context-action ae-token-context-action--weld" data-action="weld-vertex">Soldar</button>';
+      }
+      html += '<button class="ae-token-context-action ae-token-context-action--danger" data-action="delete-vertex">Borrar</button>';
+      bodyEl.innerHTML = html;
 
       bodyEl.querySelector('[data-action="delete-vertex"]').addEventListener("click", function (e) {
         e.stopPropagation();
         hide();
         deleteVertex(info);
       });
+      bodyEl.querySelector('[data-action="weld-vertex"]')?.addEventListener("click", function (e) {
+        e.stopPropagation();
+        hide();
+        weldVertex(info);
+      });
+    }
+
+    function weldVertex(info) {
+      var vx = info.vertex.x;
+      var vy = info.vertex.y;
+      var EPSILON = 0.15;
+      var wallPaths = state.encounter?.data?.wallPaths || [];
+      if (wallPaths.length < 1) return;
+
+      function near(p) {
+        return p && Math.abs(p.x - vx) < EPSILON && Math.abs(p.y - vy) < EPSILON;
+      }
+
+      // Find paths that have one of their endpoints at the clicked vertex
+      // (only endpoint vertices can be welded — joining at an interior
+      // point would require splitting the path first).
+      var matches = [];
+      for (var pi = 0; pi < wallPaths.length; pi++) {
+        var path = wallPaths[pi];
+        var pts = path?.points || [];
+        if (pts.length < 2) continue;
+        var startNear = near(pts[0]);
+        var endNear = near(pts[pts.length - 1]);
+        if (startNear || endNear) {
+          matches.push({ path: path, atStart: startNear, atEnd: endNear });
+        }
+      }
+      // Self-loop case: one open path whose start AND end both sit at
+      // this vertex. Welding closes the loop.
+      if (matches.length === 1 && matches[0].atStart && matches[0].atEnd && !matches[0].path.closed) {
+        var selfPath = matches[0].path;
+        if (selfPath.points.length < 3) return;
+        var trimmedPoints = selfPath.points.slice(0, -1);
+        var trimmedSegments = selfPath.segments.slice(0, -1);
+        var closedPath = {
+          id: selfPath.id,
+          closed: true,
+          points: trimmedPoints,
+          segments: trimmedSegments.length === trimmedPoints.length ? trimmedSegments : selfPath.segments.slice(),
+        };
+        var newWallPathsClosed = wallPaths.map(function (p) { return p === selfPath ? closedPath : p; });
+        state.encounter.data.wallPaths = newWallPathsClosed;
+        if (window.AEWallPaths?.compileWalls) {
+          state.encounter.data.walls = window.AEWallPaths.compileWalls(newWallPathsClosed);
+        }
+        getPaperEditor?.()?.reload?.();
+        syncMapAndSave();
+        return;
+      }
+
+      if (matches.length < 2) return;
+
+      // Two-path join case: take the first two matches and merge into one.
+      var A = matches[0];
+      var B = matches[1];
+
+      function reversedPoints(arr) { return arr.slice().reverse(); }
+      function reversedSegments(arr) { return arr.slice().reverse(); }
+
+      // Orient A so its endpoint at vertex is the END of the points array.
+      var aPoints = A.atEnd ? A.path.points.slice() : reversedPoints(A.path.points);
+      var aSegments = A.atEnd ? A.path.segments.slice() : reversedSegments(A.path.segments);
+      // Orient B so its endpoint at vertex is the START of the points array.
+      var bPoints = B.atStart ? B.path.points.slice() : reversedPoints(B.path.points);
+      var bSegments = B.atStart ? B.path.segments.slice() : reversedSegments(B.path.segments);
+
+      // Snap the merged vertex to exact (vx, vy) for cleanliness.
+      aPoints[aPoints.length - 1] = { x: vx, y: vy };
+
+      // Concat: drop B's first point because it's the shared vertex.
+      var mergedPoints = aPoints.concat(bPoints.slice(1));
+      var mergedSegments = aSegments.concat(bSegments);
+
+      var merged = {
+        id: A.path.id,
+        closed: false,
+        points: mergedPoints,
+        segments: mergedSegments,
+      };
+
+      var newWallPaths = [];
+      for (var i = 0; i < wallPaths.length; i++) {
+        var wp = wallPaths[i];
+        if (wp === A.path) newWallPaths.push(merged);
+        else if (wp === B.path) continue;
+        else newWallPaths.push(wp);
+      }
+      state.encounter.data.wallPaths = newWallPaths;
+      if (window.AEWallPaths?.compileWalls) {
+        state.encounter.data.walls = window.AEWallPaths.compileWalls(newWallPaths);
+      }
+      getPaperEditor?.()?.reload?.();
+      syncMapAndSave();
     }
 
     function renderWallMenu(info) {
