@@ -58,17 +58,14 @@
       const mapUploadBtn = document.getElementById("btn-ae-map-upload-bg");
       const mapRemoveBtn = document.getElementById("btn-ae-map-remove-bg");
 
-      // Elements layer sections (walls, lights, etc.)
-      const wallsSection = document.getElementById("ae-walls-section");
-      const lightsSection = document.getElementById("ae-lights-section");
-
       if (npcBtn) npcBtn.style.display = showEntities ? "" : "none";
       if (pcBtn) pcBtn.style.display = showEntities ? "" : "none";
       if (decorBtn) decorBtn.style.display = showDecor ? "" : "none";
       if (mapUploadBtn) mapUploadBtn.style.display = showBackground ? "" : "none";
       if (mapRemoveBtn) mapRemoveBtn.style.display = showBackground ? "" : "none";
-      if (wallsSection) wallsSection.style.display = "none";
-      if (lightsSection) lightsSection.style.display = showElements ? "" : "none";
+      // Drawer sections (walls, lights, fog, decor, background) are no longer
+      // hidden by layer selection. Visibility is driven solely by role in
+      // applyPermissions; the narrator always sees every section.
 
       // Dispatch event for other modules to react to layer change
       // Only dispatch if layer actually changed (avoid spurious events from render())
