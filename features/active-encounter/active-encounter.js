@@ -1999,14 +1999,21 @@
 
     drawerController?.applyPermissions();
 
+    // Drawer only exists in edit mode for the narrator. In play mode (including
+    // narrator previewing) and for players the DOM is removed entirely so
+    // there's no way to interact with narrator-only controls.
+    const drawerActive = canEditEncounter() && isEditMode();
     const toolsToggle = document.getElementById("btn-ae-toggle-tools");
-    if (toolsToggle) {
-      toolsToggle.style.display = canEditEncounter() ? "flex" : "none";
-    }
     const toolsDrawer = document.getElementById("ae-tools-drawer");
-    if (toolsDrawer) {
-      toolsDrawer.style.display = canEditEncounter() ? "" : "none";
-      setToolsDrawerOpen(canEditEncounter() && !!state.encounterViewState?.toolsDrawerOpen);
+    if (drawerActive) {
+      if (toolsToggle) toolsToggle.style.display = "flex";
+      if (toolsDrawer) {
+        toolsDrawer.style.display = "";
+        setToolsDrawerOpen(!!state.encounterViewState?.toolsDrawerOpen);
+      }
+    } else {
+      toolsToggle?.remove();
+      toolsDrawer?.remove();
     }
     if (els.layerToolbar) {
       els.layerToolbar.style.display = "flex";

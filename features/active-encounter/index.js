@@ -32,7 +32,6 @@
     "realtime/encounter-sync.js",
     // Encounter subsystems
     "active-encounter-turns.js",
-    "active-encounter-play-drawer.js",
     "encounter-powers.js",
     "token-actions.js",
     "token-context-menu.js",
