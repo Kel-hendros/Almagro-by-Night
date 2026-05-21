@@ -80,6 +80,7 @@
         const isOwn = sheet.user_id === sessionUserId;
         const canRemoveChar = isNarrator || isOwn;
         const canOpen = isNarrator || isOwn;
+        const canSeeClan = isNarrator || isOwn;
         const initials = (sheet.name || "?").charAt(0).toUpperCase();
 
         const avatarUrl = sheet.data?.avatarThumbUrl || sheet.avatar_url;
@@ -104,8 +105,12 @@
             <span class="${nameClass}" data-sheet-id="${sheet.id}">${escapeHtml(
           sheet.name
         )}</span>
-            <span class="cd-player-char-sep">|</span>
-            <span class="cd-player-char-clan">${escapeHtml(clan)}</span>
+            ${
+              canSeeClan
+                ? `<span class="cd-player-char-sep">|</span>
+            <span class="cd-player-char-clan">${escapeHtml(clan)}</span>`
+                : ""
+            }
           </div>
           ${deleteCharHtml}
         `;
