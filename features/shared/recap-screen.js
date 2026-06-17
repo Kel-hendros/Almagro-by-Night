@@ -208,6 +208,10 @@
           <a class="md-help-img-label md-help-img-link" href="https://imgbb.com/" target="_blank" rel="noopener noreferrer">BBCode Link <span aria-hidden="true">🔗</span></a>
           <code class="md-help-code">[url=https://…][img]URL[/img][/url]</code>
         </div>
+        <div class="md-help-img-item">
+          <span class="md-help-img-label">Ancho en el BBCode (40–1200 px)</span>
+          <code class="md-help-code">[url=https://…][img=400]URL[/img][/url]</code>
+        </div>
       </div>
     `;
   }
