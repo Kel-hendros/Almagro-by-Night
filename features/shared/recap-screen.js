@@ -183,6 +183,35 @@
     return data || null;
   }
 
+  function markdownHelpMarkup() {
+    return `
+      <h4 class="md-help-title">Formato Markdown</h4>
+      <ul class="md-help-list">
+        <li><code class="md-help-code"># Título</code><span class="md-help-desc">Título grande</span></li>
+        <li><code class="md-help-code">## Subtítulo</code><span class="md-help-desc">Título menor</span></li>
+        <li><code class="md-help-code">**negrita**</code><span class="md-help-desc">Texto en <strong>negrita</strong></span></li>
+        <li><code class="md-help-code">*cursiva*</code><span class="md-help-desc">Texto en <em>cursiva</em></span></li>
+        <li><code class="md-help-code">---</code><span class="md-help-desc">Línea separadora</span></li>
+        <li><code class="md-help-code">(línea en blanco)</code><span class="md-help-desc">Separa párrafos</span></li>
+      </ul>
+      <div class="md-help-box">
+        <h5 class="md-help-box-title">Imágenes</h5>
+        <div class="md-help-img-item">
+          <span class="md-help-img-label">Insertar una imagen</span>
+          <code class="md-help-code">![descripción](URL)</code>
+        </div>
+        <div class="md-help-img-item">
+          <span class="md-help-img-label">Definir el ancho (40–1200 px)</span>
+          <code class="md-help-code">![descripción|400](URL)</code>
+        </div>
+        <div class="md-help-img-item">
+          <a class="md-help-img-label md-help-img-link" href="https://imgbb.com/" target="_blank" rel="noopener noreferrer">BBCode Link <span aria-hidden="true">🔗</span></a>
+          <code class="md-help-code">[url=https://…][img]URL[/img][/url]</code>
+        </div>
+      </div>
+    `;
+  }
+
   function recapFormMarkup(recap, existingRecaps) {
     const rows = Array.isArray(existingRecaps) ? existingRecaps : [];
     const maxNum = rows.length > 0
@@ -308,6 +337,14 @@
       docType: "recap",
       title: heading,
       actions: [
+        {
+          id: "format-help",
+          kind: "icon",
+          variant: "ghost",
+          icon: "help-circle",
+          ariaLabel: "Ayuda de formato Markdown",
+          popoverHtml: markdownHelpMarkup(),
+        },
         {
           id: "save",
           kind: "button",

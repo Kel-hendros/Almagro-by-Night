@@ -178,6 +178,18 @@
       action.className.split(" ").filter(Boolean).forEach((cls) => button.classList.add(cls));
     }
     if (action.disabled) button.disabled = true;
+
+    if (action.popoverHtml) {
+      const wrap = document.createElement("div");
+      wrap.className = "ds-action-pop";
+      const panel = document.createElement("div");
+      panel.className = "ds-action-pop-panel";
+      panel.setAttribute("role", "tooltip");
+      panel.innerHTML = action.popoverHtml;
+      wrap.appendChild(button);
+      wrap.appendChild(panel);
+      return wrap;
+    }
     return button;
   }
 
@@ -199,6 +211,7 @@
           disabled: Boolean(action?.disabled),
           danger: Boolean(action?.danger),
           className: action?.className || "",
+          popoverHtml: action?.popoverHtml || "",
           onClick: typeof action?.onClick === "function" ? action.onClick : null,
         };
       })
